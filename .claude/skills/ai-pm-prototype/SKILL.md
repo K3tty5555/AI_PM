@@ -3,8 +3,9 @@ name: ai-pm-prototype
 description: >-
   产品原型生成技能。基于 PRD 生成可交互的网页原型，支持移动端和 Web 端设计。
   使用 HTML/CSS/JS 生成单页应用原型，放在项目目录下供预览。
-  遵循 Apple 设计规范（默认），或按用户指定风格设计。
-argument-hint: "[PRD文件路径] [风格:apple/mobile/web/custom]"
+  从项目配置读取设计规范，调用 ai-pm-design-system 导出设计令牌应用。
+  无设计规范时遵循 Apple Human Interface Guidelines（默认）。
+argument-hint: "[PRD文件路径] [设备:mobile/web/responsive]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ---
 
@@ -12,11 +13,124 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ## 执行协议
 
-- **询问风格**：生成前询问用户风格偏好（移动端/Web端/自定义）
-- **默认规范**：无指定时遵循 Apple Human Interface Guidelines
+- **设计规范集成**：从项目配置读取选定的设计规范，调用 `ai-pm-design-system export` 获取设计令牌
+- **设备类型确认**：询问用户设备偏好（移动端/Web端/响应式）
+- **默认回退**：无设计规范时遵循 Apple Human Interface Guidelines
 - **基于 PRD**：从 PRD 中提取功能点和页面流程
 - **单页应用**：生成 HTML+CSS+JS，可直接在浏览器打开
 - **项目存放**：原型文件放在项目目录 `06-prototype/` 下
+
+## 设计规范集成（与 ai-pm-design-system 协作）
+
+### 设计规范来源
+
+本技能**不直接管理**设计规范，而是调用独立技能 `ai-pm-design-system`：
+
+```
+┌─────────────────┐     ┌─────────────────────┐     ┌─────────────────┐
+│   ai-pm         │────▶│  ai-pm-design-system │     │   ai-pm-prototype│
+│  (PRD生成阶段)   │     │   (独立管理技能)      │◀────│  (原型生成阶段)  │
+└─────────────────┘     └─────────────────────┘     └─────────────────┘
+         │                                               │
+         │  1. 调用 list 获取规范列表                      │
+         │  2. 用户选择后保存到项目配置                      │
+         │───────────────────────────────────────────────▶│
+         │                                               │
+         │                                          3. 读取项目配置
+         │                                          4. 调用 export 获取 tokens
+         │                                          5. 应用 tokens 生成 CSS
+```
+
+### 调用接口
+
+**1. 读取项目配置获取设计规范名称：**
+```javascript
+// 读取项目目录下的 .ai-pm-config.json
+const config = readProjectConfig(projectDir);
+const systemName = config.designSystem || null;  // 如 "my-company" 或 null
+```
+
+**2. 调用 ai-pm-design-system 导出设计令牌：**
+```javascript
+// 如果有选定设计规范，调用独立技能导出
+if (systemName) {
+    const tokens = exec(`ai-pm-design-system export ${systemName}`);
+    // 返回完整的 design-tokens.json 内容
+}
+```
+
+**3. 将设计令牌转换为 CSS 变量：**
+```css
+/* 示例：从 design-tokens.json 生成 CSS 变量 */
+:root {
+  /* 颜色 */
+  --color-primary: #007AFF;
+  --color-secondary: #5856D6;
+  --color-background: #F5F5F7;
+
+  /* 字体 */
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'SF Pro Text';
+  --font-size-base: 16px;
+
+  /* 间距 */
+  --spacing-md: 16px;
+
+  /* 圆角 */
+  --border-radius-md: 12px;
+
+  /* 阴影 */
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+}
+```
+
+### 设计规范应用流程
+
+**Phase 0: 准备阶段（读取设计规范）**
+
+```
+🎨 准备：加载设计规范
+
+步骤 1: 读取项目配置
+   📄 读取 {项目目录}/.ai-pm-config.json
+   ✅ 发现配置：designSystem = "my-company"
+
+步骤 2: 调用 ai-pm-design-system 导出
+   $ ai-pm-design-system export my-company
+
+   返回结果：
+   {
+     "colors": { "primary": { "value": "#007AFF", "usage": "主按钮" } },
+     "typography": { "fontFamily": { "base": "-apple-system..." } },
+     "spacing": { "md": { "value": "16px" } },
+     ...
+   }
+   ✅ 已加载设计令牌
+
+步骤 3: 生成 CSS 变量
+   ✅ 已生成 css/design-tokens.css
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ 设计规范 "my-company" 已应用
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**无设计规范时的回退：**
+
+```
+🎨 准备：加载设计规范
+
+步骤 1: 读取项目配置
+   📄 读取 {项目目录}/.ai-pm-config.json
+   ℹ️ 未发现设计规范配置
+
+步骤 2: 使用默认 Apple 设计规范
+   ✅ 已加载默认设计令牌（Apple HIG）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ℹ️ 使用默认设计规范（Apple）
+💡 提示：在 PRD 生成阶段可选择自定义设计规范
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 ## 设计规范
 
@@ -65,32 +179,51 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ## 生成流程
 
-### Phase 0: 询问风格偏好
+### Phase 0: 加载设计规范 + 询问设备类型
 
-**询问模板：**
+**步骤 1: 自动加载设计规范（静默）**
+
 ```
-🎨 即将开始：原型设计
+🎨 准备：加载设计规范
 
-基于 PRD，我将生成可交互的网页原型。
+读取项目配置 → 调用 ai-pm-design-system export → 生成 CSS 变量
 
-💬 请告诉我设计偏好：
+✅ 设计规范 "{规范名}" 已加载（或未配置，使用默认）
+```
+
+**步骤 2: 询问设备类型**
+
+```
+💬 请指定设备类型：
 
 1. **设备类型**
    • 移动端 App（手机端应用）
    • Web 端（电脑浏览器使用）
    • 响应式（同时适配手机和电脑）
 
-2. **设计风格**（可选，默认 Apple 风格）
-   • Apple 风格（简洁、圆角、毛玻璃）
-   • Material Design（Google 风格）
-   • 自定义描述（如：深色模式、商务风格等）
+2. **补充说明**（可选）
+   • 如有特殊要求，如"深色模式"、"大屏适配"等请说明
 
 请回复你的选择，例如：
-   • "移动端，Apple 风格"
-   • "Web端，深色模式"
-   • "响应式，Material Design"
-   • 或直接回复"默认"（Web端 + Apple风格）
+   • "移动端" → 使用已选设计规范 + 移动端布局
+   • "Web端，深色模式" → 使用已选设计规范 + Web布局 + 深色主题
+   • 或直接回复"默认"（Web端 + 已选设计规范）
+
+💡 当前设计规范：{规范名}
+   如需更换，请在 PRD 生成阶段重新选择，或运行 `/ai-pm design-system`
 ```
+
+**设计规范已确定说明：**
+
+在原型生成阶段，**不再询问设计风格**，因为：
+- 设计规范（颜色、字体、间距）已在 PRD 阶段通过 `ai-pm-design-system` 选定并保存
+- 本阶段只询问**设备类型**（影响布局结构）
+- 视觉风格由设计规范令牌自动决定
+
+这种分离确保：
+- **一致性**：同一项目的 PRD 和原型使用相同设计规范
+- **单一数据源**：设计规范只由 `ai-pm-design-system` 管理
+- **减少决策**：用户只需在 PRD 阶段选择一次设计规范
 
 ### Phase 1: 解析 PRD
 
@@ -117,6 +250,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 06-prototype/
 ├── index.html              # 入口页面
 ├── css/
+│   ├── design-tokens.css  # 设计令牌（从 ai-pm-design-system 导出）
 │   ├── style.css          # 主样式
 │   └── components.css     # 组件样式
 ├── js/
@@ -129,6 +263,82 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 └── assets/
     ├── icons/             # 图标
     └── images/            # 图片占位
+```
+
+**设计令牌 CSS 生成（css/design-tokens.css）：**
+
+```css
+/* =========================================================
+   Design Tokens
+   Source: ai-pm-design-system export {design-system-name}
+   Generated: {timestamp}
+   ========================================================= */
+
+/* Colors */
+:root {
+  --color-primary: #007AFF;
+  --color-primary-hover: #0056CC;
+  --color-secondary: #5856D6;
+  --color-success: #34C759;
+  --color-warning: #FF9500;
+  --color-danger: #FF3B30;
+  --color-background: #F5F5F7;
+  --color-surface: #FFFFFF;
+  --color-text-primary: #1D1D1F;
+  --color-text-secondary: #86868B;
+}
+
+/* Typography */
+:root {
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  --font-family-heading: 'SF Pro Display', sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+}
+
+/* Spacing */
+:root {
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+}
+
+/* Border Radius */
+:root {
+  --border-radius-sm: 8px;
+  --border-radius-md: 12px;
+  --border-radius-lg: 16px;
+  --border-radius-xl: 24px;
+}
+
+/* Shadows */
+:root {
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+/* Component Tokens */
+:root {
+  --button-primary-bg: var(--color-primary);
+  --button-primary-color: #FFFFFF;
+  --button-primary-radius: var(--border-radius-md);
+  --card-bg: var(--color-surface);
+  --card-radius: var(--border-radius-md);
+  --card-shadow: var(--shadow-md);
+  --input-bg: #F2F2F7;
+  --input-radius: var(--border-radius-md);
+}
 ```
 
 **HTML 模板结构：**
@@ -162,10 +372,13 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 📁 文件位置：{项目目录}/06-prototype/
 
 📄 生成文件：
-   ├── index.html          # 入口页面
-   ├── css/style.css       # 样式文件
-   ├── js/app.js           # 交互逻辑
-   └── pages/              # 页面文件夹
+   ├── index.html              # 入口页面
+   ├── css/
+   │   ├── design-tokens.css  # 设计令牌（来自 ai-pm-design-system）
+   │   ├── style.css          # 主样式
+   │   └── components.css     # 组件样式
+   ├── js/app.js              # 交互逻辑
+   └── pages/                 # 页面文件夹
 
 🌐 预览方式：
    1. 用浏览器打开 index.html
@@ -174,33 +387,44 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 📱 设计规格：
    • 设备类型：{mobile/web/responsive}
-   • 设计风格：{apple/material/custom}
+   • 设计规范：{规范名}（via ai-pm-design-system）
+   • 颜色令牌：{N}个
+   • 字体令牌：{N}个
+   • 组件令牌：{N}个
    • 页面数量：{N}个
 
 💡 使用说明：
    • 点击可交互元素体验流程
    • 部分按钮/链接支持点击跳转
    • 数据为模拟数据，仅展示界面
+
+🎨 设计规范来源：
+   • 管理：/ai-pm design-system
+   • 位置：templates/design-systems/{规范名}/
+   • 导出：ai-pm-design-system export {规范名}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ## 原型页面生成规范
 
-### 通用组件库
+### 通用组件库（使用 Design Tokens）
 
-**按钮：**
+所有组件样式通过 CSS 变量引用设计令牌，确保与 `ai-pm-design-system` 导出的规范一致：
+
+**按钮（引用 design-tokens.css）：**
 ```css
-/* Primary Button - Apple Style */
+/* Primary Button - 使用 Design Tokens */
 .btn-primary {
-    background: #007AFF;
-    color: white;
-    border-radius: 10px;
+    background: var(--button-primary-bg);
+    color: var(--button-primary-color);
+    border-radius: var(--button-primary-radius);
     padding: 12px 24px;
-    font-weight: 500;
+    font-family: var(--font-family-base);
+    font-weight: var(--font-weight-medium);
     transition: all 0.2s;
 }
 .btn-primary:hover {
-    background: #0056CC;
+    background: var(--color-primary-hover);
     transform: scale(1.02);
 }
 .btn-primary:active {
@@ -210,29 +434,41 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 **卡片：**
 ```css
-/* Card - Apple Style */
+/* Card - 使用 Design Tokens */
 .card {
-    background: white;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
+    padding: var(--spacing-md);
+    box-shadow: var(--card-shadow);
     transition: transform 0.2s;
 }
 ```
 
 **输入框：**
 ```css
-/* Input - Apple Style */
+/* Input - 使用 Design Tokens */
 .input {
-    background: #F2F2F7;
-    border-radius: 10px;
+    background: var(--input-bg);
+    border-radius: var(--input-radius);
     padding: 12px 16px;
     border: 2px solid transparent;
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
     transition: border-color 0.2s;
 }
 .input:focus {
-    border-color: #007AFF;
+    border-color: var(--color-primary);
     outline: none;
+}
+```
+
+**设计令牌回退机制：**
+```css
+/* 如果 CSS 变量未定义，提供默认值（Apple 风格） */
+.btn-primary {
+    background: var(--button-primary-bg, #007AFF);
+    color: var(--button-primary-color, #FFFFFF);
+    border-radius: var(--button-primary-radius, 10px);
 }
 ```
 
