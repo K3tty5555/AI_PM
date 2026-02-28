@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(mv daily-push-suite:*)",
+      "Bash(mv .claude-plugin:*)",
+      "Bash(ln:*)",
+      "Bash(npx shadcn@latest:*)",
+      "Bash(npm run:*)",
+      "Bash(source:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsx:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git:*)",
+      "Bash(chmod +x:*)",
+      "Bash(node:*)",
+      "Bash(lib/sync-status.json:*)",
+      "Bash(lsof:*)",
+      "WebSearch",
+      "Skill(ai-pm)",
+      "Bash(pkill:*)",
+      "WebFetch(domain:www.zhixue.com)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(mv enterprise-b2b:*)"
+    ]
+  }
+}

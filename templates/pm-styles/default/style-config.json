@@ -1,0 +1,67 @@
+{
+  "styleInfo": {
+    "name": "default",
+    "description": "系统默认风格 - 标准8章结构，平衡详细程度",
+    "createdAt": "2026-02-28",
+    "updatedAt": "2026-02-28",
+    "sourceFiles": ["system-default"]
+  },
+  "structure": {
+    "chapterOrder": [
+      "一、文档概述",
+      "二、需求分析",
+      "三、功能清单",
+      "四、产品流程",
+      "五、全局说明",
+      "六、详细功能设计",
+      "七、效果验证",
+      "八、非功能性说明"
+    ],
+    "requiredChapters": ["文档概述", "需求分析", "功能清单", "详细功能设计"],
+    "optionalChapters": ["全局说明", "非功能性说明"],
+    "tableFrequency": "medium",
+    "maxHeadingLevel": 4
+  },
+  "writing": {
+    "languageStyle": "product-oriented",
+    "detailLevel": "standard",
+    "terminology": {
+      "priorityTerms": ["P0", "P1", "P2"],
+      "priorityDescriptions": {
+        "P0": "核心功能，必须实现",
+        "P1": "重要功能，建议实现",
+        "P2": "增值功能，可选实现"
+      },
+      "roleTerms": ["用户", "管理员", "运营人员", "系统"],
+      "actionTerms": ["点击", "输入", "选择", "提交", "查看"],
+      "stateTerms": ["未开始", "进行中", "已完成", "已取消"]
+    },
+    "perspective": "mixed"
+  },
+  "formatting": {
+    "tableFields": {
+      "revisionTable": ["日期", "修订版本", "修改描述", "涉及影响模块", "作者", "备注"],
+      "functionTable": ["模块", "功能", "子功能", "描述", "优先级", "备注"],
+      "detailTable": ["项目", "说明"],
+      "metricTable": ["指标分类", "指标名称", "指标定义", "计算方式", "目标值"],
+      "trackingTable": ["埋点事件", "触发时机", "事件参数", "备注"]
+    },
+    "emphasisStyle": "bold",
+    "flowFormat": "text",
+    "priorityMarks": ["P0", "P1", "P2"],
+    "useMermaid": false
+  },
+  "contentFocus": {
+    "userStoryWeight": "medium",
+    "metricsDetail": "standard",
+    "exceptionCoverage": "standard",
+    "technicalDetail": "light",
+    "businessContext": "detailed"
+  },
+  "examples": {
+    "summary": "本文档描述[功能名称]的产品需求，旨在解决[核心痛点]，提升[关键指标]。",
+    "requirement": "用户在[场景]下，需要[需求]，以解决[痛点]。",
+    "functionList": "| 模块 | 功能 | 描述 | 优先级 |\n|------|------|------|--------|\n| 用户管理 | 账号注册 | 支持手机号注册 | P0 |",
+    "detailDesign": "| 项目 | 说明 |\n|------|------|\n| 用户场景 | 用户在什么场景下使用 |\n| 功能描述 | 功能是什么，解决什么问题 |"
+  }
+}
