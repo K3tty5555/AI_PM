@@ -27,17 +27,8 @@ templates/
 │   ├── default/                   #    系统默认风格
 │   └── [用户自定义风格]/           #    你的风格配置
 │
-├── prd-templates/                 # 📝 PRD 模板
-│   └── (上传你的 PRD 模板)
-│
-├── user-story-templates/          # 👤 用户故事模板
-│   └── (上传你的用户故事模板)
-│
-├── analysis-templates/            # 🔍 需求分析模板
-│   └── (上传你的分析模板)
-│
-└── research-templates/            # 📊 竞品研究模板
-    └── (上传你的研究模板)
+└── prd-templates/                 # 📝 PRD 模板
+    └── (上传你的 PRD 模板)
 ```
 
 ---
@@ -91,9 +82,6 @@ cp templates/design-systems/example-enterprise/* \
 | `design-systems/` | 全局设计规范（跨项目共享） | 常用 |
 | `pm-styles/` | 产品经理风格库（PRD写作风格） | 常用 |
 | `prd-templates/` | PRD 文档模板 | 按需上传 |
-| `user-story-templates/` | 用户故事模板 | 按需上传 |
-| `analysis-templates/` | 需求分析模板 | 按需上传 |
-| `research-templates/` | 竞品研究模板 | 按需上传 |
 
 ---
 
