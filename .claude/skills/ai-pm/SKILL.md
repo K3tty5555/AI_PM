@@ -5,7 +5,7 @@ description: >-
   支持需求分析、竞品分析、用户故事、PRD 生成、原型设计等全流程。
   输入一句话需求，通过交互引导完善，输出 PRD 文档 + 可交互网页原型。
   支持多项目管理，每个需求独立存放。
-argument-hint: "[需求描述、文件路径、项目名或阶段命令: analyze/research/story/prd/prototype]"
+argument-hint: "[需求描述、文件路径、项目名或命令: analyze/research/story/prd/prototype/design-system/style]"
 allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(test) Bash(cd) Bash(pwd)
 ---
 
@@ -35,7 +35,9 @@ AI_PM/                          # 技能根目录
 │   ├── ai-pm-research/         # 竞品研究
 │   ├── ai-pm-story/            # 用户故事
 │   ├── ai-pm-prd/              # PRD生成
-│   └── ai-pm-prototype/        # 原型生成
+│   ├── ai-pm-prototype/        # 原型生成
+│   ├── ai-pm-style/            # 风格管理
+│   └── ai-pm-design-system/    # 设计规范管理（独立技能）
 │
 ├── output/                     # 所有项目输出
 │   ├── projects/               # 项目文件夹
@@ -155,72 +157,37 @@ AI:
 
 ## 设计规范管理（独立能力）
 
-设计规范管理是一项**独立能力**，用于创建、解析和管理设计规范，供后续 PRD 生成时选用。
+设计规范管理由**独立技能 `ai-pm-design-system`** 负责。本技能通过调用该独立技能来获取设计规范列表。
 
-### 使用场景
+### 职责分离
 
-- 上传公司/团队的设计规范文档或图片
-- 解析设计稿生成结构化的设计规范文档
-- 管理多个设计规范，供不同项目选择使用
+| 技能 | 职责 |
+|------|------|
+| `ai-pm-design-system` | 设计规范的 CRUD 管理、解析、存储 |
+| `ai-pm` (本技能) | 在 PRD 生成阶段调用设计规范列表，保存用户选择到项目配置 |
+| `ai-pm-prototype` | 读取项目配置，调用设计规范导出接口获取 tokens |
 
-### 设计规范存储位置
+### 调用接口
 
-```
-templates/design-systems/
-├── enterprise-standard/        # 企业级设计规范
-│   ├── README.md              # 规范说明
-│   ├── design-tokens.json     # 设计令牌（颜色、字体、间距）
-│   └── assets/                # 参考图片
-├── apple-clean/               # Apple 风格规范
-└── [用户自定义]/               # 用户上传的规范
-```
-
-### 命令
-
-| 命令 | 作用 | 示例 |
-|------|------|------|
-| `/ai-pm design-system` | 进入设计规范管理菜单 | - |
-| `/ai-pm design-system list` | 列出所有设计规范 | - |
-| `/ai-pm design-system upload {规范名}` | 上传并解析设计规范 | `/ai-pm design-system upload my-company` |
-
-### 工作流程
-
-```
-用户执行 /ai-pm design-system
-    ↓
-显示设计规范管理菜单
-    ├─ 1. 上传新的设计规范
-    ├─ 2. 查看/管理现有规范
-    └─ 3. 删除设计规范
-
-选择 1: 上传新的设计规范
-    ↓
-💬 请输入设计规范名称（如：my-company）
-    ↓
-📁 创建文件夹 templates/design-systems/my-company/
-    ↓
-💬 请上传设计规范文档或图片
-    • 支持格式：PDF、PNG、JPG、Sketch、Figma 导出
-    • 可以上传多个文件（组件截图、页面设计稿等）
-    ↓
-用户上传文件到文件夹
-    ↓
-🔄 AI 解析上传的设计资源
-    • 提取颜色系统
-    • 识别字体规范
-    • 分析组件样式
-    • 整理间距/圆角/阴影
-    ↓
-📝 生成设计规范文档
-    • templates/design-systems/my-company/README.md
-    • templates/design-systems/my-company/design-tokens.json
-    ↓
-✅ 设计规范创建完成
+**获取设计规范列表（Phase 5）：**
+```javascript
+// 调用 ai-pm-design-system 技能
+const systems = exec('ai-pm-design-system list --json');
+// 返回格式：[{name, description, fileCount, updatedAt}, ...]
 ```
 
-### PRD 生成时选择设计规范
+**保存选择到项目配置：**
+```javascript
+// 保存到项目目录下的 .ai-pm-config.json
+saveToProjectConfig({
+  designSystem: selectedSystemName,  // 如 "my-company"
+  designSystemVersion: "1.0"
+});
+```
 
-在 Phase 5（PRD 生成前统一确认）时，增加设计规范选择：
+### PRD 生成时选择设计规范（Phase 5）
+
+在 PRD 生成前的统一确认节点，调用独立技能获取规范列表：
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -234,50 +201,76 @@ templates/design-systems/
 
 🎨 设计规范选择：
 
-📁 检测到以下设计规范：
+📁 调用 ai-pm-design-system list...
+
+【情况A：检测到设计规范】
+可用设计规范：
    1. enterprise-standard（企业级B端规范）
    2. apple-clean（Apple 风格规范）
    3. my-company（自定义规范）
 
+【情况B：未检测到设计规范】
+ℹ️ 未检测到设计规范，将使用默认风格
+💡 提示：使用 `/ai-pm design-system upload {规范名}` 可上传设计规范
+
 💬 请选择：
-   • 回复数字 1/2/3 → 使用该规范生成PRD
+   • 回复数字 1/2/3 → 使用该规范（保存到项目配置）
    • "不使用规范" → 采用默认风格
-   • "管理规范" → 进入设计规范管理
+   • "管理规范" → 调用 ai-pm-design-system 进入管理界面
 ```
 
-### 示例交互
+### 与 ai-pm-design-system 的协作流程
 
-**上传设计规范：**
+```
+用户执行 /ai-pm design-system upload my-company
+    ↓
+ai-pm-design-system 技能处理（完全独立）
+    • 创建目录 templates/design-systems/my-company/
+    • 解析设计资源
+    • 生成 design-tokens.json
+    ↓
+后续 PRD 生成时（本技能）：
+    • 调用 ai-pm-design-system list 获取列表
+    • 用户选择后保存到项目配置
+    ↓
+原型生成时（ai-pm-prototype 技能）：
+    • 读取项目配置获取 designSystem
+    • 调用 ai-pm-design-system export {name} 获取 tokens
+    • 应用 tokens 生成 CSS
+```
 
+### 独立技能调用示例
+
+**管理设计规范（完全委托）：**
 ```
 用户: /ai-pm design-system upload my-company
 
-AI: 📁 创建设计规范：my-company
-    路径：templates/design-systems/my-company/
+AI: [调用 ai-pm-design-system 技能处理]
+    该操作由独立技能 ai-pm-design-system 处理
 
-💬 请上传设计资源（可多选）：
-   • 设计规范PDF/文档
-   • 组件截图（按钮、表单、卡片等）
-   • 页面设计稿（首页、列表页、详情页）
-   • 品牌资产（Logo、色板、字体）
-
-提示：将文件放入上述文件夹，然后回复"开始解析"
-
-用户: [上传文件到文件夹] 开始解析
-
-AI: 🔄 正在解析设计规范...
-    [1/3] 分析色彩系统... ✅
-    [2/3] 识别字体规范... ✅
-    [3/3] 提取组件样式... ✅
-
-📝 生成设计规范文档：
-    • README.md（规范说明）
-    • design-tokens.json（设计令牌）
-
+📁 ai-pm-design-system 输出：
 ✅ 设计规范 "my-company" 创建完成！
+   位置：templates/design-systems/my-company/
+   文件：README.md, design-tokens.json
+```
 
-💡 后续使用：
-   生成PRD时，该规范将出现在选择列表中
+**PRD 阶段使用：**
+```
+AI: 🎨 正在获取设计规范列表...
+   $ ai-pm-design-system list --json
+
+   返回结果：
+   [1] enterprise-standard
+   [2] my-company
+
+💬 请选择要应用的设计规范（回复数字）：
+
+用户: 2
+
+AI: ✅ 已选择 "my-company" 设计规范
+   已保存到项目配置：.ai-pm-config.json
+
+   该配置将在原型生成阶段被 ai-pm-prototype 读取使用
 ```
 
 ## 产品经理风格管理（独立能力）
@@ -1385,6 +1378,9 @@ $ playwright-cli state-save ./07-references/zhixue-session.json
 | `/ai-pm style` | 进入产品经理风格管理 |
 | `/ai-pm style list` | 列出所有可用风格 |
 | `/ai-pm style analyze {文件路径}` | 分析 PRD 创建风格 |
+| `/ai-pm design-system` | 进入设计规范管理（调用 ai-pm-design-system） |
+| `/ai-pm design-system list` | 列出所有设计规范 |
+| `/ai-pm design-system upload {规范名}` | 上传并解析设计规范 |
 
 ## 边缘情况处理
 
