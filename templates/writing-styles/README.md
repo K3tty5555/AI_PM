@@ -1,13 +1,13 @@
-# 产品经理风格库
+# PRD 写作风格库
 
-> 存放用户上传的产品经理风格配置，供 AI_PM 生成文档时使用
+> 存放用户的 PRD 写作风格配置，供 AI_PM 生成文档时使用
 
 ---
 
 ## 📁 文件夹结构
 
 ```
-pm-styles/
+writing-styles/
 │
 ├── README.md                          # 📄 本说明文件
 │
@@ -31,17 +31,17 @@ pm-styles/
 
 ## 🚀 快速开始
 
-### 1. 分析你的 PRD 创建风格
+### 1. 分析你的 PRD 写作风格
 
 ```bash
 # 上传你的 PRD 到任意位置，然后执行
-/ai-pm style analyze /path/to/your-prd.md
+/ai-pm writing-style analyze /path/to/your-prd.md
 ```
 
-### 2. 查看已有风格
+### 2. 查看已有写作风格
 
 ```bash
-/ai-pm style list
+/ai-pm writing-style list
 ```
 
 ### 3. 使用特定风格生成 PRD
@@ -56,12 +56,12 @@ pm-styles/
 
 ---
 
-## 📌 风格 vs 设计规范
+## 📌 写作风格 vs UI 规范
 
-| 对比项 | 产品经理风格 | 设计规范 |
+| 对比项 | 写作风格 | UI 规范 |
 |--------|-------------|---------|
-| **关注点** | PRD 写作风格、结构、术语 | UI 视觉风格、组件、交互 |
-| **存储位置** | `templates/pm-styles/` | `templates/design-systems/` |
+| **关注点** | PRD 写作风格、章节结构、用词习惯 | UI 视觉风格、组件、颜色、字体 |
+| **存储位置** | `templates/writing-styles/` | `templates/ui-specs/` |
 | **影响内容** | 文字描述、章节结构、表格格式 | 原型视觉、颜色、字体、间距 |
 | **使用时机** | 生成 PRD 文档时 | 生成原型时 |
 

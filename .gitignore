@@ -1,5 +1,6 @@
 .DS_Store
 .playwright/
 output/
-templates/pm-styles/.playwright-cli/
+templates/writing-styles/.playwright-cli/
 *.log
+.docs/

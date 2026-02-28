@@ -5,7 +5,7 @@ description: >-
   支持需求分析、竞品分析、用户故事、PRD 生成、原型设计等全流程。
   输入一句话需求，通过交互引导完善，输出 PRD 文档 + 可交互网页原型。
   支持多项目管理，每个需求独立存放。
-argument-hint: "[需求描述、文件路径、项目名或命令: analyze/research/story/prd/prototype/design-system/style]"
+argument-hint: "[需求描述、文件路径、项目名或命令: analyze/research/story/prd/prototype/review/ui-spec/writing-style]"
 allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(test) Bash(cd) Bash(pwd)
 ---
 
@@ -36,8 +36,9 @@ AI_PM/                          # 技能根目录
 │   ├── ai-pm-story/            # 用户故事
 │   ├── ai-pm-prd/              # PRD生成
 │   ├── ai-pm-prototype/        # 原型生成
-│   ├── ai-pm-style/            # 风格管理
-│   └── ai-pm-design-system/    # 设计规范管理（独立技能）
+│   ├── ai-pm-review/           # 需求评审（新增）
+│   ├── ai-pm-writing-style/    # 写作风格管理
+│   └── ai-pm-ui-spec/          # UI 规范管理（独立技能）
 │
 ├── output/                     # 所有项目输出
 │   ├── projects/               # 项目文件夹
@@ -49,7 +50,10 @@ AI_PM/                          # 技能根目录
 │   │   │   ├── 04-user-stories.md         # 用户故事
 │   │   │   ├── 05-PRD-v1.0.md             # PRD文档
 │   │   │   ├── 06-prototype/              # 网页原型
-│   │   │   └── 07-references/             # 参考资源（可选）
+│   │   │   ├── 07-references/             # 参考资源（可选）
+│   │   │   │   ├── reference-config.md
+│   │   │   │   └── images/
+│   │   │   └── 08-review-report-v1.md     # 需求评审报告（可选）
 │   │   │       ├── reference-config.md
 │   │   │       └── images/
 │   │   └── accounting-app-20260301/
@@ -59,11 +63,11 @@ AI_PM/                          # 技能根目录
 │   ├── 00-examples/            # 示例文件
 │   ├── 01-config/              # 配置模板
 │   │   └── reference-config.md # 参考资源配置模板
-│   ├── design-systems/         # ✅ 设计规范库（全局独立管理）
+│   ├── ui-specs/               # ✅ UI 规范库（全局独立管理）
 │   │   ├── README.md
-│   │   ├── enterprise-standard/# 企业规范示例
+│   │   ├── example-enterprise/ # 企业规范示例
 │   │   └── [用户自定义规范]/
-│   ├── pm-styles/              # ✅ 产品经理风格库（新增）
+│   ├── writing-styles/         # ✅ PRD 写作风格库（新增）
 │   │   ├── README.md
 │   │   ├── default/            # 系统默认风格
 │   │   └── [用户自定义风格]/    # 用户上传的风格
@@ -85,14 +89,19 @@ AI_PM/                          # 技能根目录
 
 | 输入类型 | 处理方式 |
 |---------|---------|
+| `quick "需求"` | 快速模式：需求澄清 → PRD → 原型 |
+| `quick-prd "需求"` | 快速生成 PRD  only |
 | `analyze` | 在当前项目执行需求分析 |
 | `research` | 在当前项目执行竞品研究 |
 | `story` | 在当前项目执行用户故事 |
 | `prd` | 在当前项目执行 PRD 生成 |
 | `prototype` | 在当前项目执行原型生成 |
+| `review` | 在当前项目执行需求评审 |
+| `review --round=2` | 进行第二轮评审 |
 | `fetch` | 抓取参考网页进行分析 |
-| `design-system` | 进入设计规范管理 |
-| `style` | 进入产品经理风格管理（新增） |
+| `ui-spec` | 进入 UI 规范管理 |
+| `writing-style` | 进入 PRD 写作风格管理 |
+| `config` | 查看/修改用户配置 |
 | `status` | 显示项目列表和当前项目状态 |
 | `switch {项目名}` | 切换到指定项目 |
 | `list` | 列出所有项目 |
@@ -127,6 +136,75 @@ AI:
 3. 切换到其他项目
 ```
 
+## 用户分层与工作流模式
+
+### 用户画像配置
+
+在 `.ai-pm-config.json` 中配置用户画像：
+
+```json
+{
+  "userProfile": {
+    "level": "professional",
+    "productType": "b2b",
+    "role": "pm"
+  },
+  "workflow": {
+    "mode": "adaptive"
+  }
+}
+```
+
+**用户层级**:
+| 层级 | 特征 | 推荐模式 |
+|------|------|----------|
+| `novice` | 初级PM，产品经验<2年 | 快速模式 + 详细引导 |
+| `professional` | 资深PM，有成熟方法论 | 标准模式 |
+| `expert` | 专家PM，追求效率 | 自定义模式 |
+
+**产品类型**:
+| 类型 | 流程特点 |
+|------|----------|
+| `b2b` | 强调需求分析、竞品研究、架构设计 |
+| `b2c` | 强调用户研究、体验设计、数据分析 |
+| `internal` | 简化流程，强调效率和落地 |
+
+### 工作流模式选择
+
+**情况3：新需求 - 选择工作流模式**
+```
+👋 你好，我是你的 AI 产品经理。
+
+📋 为了更好地服务你，请先选择工作流模式：
+
+┌─────────────────────────────────────────────────┐
+│  ⚡ 快速模式 (15分钟)                           │
+│     流程：需求澄清 → PRD → 原型                 │
+│     适合：简单需求、个人项目、时间紧迫          │
+├─────────────────────────────────────────────────┤
+│  📊 标准模式 (45分钟)  ← 推荐                   │
+│     流程：完整 Phase 1-6                        │
+│     适合：常规项目、需要完整分析                │
+├─────────────────────────────────────────────────┤
+│  🔬 深度模式 (2小时)                            │
+│     流程：完整 Phase 0-7 + 多轮评审             │
+│     适合：复杂系统、企业级项目                  │
+├─────────────────────────────────────────────────┤
+│  🎯 自适应模式                                  │
+│     根据需求复杂度自动选择                      │
+│     AI 评估后推荐最优流程                       │
+└─────────────────────────────────────────────────┘
+
+💬 请回复：快速/标准/深度/自适应
+```
+
+**快速命令直达**:
+```bash
+/ai-pm quick "需求"           # 快速模式
+/ai-pm quick-prd "需求"       # 仅生成PRD
+/ai-pm "需求" --mode=quick    # 参数指定模式
+```
+
 ### 进度检测（断点续传）
 
 启动时检测当前项目目录：
@@ -141,6 +219,7 @@ AI:
 - 04-user-stories.md → 用户故事已完成
 - 05-PRD-*.md → PRD 已生成
 - 06-prototype/index.html → 原型已生成
+- 08-review-report-*.md → 需求评审已完成
 ```
 
 **自动跳过已完成的阶段**，从第一个缺失的环节开始。
@@ -157,13 +236,13 @@ AI:
 
 ## 设计规范管理（独立能力）
 
-设计规范管理由**独立技能 `ai-pm-design-system`** 负责。本技能通过调用该独立技能来获取设计规范列表。
+设计规范管理由**独立技能 `ai-pm-ui-spec`** 负责。本技能通过调用该独立技能来获取设计规范列表。
 
 ### 职责分离
 
 | 技能 | 职责 |
 |------|------|
-| `ai-pm-design-system` | 设计规范的 CRUD 管理、解析、存储 |
+| `ai-pm-ui-spec` | 设计规范的 CRUD 管理、解析、存储 |
 | `ai-pm` (本技能) | 在 PRD 生成阶段调用设计规范列表，保存用户选择到项目配置 |
 | `ai-pm-prototype` | 读取项目配置，调用设计规范导出接口获取 tokens |
 
@@ -171,8 +250,8 @@ AI:
 
 **获取设计规范列表（Phase 5）：**
 ```javascript
-// 调用 ai-pm-design-system 技能
-const systems = exec('ai-pm-design-system list --json');
+// 调用 ai-pm-ui-spec 技能
+const systems = exec('ai-pm-ui-spec list --json');
 // 返回格式：[{name, description, fileCount, updatedAt}, ...]
 ```
 
@@ -201,7 +280,7 @@ saveToProjectConfig({
 
 🎨 设计规范选择：
 
-📁 调用 ai-pm-design-system list...
+📁 调用 ai-pm-ui-spec list...
 
 【情况A：检测到设计规范】
 可用设计规范：
@@ -211,31 +290,31 @@ saveToProjectConfig({
 
 【情况B：未检测到设计规范】
 ℹ️ 未检测到设计规范，将使用默认风格
-💡 提示：使用 `/ai-pm design-system upload {规范名}` 可上传设计规范
+💡 提示：使用 `/ai-pm ui-spec upload {规范名}` 可上传设计规范
 
 💬 请选择：
    • 回复数字 1/2/3 → 使用该规范（保存到项目配置）
    • "不使用规范" → 采用默认风格
-   • "管理规范" → 调用 ai-pm-design-system 进入管理界面
+   • "管理规范" → 调用 ai-pm-ui-spec 进入管理界面
 ```
 
-### 与 ai-pm-design-system 的协作流程
+### 与 ai-pm-ui-spec 的协作流程
 
 ```
-用户执行 /ai-pm design-system upload my-company
+用户执行 /ai-pm ui-spec upload my-company
     ↓
-ai-pm-design-system 技能处理（完全独立）
-    • 创建目录 templates/design-systems/my-company/
+ai-pm-ui-spec 技能处理（完全独立）
+    • 创建目录 templates/ui-specs/my-company/
     • 解析设计资源
     • 生成 design-tokens.json
     ↓
 后续 PRD 生成时（本技能）：
-    • 调用 ai-pm-design-system list 获取列表
+    • 调用 ai-pm-ui-spec list 获取列表
     • 用户选择后保存到项目配置
     ↓
 原型生成时（ai-pm-prototype 技能）：
     • 读取项目配置获取 designSystem
-    • 调用 ai-pm-design-system export {name} 获取 tokens
+    • 调用 ai-pm-ui-spec export {name} 获取 tokens
     • 应用 tokens 生成 CSS
 ```
 
@@ -243,21 +322,21 @@ ai-pm-design-system 技能处理（完全独立）
 
 **管理设计规范（完全委托）：**
 ```
-用户: /ai-pm design-system upload my-company
+用户: /ai-pm ui-spec upload my-company
 
-AI: [调用 ai-pm-design-system 技能处理]
-    该操作由独立技能 ai-pm-design-system 处理
+AI: [调用 ai-pm-ui-spec 技能处理]
+    该操作由独立技能 ai-pm-ui-spec 处理
 
-📁 ai-pm-design-system 输出：
+📁 ai-pm-ui-spec 输出：
 ✅ 设计规范 "my-company" 创建完成！
-   位置：templates/design-systems/my-company/
+   位置：templates/ui-specs/my-company/
    文件：README.md, design-tokens.json
 ```
 
 **PRD 阶段使用：**
 ```
 AI: 🎨 正在获取设计规范列表...
-   $ ai-pm-design-system list --json
+   $ ai-pm-ui-spec list --json
 
    返回结果：
    [1] enterprise-standard
@@ -287,7 +366,7 @@ AI: ✅ 已选择 "my-company" 设计规范
 ### 风格库存储位置
 
 ```
-templates/pm-styles/
+templates/writing-styles/
 ├── default/                   # 系统默认风格
 │   └── style-config.json
 ├── enterprise-standard/       # 企业标准风格示例
@@ -308,9 +387,9 @@ templates/pm-styles/
 
 | 命令 | 作用 | 示例 |
 |------|------|------|
-| `/ai-pm style` | 进入风格管理菜单 | - |
-| `/ai-pm style list` | 列出所有风格 | - |
-| `/ai-pm style analyze {文件路径}` | 分析 PRD 创建风格 | `/ai-pm style analyze ~/my-prd.md` |
+| `/ai-pm writing-style` | 进入风格管理菜单 | - |
+| `/ai-pm writing-style list` | 列出所有风格 | - |
+| `/ai-pm writing-style analyze {文件路径}` | 分析 PRD 创建风格 | `/ai-pm writing-style analyze ~/my-prd.md` |
 
 ### 工作流程
 
@@ -328,7 +407,7 @@ templates/pm-styles/
     ↓
 💬 请提供 PRD 文件路径
     ↓
-📁 创建文件夹 templates/pm-styles/{风格名}/
+📁 创建文件夹 templates/writing-styles/{风格名}/
     ↓
 🔄 AI 分析 PRD 文档
     • 提取文档结构偏好
@@ -360,7 +439,7 @@ templates/pm-styles/
 
 ✍️ 产品经理风格选择：
 
-📁 扫描风格库 (templates/pm-styles/)...
+📁 扫描风格库 (templates/writing-styles/)...
 
 【情况A：检测到多种风格】
 可用风格：
@@ -371,7 +450,7 @@ templates/pm-styles/
 
 【情况B：仅默认风格】
 ℹ️ 使用系统默认风格
-💡 提示：使用 `/ai-pm style analyze {PRD文件}` 可创建自定义风格
+💡 提示：使用 `/ai-pm writing-style analyze {PRD文件}` 可创建自定义风格
 
 💬 请选择：
    • 回复数字 1/2/3/4 → 使用该风格生成PRD
@@ -391,7 +470,7 @@ templates/pm-styles/
 | 对比项 | 产品经理风格 | 设计规范 |
 |--------|-------------|---------|
 | **关注点** | PRD 写作风格、结构、术语 | UI 视觉风格、组件、交互 |
-| **存储位置** | `templates/pm-styles/` | `templates/design-systems/` |
+| **存储位置** | `templates/writing-styles/` | `templates/ui-specs/` |
 | **影响内容** | 文字描述、章节结构、表格格式 | 原型视觉、颜色、字体、间距 |
 | **使用时机** | 生成 PRD 文档时 | 生成原型时 |
 | **配置文件** | `style-config.json` | `design-tokens.json` |
@@ -401,7 +480,7 @@ templates/pm-styles/
 **分析 PRD 创建风格：**
 
 ```
-用户: /ai-pm style analyze ~/Documents/my-prd.md
+用户: /ai-pm writing-style analyze ~/Documents/my-prd.md
 
 AI: 📁 即将分析 PRD 并创建风格
 
@@ -433,8 +512,8 @@ AI: 🔄 正在分析 PRD 文档...
    • 优先级标记：P0/P1/P2
 
 📝 生成风格配置：
-    • templates/pm-styles/my-company-style/style-config.json
-    • templates/pm-styles/my-company-style/examples/original-prd.md
+    • templates/writing-styles/my-company-style/style-config.json
+    • templates/writing-styles/my-company-style/examples/original-prd.md
 
 ✅ 风格 "my-company-style" 创建完成！
 
@@ -446,7 +525,8 @@ AI: 🔄 正在分析 PRD 文档...
 
 如果需求信息不完整，启动深度访谈模式：
 
-**开场白：**
+### 开场白（v2.0优化版）
+
 ```
 👋 你好，我是你的 AI 产品经理。
 
@@ -455,38 +535,109 @@ AI: 🔄 正在分析 PRD 文档...
 收到你的初步需求：
 "{用户输入}"
 
-为了帮你做出更好的产品方案，我需要更深入地了解这个需求。
-让我们花 3-5 分钟聊聊——
+为了帮你做出更好的产品方案，我需要先确认几个关键问题——
 ```
 
-**访谈问题清单（按需追问）：**
+### 首要确认：项目类型（v2.0新增）
 
-1. **目标用户**（必问）
+**第一个问题（最重要）：**
+```
+💬 请先确认项目类型：
+
+1. 【0-1全新开发】从零开始做一个新产品/新功能
+   → 我会进行完整的需求分析、竞品研究、用户画像
+
+2. 【基于已有项目迭代】在现有产品基础上优化改进
+   → 我会重点分析现有问题和改进点，关注兼容和过渡
+
+3. 【参考竞品/对标】参考市场上的同类产品
+   → 我会深入分析竞品，找出差异化和突破点
+
+请回复：1 / 2 / 3
+```
+
+### 参考资源收集（v2.0新增）
+
+**第二个问题（启动Phase 0参考分析）：**
+```
+💬 你是否有以下参考资源可以提供？
+
+📱 现有系统（如果是迭代项目）：
+   • 现网URL和测试账号密码
+   • 现有系统截图或录屏
+   • 现有功能清单或PRD
+
+🎯 竞品参考：
+   • 竞品网址（可公开访问的）
+   • 竞品截图/UI/UE设计稿
+   • 你关注的具体功能点
+
+🎨 设计参考：
+   • UI设计稿、品牌规范
+   • 参考网站（你喜欢的风格）
+   • 设计系统/组件库文档
+
+如果有，请直接发送：
+   • 网址（我会自动抓取分析）
+   • 截图（直接上传图片）
+   • 文件路径（如果是本地文件）
+
+如果没有，回复"没有"，我们继续下一步。
+```
+
+**处理用户提供的参考资源：**
+- 如果用户提供了URL → 使用playwright-cli抓取网页内容
+- 如果用户提供了图片 → 分析图片内容（UI/UX/竞品界面）
+- 如果用户提供了账号密码 → 登录后抓取内部系统
+- 如果用户提供了文件路径 → 读取文件内容
+
+**自动触发Phase 0参考分析：**
+```
+📁 检测到参考资源：
+   • 现网URL: https://xxx.com (账号: xxx)
+   • 竞品截图: 3张
+   • 设计稿: Figma链接
+
+🔍 是否开始参考分析？
+   • "开始分析" → 使用playwright抓取网页，分析图片
+   • "跳过" → 直接进入需求澄清
+```
+
+### 访谈问题清单（按需追问）
+
+**基础问题：**
+
+1. **项目背景**（必问）
+   - 【0-1】目标用户是谁？他们有什么痛点？
+   - 【迭代】现有系统最大的问题是什么？用户反馈如何？
+   - 【对标】竞品哪里做得好？我们要怎么超越？
+
+2. **目标用户**（必问）
    - 这个产品是给谁用的？
    - 他们大概是什么年龄段？什么职业？
    - 他们在什么场景下会用这个产品？
 
-2. **核心痛点**（必问）
+3. **核心痛点**（必问）
    - 他们现在怎么解决这个问题？
    - 现在的解决方案有什么不好的地方？
    - 如果不做这个产品，他们会怎么样？
 
-3. **成功标准**（必问）
+4. **成功标准**（必问）
    - 怎么算这个产品成功了？
    - 你期望用户达到什么样的使用频率？
    - 有没有数字化的目标？（比如留存率、付费率）
 
-4. **竞品情况**（选问）
+5. **竞品情况**（选问）
    - 你知道有哪些类似的产品吗？
    - 你觉得他们做得怎么样？
    - 我们要跟他们的区别是什么？
 
-5. **约束条件**（选问）
+6. **约束条件**（选问）
    - 大概什么时候需要上线？
    - 技术团队规模怎么样？
    - 有没有什么必须遵守的规则或限制？
 
-6. **商业目标**（选问）
+7. **商业目标**（选问）
    - 这个产品怎么赚钱？（如果有计划的话）
    - 打算免费还是付费？
 
@@ -516,17 +667,32 @@ AI: 🔄 正在分析 PRD 文档...
 - 提供**一键连续模式**（Yolo模式）供熟悉用户使用
 
 ```
-Phase 0: 参考网页分析（可选，当用户提供URL/配置文件时触发）
-    ↓ 读取 07-references/reference-config.md
-    ↓ 显示检测到的资源清单，询问："是否开始分析？"
-         - 是 → 继续
-         - 否 → 跳过，进入Phase 1
-    ↓ （如需要登录）询问操作权限（仅查看/自由操作/无限制）
-    ↓ 分析网页/图片，生成 00-reference-analysis.md
-    ↓ 询问分析结论："基于分析结果，请选择模式："
+Phase 0: 项目启动与参考资源收集（v2.0优化）
+
+步骤1: 项目类型确认
+    ↓ 询问用户项目类型：
+         - 0-1全新开发
+         - 基于已有项目迭代
+         - 参考竞品/对标
+
+步骤2: 参考资源收集（关键优化）
+    ↓ 主动询问用户是否有参考资源：
+         💬 你是否有以下参考资源可以提供？
+         📱 现有系统（如果是迭代项目）：现网URL、账号密码、截图
+         🎯 竞品参考：竞品网址、截图、关注的功能点
+         🎨 设计参考：UI设计稿、品牌规范、参考网站
+    ↓ 如果用户提供了资源：
+         - URL → 使用playwright-cli自动抓取
+         - 截图/图片 → 保存到 07-references/images/
+         - 文件 → 保存到 07-references/
+    ↓ 生成 07-references/reference-config.md 记录配置
+    ↓ 生成 00-reference-analysis.md 分析报告
+
+步骤3: 分析结论确认
+    ↓ 基于参考分析，询问："请选择分析模式："
          - 迭代优化 → 侧重现有功能改进
          - 对标开发 → 侧重差异化分析
-         - 仅作参考 → 作为Phase 3竞品研究素材
+         - 仅作参考 → 作为竞品研究素材
 
 Phase 1: 需求澄清（交互式访谈）
     ↓ 检查是否存在 01-requirement-draft.md
@@ -564,7 +730,7 @@ Phase 5: PRD 生成前统一确认
 
          ✍️ 产品经理风格选择：
 
-         📁 扫描风格库 (templates/pm-styles/)...
+         📁 扫描风格库 (templates/writing-styles/)...
 
          【情况A：检测到多种风格】
          可用风格：
@@ -574,13 +740,13 @@ Phase 5: PRD 生成前统一确认
 
          【情况B：仅默认风格】
          ℹ️ 使用系统默认风格
-         💡 提示：使用 `/ai-pm style analyze {PRD文件}` 可创建自定义风格
+         💡 提示：使用 `/ai-pm writing-style analyze {PRD文件}` 可创建自定义风格
 
          💬 请选择风格（回复数字）：
 
          🎨 设计规范选择：
 
-         📁 扫描设计规范 (templates/design-systems/)...
+         📁 扫描设计规范 (templates/ui-specs/)...
 
          【情况A：检测到设计规范】
          可用设计规范：
@@ -590,7 +756,7 @@ Phase 5: PRD 生成前统一确认
 
          【情况B：未检测到设计规范】
          ℹ️ 未检测到设计规范，将使用默认风格
-         💡 提示：使用 `/ai-pm design-system` 可上传设计规范
+         💡 提示：使用 `/ai-pm ui-spec` 可上传设计规范
 
          💬 请确认：
             • "确认，生成PRD" → 立即生成（使用指定风格+规范）
@@ -631,7 +797,7 @@ Phase 6: 原型生成（Token消耗提示）
 Phase 6: 原型生成（执行）
     ↓ 读取 PRD 中确定的设计规范
          - 从 PRD 文档读取已选定的设计规范
-         - 加载 templates/design-systems/{规范名}/design-tokens.json
+         - 加载 templates/ui-specs/{规范名}/design-tokens.json
     ↓ 询问设备类型（如未指定）
          ```
          💬 请指定设备类型：
@@ -643,6 +809,34 @@ Phase 6: 原型生成（执行）
          - 应用 PRD 阶段选定的设计规范
          - 应用指定的设备类型
     ↓ 输出完成总结
+    ↓ 询问是否进入需求评审
+         ```
+         ✅ 原型生成完成！
+
+         💬 是否进行需求评审？
+            • "开始评审" → 进入 Phase 7
+            • "跳过" → 流程结束
+         ```
+
+Phase 7: 需求评审（可选，多轮迭代）
+    ↓ 读取 PRD (05-PRD-v1.0.md) 和原型 (06-prototype/)
+    ↓ 调用 ai-pm-review 技能
+         - 研发总监评审（技术可行性、开发成本）
+         - 资深架构师评审（架构设计、扩展性）
+         - 产品总监评审（产品定位、商业价值）
+         - 设计总监评审（用户体验、交互设计）
+    ↓ 生成 08-review-report-v{N}.md
+    ↓ 用户确认修改范围
+         - 全部修改 / 核心修改 / 最小修改 / 指定修改
+    ↓ 基于评审意见修改 PRD（v2.0优化：直接在原文档更新）
+         - 在修订日志中增加新版本记录
+         - 直接在 05-PRD-v1.0.md 中修改内容
+         - 不创建新文件，保持文档唯一性
+         - 更新 06-prototype/（如有需要）
+    ↓ 生成修改说明文档 08-review-changes.md（可选）
+    ↓ 询问是否再次评审
+         - 再次评审 → 生成 08-review-report-v{N+1}.md
+         - 确认完成 → 流程结束，进入开发阶段
 ```
 
 ### 用户体验优化点
@@ -1371,16 +1565,18 @@ $ playwright-cli state-save ./07-references/zhixue-session.json
 | `/ai-pm story` | 在当前项目执行用户故事 |
 | `/ai-pm prd` | 在当前项目生成 PRD |
 | `/ai-pm prototype` | 在当前项目生成网页原型 |
+| `/ai-pm review` | 在当前项目执行需求评审 |
+| `/ai-pm review --round=2` | 进行第二轮评审 |
 | `/ai-pm https://example.com` | 分析参考网页（支持账号密码） |
 | `/ai-pm fetch` | 重新抓取参考网页 |
 | `/ai-pm reset` | 清空当前项目输出，重新开始 |
 | `/ai-pm delete {项目名}` | 删除指定项目 |
-| `/ai-pm style` | 进入产品经理风格管理 |
-| `/ai-pm style list` | 列出所有可用风格 |
-| `/ai-pm style analyze {文件路径}` | 分析 PRD 创建风格 |
-| `/ai-pm design-system` | 进入设计规范管理（调用 ai-pm-design-system） |
-| `/ai-pm design-system list` | 列出所有设计规范 |
-| `/ai-pm design-system upload {规范名}` | 上传并解析设计规范 |
+| `/ai-pm writing-style` | 进入写作风格管理 |
+| `/ai-pm writing-style list` | 列出所有可用风格 |
+| `/ai-pm writing-style analyze {文件路径}` | 分析 PRD 写作风格 |
+| `/ai-pm ui-spec` | 进入 UI 规范管理（调用 ai-pm-ui-spec） |
+| `/ai-pm ui-spec list` | 列出所有 UI 规范 |
+| `/ai-pm ui-spec upload {规范名}` | 上传并解析 UI 规范 |
 
 ## 边缘情况处理
 
@@ -1393,6 +1589,237 @@ $ playwright-cli state-save ./07-references/zhixue-session.json
 | 用户想跳过某个阶段 | 询问原因，同意后跳过 |
 | 项目名重复 | 提示已存在，询问是否覆盖或重命名 |
 | 输出文件夹不存在 | 自动创建 |
+
+## Phase 7: 需求评审详细说明
+
+### 评审流程概述
+
+需求评审是 PRD 和原型完成后的**可选但推荐**的阶段，通过模拟真实的评审会议，让四大专业角色从不同维度审视方案，提前发现问题并优化。
+
+### 触发条件
+
+```
+自动触发：原型生成完成后询问用户
+手动触发：/ai-pm review
+指定轮次：/ai-pm review --round=2
+```
+
+### 评审交互示例
+
+**Phase 6 完成后询问：**
+```
+✅ 原型生成完成！
+
+📁 项目产出：
+   • PRD: 05-PRD-v1.0.md
+   • 原型: 06-prototype/
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 是否进行需求评审？
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+模拟真实企业级评审会议，引入八大角色：
+   👨‍💼 研发总监 - 技术可行性、开发成本、工期
+   🏗️ 资深架构师 - 系统架构、扩展性、性能
+   📊 产品总监 - 产品定位、商业价值、优先级
+   🎨 设计总监 - 用户体验、交互设计、视觉
+   📅 项目经理 - 项目排期、风险管理、资源协调
+   🧪 QA总监 - 可测试性、验收标准、边界覆盖
+   🔒 安全合规官 - 数据安全、隐私保护、合规审查
+   📈 运营增长官 - 冷启动、运营工具、数据埋点
+
+💡 评审收益：
+   • 提前发现技术风险和体验问题
+   • 获得专业的优化建议
+   • 覆盖安全合规和运营增长维度
+   • 提升方案的可落地性
+
+💬 请选择：
+   • "开始评审" → 八角色全量评审（推荐企业项目）
+   • "精简评审" → 四角色核心评审（适合快速迭代）
+   • "安全专项" → 仅安全合规评审（适合敏感项目）
+   • "跳过" → 流程结束，进入开发阶段
+```
+
+**Phase 7 执行过程：**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄 阶段 7/7：需求评审（第1轮）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📥 输入：PRD v1.0 + 原型
+📤 输出：评审报告 + 修改后的 PRD v1.1
+⏱️ 预计时间：5-8 分钟
+
+🔄 正在执行八大角色评审...
+
+[1/8] 👨‍💼 研发总监评审中...
+   ✓ 技术可行性评估
+   ✓ 开发工作量估算
+   ✓ 风险识别
+   发现问题: 1 Critical, 2 Major, 3 Minor
+
+[2/8] 🏗️ 资深架构师评审中...
+   ✓ 架构合理性评估
+   ✓ 技术选型建议
+   ✓ 扩展性分析
+   发现问题: 0 Critical, 3 Major, 2 Minor
+
+[3/8] 📊 产品总监评审中...
+   ✓ 产品定位评估
+   ✓ 需求价值分析
+   ✓ 优先级评审
+   发现问题: 2 Critical, 1 Major, 2 Minor
+
+[4/8] 🎨 设计总监评审中...
+   ✓ 交互流程评审
+   ✓ 体验细节检查
+   ✓ 设计规范审查
+   发现问题: 0 Critical, 2 Major, 4 Minor
+
+[5/8] 📅 项目经理评审中...
+   ✓ 排期合理性评估
+   ✓ 风险识别
+   ✓ 资源协调分析
+   发现问题: 0 Critical, 1 Major, 2 Minor
+
+[6/8] 🧪 QA总监评审中...
+   ✓ 可测试性评估
+   ✓ 验收标准检查
+   ✓ 边界情况分析
+   发现问题: 1 Critical, 2 Major, 3 Minor
+
+[7/8] 🔒 安全合规官评审中...
+   ✓ 数据安全审查
+   ✓ 合规性检查
+   ✓ 权限控制评估
+   发现问题: 1 Critical, 0 Major, 1 Minor
+
+[8/8] 📈 运营增长官评审中...
+   ✓ 冷启动方案评估
+   ✓ 运营工具检查
+   ✓ 数据埋点审查
+   发现问题: 0 Critical, 2 Major, 2 Minor
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 第1轮评审完成！
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+总计发现问题: 5 Critical + 13 Major + 19 Minor = 37 个
+
+Critical 问题（必须修改）：
+   1. [QA] 核心功能缺少验收标准
+   2. [安全] 个人敏感信息未脱敏
+   3. [产品] 用户分层不够细致
+   4. [研发] 实时同步技术方案不明确
+   5. [QA] 边界情况覆盖不完整
+
+Major 问题（建议修改）：
+   1. [架构] 缺少缓存策略设计
+   2. [产品] P0 功能过多，建议拆分版本
+   3. [项目] 里程碑设置过于密集
+   4. [运营] 缺少冷启动内容填充方案
+   ...
+
+📄 评审报告已保存: 08-review-report-v1.md
+
+💬 请选择修改策略：
+   • "全部修改" → 修改所有 Critical + Major + Minor
+   • "核心修改" → 仅修改 Critical + Major（推荐）
+   • "最小修改" → 仅修改 Critical
+   • "查看详情" → 先查看完整评审报告
+```
+
+**修改执行过程：**
+```
+🔄 正在基于评审意见修改...
+
+用户选择：核心修改（Critical + Major）
+
+[1/5] 分析修改影响...
+   ✓ 识别受影响的功能模块
+   ✓ 评估修改复杂度
+   ✓ 制定修改计划
+
+[2/5] 修改 PRD 文档...
+   ✓ 补充实时同步技术方案（研发意见）
+   ✓ 细化用户角色和权限设计（产品意见）
+   ✓ 拆分 P0 功能到两个版本（产品意见）
+   ✓ 补充缓存策略设计（架构意见）
+   ✓ 补充核心功能验收标准（QA意见）
+   ✓ 补充敏感信息脱敏方案（安全意见）
+   ✓ 调整里程碑和缓冲时间（项目意见）
+   ✓ 补充冷启动运营方案（运营意见）
+   ...
+
+[3/5] 更新原型...
+   ✓ 补充空状态设计（设计意见）
+   ✓ 优化交互流程（设计意见）
+   ✓ 增加运营后台入口（运营意见）
+   ...
+
+[4/5] 更新配置和模板...
+   ✓ 更新测试用例模板（QA意见）
+   ✓ 补充数据埋点清单（运营意见）
+
+[5/5] 更新版本信息...
+   PRD: v1.0 → v1.1
+   保存: 05-PRD-v1.1.md
+   备份: 05-PRD-v1.0.md.bak
+   生成: 08-review-changes-v1.1.md（修改说明）
+
+✅ 修改完成！
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 修改统计
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+已解决问题:
+   • Critical: 5/5 (100%)
+   • Major: 10/13 (77%)
+   • Minor: 0/19 (0%, 本轮暂不处理)
+
+主要变更:
+   • 新增: 技术方案章节（实时同步）
+   • 新增: 安全合规章节（数据脱敏）
+   • 新增: 验收标准矩阵（QA要求）
+   • 新增: 冷启动运营方案
+   • 优化: 用户角色设计（5种角色）
+   • 调整: 功能优先级（拆分 v1.0/v1.1）
+   • 调整: 里程碑计划（增加缓冲）
+   • 补充: 缓存策略和性能指标
+
+💬 是否进行第二轮评审？
+   • "再次评审" → 生成 08-review-report-v2.md
+   • "确认完成" → 评审流程结束，进入开发
+   • "查看修改" → 显示本次修改对比
+```
+
+### 多轮评审机制
+
+**第一轮评审**：全面审视，发现主要问题
+**第二轮评审**：验证修改效果，关注新问题
+**终轮评审**：确认达到开发准入标准
+
+**通过标准**：
+- Critical 问题全部解决
+- Major 问题解决率 ≥ 80%
+- 无新引入的 Critical 问题
+
+### 与主流程的集成
+
+```
+完整流程（含评审）：
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7
+需求澄清 → 需求分析 → 竞品研究 → 用户故事 → PRD生成 → 原型生成 → 需求评审
+                                                              ↓
+                                                        [多轮迭代]
+                                                              ↓
+                                                        进入开发
+
+精简流程（跳过评审）：
+Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → 进入开发
+```
 
 ## Anti-Pattern
 
