@@ -791,6 +791,15 @@
             color: white;
         }
 
+        .module-badge.expert {
+            background: linear-gradient(135deg, #AF52DE, #5856D6);
+            color: white;
+        }
+
+        .toc-group-title.expert {
+            color: #AF52DE;
+        }
+
         .toc-group {
             margin-bottom: var(--spacing-lg);
         }
@@ -887,8 +896,9 @@
             <p class="hero-subtitle">从零开始掌握 AI 产品经理，20 分钟从想法到完整 PRD + 可交互原型</p>
             <div class="hero-badges">
                 <span class="hero-badge">无需编程基础</span>
-                <span class="hero-badge">7 个实战案例</span>
+                <span class="hero-badge">9 个实战案例</span>
                 <span class="hero-badge">完整交互示例</span>
+                <span class="hero-badge">v1.2.0</span>
             </div>
         </div>
     </section>
@@ -897,7 +907,7 @@
     <section class="features">
         <div class="features-content">
             <div class="features-header">
-                <h2 class="features-title">v1.1.0 功能一览</h2>
+                <h2 class="features-title">v1.2.0 功能一览</h2>
                 <p class="features-subtitle">AI_PM 目前支持以下核心能力</p>
             </div>
             <div class="features-grid">
@@ -946,6 +956,21 @@
                     <div class="feature-title">对标开发模式</div>
                     <p class="feature-desc">针对竞品做差异化，分析差异化机会，输出对标版 PRD</p>
                 </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✍️</div>
+                    <div class="feature-title">产品经理风格管理</div>
+                    <p class="feature-desc">分析你的 PRD 写作风格，创建风格配置，生成符合个人习惯的文档</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <div class="feature-title">设计规范管理</div>
+                    <p class="feature-desc">上传和管理设计规范，生成原型时自动应用，保持视觉一致性</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <div class="feature-title">浏览器自动化</div>
+                    <p class="feature-desc">内置 Playwright CLI，支持网页截图、自动化测试、数据抓取</p>
+                </div>
             </div>
         </div>
     </section>
@@ -979,10 +1004,6 @@
                         <span class="toc-number">3</span>
                         <span class="toc-text">工作流程详解</span>
                     </a>
-                    <a href="#pm" class="toc-item">
-                        <span class="toc-number">4</span>
-                        <span class="toc-text">多项目管理</span>
-                    </a>
                 </div>
             </div>
 
@@ -991,12 +1012,31 @@
                 <div class="toc-group-title advanced">高阶操作</div>
                 <div class="toc-grid">
                     <a href="#project2" class="toc-item">
-                        <span class="toc-number">5</span>
+                        <span class="toc-number">4</span>
                         <span class="toc-text">迭代优化模式</span>
                     </a>
                     <a href="#project3" class="toc-item">
-                        <span class="toc-number">6</span>
+                        <span class="toc-number">5</span>
                         <span class="toc-text">竞品对标模式</span>
+                    </a>
+                    <a href="#pm" class="toc-item">
+                        <span class="toc-number">6</span>
+                        <span class="toc-text">多项目管理</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 专家级 -->
+            <div class="toc-group">
+                <div class="toc-group-title expert">专家级</div>
+                <div class="toc-grid">
+                    <a href="#style" class="toc-item">
+                        <span class="toc-number">7</span>
+                        <span class="toc-text">产品经理风格</span>
+                    </a>
+                    <a href="#design" class="toc-item">
+                        <span class="toc-number">8</span>
+                        <span class="toc-text">设计规范管理</span>
                     </a>
                 </div>
             </div>
@@ -1006,7 +1046,7 @@
                 <div class="toc-group-title">附录</div>
                 <div class="toc-grid">
                     <a href="#faq" class="toc-item">
-                        <span class="toc-number">7</span>
+                        <span class="toc-number">9</span>
                         <span class="toc-text">常见问题</span>
                     </a>
                 </div>
@@ -1455,7 +1495,194 @@ cp -r AI_PM/output/projects/my-project ./backup/
 cp -r AI_PM/output/projects ./backup-all/</pre></div>
         </section>
 
-        <!-- Section 7: FAQ (Appendix) -->
+        <!-- Section 7: Style Management (Expert) -->
+        <section class="section" id="style">
+            <div class="section-header">
+                <span class="module-badge expert">🎓 专家级</span>
+                <div class="section-eyebrow">Style Management</div>
+                <h2 class="section-title">产品经理风格管理</h2>
+                <p class="section-description">分析你的 PRD 写作风格，生成符合个人习惯的文档</p>
+            </div>
+
+            <h3>什么是风格管理？</h3>
+            <p>每个人的 PRD 写作风格都不同：有的喜欢用表格，有的喜欢详细描述，有的用 P0/P1/P2 标记优先级，有的用高/中-低。</p>
+            <p><strong>风格管理功能让 AI 学习你的写作风格，生成符合你习惯的 PRD。</strong></p>
+
+            <h3>创建你的风格</h3>
+            <div class="code-block"><pre># 分析你的 PRD 文件，创建风格配置
+/ai-pm style analyze ~/Documents/my-prd.md
+
+# AI 会询问风格名称
+💬 请为风格命名（如：my-company-style）：
+
+你: my-style
+
+# AI 分析完成后会生成：
+# - templates/pm-styles/my-style/style-config.json
+# - templates/pm-styles/my-style/examples/original-prd.md</pre></div>
+
+            <h3>风格分析维度</h3>
+            <table>
+                <tr>
+                    <th>维度</th>
+                    <th>说明</th>
+                    <th>示例</th>
+                </tr>
+                <tr>
+                    <td>文档结构</td>
+                    <td>章节组织方式、层级深度</td>
+                    <td>8章结构 / 精简5章</td>
+                </tr>
+                <tr>
+                    <td>写作风格</td>
+                    <td>语言特征、详细程度</td>
+                    <td>技术严谨 / 产品思维</td>
+                </tr>
+                <tr>
+                    <td>格式偏好</td>
+                    <td>表格字段、标注方式</td>
+                    <td>P0-P2 / 高中低</td>
+                </tr>
+                <tr>
+                    <td>内容侧重</td>
+                    <td>用户故事、数据指标比重</td>
+                    <td>详细 / 简要</td>
+                </tr>
+            </table>
+
+            <h3>使用风格生成 PRD</h3>
+            <div class="code-block"><pre># 生成 PRD 时会自动提示选择风格
+/ai-pm prd
+
+AI: ✍️ 产品经理风格选择：
+
+可用风格：
+   1. default（系统默认 - 标准平衡风格）
+   2. enterprise-standard（企业标准 - 技术严谨型）
+   3. my-style（自定义风格）
+
+💬 请选择风格（回复数字）：3</pre></div>
+
+            <h3>管理风格</h3>
+            <div class="code-block"><pre># 查看所有风格
+/ai-pm style list
+
+# 删除风格
+/ai-pm style delete old-style
+
+# 进入风格管理菜单
+/ai-pm style</pre></div>
+
+            <div class="tip">
+                <strong>💡 使用建议：</strong>团队协作时，建议统一使用相同风格，确保 PRD 文档一致性。
+            </div>
+        </section>
+
+        <!-- Section 8: Design System (Expert) -->
+        <section class="section" id="design">
+            <div class="section-header">
+                <span class="module-badge expert">🎓 专家级</span>
+                <div class="section-eyebrow">Design System</div>
+                <h2 class="section-title">设计规范管理</h2>
+                <p class="section-description">上传和管理设计规范，保持原型视觉一致性</p>
+            </div>
+
+            <h3>什么是设计规范？</h3>
+            <p>设计规范定义了产品的视觉风格：颜色、字体、组件样式、间距等。</p>
+            <p><strong>设计规范管理让你可以复用设计规范，确保生成的原型符合你的设计体系。</strong></p>
+
+            <h3>两种管理方式</h3>
+            <table>
+                <tr>
+                    <th>类型</th>
+                    <th>存储位置</th>
+                    <th>适用场景</th>
+                </tr>
+                <tr>
+                    <td>全局设计规范</td>
+                    <td><code>templates/design-systems/</code></td>
+                    <td>跨项目共享（推荐）</td>
+                </tr>
+                <tr>
+                    <td>项目级设计规范</td>
+                    <td><code>projects/项目名/08-design-system/</code></td>
+                    <td>项目专属风格</td>
+                </tr>
+            </table>
+
+            <h3>创建全局设计规范</h3>
+            <div class="code-block"><pre># 步骤 1：创建规范文件夹
+mkdir -p AI_PM/templates/design-systems/my-company
+
+# 步骤 2：创建规范说明
+# 编辑 AI_PM/templates/design-systems/my-company/README.md</pre></div>
+
+            <h3>规范文件夹结构</h3>
+            <div class="file-tree">
+                <div class="file-tree-line">design-systems/</div>
+                <div class="file-tree-line">└── my-company/</div>
+                <div class="file-tree-line">    ├── README.md              <span class="file-tree-comment">规范说明</span></div>
+                <div class="file-tree-line">    ├── brand-assets/          <span class="file-tree-comment">品牌资产</span></div>
+                <div class="file-tree-line">    │   ├── logo.png</div>
+                <div class="file-tree-line">    │   └── color-palette.png</div>
+                <div class="file-tree-line">    ├── ui-components/         <span class="file-tree-comment">UI 组件截图</span></div>
+                <div class="file-tree-line">    │   ├── buttons.png</div>
+                <div class="file-tree-line">    │   ├── forms.png</div>
+                <div class="file-tree-line">    │   └── cards.png</div>
+                <div class="file-tree-line">    └── page-designs/          <span class="file-tree-comment">页面设计稿</span></div>
+                <div class="file-tree-line">        ├── dashboard.png</div>
+                <div class="file-tree-line">        └── list-page.png</div>
+            </div>
+
+            <h3>使用设计规范生成原型</h3>
+            <div class="code-block"><pre># 生成原型时会自动提示选择设计规范
+/ai-pm prototype
+
+AI: 🎨 设计规范选择：
+
+可用规范：
+   1. enterprise-standard（企业级 B 端规范）
+   2. my-company（自定义规范）
+
+💬 请选择规范（回复数字）：2
+
+🎨 设备类型：
+   • 移动端 App
+   • Web 端
+   • 响应式
+
+你: Web 端</pre></div>
+
+            <h3>风格 vs 设计规范</h3>
+            <table>
+                <tr>
+                    <th>对比项</th>
+                    <th>产品经理风格</th>
+                    <th>设计规范</th>
+                </tr>
+                <tr>
+                    <td>关注点</td>
+                    <td>PRD 写作风格、结构、术语</td>
+                    <td>UI 视觉风格、组件、交互</td>
+                </tr>
+                <tr>
+                    <td>使用时机</td>
+                    <td>生成 PRD 文档时</td>
+                    <td>生成原型时</td>
+                </tr>
+                <tr>
+                    <td>影响内容</td>
+                    <td>文字描述、章节结构、表格格式</td>
+                    <td>原型视觉、颜色、字体、间距</td>
+                </tr>
+            </table>
+
+            <div class="tip">
+                <strong>💡 最佳实践：</strong>建议同时配置风格和设计规范，这样生成的 PRD 和原型都能保持一致性。
+            </div>
+        </section>
+
+        <!-- Section 9: FAQ (Appendix) -->
         <section class="section" id="faq">
             <div class="section-header">
                 <span class="module-badge" style="background: linear-gradient(135deg, #8E8E93, #636366); color: white;">📎 附录</span>
@@ -1540,7 +1767,7 @@ rm AI_PM/output/projects/项目名/03-*.md</pre></div>
                 <a href="README.md" class="footer-link">项目简介</a>
                 <a href="CHANGELOG.md" class="footer-link">更新日志</a>
             </div>
-            <div class="footer-text">AI_PM - 你的AI产品经理 · by KettyWu · 祝你使用愉快</div>
+            <div class="footer-text">AI_PM v1.2.0 - 你的AI产品经理 · 祝你使用愉快</div>
         </div>
     </footer>
 

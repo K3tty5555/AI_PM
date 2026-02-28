@@ -6,6 +6,99 @@
 
 ## 📌 最新版本
 
+### v1.2.0 (2026-03-01)
+
+**新增功能**
+
+| 功能 | 说明 | 使用方式 |
+|------|------|----------|
+| ✍️ **产品经理风格管理** | 分析 PRD 文档，提取写作风格并复用 | `/ai-pm style analyze {文件}` |
+| 🎨 **设计规范管理** | 支持上传和复用设计规范 | `templates/design-systems/` |
+| 🌐 **Playwright CLI 技能** | 独立的浏览器自动化能力 | `playwright-cli` 命令 |
+| 📐 **8章标准 PRD 结构** | 标准化的 PRD 文档模板 | 自动生成 |
+
+**风格管理功能**
+
+- 支持分析用户上传的 PRD，提取风格特征
+- 支持管理多种风格（B端/C端/数据产品等）
+- 内置 `default` 和 `enterprise-standard` 预设风格
+- 生成结构化的 `style-config.json` 配置文件
+
+**设计规范功能**
+
+- 支持创建全局设计规范（跨项目共享）
+- 支持项目级设计规范（项目专属）
+- 内置 `example-enterprise` 企业级规范示例
+- 生成原型时自动应用选定设计规范
+
+**改进优化**
+
+- ✅ **PRD 生成增强**：支持按指定风格生成文档
+- ✅ **风格选择**：PRD 生成前可选择产品经理风格
+- ✅ **规范选择**：原型生成前可选择设计规范
+
+**文件变更**
+
+```
+AI_PM/
+├── .claude/skills/             # 技能定义（标准功能）
+│   ├── ai-pm/                  # 主控技能
+│   ├── ai-pm-analyze/          # 需求分析技能
+│   ├── ai-pm-research/         # 竞品研究技能
+│   ├── ai-pm-story/            # 用户故事技能
+│   ├── ai-pm-prd/              # PRD生成技能
+│   ├── ai-pm-prototype/        # 原型生成技能
+│   ├── ai-pm-style/            # 新增：风格管理技能
+│   └── playwright-cli/         # 新增：浏览器自动化技能
+│
+├── templates/                  # 全局模板（标准功能）
+│   ├── pm-styles/              # 新增：产品经理风格库
+│   │   ├── default/
+│   │   └── enterprise-standard/
+│   ├── design-systems/         # 新增：设计规范库
+│   │   └── example-enterprise/
+│   └── prd-templates/          # PRD模板
+│
+└── output/projects/            # 用户项目（您的作品）
+    └── {您的项目}/             # 使用AI_PM创建的项目
+        ├── 01-requirement-draft.md
+        ├── 02-analysis-report.md
+        ├── 03-competitor-report.md
+        ├── 04-user-stories.md
+        ├── 05-PRD-v1.0.md
+        └── 06-prototype/
+```
+
+**目录结构说明**
+
+| 目录 | 类型 | 说明 |
+|------|------|------|
+| `.claude/skills/` | 工具功能 | AI_PM 核心技能定义，请勿修改 |
+| `templates/` | 工具功能 | 全局模板和配置，可自定义扩展 |
+| `output/projects/` | 用户项目 | 您使用 AI_PM 创建的所有项目 |
+
+**使用示例**
+
+```bash
+# 分析你的 PRD 创建风格
+/ai-pm style analyze ~/Documents/my-prd.md
+
+# 查看已有风格
+/ai-pm style list
+
+# 使用特定风格生成 PRD（生成时会提示选择）
+/ai-pm prd
+
+# 浏览器自动化（独立功能）
+playwright-cli open https://example.com
+playwright-cli screenshot
+playwright-cli close
+```
+
+---
+
+## 🗂️ 历史版本
+
 ### v1.1.0 (2026-02-28)
 
 **新增功能**
@@ -140,6 +233,50 @@ AI_PM/
 
 ## 🔄 升级指南
 
+### 从 v1.1.0 升级到 v1.2.0
+
+**步骤 1：添加新技能**
+
+```bash
+# 复制新技能到 skills 目录
+cp -r ai-pm-style/ AI_PM/.claude/skills/
+cp -r playwright-cli/ AI_PM/.claude/skills/
+
+# 确保 skills 目录结构
+ls AI_PM/.claude/skills/
+# 应有：ai-pm, ai-pm-analyze, ai-pm-research, ai-pm-story, ai-pm-prd, ai-pm-prototype, ai-pm-style, playwright-cli
+```
+
+**步骤 2：添加模板目录**
+
+```bash
+# 创建风格库目录
+mkdir -p AI_PM/templates/pm-styles/default
+mkdir -p AI_PM/templates/pm-styles/enterprise-standard
+
+# 创建设计规范目录
+mkdir -p AI_PM/templates/design-systems/example-enterprise
+
+# 复制配置文件
+cp style-config.json AI_PM/templates/pm-styles/default/
+cp style-config.json AI_PM/templates/pm-styles/enterprise-standard/
+```
+
+**步骤 3：更新主控技能**
+
+```bash
+# 确保 ai-pm/SKILL.md 包含风格管理和设计规范相关内容
+# 关键检查：搜索 "style" 和 "design-system" 关键字
+```
+
+**步骤 4：验证**
+
+```bash
+/ai-pm style list           # 验证风格管理
+/ai-pm list                 # 验证基础功能
+playwright-cli --version    # 验证 Playwright CLI
+```
+
 ### 从 v1.0.0 升级到 v1.1.0
 
 **步骤 1：更新核心文件**
@@ -171,25 +308,29 @@ cp AI_PM/QUICKSTART.md AI_PM/QUICKSTART.md.bak
 
 ## 📋 功能对比表
 
-| 功能 | v1.0.0 | v1.1.0 |
-|------|--------|--------|
-| 需求澄清 | ✅ | ✅ |
-| 需求分析 | ✅ | ✅ |
-| 竞品研究 | ✅ | ✅ |
-| 用户故事 | ✅ | ✅ |
-| PRD 生成 | ✅ | ✅ |
-| 原型生成 | ✅ | ✅ |
-| 多项目管理 | ✅ | ✅ |
-| **参考网页分析** | ❌ | ✅ 新增 |
-| **账号密码支持** | ❌ | ✅ 新增 |
-| **迭代优化模式** | ❌ | ✅ 新增 |
-| **对标开发模式** | ❌ | ✅ 新增 |
-| **完整新手教程** | ❌ | ✅ 新增 |
-| **版本更新日志** | ❌ | ✅ 新增 |
-| **参考资源配置文件** | ❌ | ✅ 新增 |
-| **批量分析多个网页** | ❌ | ✅ 新增 |
-| **参考图片上传分析** | ❌ | ✅ 新增 |
-| **可视化 HTML 教程** | ❌ | ✅ 新增 |
+| 功能 | v1.0.0 | v1.1.0 | v1.2.0 |
+|------|--------|--------|--------|
+| 需求澄清 | ✅ | ✅ | ✅ |
+| 需求分析 | ✅ | ✅ | ✅ |
+| 竞品研究 | ✅ | ✅ | ✅ |
+| 用户故事 | ✅ | ✅ | ✅ |
+| PRD 生成 | ✅ | ✅ | ✅ |
+| 原型生成 | ✅ | ✅ | ✅ |
+| 多项目管理 | ✅ | ✅ | ✅ |
+| 参考网页分析 | ❌ | ✅ | ✅ |
+| 账号密码支持 | ❌ | ✅ | ✅ |
+| 迭代优化模式 | ❌ | ✅ | ✅ |
+| 对标开发模式 | ❌ | ✅ | ✅ |
+| 完整新手教程 | ❌ | ✅ | ✅ |
+| 版本更新日志 | ❌ | ✅ | ✅ |
+| 参考资源配置文件 | ❌ | ✅ | ✅ |
+| 批量分析多个网页 | ❌ | ✅ | ✅ |
+| 参考图片上传分析 | ❌ | ✅ | ✅ |
+| 可视化 HTML 教程 | ❌ | ✅ | ✅ |
+| **产品经理风格管理** | ❌ | ❌ | ✅ 新增 |
+| **设计规范管理** | ❌ | ❌ | ✅ 新增 |
+| **Playwright CLI** | ❌ | ❌ | ✅ 新增 |
+| **8章标准 PRD 结构** | ❌ | ❌ | ✅ 新增 |
 
 ---
 
@@ -244,5 +385,5 @@ CHANGELOG 仅记录**功能性更新**，以下内容不记录：
 
 ---
 
-**当前版本：v1.1.0**
-**最后更新：2026-02-28**
+**当前版本：v1.2.0**
+**最后更新：2026-03-01**
