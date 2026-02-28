@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI_PM 教程中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0071e3;
+            --primary-dark: #0051a2;
+            --secondary: #5e5ce6;
+            --success: #34c759;
+            --warning: #ff9500;
+            --danger: #ff3b30;
+            --gray-50: #f5f5f7;
+            --gray-100: #e8e8ed;
+            --gray-200: #d2d2d7;
+            --gray-400: #86868b;
+            --gray-600: #424245;
+            --gray-800: #1d1d1f;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* 顶部导航 */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--gray-100);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-right: 48px;
+        }
+
+        .header-brand .icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .nav-item {
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            background: transparent;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--gray-800);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-item .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--danger);
+            color: white;
+            font-size: 10px;
+            border-radius: 10px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-md);
+            border: none;
+            background: var(--gray-50);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            color: var(--gray-600);
+        }
+
+        .btn-icon:hover {
+            background: var(--gray-100);
+            color: var(--gray-800);
+        }
+
+        /* 主内容区 */
+        .main-container {
+            margin-top: 64px;
+            min-height: calc(100vh - 64px);
+        }
+
+        .content-section {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 侧边导航 */
+        .sidebar-layout {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            width: 260px;
+            padding: 24px;
+            position: sticky;
+            top: 64px;
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+            border-right: 1px solid var(--gray-100);
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-400);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            padding-left: 12px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-item {
+            margin-bottom: 4px;
+        }
+
+        .sidebar-link {
+            display: block;
+            padding: 10px 12px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            color: var(--gray-600);
+            text-decoration: none;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .sidebar-link:hover {
+            background: var(--gray-50);
+            color: var(--gray-800);
+        }
+
+        .sidebar-link.active {
+            background: rgba(0,113,227,0.1);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 40px 48px;
+            max-width: 900px;
+        }
+
+        /* Hero 区域 */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            padding: 80px 48px;
+            text-align: center;
+            color: white;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 40px;
+            font-weight: 400;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* 快速入口卡片 */
+        .quick-start {
+            padding: 60px 48px;
+            background: white;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--gray-800);
+        }
+
+        .section-desc {
+            font-size: 17px;
+            color: var(--gray-400);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .mode-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .mode-card {
+            background: white;
+            border: 1px solid var(--gray-100);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transition: var(--transition);
+        }
+
+        .mode-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .mode-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .mode-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .mode-card.quick .mode-icon { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); }
+        .mode-card.standard .mode-icon { background: linear-gradient(135deg, var(--primary), #5856d6); }
+        .mode-card.deep .mode-icon { background: linear-gradient(135deg, #af52de, #8944ab); }
+        .mode-card.adaptive .mode-icon { background: linear-gradient(135deg, var(--success), #30b350); }
+
+        .mode-card .mode-icon {
+            color: white;
+        }
+
+        .mode-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--gray-800);
+        }
+
+        .mode-time {
+            font-size: 13px;
+            color: var(--gray-400);
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .mode-desc {
+            font-size: 14px;
+            color: var(--gray-600);
+            line-height: 1.6;
+        }
+
+        /* 特性网格 */
+        .features {
+            padding: 60px 48px;
+            background: var(--gray-50);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-item {
+            display: flex;
+            gap: 16px;
+            padding: 24px;
+            background: white;
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+        }
+
+        .feature-item:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, rgba(0,113,227,0.1), rgba(94,92,230,0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .feature-content h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--gray-800);
+        }
+
+        .feature-content p {
+            font-size: 14px;
+            color: var(--gray-400);
+            line-height: 1.5;
+        }
+
+        /* 命令速查 */
+        .commands-section {
+            padding: 60px 48px;
+            background: white;
+        }
+
+        .command-table {
+            max-width: 1000px;
+            margin: 0 auto;
+            border: 1px solid var(--gray-100);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .command-row {
+            display: flex;
+            align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--gray-100);
+            transition: var(--transition);
+        }
+
+        .command-row:last-child {
+            border-bottom: none;
+        }
+
+        .command-row:hover {
+            background: var(--gray-50);
+        }
+
+        .command-code {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 14px;
+            color: var(--primary);
+            background: rgba(0,113,227,0.08);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            min-width: 200px;
+            font-weight: 500;
+        }
+
+        .command-desc {
+            flex: 1;
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        .command-tag {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .tag-quick { background: rgba(255,149,0,0.1); color: var(--warning); }
+        .tag-core { background: rgba(0,113,227,0.1); color: var(--primary); }
+        .tag-review { background: rgba(175,82,222,0.1); color: #af52de; }
+
+        /* 四角色评审 */
+        .roles-section {
+            padding: 60px 48px;
+            background: linear-gradient(135deg, #1d1d1f 0%, #2d2d2f 100%);
+            color: white;
+        }
+
+        .roles-section .section-title,
+        .roles-section .section-desc {
+            color: white;
+        }
+
+        .roles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .role-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .role-card:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-4px);
+        }
+
+        .role-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+        }
+
+        .role-card.rd .role-avatar { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); }
+        .role-card.arch .role-avatar { background: linear-gradient(135deg, var(--primary), #5856d6); }
+        .role-card.pm .role-avatar { background: linear-gradient(135deg, var(--success), #30b350); }
+        .role-card.design .role-avatar { background: linear-gradient(135deg, #af52de, #8944ab); }
+
+        .role-name {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .role-focus {
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.5;
+        }
+
+        /* 完整教程内容样式 */
+        .tutorial-content h1 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: var(--gray-800);
+            letter-spacing: -0.5px;
+        }
+
+        .tutorial-content h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 48px;
+            margin-bottom: 20px;
+            color: var(--gray-800);
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--gray-100);
+        }
+
+        .tutorial-content h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: var(--gray-800);
+        }
+
+        .tutorial-content p {
+            margin-bottom: 16px;
+            color: var(--gray-600);
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .tutorial-content ul, .tutorial-content ol {
+            margin-bottom: 20px;
+            padding-left: 24px;
+        }
+
+        .tutorial-content li {
+            margin-bottom: 8px;
+            color: var(--gray-600);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .tutorial-content code {
+            font-family: 'SF Mono', Monaco, monospace;
+            background: var(--gray-50);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: var(--primary);
+        }
+
+        .tutorial-content pre {
+            background: var(--gray-800);
+            color: white;
+            padding: 20px;
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .tutorial-content pre code {
+            background: transparent;
+            color: white;
+            padding: 0;
+        }
+
+        .tutorial-content blockquote {
+            border-left: 4px solid var(--primary);
+            padding-left: 20px;
+            margin: 20px 0;
+            color: var(--gray-600);
+            font-style: italic;
+        }
+
+        .tutorial-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            font-size: 14px;
+        }
+
+        .tutorial-content th {
+            background: var(--gray-50);
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray-800);
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .tutorial-content td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        .tutorial-content tr:hover td {
+            background: var(--gray-50);
+        }
+
+        /* 版本日志样式 */
+        .changelog-timeline {
+            position: relative;
+            padding-left: 32px;
+        }
+
+        .changelog-timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--gray-200);
+        }
+
+        .version-item {
+            position: relative;
+            margin-bottom: 40px;
+            padding: 24px;
+            background: white;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-100);
+        }
+
+        .version-item::before {
+            content: '';
+            position: absolute;
+            left: -28px;
+            top: 28px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .version-item.latest::before {
+            background: var(--success);
+            box-shadow: 0 0 0 2px var(--success);
+        }
+
+        .version-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .version-number {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .version-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-latest {
+            background: rgba(52,199,89,0.1);
+            color: var(--success);
+        }
+
+        .badge-major {
+            background: rgba(0,113,227,0.1);
+            color: var(--primary);
+        }
+
+        .version-date {
+            margin-left: auto;
+            font-size: 13px;
+            color: var(--gray-400);
+        }
+
+        .version-section {
+            margin-bottom: 20px;
+        }
+
+        .version-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-800);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .version-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .version-list li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            font-size: 14px;
+            color: var(--gray-600);
+            border-bottom: 1px solid var(--gray-50);
+        }
+
+        .version-list li:last-child {
+            border-bottom: none;
+        }
+
+        .version-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 14px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--gray-200);
+        }
+
+        .version-list.feature li::before { background: var(--primary); }
+        .version-list.improve li::before { background: var(--success); }
+        .version-list.fix li::before { background: var(--warning); }
+
+        /* 移动端适配 */
+        .mobile-menu-btn {
+            display: none;
+            padding: 8px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--gray-600);
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 64px;
+                z-index: 999;
+                background: white;
+                transition: var(--transition);
+                box-shadow: var(--shadow-lg);
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .content-area {
+                padding: 24px;
+                max-width: 100%;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .overlay {
+                display: none;
+                position: fixed;
+                top: 64px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.3);
+                z-index: 998;
+            }
+
+            .overlay.show {
+                display: block;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-nav {
+                display: none;
+            }
+
+            .hero {
+                padding: 60px 24px;
+            }
+
+            .hero-title {
+                font-size: 32px;
+            }
+
+            .hero-subtitle {
+                font-size: 16px;
+            }
+
+            .quick-start, .features, .commands-section, .roles-section {
+                padding: 40px 24px;
+            }
+
+            .mode-cards, .feature-grid, .roles-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .command-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .command-code {
+                min-width: auto;
+            }
+        }
+
+        /* 搜索功能 */
+        .search-box {
+            position: relative;
+            width: 280px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 16px 10px 40px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            transition: var(--transition);
+            background: var(--gray-50);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0,113,227,0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+        }
+
+        /* 回到顶部 */
+        .back-to-top {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: white;
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--gray-600);
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+            z-index: 100;
+        }
+
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* 步骤指引 */
+        .step-flow {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 32px 0;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(0,113,227,0.05), rgba(94,92,230,0.05));
+            border-radius: var(--radius-lg);
+            overflow-x: auto;
+        }
+
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 100px;
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .step-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-align: center;
+        }
+
+        .step-arrow {
+            color: var(--gray-300);
+            font-size: 20px;
+        }
+
+        /* 提示框 */
+        .tip-box {
+            padding: 16px 20px;
+            border-radius: var(--radius-md);
+            margin: 20px 0;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .tip-box.info {
+            background: rgba(0,113,227,0.08);
+            border-left: 4px solid var(--primary);
+        }
+
+        .tip-box.success {
+            background: rgba(52,199,89,0.08);
+            border-left: 4px solid var(--success);
+        }
+
+        .tip-box.warning {
+            background: rgba(255,149,0,0.08);
+            border-left: 4px solid var(--warning);
+        }
+
+        .tip-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .tip-content {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        .tip-content strong {
+            color: var(--gray-800);
+        }
+
+        /* 标签页 */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--gray-100);
+            margin-bottom: 24px;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-400);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+        }
+
+        .tab:hover {
+            color: var(--gray-600);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <header class="header">
+        <div class="header-brand">
+            <div class="icon">AI</div>
+            <span>AI_PM 教程中心</span>
+        </div>
+        <nav class="header-nav">
+            <button class="nav-item active" data-section="home">首页</button>
+            <button class="nav-item" data-section="tutorial">完整教程</button>
+            <button class="nav-item" data-section="changelog">更新日志<span class="badge">NEW</span></button>
+        </nav>
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" placeholder="搜索教程内容..." id="searchInput">
+        </div>
+        <div class="header-actions">
+            <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+        </div>
+    </header>
+
+    <!-- 移动端遮罩 -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- 主内容区 -->
+    <main class="main-container">
+        <!-- 首页/新手引导 -->
+        <section class="content-section active" id="home">
+            <!-- Hero -->
+            <div class="hero">
+                <div class="hero-badge">v2.0.0 用户体验大升级</div>
+                <h1 class="hero-title">AI 产品经理技能套件</h1>
+                <p class="hero-subtitle">将简短需求转化为完整的产品方案。需求分析 → PRD 生成 → 原型设计 → 需求评审，全流程 AI 驱动。</p>
+                <div class="hero-actions">
+                    <button class="btn btn-primary" onclick="switchSection('tutorial')">📚 阅读完整教程</button>
+                    <button class="btn btn-secondary" onclick="showQuickStart()">⚡ 快速开始</button>
+                </div>
+            </div>
+
+            <!-- 四种工作流 -->
+            <div class="quick-start" id="quickStart">
+                <div class="section-header">
+                    <h2 class="section-title">四种工作流，按需选择</h2>
+                    <p class="section-desc">从 15 分钟快速输出到 2 小时深度评审，适配不同场景需求</p>
+                </div>
+                <div class="mode-cards">
+                    <div class="mode-card quick" onclick="showModeDetail('quick')">
+                        <div class="mode-icon">⚡</div>
+                        <div class="mode-name">快速模式</div>
+                        <div class="mode-time">15 分钟</div>
+                        <div class="mode-desc">适合简单工具类 App、个人项目或原型验证。流程：需求澄清 → PRD → 原型</div>
+                    </div>
+                    <div class="mode-card standard" onclick="showModeDetail('standard')">
+                        <div class="mode-icon">📊</div>
+                        <div class="mode-name">标准模式</div>
+                        <div class="mode-time">45 分钟</div>
+                        <div class="mode-desc">适合常规产品项目。完整 6 阶段：需求澄清 → 分析 → 竞品 → 故事 → PRD → 原型</div>
+                    </div>
+                    <div class="mode-card deep" onclick="showModeDetail('deep')">
+                        <div class="mode-icon">🔬</div>
+                        <div class="mode-name">深度模式</div>
+                        <div class="mode-time">2 小时</div>
+                        <div class="mode-desc">适合复杂企业系统。包含参考分析、完整流程、八大角色评审和多轮迭代</div>
+                    </div>
+                    <div class="mode-card adaptive" onclick="showModeDetail('adaptive')">
+                        <div class="mode-icon">🎯</div>
+                        <div class="mode-name">自适应模式</div>
+                        <div class="mode-time">动态</div>
+                        <div class="mode-desc">AI 根据需求复杂度自动选择合适模式，不确定时的最佳选择</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 核心特性 -->
+            <div class="features">
+                <div class="section-header">
+                    <h2 class="section-title">核心能力</h2>
+                    <p class="section-desc">模拟专业产品经理工作流，输出企业级产品文档</p>
+                </div>
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <div class="feature-icon">💬</div>
+                        <div class="feature-content">
+                            <h3>需求分析</h3>
+                            <p>深度访谈澄清需求，输出结构化分析报告</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🔍</div>
+                        <div class="feature-content">
+                            <h3>竞品研究</h3>
+                            <p>分析市场竞争格局，识别差异化机会</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">👤</div>
+                        <div class="feature-content">
+                            <h3>用户故事</h3>
+                            <p>编写详细用户故事和验收标准</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">📝</div>
+                        <div class="feature-content">
+                            <h3>PRD 生成</h3>
+                            <p>输出专业级产品需求文档（支持自定义模板）</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🎨</div>
+                        <div class="feature-content">
+                            <h3>原型生成</h3>
+                            <p>生成交互式网页原型（HTML+CSS+JS）</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">👥</div>
+                        <div class="feature-content">
+                            <h3>需求评审</h3>
+                            <p>八大角色专业评审，支持多轮迭代</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">✍️</div>
+                        <div class="feature-content">
+                            <h3>风格管理</h3>
+                            <p>分析你的 PRD 写作风格并自动复用</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🎯</div>
+                        <div class="feature-content">
+                            <h3>设计规范</h3>
+                            <p>上传企业设计规范，自动应用到原型</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 命令速查 -->
+            <div class="commands-section">
+                <div class="section-header">
+                    <h2 class="section-title">常用命令速查</h2>
+                    <p class="section-desc">掌握这些命令，高效使用 AI_PM</p>
+                </div>
+                <div class="command-table">
+                    <div class="command-row">
+                        <code class="command-code">/ai-pm quick "需求"</code>
+                        <span class="command-desc">快速模式全流程（澄清→PRD→原型）</span>
+                        <span class="command-tag tag-quick">快速</span>
+                    </div>
+                    <div class="command-row">
+                        <code class="command-code">/ai-pm "需求"</code>
+                        <span class="command-desc">创建新项目，选择工作流模式</span>
+                        <span class="command-tag tag-core">核心</span>
+                    </div>
+                    <div class="command-row">
+                        <code class="command-code">/ai-pm</code>
+                        <span class="command-desc">继续当前项目（断点续传）</span>
+                        <span class="command-tag tag-core">核心</span>
+                    </div>
+                    <div class="command-row">
+                        <code class="command-code">/ai-pm review</code>
+                        <span class="command-desc">启动八大角色需求评审</span>
+                        <span class="command-tag tag-review">评审</span>
+                    </div>
+                    <div class="command-row">
+                        <code class="command-code">/ai-pm review --round=2</code>
+                        <span class="command-desc">进行第二轮评审迭代</span>
+                        <span class="command-tag tag-review">评审</span>
+                    </div>
+                    <div class="command-row">
+                        <code class="command-code">/ai-pm switch {项目名}</code>
+                        <span class="command-desc">切换到指定项目</span>
+                        <span class="command-tag tag-core">管理</span>
+                    </div>
+                    <div class="command-row">
+                        <code class="command-code">/ai-pm writing-style analyze {文件}</code>
+                        <span class="command-desc">分析 PRD 写作风格</span>
+                        <span class="command-tag tag-core">风格</span>
+                    </div>
+                    <div class="command-row">
+                        <code class="command-code">/ai-pm ui-spec upload {名称}</code>
+                        <span class="command-desc">上传并解析 UI 规范</span>
+                        <span class="command-tag tag-core">规范</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 八大评审角色 -->
+            <div class="roles-section">
+                <div class="section-header">
+                    <h2 class="section-title">需求评审：八大角色</h2>
+                    <p class="section-desc">模拟真实企业级评审会议，覆盖产研运全链路，从战略到落地全方位把关</p>
+                </div>
+                <div class="roles-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div class="role-card rd">
+                        <div class="role-avatar">👨‍💼</div>
+                        <div class="role-name">研发总监</div>
+                        <div class="role-focus">技术可行性<br>开发成本评估<br>工期合理性<br>技术风险评估</div>
+                    </div>
+                    <div class="role-card arch">
+                        <div class="role-avatar">🏗️</div>
+                        <div class="role-name">资深架构师</div>
+                        <div class="role-focus">系统架构设计<br>技术选型<br>可扩展性<br>性能优化</div>
+                    </div>
+                    <div class="role-card pm">
+                        <div class="role-avatar">📊</div>
+                        <div class="role-name">产品总监</div>
+                        <div class="role-focus">产品定位<br>商业价值<br>用户需求<br>竞品差异化</div>
+                    </div>
+                    <div class="role-card design">
+                        <div class="role-avatar">🎨</div>
+                        <div class="role-name">设计总监</div>
+                        <div class="role-focus">用户体验<br>交互设计<br>视觉规范<br>信息架构</div>
+                    </div>
+                    <div class="role-card" style="background: rgba(255,149,0,0.1); border-color: rgba(255,149,0,0.3);">
+                        <div class="role-avatar" style="background: linear-gradient(135deg, #ff9500, #ff6b00);">📅</div>
+                        <div class="role-name" style="color: #ff9500;">项目经理</div>
+                        <div class="role-focus" style="color: rgba(255,255,255,0.7);">项目排期<br>风险管理<br>资源协调<br>里程碑把控</div>
+                    </div>
+                    <div class="role-card" style="background: rgba(175,82,222,0.1); border-color: rgba(175,82,222,0.3);">
+                        <div class="role-avatar" style="background: linear-gradient(135deg, #af52de, #8944ab);">🧪</div>
+                        <div class="role-name" style="color: #af52de;">QA总监</div>
+                        <div class="role-focus" style="color: rgba(255,255,255,0.7);">可测试性<br>验收标准<br>边界覆盖<br>自动化测试</div>
+                    </div>
+                    <div class="role-card" style="background: rgba(48,209,88,0.1); border-color: rgba(48,209,88,0.3);">
+                        <div class="role-avatar" style="background: linear-gradient(135deg, #30d158, #248a3d);">🔒</div>
+                        <div class="role-name" style="color: #30d158;">安全合规官</div>
+                        <div class="role-focus" style="color: rgba(255,255,255,0.7);">数据安全<br>隐私保护<br>合规审查<br>权限控制</div>
+                    </div>
+                    <div class="role-card" style="background: rgba(0,199,190,0.1); border-color: rgba(0,199,190,0.3);">
+                        <div class="role-avatar" style="background: linear-gradient(135deg, #00c7be, #009193);">📈</div>
+                        <div class="role-name" style="color: #00c7be;">运营增长官</div>
+                        <div class="role-focus" style="color: rgba(255,255,255,0.7);">冷启动策略<br>运营工具<br>数据埋点<br>增长实验</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 完整教程 -->
+        <section class="content-section" id="tutorial">
+            <div class="sidebar-layout">
+                <aside class="sidebar" id="sidebar">
+                    <div class="sidebar-title">教程目录</div>
+                    <ul class="sidebar-menu">
+                        <li class="sidebar-item"><a class="sidebar-link active" data-anchor="intro">简介与快速开始</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-anchor="tiers">用户分层模式</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-anchor="workflows">四种工作流详解</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-anchor="commands">完整命令速查</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-anchor="review">需求评审详解</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-anchor="multiproject">多项目管理</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-anchor="bestpractice">最佳实践</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-anchor="customize">高级自定义</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-anchor="faq">常见问题</a></li>
+                    </ul>
+                </aside>
+                <div class="content-area tutorial-content" id="tutorialContent">
+                    <h1>AI_PM v1.4 完整使用教程</h1>
+                    <p>基于 v1.4 全新架构，支持用户分层、快速模式、需求评审等强大功能</p>
+
+                    <h2 id="intro">一、简介与快速开始</h2>
+                    <h3>1.1 什么是 AI_PM？</h3>
+                    <p>AI_PM 是一个模仿产品经理工作流的 Claude Code 技能套件。它能够将简短的需求描述转化为完整、专业的产品需求文档（PRD）和可交互原型。</p>
+
+                    <h3>1.2 30 秒快速开始</h3>
+                    <pre><code># 1. 启动 Claude Code
+claude
+
+# 2. 创建第一个项目
+/ai-pm "我想做一个记账小程序，帮助年轻人管理日常开支"
+
+# 3. 跟随 AI 引导完成需求访谈
+# 4. 自动获得完整 PRD 文档 + 可交互原型</code></pre>
+
+                    <div class="step-flow">
+                        <div class="step-item">
+                            <div class="step-number">1</div>
+                            <div class="step-name">需求澄清</div>
+                        </div>
+                        <div class="step-arrow">→</div>
+                        <div class="step-item">
+                            <div class="step-number">2</div>
+                            <div class="step-name">需求分析</div>
+                        </div>
+                        <div class="step-arrow">→</div>
+                        <div class="step-item">
+                            <div class="step-number">3</div>
+                            <div class="step-name">竞品研究</div>
+                        </div>
+                        <div class="step-arrow">→</div>
+                        <div class="step-item">
+                            <div class="step-number">4</div>
+                            <div class="step-name">PRD 生成</div>
+                        </div>
+                        <div class="step-arrow">→</div>
+                        <div class="step-item">
+                            <div class="step-number">5</div>
+                            <div class="step-name">原型设计</div>
+                        </div>
+                        <div class="step-arrow">→</div>
+                        <div class="step-item">
+                            <div class="step-number">6</div>
+                            <div class="step-name">需求评审</div>
+                        </div>
+                    </div>
+
+                    <h2 id="tiers">二、用户分层模式</h2>
+                    <p>AI_PM v1.4 引入了三层用户体系，根据你的经验水平提供个性化体验：</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>层级</th>
+                                <th>特征</th>
+                                <th>交互特点</th>
+                                <th>默认模式</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>新手</strong></td>
+                                <td>产品经验 &lt; 2年</td>
+                                <td>详细引导、解释术语、示例丰富</td>
+                                <td>标准+详细引导</td>
+                            </tr>
+                            <tr>
+                                <td><strong>专业</strong></td>
+                                <td>资深 PM，有方法论</td>
+                                <td>标准流程、可自定义、高效产出</td>
+                                <td>标准模式</td>
+                            </tr>
+                            <tr>
+                                <td><strong>专家</strong></td>
+                                <td>追求极致效率</td>
+                                <td>极简交互、快捷命令、跳过确认</td>
+                                <td>快速模式</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="tip-box info">
+                        <span class="tip-icon">💡</span>
+                        <div class="tip-content">
+                            <strong>配置文件</strong><br>
+                            创建 <code>.ai-pm-config.json</code> 设置默认偏好，避免每次重复选择
+                        </div>
+                    </div>
+
+                    <h2 id="workflows">三、四种工作流详解</h2>
+
+                    <h3>3.1 快速模式（⚡ Quick Mode）</h3>
+                    <p><strong>适用场景</strong>：简单工具类 App、已有清晰思路、个人项目/原型验证、时间紧迫</p>
+                    <p><strong>流程</strong>：需求澄清 (5min) → PRD生成 (8min) → 原型 (2min)</p>
+                    <pre><code>/ai-pm quick "需求描述"</code></pre>
+
+                    <h3>3.2 标准模式（📊 Standard Mode）</h3>
+                    <p><strong>适用场景</strong>：常规产品项目、需要完整分析、团队协作</p>
+                    <p><strong>流程</strong>：完整 Phase 1-6，预计 45 分钟</p>
+
+                    <h3>3.3 深度模式（🔬 Deep Mode）</h3>
+                    <p><strong>适用场景</strong>：复杂企业级系统、战略级产品、需要多方评审</p>
+                    <p><strong>流程</strong>：Phase 0-7 + 多轮评审，预计 2 小时</p>
+
+                    <h3>3.4 自适应模式（🎯 Adaptive Mode）</h3>
+                    <p>AI 根据需求描述长度、技术关键词密度、业务复杂度评估自动选择模式</p>
+
+                    <h2 id="commands">四、完整命令速查</h2>
+
+                    <h3>快速命令</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>命令</th>
+                                <th>作用</th>
+                                <th>耗时</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/ai-pm quick "需求"</code></td>
+                                <td>快速模式全流程</td>
+                                <td>15min</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm quick-prd "需求"</code></td>
+                                <td>仅生成 PRD</td>
+                                <td>10min</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm "需求"</code></td>
+                                <td>标准模式（需选择）</td>
+                                <td>45min</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>单阶段命令</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>命令</th>
+                                <th>作用</th>
+                                <th>前置要求</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/ai-pm analyze</code></td>
+                                <td>仅执行需求分析</td>
+                                <td>有需求澄清</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm research</code></td>
+                                <td>仅执行竞品研究</td>
+                                <td>有需求分析</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm story</code></td>
+                                <td>仅编写用户故事</td>
+                                <td>有需求分析</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm prd</code></td>
+                                <td>仅生成 PRD</td>
+                                <td>有前置分析</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm prototype</code></td>
+                                <td>仅生成原型</td>
+                                <td>有 PRD</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm review</code></td>
+                                <td>仅执行评审</td>
+                                <td>有 PRD 和原型</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>高级命令</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>命令</th>
+                                <th>作用</th>
+                                <th>说明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/ai-pm writing-style analyze {文件}</code></td>
+                                <td>分析 PRD 写作风格</td>
+                                <td>提取写作风格并保存</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm writing-style list</code></td>
+                                <td>列出可用写作风格</td>
+                                <td>查看所有风格配置</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm ui-spec upload {名称}</code></td>
+                                <td>上传 UI 规范</td>
+                                <td>解析设计稿生成设计令牌</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm review --focus=security</code></td>
+                                <td>安全专项评审</td>
+                                <td>仅进行安全合规审查</td>
+                            </tr>
+                            <tr>
+                                <td><code>/ai-pm review --light</code></td>
+                                <td>精简评审</td>
+                                <td>四角色（适合快速迭代）</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h2 id="review">五、需求评审详解</h2>
+
+                    <h3>5.1 什么时候用？</h3>
+                    <ul>
+                        <li>PRD 完成后，想提前发现问题</li>
+                        <li>重要项目，需要多方把关</li>
+                        <li>团队协作，需要达成共识</li>
+                        <li>学习提升，想了解专业视角</li>
+                    </ul>
+
+                    <h3>5.2 八大评审角色</h3>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>角色</th>
+                                <th>关注维度</th>
+                                <th>典型问题</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>👨‍💼 <strong>研发总监</strong></td>
+                                <td>技术可行性、开发成本、工期评估</td>
+                                <td>技术方案不明确、工期不合理</td>
+                            </tr>
+                            <tr>
+                                <td>🏗️ <strong>资深架构师</strong></td>
+                                <td>系统架构、技术选型、扩展性</td>
+                                <td>缺少缓存策略、架构不合理</td>
+                            </tr>
+                            <tr>
+                                <td>📊 <strong>产品总监</strong></td>
+                                <td>产品定位、商业价值、需求优先级</td>
+                                <td>P0 过多、用户分层不细</td>
+                            </tr>
+                            <tr>
+                                <td>🎨 <strong>设计总监</strong></td>
+                                <td>用户体验、交互设计、视觉规范</td>
+                                <td>缺少空状态、流程不顺畅</td>
+                            </tr>
+                            <tr>
+                                <td>📅 <strong>项目经理</strong></td>
+                                <td>项目排期、风险管理、资源协调</td>
+                                <td>里程碑过密、依赖未明确</td>
+                            </tr>
+                            <tr>
+                                <td>🧪 <strong>QA 总监</strong></td>
+                                <td>可测试性、验收标准、边界覆盖</td>
+                                <td>缺少验收标准、边界未覆盖</td>
+                            </tr>
+                            <tr>
+                                <td>🔒 <strong>安全合规官</strong></td>
+                                <td>数据安全、隐私保护、合规审查</td>
+                                <td>敏感信息未脱敏、权限过宽</td>
+                            </tr>
+                            <tr>
+                                <td>📈 <strong>运营增长官</strong></td>
+                                <td>冷启动、运营工具、数据埋点</td>
+                                <td>缺少冷启动方案、运营后台弱</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>5.3 问题分级</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>级别</th>
+                                <th>说明</th>
+                                <th>处理要求</th>
+                                <th>典型场景</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Critical</strong></td>
+                                <td>影响核心功能或存在重大风险</td>
+                                <td>必须修改，阻塞发布</td>
+                                <td>安全漏洞、合规风险、架构缺陷</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Major</strong></td>
+                                <td>影响用户体验或存在明显缺陷</td>
+                                <td>建议修改，影响满意度</td>
+                                <td>体验断层、测试覆盖不足、项目风险</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Minor</strong></td>
+                                <td>细节优化或改进建议</td>
+                                <td>可选修改，锦上添花</td>
+                                <td>文案优化、交互微调</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>5.4 评审流程</h3>
+                    <pre><code>1. 触发评审
+   /ai-pm review
+
+2. AI 自动分配八个角色并行评审
+   [研发总监]   评审中... ✓
+   [架构师]     评审中... ✓
+   [产品总监]   评审中... ✓
+   [设计总监]   评审中... ✓
+   [项目经理]   评审中... ✓
+   [QA总监]     评审中... ✓
+   [安全合规官] 评审中... ✓
+   [运营增长官] 评审中... ✓
+
+3. 生成评审报告 08-review-report-v1.md
+   - 按严重程度汇总问题
+   - 给出修改分工建议
+
+4. 用户确认修改范围
+   - 全部修改 / 核心修改 / 最小修改 / 安全优先
+
+5. AI 自动修改 PRD（在原文档直接更新）
+   - 在 05-PRD-v1.0.md 的修订日志中增加 v1.1 记录
+   - 直接在原文档中修改内容
+   - 不创建新文件版本，保持文档唯一性
+
+6. 再次评审（可选）/ai-pm review --round=2</code></pre>
+
+                    <div class="tip-box warning">
+                        <span class="tip-icon">⚠️</span>
+                        <div class="tip-content">
+                            <strong>v2.0 更新：评审后修改方式优化</strong><br>
+                            之前：创建 05-PRD-v1.1.md 新文件<br>
+                            现在：直接在 05-PRD-v1.0.md 中更新，通过修订日志追踪变更<br>
+                            好处：保持文档唯一性，避免版本文件冗余
+                        </div>
+                    </div>
+
+                    <h3>5.5 场景化评审配置</h3>
+
+                    <div class="tip-box info">
+                        <span class="tip-icon">💡</span>
+                        <div class="tip-content">
+                            <strong>不同场景可启用不同角色组合</strong>：<br>
+                            • <strong>创业团队</strong>：产品+研发+设计（轻量级）<br>
+                            • <strong>企业级项目</strong>：八角色全启（全量评审）<br>
+                            • <strong>内部工具</strong>：产品+研发+QA（简化评审）<br>
+                            • <strong>安全敏感</strong>：增加安全合规专项评审
+                        </div>
+                    </div>
+
+                    <h2 id="multiproject">六、多项目管理</h2>
+
+                    <h3>6.1 项目目录结构</h3>
+                    <pre><code>output/projects/
+├── meeting-assistant-20260228/
+│   ├── 01-requirement-draft.md
+│   ├── 02-analysis-report.md
+│   ├── 03-competitor-report.md
+│   ├── 04-user-stories.md
+│   ├── 05-PRD-v1.0.md          # 评审后在修订日志中更新，不创建新文件
+│   ├── 06-prototype/
+│   ├── 07-references/          # 参考资源（可选）
+│   │   ├── reference-config.md # URL、账号等配置
+│   │   └── images/             # 参考图片
+│   └── 08-review-report-v1.md
+└── .current-project             # 记录当前项目</code></pre>
+
+                    <h3>6.2 断点续传</h3>
+                    <p>AI_PM 会自动检测项目进度，从上次中断处继续：</p>
+                    <pre><code>/ai-pm
+# 自动检测：
+# ✓ 01-requirement-draft.md
+# ✓ 02-analysis-report.md
+# ⏳ 03-competitor-report.md ← 从这里继续</code></pre>
+
+                    <h2 id="bestpractice">七、最佳实践</h2>
+
+                    <h3>7.1 选择合适的模式</h3>
+                    <div class="tip-box success">
+                        <span class="tip-icon">✓</span>
+                        <div class="tip-content">
+                            场景 1：简单工具 App → <strong>快速模式</strong><br>
+                            场景 2：常规产品迭代 → <strong>标准模式</strong><br>
+                            场景 3：复杂企业系统 → <strong>深度模式 + 多轮评审</strong><br>
+                            场景 4：不确定复杂度 → <strong>自适应模式</strong>
+                        </div>
+                    </div>
+
+                    <h3>7.2 高效使用技巧</h3>
+                    <ul>
+                        <li><strong>配置默认偏好</strong>：创建 <code>.ai-pm-config.json</code>，避免每次选择</li>
+                        <li><strong>使用参考资源</strong>：对于迭代优化项目，准备参考配置和图片</li>
+                        <li><strong>分段执行</strong>：时间不够时，可以分段完成</li>
+                        <li><strong>多轮评审</strong>：重要项目建议至少两轮评审</li>
+                    </ul>
+
+                    <h2 id="customize">八、高级自定义</h2>
+
+                    <p>AI_PM 支持深度自定义，让生成的 PRD 和原型更符合你的企业和个人风格。</p>
+
+                    <h3>8.1 模板系统（templates/）</h3>
+
+                    <p><code>templates/</code> 目录用于存放全局模板，所有项目共享：</p>
+
+                    <pre><code>templates/
+├── writing-styles/         # 写作风格库（PRD 文档风格）
+│   ├── default/            # 默认风格
+│   └── [自定义风格]/       # 你创建的风格
+├── ui-specs/               # UI 规范库（设计规范）
+│   ├── example-enterprise/ # 企业规范示例
+│   └── [自定义规范]/       # 你上传的规范
+├── prd-templates/          # PRD 模板
+└── 01-config/              # 配置模板
+    └── reference-config.md # 参考资源配置模板</code></pre>
+
+                    <h3>8.2 PRD 写作风格管理</h3>
+
+                    <p>分析你历史 PRD 的写作风格（章节结构、用词习惯、详细程度等），后续生成时自动应用，保持文档风格一致性。</p>
+
+                    <div class="tip-box info">
+                        <span class="tip-icon">💡</span>
+                        <div class="tip-content">
+                            <strong>什么是写作风格？</strong> 包括：章节结构偏好、用词习惯（技术/口语）、详细程度、表格使用频率、示例丰富度等
+                        </div>
+                    </div>
+
+                    <p><strong>创建写作风格</strong></p>
+                    <pre><code># 分析你现有的 PRD 文件，提取写作风格特征
+/ai-pm writing-style analyze ~/Documents/我的PRD.md
+
+# 命名并保存风格
+# 风格文件将保存到 templates/writing-styles/[风格名]/</code></pre>
+
+                    <p><strong>应用写作风格</strong></p>
+                    <pre><code># 生成 PRD 时会自动提示选择风格
+/ai-pm prd
+
+# 选择：default / enterprise-standard / 你创建的风格</code></pre>
+
+                    <p><strong>管理写作风格</strong></p>
+                    <pre><code>/ai-pm writing-style list     # 查看所有可用风格
+/ai-pm writing-style switch  # 切换默认风格</code></pre>
+
+                    <h3>8.3 UI 规范管理</h3>
+
+                    <p>上传企业的 UI 设计规范（颜色、字体、间距、组件），原型生成时自动应用。</p>
+
+                    <p><strong>上传 UI 规范</strong></p>
+                    <pre><code># 创建规范目录
+mkdir -p templates/ui-specs/my-company
+
+# 放入设计资源：
+# - design-tokens.json    # 设计令牌（颜色、字体、间距）
+# - components/           # 组件截图或描述
+# - guidelines.md         # 设计准则文档
+# - brand-assets/         # Logo、图标等</code></pre>
+
+                    <p><strong>自动生成设计令牌</strong>（推荐）</p>
+                    <pre><code># 上传设计稿图片或 PDF
+/ai-pm ui-spec upload my-company
+
+# AI 自动解析：
+# - 主色/辅助色/功能色
+# - 字体层级
+# - 间距系统
+# - 圆角规范</code></pre>
+
+                    <p><strong>应用 UI 规范</strong></p>
+                    <pre><code># 生成原型时会自动提示选择 UI 规范
+/ai-pm prototype
+
+# 选择：example-enterprise / my-company</code></pre>
+
+                    <p><strong>UI 规范优先级</strong></p>
+                    <ol>
+                        <li>项目级 UI 规范（项目目录下的 ui-spec/）</li>
+                        <li>全局 UI 规范（templates/ui-specs/）</li>
+                        <li>默认规范（Apple HIG）</li>
+                    </ol>
+
+                    <h3>8.4 自定义 PRD 模板</h3>
+
+                    <p>如果你有特定的 PRD 格式要求（如公司模板），可以创建自定义模板：</p>
+
+                    <pre><code># 1. 创建模板目录
+mkdir -p templates/prd-templates/my-company
+
+# 2. 放入模板文件
+# - template.md           # PRD 模板主体
+# - style-config.json     # 风格配置
+
+# 3. 生成时选择模板
+/ai-pm prd
+# → 选择模板：default / my-company</code></pre>
+
+                    <div class="tip-box success">
+                        <span class="tip-icon">✓</span>
+                        <div class="tip-content">
+                            <strong>最佳实践</strong>：先完成 2-3 个项目，积累满意的 PRD 后，再提取写作风格并上传 UI 规范，实现真正的个性化
+                        </div>
+                    </div>
+
+                    <h2 id="v2optimize">八、v2.0 核心优化详解</h2>
+
+                    <p>v2.0 版本基于用户反馈进行了三项核心优化，大幅提升用户体验：</p>
+
+                    <h3>8.1 项目类型确认（首要问题）</h3>
+
+                    <p><strong>优化前</strong>：默认按 0-1 全新开发处理，不适合迭代项目</p>
+                    <p><strong>优化后</strong>：首先询问项目类型，三种模式不同策略</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>项目类型</th>
+                                <th>询问重点</th>
+                                <th>输出侧重</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>0-1 全新开发</strong></td>
+                                <td>目标用户、核心痛点、竞品分析</td>
+                                <td>完整需求分析、用户画像、市场定位</td>
+                            </tr>
+                            <tr>
+                                <td><strong>基于已有项目迭代</strong></td>
+                                <td>现有系统问题、用户反馈、改进点</td>
+                                <td>问题分析、改进方案、兼容过渡</td>
+                            </tr>
+                            <tr>
+                                <td><strong>参考竞品/对标</strong></td>
+                                <td>竞品优势、差异化点、超越策略</td>
+                                <td>竞品对比、差异化功能、突破点</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>8.2 参考资源收集（关键优化）</h3>
+
+                    <p><strong>优化前</strong>：被动等待用户提供参考，经常遗漏</p>
+                    <p><strong>优化后</strong>：主动询问并自动抓取，形成 Phase 0</p>
+
+                    <pre><code>Phase 0: 参考资源收集（v2.0 新增）
+    ↓
+💬 主动询问：你是否有以下参考资源？
+
+📱 现有系统（如果是迭代项目）：
+   • 现网 URL 和测试账号密码
+   • 现有系统截图或录屏
+   • 现有功能清单或 PRD
+
+🎯 竞品参考：
+   • 竞品网址（可公开访问的）
+   • 竞品截图/UI/UE 设计稿
+   • 你关注的具体功能点
+
+🎨 设计参考：
+   • UI 设计稿、品牌规范
+   • 参考网站（你喜欢的风格）
+   • 设计系统/组件库文档
+    ↓
+如果用户提供了资源：
+   • URL → 使用 playwright-cli 自动抓取网页
+   • 截图 → 保存到 07-references/images/
+   • 账号 → 登录后抓取内部系统
+    ↓
+生成 07-references/reference-config.md（配置记录）
+生成 00-reference-analysis.md（分析报告）</code></pre>
+
+                    <div class="tip-box info">
+                        <span class="tip-icon">💡</span>
+                        <div class="tip-content">
+                            <strong>07-references/ 目录结构</strong>：<br>
+                            • reference-config.md - URL、账号密码等配置<br>
+                            • session-auth.json - 保存的登录会话<br>
+                            • images/ - 参考图片（UI截图、竞品截图）
+                        </div>
+                    </div>
+
+                    <h3>8.3 评审后修改优化（文档管理）</h3>
+
+                    <p><strong>优化前</strong>：创建新文件 05-PRD-v1.1.md，文件数量不断增加</p>
+                    <p><strong>优化后</strong>：直接在原文档更新，通过修订日志追踪变更</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>对比项</th>
+                                <th>v1.x 方式</th>
+                                <th>v2.0 方式</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>修改方式</td>
+                                <td>创建 05-PRD-v1.1.md 新文件</td>
+                                <td>在 05-PRD-v1.0.md 中直接修改</td>
+                            </tr>
+                            <tr>
+                                <td>版本追踪</td>
+                                <td>多个文件</td>
+                                <td>修订日志 + Git 历史</td>
+                            </tr>
+                            <tr>
+                                <td>文件数量</td>
+                                <td>不断增加（v1.0, v1.1, v1.2...）</td>
+                                <td>保持唯一（始终 v1.0）</td>
+                            </tr>
+                            <tr>
+                                <td>备份文件</td>
+                                <td>生成 .bak 文件</td>
+                                <td>不生成（Git 已足够）</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p><strong>v2.0 修改流程</strong>：</p>
+                    <pre><code>1. 读取 05-PRD-v1.0.md
+2. 在修订日志中增加新记录：
+   | 2026-03-01 | v1.1 | 修复30个问题（2C+12M+16m）| 全模块 | AI_PM | 详见第9章 |
+3. 直接在原文档中修改内容
+4. 新增"评审问题修复记录"章节（如第9章）
+5. 可选生成 08-review-changes.md（详细修改说明）
+6. 不创建 .bak 备份文件</code></pre>
+
+                    <div class="tip-box warning">
+                        <span class="tip-icon">⚠️</span>
+                        <div class="tip-content">
+                            <strong>注意事项</strong>：<br>
+                            • 始终只保留 05-PRD-v1.0.md 一个文件<br>
+                            • 通过修订日志查看版本历史<br>
+                            • 如需查看旧版本，使用 Git 历史<br>
+                            • 保持文档唯一性，避免文件冗余
+                        </div>
+                    </div>
+
+                    <h2 id="faq">九、常见问题</h2>
+
+                    <h3>Q1: 新手从哪里开始？</h3>
+                    <p>建议：先选择「新手模式」体验一次完整流程 → 阅读生成的文档 → 尝试用「快速模式」做个简单需求 → 熟悉后切换到「专业模式」</p>
+
+                    <h3>Q2: 快速模式和标准模式有什么区别？</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>对比项</th>
+                                <th>快速模式</th>
+                                <th>标准模式</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>时间</td>
+                                <td>15 分钟</td>
+                                <td>45 分钟</td>
+                            </tr>
+                            <tr>
+                                <td>流程</td>
+                                <td>3 个阶段</td>
+                                <td>6 个阶段</td>
+                            </tr>
+                            <tr>
+                                <td>分析深度</td>
+                                <td>基础</td>
+                                <td>深入</td>
+                            </tr>
+                            <tr>
+                                <td>适用场景</td>
+                                <td>简单需求</td>
+                                <td>常规项目</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Q3: 需求评审必须做吗？</h3>
+                    <p>不是必须的，但强烈推荐用于：复杂项目、团队协作、学习提升、高风险项目。简单个人项目可以跳过。</p>
+
+                    <h3>Q4: 如何提升 PRD 质量？</h3>
+                    <ul>
+                        <li>提供详细的需求描述</li>
+                        <li>选择深度模式 + 多轮评审</li>
+                        <li>上传参考资源</li>
+                        <li>创建自定义风格</li>
+                        <li>使用需求评审功能</li>
+                    </ul>
+
+                    <div class="tip-box success">
+                        <span class="tip-icon">🎉</span>
+                        <div class="tip-content">
+                            <strong>恭喜！</strong> 你已经了解了 AI_PM v1.4 的所有核心功能（九章完整教程）。现在可以尝试用 <code>/ai-pm quick "你的需求"</code> 开始你的第一个项目了！
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 更新日志 -->
+        <section class="content-section" id="changelog">
+            <div class="sidebar-layout">
+                <aside class="sidebar">
+                    <div class="sidebar-title">版本历史</div>
+                    <ul class="sidebar-menu">
+                        <li class="sidebar-item"><a class="sidebar-link active" data-version="v200">v2.0.0 (最新)</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-version="v140">v1.4.0</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-version="v130">v1.3.0</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-version="v120">v1.2.0</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-version="v110">v1.1.0</a></li>
+                        <li class="sidebar-item"><a class="sidebar-link" data-version="v100">v1.0.0</a></li>
+                    </ul>
+                </aside>
+                <div class="content-area">
+                    <h1>更新日志</h1>
+                    <p>记录 AI_PM 的所有版本更新，方便用户了解新功能和改进</p>
+
+                    <div class="changelog-timeline">
+                        <!-- v2.0.0 -->
+                        <div class="version-item latest" id="v200">
+                            <div class="version-header">
+                                <span class="version-number">v2.0.0</span>
+                                <span class="version-badge badge-latest">LATEST</span>
+                                <span class="version-date">2026-03-01</span>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">🚀 用户体验大升级</div>
+                                <ul class="version-list feature">
+                                    <li><strong>项目类型确认</strong>：首先询问0-1全新开发/迭代优化/竞品对标，不同模式不同访谈策略</li>
+                                    <li><strong>参考资源收集</strong>：主动询问是否有现网URL、竞品截图、设计稿，支持playwright自动抓取</li>
+                                    <li><strong>评审后修改优化</strong>：不再创建v1.1新文件，直接在原文档更新修订日志，保持文档唯一性</li>
+                                </ul>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">✨ 新增功能</div>
+                                <ul class="version-list feature">
+                                    <li><strong>Phase 0 参考分析</strong>：在需求澄清前自动抓取和分析参考资源</li>
+                                    <li><strong>07-references/ 目录</strong>：统一存放参考资源配置和抓取结果</li>
+                                    <li><strong>迭代模式访谈</strong>：针对现有系统迭代，重点关注问题和改进点</li>
+                                    <li><strong>对标模式访谈</strong>：针对竞品对标，重点关注差异化和突破点</li>
+                                </ul>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">⚡ 优化改进</div>
+                                <ul class="version-list improve">
+                                    <li>PRD版本管理：创建新文件(v1.1) → 原文档更新(修订日志)</li>
+                                    <li>参考资源：被动等待 → 主动询问并自动抓取</li>
+                                    <li>项目类型：默认0-1 → 首先确认类型</li>
+                                    <li>文件数量：不断增加 → 保持文档唯一性</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- v1.4.0 -->
+                        <div class="version-item" id="v140">
+                            <div class="version-header">
+                                <span class="version-number">v1.4.0</span>
+                                <span class="version-badge badge-latest">LATEST</span>
+                                <span class="version-date">2026-02-28</span>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">🚀 架构优化</div>
+                                <ul class="version-list feature">
+                                    <li>基于八大角色评审意见，进行全面架构优化</li>
+                                    <li>引入统一核心引擎架构（StateManager, WorkflowEngine, PluginSystem, DataBus）</li>
+                                </ul>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">✨ 新增功能</div>
+                                <ul class="version-list feature">
+                                    <li><strong>快速模式</strong>：15 分钟快速输出 PRD（<code>/ai-pm quick "需求"</code>）</li>
+                                    <li><strong>用户分层</strong>：支持新手/专业/专家三种模式</li>
+                                    <li><strong>工作流选择</strong>：快速/标准/深度/自适应四种模式</li>
+                                    <li><strong>核心引擎</strong>：统一状态管理和工作流引擎</li>
+                                    <li><strong>测试框架</strong>：基础测试框架搭建</li>
+                                </ul>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">⚡ 优化改进</div>
+                                <ul class="version-list improve">
+                                    <li>流程长度：固定 7 阶段 → 可选 4 种模式</li>
+                                    <li>用户适配：一刀切 → 分层个性化</li>
+                                    <li>架构设计：脚本集合 → 核心引擎+插件</li>
+                                    <li>提示词管理：分散在 10 个文件 → 统一提示词库</li>
+                                    <li>进度感知：无 → 实时进度条</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- v1.3.0 -->
+                        <div class="version-item" id="v130">
+                            <div class="version-header">
+                                <span class="version-number">v1.3.0</span>
+                                <span class="version-badge badge-major">MAJOR</span>
+                                <span class="version-date">2026-02-28</span>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">✨ 新增功能</div>
+                                <ul class="version-list feature">
+                                    <li><strong>需求评审</strong>：模拟<strong>八大角色</strong>对 PRD 和原型进行专业评审（<code>/ai-pm review</code>）</li>
+                                    <li><strong>多轮迭代</strong>：支持基于评审意见多次修改（v1.0 → v1.1 → v1.2）</li>
+                                    <li><strong>评审报告</strong>：结构化输出各角色评审意见（08-review-report-v1.md）</li>
+                                    <li><strong>场景化配置</strong>：支持精简/完整/安全专项等多种评审模式</li>
+                                </ul>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">👥 八大评审角色</div>
+                                <ul class="version-list">
+                                    <li><strong>研发总监</strong>：技术可行性、开发成本、工期评估</li>
+                                    <li><strong>资深架构师</strong>：系统架构、技术选型、扩展性、性能</li>
+                                    <li><strong>产品总监</strong>：产品定位、商业价值、用户需求</li>
+                                    <li><strong>设计总监</strong>：用户体验、交互设计、视觉规范</li>
+                                    <li><strong>项目经理</strong>：项目排期、风险管理、资源协调（新增）</li>
+                                    <li><strong>QA 总监</strong>：可测试性、验收标准、边界覆盖（新增）</li>
+                                    <li><strong>安全合规官</strong>：数据安全、隐私保护、合规审查（新增）</li>
+                                    <li><strong>运营增长官</strong>：冷启动、运营工具、数据埋点（新增）</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- v1.2.0 -->
+                        <div class="version-item" id="v120">
+                            <div class="version-header">
+                                <span class="version-number">v1.2.0</span>
+                                <span class="version-date">2026-02-28</span>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">✨ 新增功能</div>
+                                <ul class="version-list feature">
+                                    <li><strong>风格管理</strong>：分析 PRD 文档，提取写作风格并复用</li>
+                                    <li><strong>设计规范</strong>：支持上传和复用设计规范</li>
+                                    <li><strong>Playwright CLI</strong>：独立的浏览器自动化能力</li>
+                                    <li><strong>8章标准 PRD 结构</strong>：标准化的 PRD 文档模板</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- v1.1.0 -->
+                        <div class="version-item" id="v110">
+                            <div class="version-header">
+                                <span class="version-number">v1.1.0</span>
+                                <span class="version-date">2026-02-28</span>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">✨ 新增功能</div>
+                                <ul class="version-list feature">
+                                    <li><strong>参考网页分析</strong>：支持通过 URL 抓取现有系统或竞品网页进行分析</li>
+                                    <li><strong>账号密码支持</strong>：分析需登录的页面时可提供凭证</li>
+                                    <li><strong>迭代优化模式</strong>：针对现有系统的升级优化流程</li>
+                                    <li><strong>对标开发模式</strong>：针对竞品的差异化开发流程</li>
+                                    <li><strong>参考资源配置文件</strong>：支持配置多个 URL、账号密码、上传参考图片</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- v1.0.0 -->
+                        <div class="version-item" id="v100">
+                            <div class="version-header">
+                                <span class="version-number">v1.0.0</span>
+                                <span class="version-date">2026-02-27</span>
+                            </div>
+                            <div class="version-section">
+                                <div class="version-section-title">🎉 核心功能发布</div>
+                                <ul class="version-list feature">
+                                    <li><strong>需求澄清</strong>：交互式深度访谈，澄清需求细节</li>
+                                    <li><strong>需求分析</strong>：输出结构化需求分析报告</li>
+                                    <li><strong>竞品研究</strong>：分析市场竞争格局</li>
+                                    <li><strong>用户故事</strong>：编写详细用户故事和验收标准</li>
+                                    <li><strong>PRD 生成</strong>：输出专业级产品需求文档</li>
+                                    <li><strong>原型生成</strong>：生成交互式网页原型（HTML/CSS/JS）</li>
+                                    <li><strong>多项目管理</strong>：每个需求独立项目文件夹</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tip-box info" style="margin-top: 40px;">
+                        <span class="tip-icon">ℹ️</span>
+                        <div class="tip-content">
+                            <strong>版本号规则</strong><br>
+                            主版本号(v1.x.x)：重大架构变更 | 次版本号(vx.1.x)：新功能发布 | 修订号(vx.x.1)：Bug 修复
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 回到顶部 -->
+    <button class="back-to-top" id="backToTop">↑</button>
+
+    <script>
+        // 切换内容区域
+        function switchSection(sectionName) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            document.getElementById(sectionName).classList.add('active');
+            document.querySelector(`[data-section="${sectionName}"]`)?.classList.add('active');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 导航点击
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                switchSection(item.dataset.section);
+            });
+        });
+
+        // 侧边栏锚点导航
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const anchor = link.dataset.anchor;
+                const version = link.dataset.version;
+
+                // 更新激活状态
+                link.closest('.sidebar').querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+
+                if (anchor) {
+                    const element = document.getElementById(anchor);
+                    if (element) {
+                        const offset = 100;
+                        const top = element.getBoundingClientRect().top + window.pageYOffset - offset;
+                        window.scrollTo({ top, behavior: 'smooth' });
+                    }
+                } else if (version) {
+                    const element = document.getElementById(version);
+                    if (element) {
+                        const offset = 100;
+                        const top = element.getBoundingClientRect().top + window.pageYOffset - offset;
+                        window.scrollTo({ top, behavior: 'smooth' });
+                    }
+                }
+
+                // 移动端关闭侧边栏
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('overlay').classList.remove('show');
+            });
+        });
+
+        // 显示快速开始
+        function showQuickStart() {
+            document.getElementById('quickStart').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 显示模式详情
+        function showModeDetail(mode) {
+            switchSection('tutorial');
+            setTimeout(() => {
+                document.getElementById('workflows').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+
+        // 移动端菜单
+        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
+        });
+
+        document.getElementById('overlay').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('overlay').classList.remove('show');
+        });
+
+        // 回到顶部
+        const backToTop = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTop.classList.add('show');
+            } else {
+                backToTop.classList.remove('show');
+            }
+        });
+
+        backToTop.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // 搜索功能
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchInput.value.toLowerCase();
+                if (!query) return;
+
+                // 切换到教程页面
+                switchSection('tutorial');
+
+                // 简单搜索高亮
+                const content = document.getElementById('tutorialContent');
+                const text = content.innerHTML;
+                const regex = new RegExp(`(${query})`, 'gi');
+
+                // 移除旧的高亮
+                content.querySelectorAll('.search-highlight').forEach(el => {
+                    el.outerHTML = el.innerHTML;
+                });
+
+                // 添加新的高亮
+                if (query.length > 2) {
+                    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+                    const nodes = [];
+                    while (walker.nextNode()) {
+                        if (walker.currentNode.nodeValue.toLowerCase().includes(query)) {
+                            nodes.push(walker.currentNode);
+                        }
+                    }
+
+                    nodes.forEach(node => {
+                        const span = document.createElement('span');
+                        span.className = 'search-highlight';
+                        span.style.background = 'rgba(255, 235, 59, 0.5)';
+                        span.style.padding = '2px 0';
+                        span.style.borderRadius = '2px';
+
+                        const parts = node.nodeValue.split(regex);
+                        parts.forEach((part, i) => {
+                            if (part.toLowerCase() === query) {
+                                const mark = document.createElement('mark');
+                                mark.style.background = 'rgba(255, 235, 59, 0.8)';
+                                mark.style.padding = '2px 4px';
+                                mark.style.borderRadius = '3px';
+                                mark.textContent = part;
+                                node.parentNode.insertBefore(mark, node);
+                            } else {
+                                node.parentNode.insertBefore(document.createTextNode(part), node);
+                            }
+                        });
+                        node.parentNode.removeChild(node);
+                    });
+
+                    // 滚动到第一个匹配项
+                    const firstMatch = content.querySelector('mark');
+                    if (firstMatch) {
+                        firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }
+        });
+
+        // 监听滚动更新侧边栏激活状态
+        window.addEventListener('scroll', () => {
+            if (!document.getElementById('tutorial').classList.contains('active')) return;
+
+            const sections = ['intro', 'tiers', 'workflows', 'commands', 'review', 'multiproject', 'bestpractice', 'customize', 'faq'];
+            const scrollPos = window.pageYOffset + 120;
+
+            for (const section of sections) {
+                const element = document.getElementById(section);
+                if (element && element.offsetTop <= scrollPos && (element.offsetTop + element.offsetHeight) > scrollPos) {
+                    document.querySelectorAll('.sidebar-link[data-anchor]').forEach(link => {
+                        link.classList.toggle('active', link.dataset.anchor === section);
+                    });
+                    break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

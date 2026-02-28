@@ -1,21 +1,21 @@
 ---
-name: ai-pm-design-system
+name: ai-pm-ui-spec
 description: >-
-  设计规范管理技能。独立管理设计规范的上传、解析、存储和应用。
+  UI 规范管理技能。独立管理 UI 设计规范的上传、解析、存储和应用。
   支持从设计稿图片、PDF文档中提取颜色、字体、间距等设计令牌。
-  生成结构化的 design-tokens.json 供其他技能调用。
+  生成结构化的 design-tokens.json 供原型生成时调用，确保原型符合企业设计规范。
 argument-hint: "[upload|list|delete|show] [规范名] [文件路径]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(rm)
 ---
 
-# 设计规范管理
+# UI 规范管理
 
 ## 定位
 
 这是一个**独立的管理型技能**，专门负责设计规范的全生命周期管理。
 
 - **不依赖项目**：可以在任何目录执行，不绑定特定项目
-- **全局共享**：规范存储在 `templates/design-systems/`，所有项目共用
+- **全局共享**：规范存储在 `templates/ui-specs/`，所有项目共用
 - **解析器角色**：将设计资源（图片/PDF）转换为结构化数据
 
 ## 职责边界
@@ -29,7 +29,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(rm)
 ## 存储结构
 
 ```
-templates/design-systems/
+templates/ui-specs/
 ├── {规范名}/
 │   ├── README.md              # 规范说明（人工可读）
 │   ├── design-tokens.json     # 设计令牌（机器可读）
@@ -44,13 +44,13 @@ templates/design-systems/
 ### 1. 上传并解析设计规范
 
 ```bash
-/ai-pm design-system upload {规范名}
+/ai-pm ui-spec upload {规范名}
 ```
 
 **流程：**
 ```
 1. 检查名称是否已存在
-2. 创建目录 templates/design-systems/{规范名}/
+2. 创建目录 templates/ui-specs/{规范名}/
 3. 提示用户上传设计资源（图片/PDF/Sketch/Figma导出）
 4. 用户上传完成后，AI 自动解析：
    - 提取颜色系统（主色/辅助色/中性色/功能色）
@@ -154,12 +154,12 @@ templates/design-systems/
 ### 2. 列出所有设计规范
 
 ```bash
-/ai-pm design-system list
+/ai-pm ui-spec list
 ```
 
 **输出示例：**
 ```
-📁 设计规范库 (templates/design-systems/)
+📁 设计规范库 (templates/ui-specs/)
 
 系统内置：
   1. apple-standard      Apple 官方设计规范
@@ -175,7 +175,7 @@ templates/design-systems/
 ### 3. 查看设计规范详情
 
 ```bash
-/ai-pm design-system show {规范名}
+/ai-pm ui-spec show {规范名}
 ```
 
 **输出：** 显示 README.md 内容 + design-tokens.json 摘要
@@ -183,16 +183,16 @@ templates/design-systems/
 ### 4. 删除设计规范
 
 ```bash
-/ai-pm design-system delete {规范名}
+/ai-pm ui-spec delete {规范名}
 ```
 
 **确认提示：**
 ```
 ⚠️ 确定要删除设计规范 "{规范名}" 吗？
 这将删除以下文件：
-  - templates/design-systems/{规范名}/README.md
-  - templates/design-systems/{规范名}/design-tokens.json
-  - templates/design-systems/{规范名}/assets/ (3个文件)
+  - templates/ui-specs/{规范名}/README.md
+  - templates/ui-specs/{规范名}/design-tokens.json
+  - templates/ui-specs/{规范名}/assets/ (3个文件)
 
 回复 "确认删除" 以继续，或其他内容取消。
 ```
@@ -205,7 +205,7 @@ templates/design-systems/
 // ai-pm skill 内部逻辑
 function selectDesignSystem() {
   // 调用本 skill 的 list 能力
-  const systems = exec('ai-pm-design-system list --json');
+  const systems = exec('ai-pm-ui-spec list --json');
 
   // 展示选择界面
   showSelectionDialog(systems);
@@ -225,7 +225,7 @@ function applyDesignSystem(projectDir) {
   const systemName = config.designSystem || 'apple-standard';
 
   // 调用本 skill 获取设计令牌
-  const tokens = exec(`ai-pm-design-system export ${systemName}`);
+  const tokens = exec(`ai-pm-ui-spec export ${systemName}`);
 
   // 应用令牌生成 CSS
   generateCSS(tokens);
@@ -237,7 +237,7 @@ function applyDesignSystem(projectDir) {
 ### 完整的上传流程
 
 ```
-用户: /ai-pm design-system upload my-company
+用户: /ai-pm ui-spec upload my-company
 
 AI: 📁 设计规范管理
 
@@ -246,7 +246,7 @@ AI: 📁 设计规范管理
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 步骤 1/4: 创建目录结构
-✅ 已创建: templates/design-systems/my-company/
+✅ 已创建: templates/ui-specs/my-company/
 
 步骤 2/4: 上传设计资源
 💬 请上传以下文件到上述目录：
@@ -296,14 +296,14 @@ AI: 步骤 3/4: 解析设计资源
 💡 使用方式：
    1. 生成 PRD 时会提示选择设计规范
    2. 生成原型时会自动应用选定规范
-   3. 规范存储在 templates/design-systems/my-company/
+   3. 规范存储在 templates/ui-specs/my-company/
 
 ─────────────────────────────────────────
 ```
 
 ## 设计规范 vs 产品经理风格
 
-| 维度 | 设计规范 (ai-pm-design-system) | 产品经理风格 (ai-pm-style) |
+| 维度 | 设计规范 (ai-pm-ui-spec) | 产品经理风格 (ai-pm-writing-style) |
 |------|-------------------------------|---------------------------|
 | **管理对象** | UI 视觉规范（颜色/字体/组件） | PRD 写作风格 |
 | **输入** | 设计稿图片、PDF 文档 | PRD Markdown 文档 |

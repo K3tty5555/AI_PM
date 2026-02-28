@@ -1,13 +1,14 @@
 ---
-name: ai-pm-style
+name: ai-pm-writing-style
 description: >-
-  产品经理风格分析技能。分析用户上传的 PRD 文档，提取写作风格、结构偏好、
-  术语习惯等特征，生成结构化的风格配置文件。支持多种风格管理。
+  PRD 写作风格分析技能。分析用户上传的 PRD 文档，提取写作风格特征
+  （章节结构偏好、用词习惯、详细程度等），生成结构化的风格配置文件。
+  后续生成 PRD 时可按此风格输出，保持文档风格一致性。
 argument-hint: "[PRD文件路径或风格名称]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ---
 
-# 产品经理风格分析
+# PRD 写作风格分析
 
 ## 执行协议
 
@@ -134,13 +135,13 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
     ↓
 生成 style-config.json
     ↓
-保存到 templates/pm-styles/{风格名}/
+保存到 templates/writing-styles/{风格名}/
 ```
 
 ### 场景2：列出已有风格
 
 ```
-扫描 templates/pm-styles/
+扫描 templates/writing-styles/
     ↓
 读取每个风格的 style-config.json
     ↓
@@ -179,7 +180,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📁 风格名称：{风格名}
-📂 保存位置：templates/pm-styles/{风格名}/
+📂 保存位置：templates/writing-styles/{风格名}/
 
 📊 风格特征摘要：
 
@@ -223,7 +224,7 @@ ai-pm-prd 技能执行时
     ↓
 检查是否指定了风格
     ↓
-读取 templates/pm-styles/{风格名}/style-config.json
+读取 templates/writing-styles/{风格名}/style-config.json
     ↓
 根据配置调整：
     • 章节结构
