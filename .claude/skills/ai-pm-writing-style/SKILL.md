@@ -10,6 +10,17 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 # PRD 写作风格分析
 
+> ⚠️ **已合并**: 本技能已合并到 `ai-pm-config`，请使用 `/ai-pm config style`
+
+## 迁移提示
+
+```
+旧命令: /ai-pm writing-style analyze
+新命令: /ai-pm config style analyze
+
+过渡期: 2026-03-01 ~ 2026-03-15 (2周)
+```
+
 ## 执行协议
 
 - 深度分析用户上传的 PRD 文档
@@ -135,13 +146,13 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
     ↓
 生成 style-config.json
     ↓
-保存到 templates/writing-styles/{风格名}/
+保存到 templates/prd-styles/{风格名}/
 ```
 
 ### 场景2：列出已有风格
 
 ```
-扫描 templates/writing-styles/
+扫描 templates/prd-styles/
     ↓
 读取每个风格的 style-config.json
     ↓
@@ -180,7 +191,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📁 风格名称：{风格名}
-📂 保存位置：templates/writing-styles/{风格名}/
+📂 保存位置：templates/prd-styles/{风格名}/
 
 📊 风格特征摘要：
 
@@ -224,7 +235,7 @@ ai-pm-prd 技能执行时
     ↓
 检查是否指定了风格
     ↓
-读取 templates/writing-styles/{风格名}/style-config.json
+读取 templates/prd-styles/{风格名}/style-config.json
     ↓
 根据配置调整：
     • 章节结构
