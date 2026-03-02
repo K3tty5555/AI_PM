@@ -1,0 +1,195 @@
+/* PDF导出样式 - 基于标准PDF文档模板 */
+
+@page {
+    size: A4;
+    margin: 2.5cm 2cm;
+
+    @top-center {
+        content: "AI_PM 产品需求文档";
+        font-size: 9pt;
+        color: #666;
+    }
+
+    @bottom-center {
+        content: "第 " counter(page) " 页";
+        font-size: 9pt;
+        color: #666;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "PingFang SC", "Microsoft YaHei", "SimSun", sans-serif;
+    font-size: 11pt;
+    line-height: 1.8;
+    color: #333;
+}
+
+/* 标题样式 */
+h1 {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #1a1a1a;
+    border-bottom: 2px solid #0071e3;
+    padding-bottom: 10px;
+    margin-top: 30pt;
+    margin-bottom: 15pt;
+    page-break-before: always;
+}
+
+h1:first-of-type {
+    page-break-before: avoid;
+}
+
+h2 {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #2c2c2c;
+    margin-top: 25pt;
+    margin-bottom: 12pt;
+    border-left: 4px solid #0071e3;
+    padding-left: 10px;
+}
+
+h3 {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #3c3c3c;
+    margin-top: 20pt;
+    margin-bottom: 10pt;
+}
+
+h4 {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #4c4c4c;
+    margin-top: 15pt;
+    margin-bottom: 8pt;
+}
+
+/* 段落 */
+p {
+    margin: 8pt 0;
+    text-align: justify;
+}
+
+/* 表格样式 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15pt 0;
+    font-size: 10pt;
+    page-break-inside: auto;
+}
+
+tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+}
+
+th {
+    background-color: #f5f5f5;
+    border: 1pt solid #ddd;
+    padding: 8pt 6pt;
+    text-align: left;
+    font-weight: bold;
+    color: #1a1a1a;
+}
+
+td {
+    border: 1pt solid #ddd;
+    padding: 6pt;
+    vertical-align: top;
+}
+
+tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+/* 代码块 */
+pre {
+    background-color: #f8f8f8;
+    border: 1pt solid #e8e8e8;
+    border-radius: 4pt;
+    padding: 10pt;
+    font-family: "Consolas", "Monaco", monospace;
+    font-size: 9pt;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 10pt 0;
+    page-break-inside: avoid;
+}
+
+code {
+    font-family: "Consolas", "Monaco", monospace;
+    font-size: 9pt;
+    background-color: #f0f0f0;
+    padding: 2pt 4pt;
+    border-radius: 3pt;
+}
+
+/* 列表 */
+ul, ol {
+    margin: 8pt 0;
+    padding-left: 25pt;
+}
+
+li {
+    margin: 4pt 0;
+}
+
+/* 引用块 */
+blockquote {
+    border-left: 4px solid #0071e3;
+    margin: 15pt 0;
+    padding: 10pt 15pt;
+    background-color: #f9f9f9;
+    color: #555;
+}
+
+/* 分隔线 */
+hr {
+    border: none;
+    border-top: 1pt solid #ddd;
+    margin: 20pt 0;
+}
+
+/* 强调 */
+strong {
+    color: #1a1a1a;
+}
+
+/* 修订日志表格特殊样式 */
+table:first-of-type {
+    font-size: 9pt;
+}
+
+/* 功能清单表格 */
+.func-table th {
+    background-color: #0071e3;
+    color: white;
+}
+
+/* 优先级标签 */
+.p0 { color: #ff3b30; font-weight: bold; }
+.p1 { color: #ff9500; font-weight: bold; }
+.p2 { color: #34c759; font-weight: bold; }
+
+/* 打印优化 */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    a {
+        text-decoration: none;
+        color: #333;
+    }
+
+    a[href]:after {
+        content: "";
+    }
+}

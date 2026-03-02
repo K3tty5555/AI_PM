@@ -32,7 +32,7 @@ check_project_progress() {
         "02-analysis-report.md"
         "03-competitor-report.md"
         "04-user-stories.md"
-        "05-PRD"
+        "05-prd"
     )
     local stage_names=(
         "需求澄清"
@@ -52,10 +52,10 @@ check_project_progress() {
         local stage_name="${stage_names[$i]}"
         local stage_num=$((i + 1))
 
-        # 检查文件是否存在（PRD可能是前缀匹配）
-        if [[ "$file_pattern" == "05-PRD" ]]; then
-            if ls "$project_dir"/05-PRD-*.md 1> /dev/null 2>&1; then
-                local file=$(ls -t "$project_dir"/05-PRD-*.md | head -1)
+        # 检查文件是否存在（PRD在子目录中）
+        if [[ "$file_pattern" == "05-prd" ]]; then
+            if ls "$project_dir"/05-prd/05-PRD-*.md 1> /dev/null 2>&1; then
+                local file=$(ls -t "$project_dir"/05-prd/05-PRD-*.md | head -1)
                 local size=$(ls -lh "$file" 2>/dev/null | awk '{print $5}')
                 local mtime=$(stat -f "%Sm" -t "%m-%d %H:%M" "$file" 2>/dev/null || stat -c "%y" "$file" 2>/dev/null | cut -d' ' -f1,2 | cut -d'.' -f1)
                 echo -e "   ${GREEN}✅${NC} 阶段 $stage_num: $stage_name (${size}, ${mtime})"
@@ -136,7 +136,7 @@ case "${1:-status}" in
                 [ -f "$project_dir/02-analysis-report.md" ] && ((completed++))
                 [ -f "$project_dir/03-competitor-report.md" ] && ((completed++))
                 [ -f "$project_dir/04-user-stories.md" ] && ((completed++))
-                ls "$project_dir"/05-PRD-*.md 1>/dev/null 2>&1 && ((completed++))
+                ls "$project_dir"/05-prd/05-PRD-*.md 1>/dev/null 2>&1 && ((completed++))
 
                 local progress=$((completed * 100 / total))
 

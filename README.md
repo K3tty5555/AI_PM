@@ -120,7 +120,6 @@ AI_PM/
     │   ├── decisions/        # 决策记录
     │   ├── pitfalls/         # 踩坑记录
     │   └── playbooks/        # 场景手册
-    ├── prd-templates/        # PRD模板
     └── 04-data-insight-dashboard/  # 数据洞察仪表盘模板
         └── index.html        # 交互式仪表盘HTML模板
 ```
