@@ -5,8 +5,9 @@ description: >-
   支持读取写作风格配置，按照指定风格生成文档。
   基于用户上传的模板格式（8章结构），包含修订日志、需求分析、功能清单、
   流程图、全局说明、详细功能设计、效果验证、非功能性说明。
-argument-hint: "[输入文件路径列表] [--style=风格名]"
-allowed-tools: Read Write Edit Bash(mkdir) Read
+  支持多格式导出：Markdown（默认）、PDF、飞书云文档。
+argument-hint: "[输入文件路径列表] [--style=风格名] [--export=md|pdf|feishu|all]"
+allowed-tools: Read Write Edit Bash(mkdir) Read Bash(pandoc) Bash(cp)
 ---
 
 # PRD 生成
@@ -17,12 +18,9 @@ allowed-tools: Read Write Edit Bash(mkdir) Read
 - **基于用户模板格式**生成 PRD 文档（8章标准结构）
 - **支持写作风格配置**：读取 `templates/prd-styles/{风格名}/style-config.json` 并应用
 - 确保文档结构清晰、专业、可直接用于评审
-- **读取参考模板**：`templates/prd-templates/[20XXMX][模块名]需求文档模板.md`
 - 包含所有必要的产品信息
 
-## PRD 结构（基于用户模板）
-
-用户模板路径：`AI_PM/templates/prd-templates/[20XXMX][模块名]需求文档模板.md`
+## PRD 结构（8章标准结构）
 
 ### 模板章节概览
 
@@ -37,9 +35,67 @@ allowed-tools: Read Write Edit Bash(mkdir) Read
 | 七、效果验证 | 指标及定义、数据埋点 | ✅ |
 | 八、非功能性说明 | 性能、兼容性、未来规划 | 按需 |
 
+## 多格式导出支持
+
+### 支持格式
+
+| 格式 | 文件扩展名 | 适用场景 | 说明 |
+|------|-----------|---------|------|
+| Markdown | `.md` | 开发协作、版本控制 | 默认格式，支持Git管理 |
+| PDF | `.pdf` | 正式评审、归档留存 | 适合打印和正式交付 |
+| 飞书云文档 | `.feishu.md` | 飞书生态协作 | 针对飞书云文档优化的Markdown |
+| 全部 | - | 同时生成所有格式 | 使用 `--export=all` |
+
+### 导出命令
+
+```bash
+# 默认导出 Markdown
+/pm-prd
+
+# 导出 PDF（需要安装 pandoc）
+/pm-prd --export=pdf
+
+# 导出飞书云文档格式
+/pm-prd --export=feishu
+
+# 同时导出所有格式
+/pm-prd --export=all
+```
+
+### 格式转换依赖
+
+**PDF 导出**：
+- 依赖：`pandoc` + `wkhtmltopdf`
+- 安装：`brew install pandoc wkhtmltopdf` (macOS)
+- 或使用 Docker 环境
+
+**飞书云文档**：
+- 基于 Markdown 的特殊标记优化
+- 自动适配飞书表格、提及、代码块等语法
+
+### 输出文件命名
+
+```
+{项目目录}/
+└── 05-prd/                        # PRD文档统一目录
+    ├── README.md                  # 目录说明文件
+    ├── 05-PRD-v1.0.md            # Markdown（主文件）
+    ├── 05-PRD-v1.0.pdf           # PDF格式（如导出）
+    └── 05-PRD-v1.0.feishu.md     # 飞书格式（如导出）
+```
+
 ## 详细输出格式
 
-输出文件：`{项目目录}/05-PRD-v1.0.md`
+输出目录：`{项目目录}/05-prd/`
+
+```
+{项目目录}/
+└── 05-prd/                          # PRD文档目录（统一管理）
+    ├── README.md                    # 目录说明
+    ├── 05-PRD-v1.0.md              # Markdown主文件（必需）
+    ├── 05-PRD-v1.0.feishu.md       # 飞书格式（可选）
+    └── 05-PRD-v1.0.pdf.export.md   # PDF导出教程（可选）
+```
 
 **项目目录通过环境变量或参数获取：**
 - 优先从 `$PROJECT_DIR` 环境变量读取
@@ -315,8 +371,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Read
    - 检查是否指定了 `--style` 参数或从环境变量读取 `$PM_STYLE`
    - 读取 `templates/prd-styles/{风格名}/style-config.json`
    - 解析风格配置（结构、写作、格式、内容侧重）
-2. **读取参考模板**（可选）：`templates/prd-templates/[20XXMX][模块名]需求文档模板.md`
-3. **读取输入文件**：
+2. **读取输入文件**：
    - `02-analysis-report.md` - 需求分析
    - `03-competitor-report.md` - 竞品研究
    - `04-user-stories.md` - 用户故事
@@ -326,8 +381,12 @@ allowed-tools: Read Write Edit Bash(mkdir) Read
    - 根据 `formatting.tableFields` 设置表格字段
    - 根据 `contentFocus` 调整各部分的详细程度
 5. **整合信息**：按8章结构填充内容
-6. **生成PRD**：输出到 `{项目目录}/05-PRD-v1.0.md`
-7. **展示核心内容**：在终端展示 PRD 的关键摘要
+6. **创建PRD目录**：`mkdir -p {项目目录}/05-prd/`
+7. **生成PRD**：输出到 `{项目目录}/05-prd/05-PRD-v1.0.md`
+8. **多格式导出**（如指定 `--export`）：
+   - PDF: 使用 `templates/prd-styles/{风格名}/pdf-style.css` 样式
+   - 飞书: 使用 `templates/prd-styles/{风格名}/feishu-template.md` 模板
+9. **展示核心内容**：在终端展示 PRD 的关键摘要
 
 ## 风格配置应用规则
 
