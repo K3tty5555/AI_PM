@@ -7,8 +7,7 @@
     <meta name="description" content="AI_PM 是一套 AI 辅助产品管理工具集，将简短需求转化为完整的产品方案">
 
     <!-- Apple-style Meta -->
-    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#ffffff">
 
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -41,9 +40,8 @@
             --gray-03: #d2d2d7;
             --gray-04: #86868b;
             --gray-05: #6e6e73;
-            --gray-06: #1d1d1f;
 
-            /* Semantic Colors */
+            /* Light Mode (Default) */
             --bg-primary: #ffffff;
             --bg-secondary: #f5f5f7;
             --bg-tertiary: #fafafa;
@@ -52,63 +50,45 @@
             --text-tertiary: #6e6e73;
             --border-color: rgba(0,0,0,0.1);
 
-            /* Typography - Apple SF Pro style */
-            --font-stack: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            /* Typography - Apple Style */
+            --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
             --font-mono: 'SF Mono', SFMono-Regular, 'Courier New', monospace;
 
-            /* Spacing - Apple 8pt grid */
+            /* Spacing - 8pt Grid */
             --space-xs: 8px;
-            --space-sm: 16px;
-            --space-md: 24px;
-            --space-lg: 32px;
-            --space-xl: 48px;
-            --space-2xl: 64px;
-            --space-3xl: 96px;
+            --space-sm: 12px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --space-2xl: 48px;
+            --space-3xl: 64px;
 
-            /* Border Radius - Apple style */
+            /* Layout */
+            --nav-height: 52px;
+            --max-width: 1200px;
+            --content-width: 800px;
+
+            /* Radius */
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 18px;
             --radius-xl: 28px;
             --radius-full: 9999px;
 
-            /* Shadows - Apple depth */
-            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            /* Shadows - Apple Style */
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
             --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
-            --shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
-            --shadow-xl: 0 24px 64px rgba(0,0,0,0.16);
+            --shadow-lg: 0 8px 28px rgba(0,0,0,0.12);
+            --shadow-xl: 0 12px 40px rgba(0,0,0,0.16);
 
-            /* Layout */
-            --nav-height: 52px;
-            --max-width: 1024px;
-            --content-width: 692px;
-
-            /* Animation */
-            --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            /* Transitions */
+            --duration-fast: 150ms;
+            --duration-normal: 300ms;
+            --ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
             --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --duration-fast: 0.2s;
-            --duration-normal: 0.4s;
-            --duration-slow: 0.6s;
         }
 
-        /* Dark Mode - Apple style */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-primary: #000000;
-                --bg-secondary: #1c1c1e;
-                --bg-tertiary: #2c2c2e;
-                --text-primary: #f5f5f7;
-                --text-secondary: #86868b;
-                --text-tertiary: #6e6e73;
-                --border-color: rgba(255,255,255,0.1);
-                --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-                --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
-                --shadow-lg: 0 12px 40px rgba(0,0,0,0.6);
-            }
-        }
-
-        /* ========== Reset & Base ========== */
-        *, *::before, *::after {
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -116,72 +96,18 @@
 
         html {
             scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
 
-        body {
-            font-family: var(--font-stack);
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.47059;
-            font-weight: 400;
-            letter-spacing: -0.022em;
-            overflow-x: hidden;
-        }
-
-        /* ========== Typography - Apple Style ========== */
-        .typo-hero {
-            font-size: 64px;
-            font-weight: 700;
-            line-height: 1.0625;
-            letter-spacing: -0.009em;
-            background: linear-gradient(135deg, var(--text-primary) 0%, var(--apple-blue) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .typo-eyebrow {
-            font-size: 21px;
-            font-weight: 600;
-            line-height: 1.19048;
-            letter-spacing: 0.011em;
-            color: var(--apple-blue);
-            text-transform: uppercase;
-        }
-
-        .typo-headline {
-            font-size: 48px;
-            font-weight: 700;
-            line-height: 1.08349;
-            letter-spacing: -0.003em;
-        }
-
-        .typo-intro {
-            font-size: 28px;
-            font-weight: 600;
-            line-height: 1.14286;
-            letter-spacing: 0.007em;
-        }
-
-        .typo-body {
-            font-size: 21px;
-            font-weight: 400;
-            line-height: 1.381;
-            letter-spacing: 0.011em;
-            color: var(--text-secondary);
-        }
-
-        .typo-caption {
-            font-size: 14px;
-            font-weight: 400;
-            line-height: 1.28577;
-            letter-spacing: -0.016em;
-            color: var(--text-tertiary);
-        }
-
-        /* ========== Navigation - Apple Style ========== */
+        /* ========== Navigation ========== */
         .nav-global {
             position: fixed;
             top: 0;
@@ -193,13 +119,7 @@
             -webkit-backdrop-filter: saturate(180%) blur(20px);
             border-bottom: 1px solid var(--border-color);
             z-index: 9999;
-            transition: background var(--duration-fast) var(--ease-out);
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .nav-global {
-                background: rgba(0,0,0,0.72);
-            }
+            transition: background var(--duration-fast);
         }
 
         .nav-content {
@@ -215,65 +135,62 @@
         .nav-logo {
             display: flex;
             align-items: center;
-            gap: var(--space-xs);
+            gap: var(--space-sm);
             text-decoration: none;
             color: var(--text-primary);
             font-weight: 600;
-            font-size: 21px;
-            letter-spacing: -0.021em;
-            transition: opacity var(--duration-fast) var(--ease-out);
-        }
-
-        .nav-logo:hover {
-            opacity: 0.8;
+            font-size: 20px;
+            letter-spacing: -0.02em;
         }
 
         .nav-logo-icon {
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             background: linear-gradient(135deg, var(--apple-blue), var(--apple-indigo));
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 14px;
         }
 
         .nav-links {
             display: flex;
+            align-items: center;
             gap: var(--space-md);
         }
 
         .nav-link {
-            font-size: 14px;
             color: var(--text-primary);
             text-decoration: none;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            transition: all var(--duration-fast);
             opacity: 0.8;
-            transition: opacity var(--duration-fast) var(--ease-out);
-            padding: 4px 8px;
-            border-radius: var(--radius-sm);
         }
 
         .nav-link:hover {
             opacity: 1;
+            background: rgba(0,0,0,0.04);
         }
 
         .nav-link.active {
             opacity: 1;
-            background: var(--bg-secondary);
+            font-weight: 500;
         }
 
         .nav-cta {
             background: var(--apple-blue);
             color: white;
+            text-decoration: none;
             padding: 8px 16px;
             border-radius: var(--radius-full);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
-            text-decoration: none;
-            transition: all var(--duration-fast) var(--ease-out);
+            transition: all var(--duration-fast);
         }
 
         .nav-cta:hover {
@@ -281,119 +198,56 @@
             transform: scale(1.02);
         }
 
-        .theme-toggle {
-            width: 36px;
-            height: 36px;
-            border: none;
-            background: transparent;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-primary);
-            transition: all var(--duration-fast) var(--ease-out);
+        /* ========== Typography ========== */
+        .typo-hero {
+            font-size: 80px;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            line-height: 1.05;
         }
 
-        .theme-toggle:hover {
-            background: var(--bg-secondary);
+        .typo-headline {
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -0.003em;
+            line-height: 1.1;
         }
 
-        /* ========== Hero Section - Apple Style ========== */
+        .typo-eyebrow {
+            font-size: 21px;
+            font-weight: 600;
+            color: var(--apple-blue);
+            letter-spacing: 0.011em;
+            margin-bottom: var(--space-sm);
+        }
+
+        .typo-intro {
+            font-size: 28px;
+            font-weight: 400;
+            line-height: 1.4;
+            letter-spacing: 0.007em;
+        }
+
+        .typo-body {
+            font-size: 19px;
+            line-height: 1.5;
+            letter-spacing: 0.011em;
+        }
+
+        /* ========== Hero Section ========== */
         .section-hero {
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            text-align: center;
+            justify-content: center;
             padding: calc(var(--nav-height) + var(--space-3xl)) var(--space-lg) var(--space-3xl);
-            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
             position: relative;
             overflow: hidden;
         }
 
-        .hero-content {
-            max-width: 800px;
-            z-index: 1;
-        }
-
-        .hero-eyebrow {
-            margin-bottom: var(--space-md);
-            opacity: 0;
-            animation: fadeUp 0.8s var(--ease-out) forwards;
-        }
-
-        .hero-title {
-            margin-bottom: var(--space-md);
-            opacity: 0;
-            animation: fadeUp 0.8s var(--ease-out) 0.1s forwards;
-        }
-
-        .hero-description {
-            max-width: 600px;
-            margin: 0 auto var(--space-xl);
-            opacity: 0;
-            animation: fadeUp 0.8s var(--ease-out) 0.2s forwards;
-        }
-
-        .hero-cta-group {
-            display: flex;
-            gap: var(--space-md);
-            justify-content: center;
-            opacity: 0;
-            animation: fadeUp 0.8s var(--ease-out) 0.3s forwards;
-        }
-
-        .btn-primary {
-            background: var(--apple-blue);
-            color: white;
-            padding: 18px 32px;
-            border-radius: var(--radius-full);
-            font-size: 17px;
-            font-weight: 500;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all var(--duration-fast) var(--ease-spring);
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn-primary:hover {
-            background: var(--apple-blue-hover);
-            transform: scale(1.04);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--apple-blue);
-            padding: 18px 32px;
-            border-radius: var(--radius-full);
-            font-size: 17px;
-            font-weight: 500;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            border: 2px solid var(--apple-blue);
-            cursor: pointer;
-            transition: all var(--duration-fast) var(--ease-spring);
-        }
-
-        .btn-secondary:hover {
-            background: var(--apple-blue);
-            color: white;
-        }
-
-        /* Animated Background Elements */
         .hero-bg-shapes {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            inset: 0;
             overflow: hidden;
             pointer-events: none;
         }
@@ -402,52 +256,126 @@
             position: absolute;
             border-radius: 50%;
             filter: blur(80px);
-            opacity: 0.5;
-            animation: float 20s ease-in-out infinite;
+            opacity: 0.4;
         }
 
         .shape-1 {
-            width: 400px;
-            height: 400px;
-            background: var(--apple-blue);
-            top: 10%;
-            left: -100px;
-            animation-delay: 0s;
+            width: 600px;
+            height: 600px;
+            background: linear-gradient(135deg, var(--apple-blue), var(--apple-purple));
+            top: -200px;
+            right: -100px;
         }
 
         .shape-2 {
-            width: 300px;
-            height: 300px;
-            background: var(--apple-purple);
-            top: 40%;
-            right: -50px;
-            animation-delay: -5s;
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, var(--apple-pink), var(--apple-orange));
+            bottom: -100px;
+            left: -100px;
         }
 
         .shape-3 {
-            width: 250px;
-            height: 250px;
-            background: var(--apple-cyan);
-            bottom: 20%;
-            left: 20%;
-            animation-delay: -10s;
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, var(--apple-green), var(--apple-teal));
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.2;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(30px, -30px) scale(1.1); }
-            66% { transform: translate(-20px, 20px) scale(0.9); }
+        .hero-content {
+            text-align: center;
+            max-width: 800px;
+            position: relative;
+            z-index: 1;
         }
 
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .hero-title {
+            margin-bottom: var(--space-md);
+            background: linear-gradient(135deg, var(--text-primary), var(--gray-05));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-description {
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto var(--space-xl);
+        }
+
+        .hero-cta-group {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-sm);
+            background: var(--apple-blue);
+            color: white;
+            padding: 16px 32px;
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 500;
+            transition: all var(--duration-fast);
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            background: var(--apple-blue-hover);
+            transform: scale(1.02);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-sm);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 16px 32px;
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 500;
+            transition: all var(--duration-fast);
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-02);
+        }
+
+        /* ========== Version Badge ========== */
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            background: linear-gradient(135deg, var(--apple-blue), var(--apple-indigo));
+            color: white;
+            padding: 8px 16px;
+            border-radius: var(--radius-full);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: var(--space-lg);
+        }
+
+        .version-badge-small {
+            background: rgba(0,113,227,0.1);
+            color: var(--apple-blue);
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
         }
 
         /* ========== Section Styles ========== */
@@ -457,22 +385,23 @@
 
         .section-header {
             text-align: center;
-            max-width: var(--content-width);
-            margin: 0 auto var(--space-2xl);
+            margin-bottom: var(--space-2xl);
         }
 
         .section-title {
-            margin-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
         }
 
         .section-subtitle {
             color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
         }
 
-        /* ========== Bento Grid - Apple Style ========== */
+        /* ========== Bento Grid ========== */
         .bento-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: var(--space-lg);
             max-width: var(--max-width);
             margin: 0 auto;
@@ -482,15 +411,15 @@
             background: var(--bg-secondary);
             border-radius: var(--radius-xl);
             padding: var(--space-xl);
-            position: relative;
-            overflow: hidden;
-            transition: transform var(--duration-normal) var(--ease-spring), box-shadow var(--duration-normal) var(--ease-out);
+            transition: all var(--duration-normal) var(--ease-spring);
             cursor: pointer;
+            border: 1px solid transparent;
         }
 
         .bento-card:hover {
-            transform: scale(1.02);
+            transform: translateY(-4px);
             box-shadow: var(--shadow-lg);
+            border-color: var(--border-color);
         }
 
         .bento-card-large {
@@ -498,39 +427,26 @@
         }
 
         .bento-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
+            font-size: 40px;
             margin-bottom: var(--space-md);
         }
 
         .bento-title {
-            font-size: 24px;
+            font-size: 21px;
             font-weight: 600;
             margin-bottom: var(--space-xs);
         }
 
         .bento-desc {
-            font-size: 17px;
+            font-size: 15px;
             color: var(--text-secondary);
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
-        .bento-card-blue { background: linear-gradient(135deg, #e3f2ff 0%, #f0f7ff 100%); }
-        .bento-card-purple { background: linear-gradient(135deg, #f3e8ff 0%, #faf5ff 100%); }
-        .bento-card-green { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8f4 100%); }
-        .bento-card-orange { background: linear-gradient(135deg, #fff3e0 0%, #fff8f0 100%); }
-
-        @media (prefers-color-scheme: dark) {
-            .bento-card-blue { background: linear-gradient(135deg, #0d2137 0%, #1a3366 100%); }
-            .bento-card-purple { background: linear-gradient(135deg, #2d1b4e 0%, #3d2b6e 100%); }
-            .bento-card-green { background: linear-gradient(135deg, #0d3320 0%, #1a4d33 100%); }
-            .bento-card-orange { background: linear-gradient(135deg, #3d260d 0%, #5c3d1a 100%); }
-        }
+        .bento-card-blue { background: linear-gradient(135deg, #f0f4ff, #e8f0fe); }
+        .bento-card-purple { background: linear-gradient(135deg, #f3e8ff, #ede9fe); }
+        .bento-card-green { background: linear-gradient(135deg, #f0fdf4, #dcfce7); }
+        .bento-card-orange { background: linear-gradient(135deg, #fff7ed, #ffedd5); }
 
         /* ========== Workflow Section ========== */
         .workflow-section {
@@ -548,47 +464,222 @@
         .workflow-step {
             display: flex;
             align-items: flex-start;
-            gap: var(--space-md);
+            gap: var(--space-lg);
             padding: var(--space-lg);
             background: var(--bg-primary);
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-sm);
-            transition: transform var(--duration-fast) var(--ease-out);
-        }
-
-        .workflow-step:hover {
-            transform: translateX(8px);
         }
 
         .step-number {
-            width: 40px;
-            height: 40px;
-            background: var(--apple-blue);
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--apple-blue), var(--apple-indigo));
             color: white;
             border-radius: var(--radius-full);
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 20px;
             font-weight: 600;
-            font-size: 17px;
             flex-shrink: 0;
         }
 
         .step-content h3 {
-            font-size: 21px;
+            font-size: 19px;
             font-weight: 600;
             margin-bottom: 4px;
         }
 
         .step-content p {
             color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* ========== Version Section ========== */
+        .version-section {
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+        }
+
+        .version-compare {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-xl);
+        }
+
+        .version-card {
+            background: var(--bg-primary);
+            border-radius: var(--radius-xl);
+            padding: var(--space-xl);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .version-card-featured {
+            border: 2px solid var(--apple-blue);
+            box-shadow: var(--shadow-md);
+            position: relative;
+        }
+
+        .version-card-featured::before {
+            content: "最新";
+            position: absolute;
+            top: -12px;
+            right: var(--space-lg);
+            background: linear-gradient(135deg, var(--apple-blue), var(--apple-indigo));
+            color: white;
+            padding: 4px 16px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .version-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .version-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .version-date {
+            font-size: 14px;
+            color: var(--text-tertiary);
+        }
+
+        .version-core-features {
+            margin-bottom: var(--space-lg);
+        }
+
+        .version-core-features h4 {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .feature-tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-xs);
+        }
+
+        .feature-tag {
+            background: var(--bg-secondary);
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* ========== Update Categories ========== */
+        .update-categories {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+        }
+
+        .update-category {
+            background: var(--bg-primary);
+            border-radius: var(--radius-xl);
+            padding: var(--space-xl);
+            border: 1px solid var(--border-color);
+        }
+
+        .update-category-highlight {
+            border: 2px solid var(--apple-blue);
+            background: linear-gradient(135deg, #f8fafc, #f0f4ff);
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+        }
+
+        .category-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .category-icon-blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
+        .category-icon-purple { background: linear-gradient(135deg, #f3e8ff, #e9d5ff); }
+        .category-icon-green { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
+        .category-icon-orange { background: linear-gradient(135deg, #ffedd5, #fed7aa); }
+        .category-icon-pink { background: linear-gradient(135deg, #fce7f3, #fbcfe8); }
+
+        .category-title {
             font-size: 17px;
+            font-weight: 600;
+        }
+
+        .category-badge {
+            background: var(--apple-red);
+            color: white;
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        .category-features {
+            list-style: none;
+        }
+
+        .category-features li {
+            padding: 8px 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .category-features li:last-child {
+            border-bottom: none;
+        }
+
+        .category-features li::before {
+            content: "✓";
+            color: var(--apple-green);
+            font-weight: 600;
+        }
+
+        .category-features li.highlight {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .category-features li.highlight::before {
+            content: "★";
+            color: var(--apple-orange);
         }
 
         /* ========== Skills Grid ========== */
         .skills-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: var(--space-md);
             max-width: var(--max-width);
             margin: 0 auto;
@@ -601,6 +692,7 @@
             text-align: center;
             transition: all var(--duration-fast) var(--ease-spring);
             border: 1px solid transparent;
+            cursor: pointer;
         }
 
         .skill-card:hover {
@@ -642,6 +734,51 @@
             font-size: 14px;
             color: var(--text-secondary);
             line-height: 1.4;
+        }
+
+        /* ========== Highlight Cards ========== */
+        .highlight-section {
+            background: linear-gradient(135deg, #f0f4ff, #f8fafc);
+        }
+
+        .highlight-cards {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-lg);
+        }
+
+        .highlight-card {
+            background: var(--bg-primary);
+            border-radius: var(--radius-xl);
+            padding: var(--space-xl);
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: var(--space-lg);
+        }
+
+        .highlight-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            flex-shrink: 0;
+        }
+
+        .highlight-content h3 {
+            font-size: 21px;
+            font-weight: 600;
+            margin-bottom: var(--space-xs);
+        }
+
+        .highlight-content p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.5;
         }
 
         /* ========== Code Block - Apple Style ========== */
@@ -804,6 +941,32 @@
         }
 
         /* ========== Responsive ========== */
+        @media (max-width: 1024px) {
+            .bento-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .bento-card-large {
+                grid-column: span 2;
+            }
+
+            .skills-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .version-compare {
+                grid-template-columns: 1fr;
+            }
+
+            .update-categories {
+                grid-template-columns: 1fr;
+            }
+
+            .highlight-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 768px) {
             .typo-hero {
                 font-size: 40px;
@@ -973,17 +1136,9 @@
                     <a href="#" class="nav-link" :class="{ active: currentView === 'home' }" @click.prevent="currentView = 'home'">首页</a>
                     <a href="#" class="nav-link" :class="{ active: currentView === 'guide' }" @click.prevent="currentView = 'guide'">指南</a>
                     <a href="#" class="nav-link" :class="{ active: currentView === 'skills' }" @click.prevent="currentView = 'skills'">技能</a>
+                    <a href="#" class="nav-link" :class="{ active: currentView === 'changelog' }" @click.prevent="currentView = 'changelog'">更新日志</a>
                     <a href="https://github.com/K3tty5555/AI_PM" target="_blank" class="nav-link">GitHub</a>
                 </div>
-                <button class="theme-toggle" @click="toggleTheme" :title="isDarkMode ? '切换到亮色模式' : '切换到暗色模式'">
-                    <svg v-if="!isDarkMode" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-                    </svg>
-                    <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="4"></circle>
-                        <path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path>
-                    </svg>
-                </button>
                 <a href="#" class="nav-cta" @click.prevent="currentView = 'guide'">开始使用</a>
             </div>
         </nav>
@@ -1000,6 +1155,7 @@
                         <div class="shape shape-3"></div>
                     </div>
                     <div class="hero-content">
+                        <div class="version-badge">🚀 2.0.0 全新发布</div>
                         <div class="hero-eyebrow typo-eyebrow">AI 辅助产品管理</div>
                         <h1 class="hero-title typo-hero">AI产品助手</h1>
                         <p class="hero-description typo-body">
@@ -1024,26 +1180,72 @@
                     <div class="section-header">
                         <h2 class="section-title typo-headline">从想法到产品<br>只需 4 步</h2>
                     </div>
-                    <div class="bento-grid">
+                    <div class="bento-grid" style="grid-template-columns: repeat(2, 1fr); max-width: 900px;">
                         <div class="bento-card bento-card-blue" @click="currentView = 'guide'">
                             <div class="bento-icon">💬</div>
                             <h3 class="bento-title">需求分析</h3>
-                            <p class="bento-desc">AI 通过深度访谈澄清需求，输出结构化分析报告和用户画像</p>
+                            <p class="bento-desc">AI 通过深度访谈澄清需求，输出结构化分析报告和用户画像，精准定位目标用户和核心痛点</p>
                         </div>
                         <div class="bento-card bento-card-purple" @click="currentView = 'guide'">
                             <div class="bento-icon">🔍</div>
                             <h3 class="bento-title">竞品研究</h3>
-                            <p class="bento-desc">自动分析市场竞争格局，识别差异化机会和突破口</p>
+                            <p class="bento-desc">自动分析市场竞争格局，深度拆解竞品功能，识别差异化机会和产品突破口</p>
                         </div>
-                        <div class="bento-card bento-card-green bento-card-large" @click="currentView = 'guide'">
+                        <div class="bento-card bento-card-green" @click="currentView = 'guide'">
                             <div class="bento-icon">📝</div>
                             <h3 class="bento-title">PRD 生成</h3>
-                            <p class="bento-desc">输出专业级产品需求文档，支持自定义写作风格和模板。包含修订记录、需求分析、功能清单、流程图、详细设计等完整章节。</p>
+                            <p class="bento-desc">输出专业级产品需求文档，支持自定义写作风格。包含修订记录、功能清单、流程图等完整章节</p>
                         </div>
-                        <div class="bento-card bento-card-orange bento-card-large" @click="currentView = 'guide'">
+                        <div class="bento-card bento-card-orange" @click="currentView = 'guide'">
                             <div class="bento-icon">🎨</div>
                             <h3 class="bento-title">原型设计</h3>
-                            <p class="bento-desc">基于 PRD 自动生成可交互网页原型，支持 Web、移动端。包含完整前端代码实现，可直接预览和分享。</p>
+                            <p class="bento-desc">基于 PRD 自动生成可交互网页原型，支持 Web、移动端，可直接预览和分享</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2.0.0 Highlight Section -->
+                <section class="section highlight-section">
+                    <div class="section-header">
+                        <span class="version-badge-small">2.0.0 重磅更新</span>
+                        <h2 class="section-title typo-headline">五大能力全面升级</h2>
+                        <p class="section-subtitle typo-body">智能协作 · 数据驱动 · 极速效率 · 专业评审 · 个性定制</p>
+                    </div>
+                    <div class="highlight-cards">
+                        <div class="highlight-card">
+                            <div class="highlight-icon" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">🤖</div>
+                            <div class="highlight-content">
+                                <h3>AI 代理团队</h3>
+                                <p>多专业角色协同工作 —— 产品经理、架构师、UI设计师、数据分析师、技术文档工程师，模拟真实产品团队工作方式</p>
+                            </div>
+                        </div>
+                        <div class="highlight-card">
+                            <div class="highlight-icon" style="background: linear-gradient(135deg, #f3e8ff, #e9d5ff);">📊</div>
+                            <div class="highlight-content">
+                                <h3>数据驱动全流程</h3>
+                                <p>上传数据文件自动分析，通过 EDA 发现业务洞察，将数据转化为产品需求，支持指标体系设计和交互式可视化</p>
+                            </div>
+                        </div>
+                        <div class="highlight-card">
+                            <div class="highlight-icon" style="background: linear-gradient(135deg, #dcfce7, #bbf7d0);">⚡</div>
+                            <div class="highlight-content">
+                                <h3>极速工作流</h3>
+                                <p>15分钟快速模式 + 4种工作流自适应选择（快速/标准/深度/数据驱动），根据需求复杂度智能推荐最佳路径</p>
+                            </div>
+                        </div>
+                        <div class="highlight-card">
+                            <div class="highlight-icon" style="background: linear-gradient(135deg, #ffedd5, #fed7aa);">👥</div>
+                            <div class="highlight-content">
+                                <h3>多角色专业评审</h3>
+                                <p>九大角色（研发/架构/产品/设计/项目/QA/安全/运营/数据）从不同维度评审 PRD，支持多轮迭代优化</p>
+                            </div>
+                        </div>
+                        <div class="highlight-card">
+                            <div class="highlight-icon" style="background: linear-gradient(135deg, #fce7f3, #fbcfe8);">🎨</div>
+                            <div class="highlight-content">
+                                <h3>个性定制体系</h3>
+                                <p>PRD 写作风格分析、UI 设计规范管理、设计令牌自动提取，让每个项目都保持一致的输出质量和品牌调性</p>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1091,7 +1293,7 @@
             <template v-if="currentView === 'skills'">
                 <section class="section" style="padding-top: calc(var(--nav-height) + var(--space-3xl));">
                     <div class="section-header">
-                        <h2 class="section-title typo-headline">12 个专业技能</h2>
+                        <h2 class="section-title typo-headline">15 个专业技能</h2>
                         <p class="section-subtitle typo-body">覆盖产品管理的完整工作流程</p>
                     </div>
                     <div class="skills-grid">
@@ -1110,6 +1312,169 @@
                 <section class="section" style="padding-top: calc(var(--nav-height) + var(--space-3xl));">
                     <div class="content-wrapper">
                         <div class="markdown-content" v-html="renderedGuide"></div>
+                    </div>
+                </section>
+            </template>
+
+            <!-- Changelog View -->
+            <template v-if="currentView === 'changelog'">
+                <section class="section" style="padding-top: calc(var(--nav-height) + var(--space-3xl));">
+                    <div class="section-header">
+                        <h2 class="section-title typo-headline">版本更新日志</h2>
+                        <p class="section-subtitle typo-body">持续迭代，只为更好的产品体验</p>
+                    </div>
+
+                    <!-- Version Compare -->
+                    <div class="version-compare" style="margin-bottom: var(--space-3xl);">
+                        <div class="version-card">
+                            <div class="version-header">
+                                <div>
+                                    <div class="version-number">1.0.0</div>
+                                    <div class="version-date">2026.02.27 基础版</div>
+                                </div>
+                            </div>
+                            <div class="version-core-features">
+                                <h4>核心功能</h4>
+                                <div class="feature-tag-list">
+                                    <span class="feature-tag">💬 需求澄清</span>
+                                    <span class="feature-tag">🔍 需求分析</span>
+                                    <span class="feature-tag">📊 竞品研究</span>
+                                    <span class="feature-tag">👤 用户故事</span>
+                                    <span class="feature-tag">📝 PRD 生成</span>
+                                    <span class="feature-tag">🎨 原型生成</span>
+                                    <span class="feature-tag">📁 多项目管理</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="version-card version-card-featured">
+                            <div class="version-header">
+                                <div>
+                                    <div class="version-number">2.0.0</div>
+                                    <div class="version-date">2026.03.02 全面升级</div>
+                                </div>
+                            </div>
+                            <div class="version-core-features">
+                                <h4>在 1.0.0 基础上新增</h4>
+                                <div class="feature-tag-list">
+                                    <span class="feature-tag">🤖 Agent Team</span>
+                                    <span class="feature-tag">📈 数据分析</span>
+                                    <span class="feature-tag">💡 数据洞察</span>
+                                    <span class="feature-tag">👥 需求评审</span>
+                                    <span class="feature-tag">⚡ 快速模式</span>
+                                    <span class="feature-tag">🔗 网页分析</span>
+                                    <span class="feature-tag">✍️ 写作风格</span>
+                                    <span class="feature-tag">🎨 UI 规范</span>
+                                    <span class="feature-tag">📊 仪表盘</span>
+                                    <span class="feature-tag">📚 知识库</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2.0.0 Update Categories -->
+                    <div style="max-width: var(--max-width); margin: 0 auto;">
+                        <h3 style="text-align: center; font-size: 28px; font-weight: 700; margin-bottom: var(--space-xl);">2.0.0 详细更新内容</h3>
+                    </div>
+
+                    <div class="update-categories">
+                        <!-- 架构重构 -->
+                        <div class="update-category">
+                            <div class="category-header">
+                                <div class="category-icon category-icon-blue">🏗️</div>
+                                <div class="category-title">架构重构</div>
+                            </div>
+                            <ul class="category-features">
+                                <li class="highlight">核心引擎重构，统一状态管理</li>
+                                <li class="highlight">技能文件拆分，模块化设计</li>
+                                <li>PRD 目录结构统一优化</li>
+                                <li>提示词工程化，可维护性提升</li>
+                                <li>质量门禁机制，输出更稳定</li>
+                                <li>测试框架基础搭建</li>
+                            </ul>
+                        </div>
+
+                        <!-- 智能协作 -->
+                        <div class="update-category update-category-highlight">
+                            <div class="category-header">
+                                <div class="category-icon category-icon-purple">🤖</div>
+                                <div class="category-title">智能协作</div>
+                                <span class="category-badge">重磅</span>
+                            </div>
+                            <ul class="category-features">
+                                <li class="highlight">Agent Team 多代理协作系统</li>
+                                <li class="highlight">6 大专业角色（PM/架构/设计/数据/文档）</li>
+                                <li class="highlight">3 种协作模式（串行/并行/敏捷）</li>
+                                <li>九大多角色需求评审</li>
+                                <li>多轮迭代优化机制</li>
+                                <li>质量门禁自动检查</li>
+                            </ul>
+                        </div>
+
+                        <!-- 数据驱动 -->
+                        <div class="update-category update-category-highlight">
+                            <div class="category-header">
+                                <div class="category-icon category-icon-green">📊</div>
+                                <div class="category-title">数据驱动</div>
+                                <span class="category-badge">重磅</span>
+                            </div>
+                            <ul class="category-features">
+                                <li class="highlight">数据洞察与需求发现</li>
+                                <li class="highlight">交互式 EDA 分析</li>
+                                <li class="highlight">数据指标体系设计</li>
+                                <li>埋点方案自动规划</li>
+                                <li>A/B 测试设计支持</li>
+                                <li>交互式可视化仪表盘</li>
+                            </ul>
+                        </div>
+
+                        <!-- 效率工具 -->
+                        <div class="update-category">
+                            <div class="category-header">
+                                <div class="category-icon category-icon-orange">⚡</div>
+                                <div class="category-title">效率工具</div>
+                            </div>
+                            <ul class="category-features">
+                                <li class="highlight">15分钟快速模式</li>
+                                <li class="highlight">4种工作流自适应选择</li>
+                                <li>参考网页智能分析</li>
+                                <li>支持账号密码登录分析</li>
+                                <li>进度可视化追踪</li>
+                                <li>断点续传机制</li>
+                            </ul>
+                        </div>
+
+                        <!-- 个性定制 -->
+                        <div class="update-category">
+                            <div class="category-header">
+                                <div class="category-icon category-icon-pink">🎨</div>
+                                <div class="category-title">个性定制</div>
+                            </div>
+                            <ul class="category-features">
+                                <li class="highlight">PRD 写作风格分析</li>
+                                <li class="highlight">UI 设计规范管理</li>
+                                <li>设计令牌自动提取</li>
+                                <li>用户分层模式</li>
+                                <li>知识库沉淀复用</li>
+                                <li>PDF/飞书多格式导出</li>
+                            </ul>
+                        </div>
+
+                        <!-- 项目仪表盘 -->
+                        <div class="update-category">
+                            <div class="category-header">
+                                <div class="category-icon category-icon-blue">📈</div>
+                                <div class="category-title">项目仪表盘</div>
+                            </div>
+                            <ul class="category-features">
+                                <li class="highlight">项目全景视图</li>
+                                <li class="highlight">可视化进度追踪</li>
+                                <li>多项目对比分析</li>
+                                <li>健康度自动评估</li>
+                                <li>产出物一键预览</li>
+                                <li>关键指标可视化</li>
+                            </ul>
+                        </div>
                     </div>
                 </section>
             </template>
@@ -1152,6 +1517,7 @@
                     <a href="https://github.com/K3tty5555/AI_PM" target="_blank" class="footer-link">GitHub</a>
                     <a href="#" class="footer-link" @click.prevent="currentView = 'guide'">文档</a>
                     <a href="#" class="footer-link" @click.prevent="currentView = 'skills'">技能</a>
+                    <a href="#" class="footer-link" @click.prevent="currentView = 'changelog'">更新日志</a>
                 </div>
                 <p class="footer-copy">© 2025 AI_PM. 基于 MIT 协议开源。</p>
             </div>
@@ -1161,7 +1527,7 @@
     <script>
         const { createApp, ref, computed, onMounted } = Vue;
 
-        // Skills Data
+        // Skills Data - 2.0.0 更新为 15 个技能
         const SKILLS_DATA = [
             { name: "AI_PM 主控", command: "/ai-pm", icon: "🎯", desc: "完整产品流程，从需求到原型" },
             { name: "需求分析", command: "/pm-analyze", icon: "💬", desc: "深度访谈澄清需求" },
@@ -1174,10 +1540,13 @@
             { name: "数据洞察", command: "/pm-data", icon: "💡", desc: "从数据中发现洞察" },
             { name: "配置管理", command: "/pm-config", icon: "⚙️", desc: "写作风格和 UI 规范" },
             { name: "项目仪表盘", command: "/pm-dashboard", icon: "📈", desc: "可视化进度追踪" },
-            { name: "代理团队", command: "/agent-team", icon: "🤖", desc: "多角色协同工作" }
+            { name: "代理团队", command: "/agent-team", icon: "🤖", desc: "多角色协同工作" },
+            { name: "知识库", command: "/pm-knowledge", icon: "📚", desc: "沉淀设计模式和经验" },
+            { name: "UI 规范", command: "/pm-ui-spec", icon: "🎯", desc: "管理设计规范和令牌" },
+            { name: "写作风格", command: "/pm-writing-style", icon: "✍️", desc: "分析并保持写作风格" }
         ];
 
-        // Guide Content
+        // Guide Content - 2.0.0 更新版本
         const GUIDE_CONTENT = `# 快速开始
 
 ## 安装
@@ -1218,10 +1587,48 @@ AI 会问你几个关键问题：
 - 和竞品有什么区别？
 
 然后自动完成：
-1. 需求分析 - 输出用户画像和痛点分析
-2. 竞品研究 - 分析市场竞争格局
-3. PRD 编写 - 生成专业产品需求文档
-4. 原型设计 - 创建可交互网页原型
+1. **需求分析** - 输出用户画像和痛点分析
+2. **竞品研究** - 分析市场竞争格局
+3. **PRD 编写** - 生成专业产品需求文档
+4. **原型设计** - 创建可交互网页原型
+
+## 2.0.0 新功能
+
+### 🤖 AI 代理团队
+
+模拟真实产品团队，多角色协同工作：
+
+\`\`\`bash
+# 启动完整代理团队
+/agent-team "开发一个智能客服系统"
+
+# 指定特定角色
+/agent-team --roles=pm,architect "做一个记账App"
+\`\`\`
+
+### 📊 数据驱动
+
+从数据中发现产品机会：
+
+\`\`\`bash
+# 上传数据文件自动分析
+/ai-pm data-insight ./user_behavior_data.xlsx
+
+# 基于PRD设计数据指标
+/ai-pm analytics
+\`\`\`
+
+### ⚡ 快速模式
+
+15分钟快速输出：
+
+\`\`\`bash
+# 快速模式：需求澄清 → PRD → 原型
+/ai-pm quick "做一个记账小程序"
+
+# 仅快速生成PRD
+/ai-pm quick-prd "做一个记账小程序"
+\`\`\`
 
 ## 技能速查
 
@@ -1231,6 +1638,9 @@ AI 会问你几个关键问题：
 | PRD 生成 | /pm-prd | 输出专业需求文档 |
 | 原型设计 | /pm-prototype | 生成交互式原型 |
 | 需求评审 | /pm-review | 多角色专业评审 |
+| 数据分析 | /pm-analytics | 指标体系设计 |
+| 数据洞察 | /pm-data | 从数据中发现洞察 |
+| 代理团队 | /agent-team | 多角色协同工作 |
 
 ## 工作流程
 
@@ -1258,7 +1668,10 @@ AI 会问你几个关键问题：
             "/pm-data": "/pm-data --file=数据文件路径 [--format=csv|json|excel]",
             "/pm-config": "/pm-config [get|set|list] [配置项] [值]",
             "/pm-dashboard": "/pm-dashboard",
-            "/agent-team": "/agent-team \"需求描述\" [--mode=serial|parallel|agile] [--roles=角色列表]"
+            "/agent-team": "/agent-team \"需求描述\" [--mode=serial|parallel|agile] [--roles=角色列表]",
+            "/pm-knowledge": "/pm-knowledge [search|add|suggest] [关键词]",
+            "/pm-ui-spec": "/pm-ui-spec [list|upload|apply] [规范名]",
+            "/pm-writing-style": "/pm-writing-style [list|analyze|apply] [风格名]"
         };
 
         createApp({
@@ -1266,7 +1679,6 @@ AI 会问你几个关键问题：
                 const currentView = ref('home');
                 const skills = ref(SKILLS_DATA.map(s => ({...s, usage: SKILL_USAGE[s.command]})));
                 const selectedSkill = ref(null);
-                const isDarkMode = ref(false);
 
                 const renderedGuide = computed(() => {
                     return marked.parse(GUIDE_CONTENT);
@@ -1282,27 +1694,6 @@ AI 会问你几个关键问题：
                     document.body.style.overflow = '';
                 };
 
-                const toggleTheme = () => {
-                    isDarkMode.value = !isDarkMode.value;
-                    if (isDarkMode.value) {
-                        document.documentElement.style.setProperty('--bg-primary', '#000000');
-                        document.documentElement.style.setProperty('--bg-secondary', '#1c1c1e');
-                        document.documentElement.style.setProperty('--bg-tertiary', '#2c2c2e');
-                        document.documentElement.style.setProperty('--text-primary', '#f5f5f7');
-                        document.documentElement.style.setProperty('--text-secondary', '#86868b');
-                        document.documentElement.style.setProperty('--text-tertiary', '#6e6e73');
-                        document.documentElement.style.setProperty('--border-color', 'rgba(255,255,255,0.1)');
-                    } else {
-                        document.documentElement.style.setProperty('--bg-primary', '#ffffff');
-                        document.documentElement.style.setProperty('--bg-secondary', '#f5f5f7');
-                        document.documentElement.style.setProperty('--bg-tertiary', '#fafafa');
-                        document.documentElement.style.setProperty('--text-primary', '#1d1d1f');
-                        document.documentElement.style.setProperty('--text-secondary', '#86868b');
-                        document.documentElement.style.setProperty('--text-tertiary', '#6e6e73');
-                        document.documentElement.style.setProperty('--border-color', 'rgba(0,0,0,0.1)');
-                    }
-                };
-
                 onMounted(() => {
                     // Highlight code blocks
                     document.querySelectorAll('pre code').forEach((block) => {
@@ -1314,11 +1705,9 @@ AI 会问你几个关键问题：
                     currentView,
                     skills,
                     selectedSkill,
-                    isDarkMode,
                     renderedGuide,
                     openSkillModal,
-                    closeSkillModal,
-                    toggleTheme
+                    closeSkillModal
                 };
             }
         }).mount('#app');
