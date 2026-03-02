@@ -10,7 +10,7 @@
 ```
 templates/ui-specs/
 ├── README.md                       # 本说明文件
-├── example-enterprise/             # 示例：企业级设计规范
+├── enterprise-sample/              # 示例：企业级设计规范
 │   ├── README.md                   # 规范说明
 │   ├── design-tokens.json          # 设计令牌
 │   └── assets/                     # 设计资源
@@ -153,7 +153,7 @@ my-company/
 
 | 规范名称 | 说明 | 适用场景 |
 |---------|------|---------|
-| `example-enterprise/` | 企业级B端产品规范示例 | 内部管理系统 |
+| `enterprise-sample/` | 企业级B端产品规范示例 | 内部管理系统 |
 | `example-apple/` | Apple风格规范示例 | 消费级产品 |
 
 ---
