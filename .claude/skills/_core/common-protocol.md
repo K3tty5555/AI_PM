@@ -46,7 +46,7 @@ Phase 3: 交付
 
 示例：
 01-requirement-draft.md
-05-PRD-v1.0.md
+05-prd/05-PRD-v1.0.md
 08-review-report-v1.md
 ```
 

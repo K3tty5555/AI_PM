@@ -62,14 +62,6 @@ templates/ui-specs/*/
 !templates/ui-specs/example-*/
 !templates/ui-specs/README.md
 
-# PRD Templates - keep template files only
-templates/prd-templates/*.pdf
-templates/prd-templates/*.docx
-templates/prd-templates/*.xlsx
-!templates/prd-templates/*template*.pdf
-!templates/prd-templates/*template*.md
-!templates/prd-templates/README.md
-
 # -----------------------------------------------------------------------------
 # Design Source Files (Large & Proprietary)
 # -----------------------------------------------------------------------------
