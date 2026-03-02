@@ -176,7 +176,7 @@ merge_task:
   agent: product-manager
   task: PRD整合
   input: all_parallel_outputs
-  output: 05-PRD-v1.0.md
+  output: 05-prd/05-PRD-v1.0.md
 ```
 
 ### Phase 2: 执行与监控
@@ -395,7 +395,8 @@ output/projects/{项目名}/
 ├── 02-analysis-report.md        # 产品经理：需求分析
 ├── 03-competitor-report.md      # 产品经理：竞品研究
 ├── 04-user-stories.md           # 产品经理：用户故事
-├── 05-PRD-v1.0.md               # 产品经理：PRD文档
+├── 05-prd/                      # 产品经理：PRD文档目录
+│   └── 05-PRD-v1.0.md           # PRD主文档
 ├── 06-prototype/                # UI设计师：可交互原型
 │   ├── index.html
 │   ├── css/

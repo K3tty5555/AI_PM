@@ -230,7 +230,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 **读取评审材料**：
 ```
 📁 正在读取评审材料...
-   ✓ PRD文档: 05-PRD-v1.0.md
+   ✓ PRD文档: 05-prd/05-PRD-v1.0.md
    ✓ 数据分析: 09-analytics-requirement.md (参考)
    ✓ 原型目录: 06-prototype/
    ✓ 需求分析: 02-analysis-report.md (参考)
@@ -601,7 +601,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ### 步骤1: 读取材料
 
-1. 读取 PRD 文档 (05-PRD-v1.0.md)
+1. 读取 PRD 文档 (05-prd/05-PRD-v1.0.md)
 2. 读取原型文件 (06-prototype/)
 3. 读取需求分析和用户故事作为参考
 
@@ -713,12 +713,12 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 基于确认的修改范围，修改 PRD 和原型。
 
 **修改原则**：
-- **不创建新文件版本**，直接在 `05-PRD-v1.0.md` 中修改
+- **不创建新文件版本**，直接在 `05-prd/05-PRD-v1.0.md` 中修改
 - **修订日志中增加新记录**，追踪变更
 - **保持文档唯一性**，Git历史已足够
 
 **修改步骤**：
-1. 读取现有 `05-PRD-v1.0.md`
+1. 读取现有 `05-prd/05-PRD-v1.0.md`
 2. 在修订日志中增加新版本记录
    ```markdown
    | 2026-03-01 | v1.1 | 评审后修改：修复{N}个问题（{Critical} Critical + {Major} Major） | 全模块 | AI_PM | 基于评审报告v1 |
@@ -729,7 +729,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 6. 更新 `06-prototype/`（如有需要）
 
 **不执行的操作**：
-- ❌ 不创建 `05-PRD-v1.1.md` 新文件
+- ❌ 不创建 `05-prd/05-PRD-v1.1.md` 新文件
 - ❌ 不生成 `.bak` 备份文件
 - ❌ 不在文件名中体现版本号
 
@@ -797,7 +797,7 @@ Phase 7 (可选): 需求评审
          - 否 → 跳过，流程结束
     ↓ 生成 08-review-report-v1.md
     ↓ 用户确认修改范围
-    ↓ 修改 PRD（v2.0优化：直接在05-PRD-v1.0.md中更新）
+    ↓ 修改 PRD（v2.0优化：直接在05-prd/05-PRD-v1.0.md中更新）
          • 在修订日志中增加v1.1记录
          • 直接在原文档中修改内容
          • 不创建新文件，保持文档唯一性

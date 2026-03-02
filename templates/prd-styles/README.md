@@ -7,21 +7,24 @@
 ## 📁 文件夹结构
 
 ```
-writing-styles/
+prd-styles/                            # PRD 写作风格库
 │
 ├── README.md                          # 📄 本说明文件
 │
-├── default/                           # 🏭 系统默认风格
-│   └── style-config.json
+├── default/                           # 🏭 系统默认风格（必需）
+│   ├── style-config.json              #    风格配置
+│   ├── pdf-style.css                  #    PDF导出样式
+│   └── feishu-template.md             #    飞书格式模板
 │
-├── [用户风格1]/                       # 👤 用户上传的风格
-│   ├── style-config.json              #    风格配置文件
-│   └── examples/                      #    参考示例原文
-│       └── original-prd.md
-│
-├── [用户风格2]/                       # 👤 另一个用户风格
+├── enterprise-standard/               # 🏢 企业标准风格（示例）
 │   ├── style-config.json
 │   └── examples/
+│       └── sample-prd.md
+│
+├── [用户风格1]/                       # 👤 用户自定义风格
+│   ├── style-config.json              #    风格配置文件
+│   ├── pdf-style.css                  #    （可选）自定义PDF样式
+│   └── examples/                      #    参考示例原文
 │       └── original-prd.md
 │
 └── ...
@@ -86,7 +89,25 @@ writing-styles/
 | `writing` | 写作风格（语言特征、术语习惯） |
 | `formatting` | 格式偏好（表格字段、标注方式） |
 | `contentFocus` | 内容侧重（用户故事、数据指标比重） |
+| `exportFormats` | 导出格式配置（PDF、飞书等模板） |
 | `examples` | 风格示例片段 |
+
+## 📤 导出格式支持
+
+每个风格可以配置导出模板：
+
+| 文件 | 用途 |
+|------|------|
+| `pdf-style.css` | PDF导出样式表 |
+| `feishu-template.md` | 飞书云文档格式模板 |
+
+### 默认风格导出
+
+系统默认风格（`default/`）已包含标准导出模板：
+- ✅ `pdf-style.css` - 标准PDF样式
+- ✅ `feishu-template.md` - 飞书格式模板
+
+用户自定义风格如无特殊需求，会自动继承默认风格的导出模板。
 
 ---
 

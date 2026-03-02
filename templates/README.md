@@ -28,9 +28,6 @@ templates/
 │   ├── enterprise-sample/         #    企业规范示例
 │   └── [用户自定义规范]/           #    你的 UI 规范
 │
-├── prd-templates/                 # 📝 PRD 文档模板
-│   └── (上传你的 PRD 模板)
-│
 ├── retrospectives/                # 🔍 项目复盘模板
 │   └── retrospective-template.md  #    复盘报告模板
 │
@@ -102,9 +99,8 @@ cp templates/ui-specs/enterprise-sample/* \
 |--------|------|---------|
 | `examples/` | 示例文件，供参考学习 | 偶尔查看 |
 | `configs/` | 项目配置、参考资源配置 | 按需复制 |
-| `prd-styles/` | PRD 写作风格（章节结构、用词习惯） | 常用 |
+| `prd-styles/` | PRD 写作风格（章节结构、用词习惯、导出模板） | 常用 |
 | `ui-specs/` | UI 设计规范（颜色、字体、组件） | 常用 |
-| `prd-templates/` | PRD 文档模板 | 按需上传 |
 | `retrospectives/` | 项目复盘报告模板 | 项目结束时 |
 | `analytics/` | 数据分析需求模板 | 数据项目 |
 | `data-insight/` | 数据洞察仪表盘模板 | 数据可视化 |

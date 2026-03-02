@@ -58,6 +58,20 @@
     "technicalDetail": "light",
     "businessContext": "detailed"
   },
+  "exportFormats": {
+    "supported": ["md", "pdf", "feishu"],
+    "default": "md",
+    "templates": {
+      "pdfStyle": "pdf-style.css",
+      "feishuTemplate": "feishu-template.md"
+    },
+    "pdfOptions": {
+      "pageSize": "A4",
+      "margin": "2cm",
+      "fontFamily": "PingFang SC, Microsoft YaHei",
+      "fontSize": "11pt"
+    }
+  },
   "examples": {
     "summary": "本文档描述[功能名称]的产品需求，旨在解决[核心痛点]，提升[关键指标]。",
     "requirement": "用户在[场景]下，需要[需求]，以解决[痛点]。",
