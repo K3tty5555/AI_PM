@@ -1,6 +1,104 @@
+# =============================================================================
+# AI_PM Project - Git Ignore Configuration
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Operating System Files
+# -----------------------------------------------------------------------------
 .DS_Store
-.playwright/
-output/
-templates/writing-styles/.playwright-cli/
+Thumbs.db
+Desktop.ini
+
+# -----------------------------------------------------------------------------
+# IDE & Editor Files
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# -----------------------------------------------------------------------------
+# Logs & Temporary Files
+# -----------------------------------------------------------------------------
 *.log
+logs/
+tmp/
+temp/
+*.tmp
+*.temp
+.cache/
+
+# -----------------------------------------------------------------------------
+# AI_PM Specific - Generated Content
+# -----------------------------------------------------------------------------
+
+# Project outputs (may contain sensitive corporate data)
+output/
+
+# Documentation build output
 .docs/
+
+# Playwright
+.playwright/
+.claude/**/.playwright-cli/
+
+# -----------------------------------------------------------------------------
+# AI_PM Specific - Templates (Keep examples, ignore user uploads)
+# -----------------------------------------------------------------------------
+
+# Configs - only keep reference config
+templates/configs/*.md
+!templates/configs/reference-config.md
+
+# PRD Styles - keep default and examples
+templates/prd-styles/*/
+!templates/prd-styles/default/
+!templates/prd-styles/example-*/
+!templates/prd-styles/README.md
+
+# UI Specs - keep examples
+templates/ui-specs/*/
+!templates/ui-specs/example-*/
+!templates/ui-specs/README.md
+
+# PRD Templates - keep template files only
+templates/prd-templates/*.pdf
+templates/prd-templates/*.docx
+templates/prd-templates/*.xlsx
+!templates/prd-templates/*template*.pdf
+!templates/prd-templates/*template*.md
+!templates/prd-templates/README.md
+
+# -----------------------------------------------------------------------------
+# Design Source Files (Large & Proprietary)
+# -----------------------------------------------------------------------------
+*.sketch
+*.fig
+*.ai
+*.psd
+*.xd
+
+# -----------------------------------------------------------------------------
+# Archives
+# -----------------------------------------------------------------------------
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# -----------------------------------------------------------------------------
+# Language Specific
+# -----------------------------------------------------------------------------
+
+# Node.js
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env

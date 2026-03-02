@@ -35,8 +35,12 @@ AI_PM/                          # 技能根目录
 │   ├── ai-pm-research/         # 竞品研究
 │   ├── ai-pm-story/            # 用户故事
 │   ├── ai-pm-prd/              # PRD生成
+│   ├── ai-pm-analytics/        # 数据分析与埋点设计
+│   ├── ai-pm-data-insight/     # 数据洞察与需求发现【新增】
 │   ├── ai-pm-prototype/        # 原型生成
-│   ├── ai-pm-review/           # 需求评审（新增）
+│   ├── ai-pm-review/           # 需求评审
+│   ├── ai-pm-knowledge/        # 知识库管理
+│   ├── ai-pm-dashboard/        # 项目仪表盘
 │   ├── ai-pm-writing-style/    # 写作风格管理
 │   └── ai-pm-ui-spec/          # UI 规范管理（独立技能）
 │
@@ -53,26 +57,40 @@ AI_PM/                          # 技能根目录
 │   │   │   ├── 07-references/             # 参考资源（可选）
 │   │   │   │   ├── reference-config.md
 │   │   │   │   └── images/
-│   │   │   └── 08-review-report-v1.md     # 需求评审报告（可选）
-│   │   │       ├── reference-config.md
-│   │   │       └── images/
+│   │   │   ├── 08-review-report-v1.md     # 需求评审报告（可选）
+│   │   │   ├── 09-analytics-requirement.md # 数据分析需求（可选）
+│   │   │   ├── 10-data-insight-report.md   # 数据洞察报告（可选）
+│   │   │   ├── 11-data-driven-requirements.md # 数据驱动需求（可选）
+│   │   │   └── 12-data-insight-dashboard/  # 交互式数据洞察仪表盘（可选）
 │   │   └── accounting-app-20260301/
 │   └── .current-project        # 当前项目记录
 │
 ├── templates/                  # 全局模板（跨项目共享）
-│   ├── 00-examples/            # 示例文件
-│   ├── 01-config/              # 配置模板
-│   │   └── reference-config.md # 参考资源配置模板
+│   ├── examples/            # 示例文件
+│   ├── configs/              # 配置模板
+│   │   ├── reference-config.md # 参考资源配置模板
+│   │   ├── project-config.json # 项目配置模板
+│   │   └── project-config-schema.json # 配置Schema
+│   ├── retrospectives/       # 复盘模板
+│   │   └── retrospective-template.md
 │   ├── ui-specs/               # ✅ UI 规范库（全局独立管理）
 │   │   ├── README.md
-│   │   ├── example-enterprise/ # 企业规范示例
+│   │   ├── enterprise-sample/  # 企业规范示例
 │   │   └── [用户自定义规范]/
-│   ├── writing-styles/         # ✅ PRD 写作风格库（新增）
+│   ├── prd-styles/             # ✅ PRD 写作风格库
 │   │   ├── README.md
 │   │   ├── default/            # 系统默认风格
-│   │   └── [用户自定义风格]/    # 用户上传的风格
-│   ├── prd-templates/
-│   └── ...
+│   │   └── [用户自定义风格]/   # 用户上传的风格
+│   ├── knowledge-base/         # ✅ 知识库
+│   │   ├── patterns/           # 设计模式
+│   │   ├── decisions/          # 决策记录
+│   │   ├── pitfalls/           # 踩坑记录
+│   │   ├── metrics/            # 度量指标
+│   │   └── playbooks/          # 场景手册
+│   ├── prd-templates/          # PRD模板
+│   └── data-insight/ # 数据洞察仪表盘模板
+│       └── index.html          # 交互式仪表盘HTML模板
+│
 │
 ├── README.md                   # 项目说明
 ├── CHANGELOG.md                # 版本日志
@@ -101,6 +119,8 @@ AI_PM/                          # 技能根目录
 | `fetch` | 抓取参考网页进行分析 |
 | `ui-spec` | 进入 UI 规范管理 |
 | `writing-style` | 进入 PRD 写作风格管理 |
+| `data-insight {文件}` | 数据洞察与需求发现 |
+| `analytics` | 数据分析与埋点设计 |
 | `config` | 查看/修改用户配置 |
 | `status` | 显示项目列表和当前项目状态 |
 | `switch {项目名}` | 切换到指定项目 |
@@ -190,12 +210,16 @@ AI:
 │     流程：完整 Phase 0-7 + 多轮评审             │
 │     适合：复杂系统、企业级项目                  │
 ├─────────────────────────────────────────────────┤
+│  📈 数据驱动模式                                │
+│     流程：数据洞察 → 需求提炼 → 产品流程        │
+│     适合：有数据文件，需从数据中挖掘需求        │
+├─────────────────────────────────────────────────┤
 │  🎯 自适应模式                                  │
 │     根据需求复杂度自动选择                      │
 │     AI 评估后推荐最优流程                       │
 └─────────────────────────────────────────────────┘
 
-💬 请回复：快速/标准/深度/自适应
+💬 请回复：快速/标准/深度/数据驱动/自适应
 ```
 
 **快速命令直达**:
@@ -366,7 +390,7 @@ AI: ✅ 已选择 "my-company" 设计规范
 ### 风格库存储位置
 
 ```
-templates/writing-styles/
+templates/prd-styles/
 ├── default/                   # 系统默认风格
 │   └── style-config.json
 ├── enterprise-standard/       # 企业标准风格示例
@@ -407,7 +431,7 @@ templates/writing-styles/
     ↓
 💬 请提供 PRD 文件路径
     ↓
-📁 创建文件夹 templates/writing-styles/{风格名}/
+📁 创建文件夹 templates/prd-styles/{风格名}/
     ↓
 🔄 AI 分析 PRD 文档
     • 提取文档结构偏好
@@ -439,7 +463,7 @@ templates/writing-styles/
 
 ✍️ 产品经理风格选择：
 
-📁 扫描风格库 (templates/writing-styles/)...
+📁 扫描风格库 (templates/prd-styles/)...
 
 【情况A：检测到多种风格】
 可用风格：
@@ -470,7 +494,7 @@ templates/writing-styles/
 | 对比项 | 产品经理风格 | 设计规范 |
 |--------|-------------|---------|
 | **关注点** | PRD 写作风格、结构、术语 | UI 视觉风格、组件、交互 |
-| **存储位置** | `templates/writing-styles/` | `templates/ui-specs/` |
+| **存储位置** | `templates/prd-styles/` | `templates/ui-specs/` |
 | **影响内容** | 文字描述、章节结构、表格格式 | 原型视觉、颜色、字体、间距 |
 | **使用时机** | 生成 PRD 文档时 | 生成原型时 |
 | **配置文件** | `style-config.json` | `design-tokens.json` |
@@ -512,8 +536,8 @@ AI: 🔄 正在分析 PRD 文档...
    • 优先级标记：P0/P1/P2
 
 📝 生成风格配置：
-    • templates/writing-styles/my-company-style/style-config.json
-    • templates/writing-styles/my-company-style/examples/original-prd.md
+    • templates/prd-styles/my-company-style/style-config.json
+    • templates/prd-styles/my-company-style/examples/original-prd.md
 
 ✅ 风格 "my-company-style" 创建完成！
 
@@ -667,6 +691,22 @@ AI: 🔄 正在分析 PRD 文档...
 - 提供**一键连续模式**（Yolo模式）供熟悉用户使用
 
 ```
+【数据驱动入口 - 可选】
+用户上传数据文件 或执行 /ai-pm data-insight {文件}
+    ↓
+数据洞察阶段（替代传统Phase 0-1）
+    ↓ 解析数据文件（Excel/CSV/JSON/Parquet）
+    ↓ 探索性数据分析（EDA）
+    ↓ 多轮交互提问，挖掘潜在需求
+    ↓ 识别用户行为模式、转化问题、流失风险
+    ↓ 生成 10-data-insight-report.md
+    ↓
+数据驱动需求提炼
+    ↓ 将数据洞察转化为产品需求
+    ↓ 基于问题诊断确定优化方向
+    ↓ 生成 11-data-driven-requirements.md
+    ↓ 可选择进入标准Phase 2-8流程
+
 Phase 0: 项目启动与参考资源收集（v2.0优化）
 
 步骤1: 项目类型确认
@@ -730,7 +770,7 @@ Phase 5: PRD 生成前统一确认
 
          ✍️ 产品经理风格选择：
 
-         📁 扫描风格库 (templates/writing-styles/)...
+         📁 扫描风格库 (templates/prd-styles/)...
 
          【情况A：检测到多种风格】
          可用风格：
@@ -767,7 +807,41 @@ Phase 5: PRD 生成前统一确认
          ```
     ↓ 生成 05-PRD-v1.0.md（应用选定的风格+设计规范）
 
-Phase 6: 原型生成（Token消耗提示）
+Phase 6: 数据分析与埋点设计【新增】
+    ↓ 读取 PRD (05-PRD-v1.0.md)
+    ↓ 调用 ai-pm-analytics 技能
+         - 指标体系设计（北极星指标+驱动指标）
+         - 埋点方案设计（事件定义+参数设计）
+         - 数据看板规划（可视化需求）
+         - A/B测试方案（实验设计）
+    ↓ 询问用户
+         ```
+         ✅ PRD已生成！
+
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         📊 下一步：数据分析与埋点设计
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+         💡 数据设计内容：
+            • 完整的指标体系（北极星指标+驱动指标）
+            • 详细的埋点方案（事件定义+参数设计）
+            • 数据看板规划（可视化需求）
+            • A/B测试方案（实验设计）
+
+         💬 请选择：
+            • "开始设计" → 生成完整数据需求文档
+            • "跳过"     → 后续用 /ai-pm analytics 单独执行
+            • "精简版"   → 仅设计核心指标和必要埋点
+
+         建议：数据设计应在原型生成前完成，确保原型集成埋点需求
+         ```
+    ↓ 生成 09-analytics-requirement.md
+         - 指标体系
+         - 埋点方案
+         - 数据看板需求
+         - A/B测试方案
+
+Phase 7: 原型生成（Token消耗提示）
     ↓ ⚠️ **重要提示（Token消耗说明）**
          ```
          ✅ PRD已生成！
@@ -794,9 +868,10 @@ Phase 6: 原型生成（Token消耗提示）
          - 生成原型 → 进入Phase 6执行
          - 跳过 → 输出完成总结
 
-Phase 6: 原型生成（执行）
-    ↓ 读取 PRD 中确定的设计规范
-         - 从 PRD 文档读取已选定的设计规范
+Phase 8: 原型生成（执行）
+    ↓ 读取 PRD 和数据分析文档
+         - 从 05-PRD-v1.0.md 读取设计规范
+         - 从 09-analytics-requirement.md 读取埋点需求
          - 加载 templates/ui-specs/{规范名}/design-tokens.json
     ↓ 询问设备类型（如未指定）
          ```
@@ -807,6 +882,7 @@ Phase 6: 原型生成（执行）
          ```
     ↓ 生成 06-prototype/（可交互网页原型）
          - 应用 PRD 阶段选定的设计规范
+         - 集成数据分析阶段的埋点需求
          - 应用指定的设备类型
     ↓ 输出完成总结
     ↓ 询问是否进入需求评审
@@ -814,11 +890,11 @@ Phase 6: 原型生成（执行）
          ✅ 原型生成完成！
 
          💬 是否进行需求评审？
-            • "开始评审" → 进入 Phase 7
+            • "开始评审" → 进入 Phase 9
             • "跳过" → 流程结束
          ```
 
-Phase 7: 需求评审（可选，多轮迭代）
+Phase 9: 需求评审（可选，多轮迭代）
     ↓ 读取 PRD (05-PRD-v1.0.md) 和原型 (06-prototype/)
     ↓ 调用 ai-pm-review 技能
          - 研发总监评审（技术可行性、开发成本）
@@ -1037,7 +1113,7 @@ output/projects/项目名/07-references/
 
 ### 参考资源配置文件
 
-**模板位置**：`templates/01-config/reference-config.md`
+**模板位置**：`templates/configs/reference-config.md`
 
 **文件结构**：
 ```markdown
