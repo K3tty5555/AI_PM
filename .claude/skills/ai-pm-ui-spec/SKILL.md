@@ -10,6 +10,17 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(rm)
 
 # UI 规范管理
 
+> ⚠️ **已合并**: 本技能已合并到 `ai-pm-config`，请使用 `/ai-pm config ui`
+
+## 迁移提示
+
+```
+旧命令: /ai-pm ui-spec upload
+新命令: /ai-pm config ui extract
+
+过渡期: 2026-03-01 ~ 2026-03-15 (2周)
+```
+
 ## 定位
 
 这是一个**独立的管理型技能**，专门负责设计规范的全生命周期管理。

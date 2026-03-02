@@ -15,7 +15,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Read
 
 - 整合所有前置分析的输出
 - **基于用户模板格式**生成 PRD 文档（8章标准结构）
-- **支持写作风格配置**：读取 `templates/writing-styles/{风格名}/style-config.json` 并应用
+- **支持写作风格配置**：读取 `templates/prd-styles/{风格名}/style-config.json` 并应用
 - 确保文档结构清晰、专业、可直接用于评审
 - **读取参考模板**：`templates/prd-templates/[20XXMX][模块名]需求文档模板.md`
 - 包含所有必要的产品信息
@@ -313,7 +313,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Read
 
 1. **读取风格配置**（可选）：
    - 检查是否指定了 `--style` 参数或从环境变量读取 `$PM_STYLE`
-   - 读取 `templates/writing-styles/{风格名}/style-config.json`
+   - 读取 `templates/prd-styles/{风格名}/style-config.json`
    - 解析风格配置（结构、写作、格式、内容侧重）
 2. **读取参考模板**（可选）：`templates/prd-templates/[20XXMX][模块名]需求文档模板.md`
 3. **读取输入文件**：

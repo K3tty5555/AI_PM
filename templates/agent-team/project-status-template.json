@@ -1,0 +1,202 @@
+{
+  "project_id": "{project-name}-{YYYYMMDD}",
+  "project_name": "项目名称",
+  "status": "pending|in_progress|paused|completed|blocked",
+  "mode": "serial|parallel|agile",
+  "created_at": "2026-03-01T10:00:00Z",
+  "updated_at": "2026-03-01T12:00:00Z",
+  "completed_at": null,
+  "requester": "用户名称",
+  "description": "项目描述",
+  "agents": {
+    "orchestrator": {
+      "role": "coordinator",
+      "status": "active",
+      "current_task": "任务调度",
+      "progress": 100,
+      "tasks_completed": [],
+      "tasks_pending": []
+    },
+    "product_manager": {
+      "role": "需求分析",
+      "status": "pending|in_progress|completed|blocked",
+      "current_task": "当前执行任务",
+      "progress": 0,
+      "tasks": [
+        {
+          "name": "需求澄清",
+          "status": "completed",
+          "deliverable": "01-requirement-draft.md",
+          "completed_at": "2026-03-01T10:30:00Z"
+        },
+        {
+          "name": "需求分析",
+          "status": "completed",
+          "deliverable": "02-analysis-report.md",
+          "completed_at": "2026-03-01T11:00:00Z"
+        },
+        {
+          "name": "竞品研究",
+          "status": "completed",
+          "deliverable": "03-competitor-report.md",
+          "completed_at": "2026-03-01T11:30:00Z"
+        },
+        {
+          "name": "用户故事",
+          "status": "completed",
+          "deliverable": "04-user-stories.md",
+          "completed_at": "2026-03-01T12:00:00Z"
+        },
+        {
+          "name": "PRD编写",
+          "status": "in_progress",
+          "deliverable": "05-PRD-v1.0.md",
+          "started_at": "2026-03-01T12:00:00Z"
+        }
+      ]
+    },
+    "architect": {
+      "role": "架构设计",
+      "status": "pending|in_progress|completed|blocked",
+      "current_task": "等待PRD",
+      "progress": 0,
+      "blocked_by": ["product_manager"],
+      "tasks": [
+        {
+          "name": "架构设计",
+          "status": "pending",
+          "deliverable": "13-architecture-design.md",
+          "dependencies": ["05-PRD-v1.0.md"]
+        }
+      ]
+    },
+    "ui_designer": {
+      "role": "UI设计",
+      "status": "pending|in_progress|completed|blocked",
+      "current_task": "等待PRD和架构",
+      "progress": 0,
+      "blocked_by": ["product_manager", "architect"],
+      "tasks": [
+        {
+          "name": "交互设计",
+          "status": "pending",
+          "deliverable": "14-interaction-design.md",
+          "dependencies": ["05-PRD-v1.0.md"]
+        },
+        {
+          "name": "原型设计",
+          "status": "pending",
+          "deliverable": "06-prototype/",
+          "dependencies": ["05-PRD-v1.0.md", "13-architecture-design.md"]
+        }
+      ]
+    },
+    "data_analyst": {
+      "role": "数据分析",
+      "status": "pending|in_progress|completed|blocked|skipped",
+      "current_task": "未分配",
+      "progress": 0,
+      "tasks": []
+    },
+    "tech_writer": {
+      "role": "文档整理",
+      "status": "pending|in_progress|completed|blocked",
+      "current_task": "等待其他代理完成",
+      "progress": 0,
+      "blocked_by": ["product_manager", "architect", "ui_designer"],
+      "tasks": [
+        {
+          "name": "文档整合",
+          "status": "pending",
+          "deliverable": "99-project-documentation/",
+          "dependencies": ["all"]
+        }
+      ]
+    }
+  },
+  "phases": [
+    {
+      "phase_id": 1,
+      "phase_name": "需求阶段",
+      "status": "completed",
+      "agents": ["product_manager"],
+      "completed_at": "2026-03-01T12:00:00Z"
+    },
+    {
+      "phase_id": 2,
+      "phase_name": "设计阶段",
+      "status": "in_progress",
+      "agents": ["architect", "ui_designer"],
+      "started_at": "2026-03-01T12:00:00Z"
+    },
+    {
+      "phase_id": 3,
+      "phase_name": "整合阶段",
+      "status": "pending",
+      "agents": ["tech_writer"]
+    }
+  ],
+  "blockers": [],
+  "deliverables": {
+    "completed": [
+      {
+        "name": "需求澄清文档",
+        "path": "01-requirement-draft.md",
+        "created_by": "product_manager",
+        "created_at": "2026-03-01T10:30:00Z"
+      }
+    ],
+    "in_progress": [
+      {
+        "name": "PRD文档",
+        "path": "05-PRD-v1.0.md",
+        "created_by": "product_manager",
+        "started_at": "2026-03-01T12:00:00Z"
+      }
+    ],
+    "pending": [
+      {
+        "name": "架构设计文档",
+        "path": "13-architecture-design.md",
+        "blocked_by": ["05-PRD-v1.0.md"]
+      }
+    ]
+  },
+  "quality_gates": [
+    {
+      "gate_id": 1,
+      "gate_name": "需求评审",
+      "status": "passed",
+      "passed_at": "2026-03-01T12:00:00Z",
+      "criteria": {
+        "user_profile_clear": true,
+        "scenario_complete": true,
+        "pain_points_analyzed": true,
+        "scope_defined": true,
+        "priority_set": true
+      }
+    },
+    {
+      "gate_id": 2,
+      "gate_name": "设计评审",
+      "status": "pending",
+      "criteria": {
+        "architecture_clear": false,
+        "tech_selection_reasonable": false,
+        "design_complete": false,
+        "prototype_functional": false
+      }
+    }
+  ],
+  "communication_log": {
+    "log_file": "logs/communication.jsonl",
+    "last_message_id": "msg-001"
+  },
+  "metadata": {
+    "estimated_effort": "2小时",
+    "actual_effort": "1.5小时",
+    "complexity": "medium",
+    "tags": ["教育", "B2B"],
+    "category": "B2B"
+  }
+}
