@@ -23,9 +23,11 @@
 | ai-pm-prototype | `ai-pm-prototype/SKILL.md` | 原型生成 |
 | ai-pm-review | `ai-pm-review/SKILL.md` | 需求评审 |
 | ai-pm-analytics | `ai-pm-analytics/SKILL.md` | 数据分析 |
-| ai-pm-ui-spec | `ai-pm-ui-spec/SKILL.md` | UI 规范 |
-| ai-pm-writing-style | `ai-pm-writing-style/SKILL.md` | 写作风格 |
+| ai-pm-ui-spec | `ai-pm-ui-spec/SKILL.md` | UI 规范（将被 ai-pm-config 整合） |
+| ai-pm-writing-style | `ai-pm-writing-style/SKILL.md` | 写作风格（将被 ai-pm-config 整合） |
+| ai-pm-config | `ai-pm-config/SKILL.md` | 统一配置管理（写作风格+UI规范） |
 | agent-team | `agent-team/SKILL.md` | 多代理协作 |
+| ai-pm-interview | `ai-pm-interview/SKILL.md` | 现场调研/客户访谈 |
 
 ## 模板文件 (Templates)
 
@@ -58,9 +60,15 @@ templates/configs/
 
 ## 项目输出结构
 
+### 标准项目结构
+
 ```
 output/projects/{项目名}/
 ├── 00-reference-analysis.md      # Phase 0: 参考分析
+├── 00-web-analysis/              # Phase 0: 网页分析截图
+│   ├── admin.yml                 # 页面快照
+│   ├── admin.png                 # 页面截图
+│   └── dashboard.png             # 仪表盘截图
 ├── 01-requirement-draft.md       # Phase 1: 需求澄清
 ├── 02-analysis-report.md         # Phase 2: 需求分析
 ├── 03-competitor-report.md       # Phase 3: 竞品研究
@@ -76,7 +84,15 @@ output/projects/{项目名}/
 ├── 07-references/                # 参考资源
 │   ├── reference-config.md
 │   └── images/
-└── 08-review-report-v1.md        # Phase 9: 评审报告
+├── 08-review-report-v1.md        # Phase 9: 评审报告
+└── 11-field-research/            # 现场调研（可选）
+    ├── 00-prep-notes.md          # 准备笔记
+    ├── 01-interview-guide.md     # 访谈提纲
+    ├── 02-interview-notes.md     # 访谈记录
+    ├── 03-prd-draft-v1.md        # PRD草稿v1
+    ├── 04-prototype/             # 原型
+    ├── 05-iteration-log.md       # 迭代记录
+    └── output/                   # 导出交付
 ```
 
 ## 常用文件路径速查
@@ -90,6 +106,9 @@ output/projects/{项目名}/
 | 添加 UI 设计规范 | `templates/ui-specs/{规范名}/` |
 | 查看项目状态脚本 | `.claude/skills/ai-pm/status-check.sh` |
 | 核心协议定义 | `.claude/skills/_core/common-protocol.md` |
+| 现场调研模式 | `.claude/skills/ai-pm-interview/SKILL.md` |
+| 访谈模板 | `.claude/skills/ai-pm-interview/templates/interview-templates.md` |
+| Agent Team 多代理协作 | `.claude/skills/agent-team/SKILL.md` |
 
 ## 按功能查找文件
 
@@ -109,6 +128,20 @@ output/projects/{项目名}/
 - Markdown (默认) → `ai-pm-prd/SKILL.md`
 - PDF 样式 → `templates/prd-styles/default/pdf-style.css`
 - 飞书格式 → `templates/prd-styles/default/feishu-template.md`
+
+### 现场调研相关
+- 现场调研主流程 → `ai-pm-interview/SKILL.md`
+- 访谈模板库 → `ai-pm-interview/templates/interview-templates.md`
+- 用户研究员角色 → `ai-pm-interview/agents/user-researcher.md`
+- 需求整合师角色 → `ai-pm-interview/agents/requirement-synthesizer.md`
+
+### 多代理协作相关
+- Agent Team 主控 → `agent-team/SKILL.md`
+
+### 配置管理相关
+- 统一配置管理 → `ai-pm-config/SKILL.md`
+- 写作风格配置（旧）→ `ai-pm-writing-style/SKILL.md`
+- UI 规范配置（旧）→ `ai-pm-ui-spec/SKILL.md`
 
 ---
 

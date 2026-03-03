@@ -32,6 +32,14 @@ cat output/projects/{项目名}/project-status.json
 - `06-prototype/index.html`    → Phase 6-8 完成
 - `08-review-report-v1.md`     → Phase 9 完成
 
+### 现场调研模式检查清单
+
+- `11-field-research/00-prep-notes.md`      → 准备阶段完成
+- `11-field-research/01-interview-guide.md` → 访谈提纲完成
+- `11-field-research/02-interview-notes.md` → 访谈记录完成
+- `11-field-research/03-prd-draft-v1.md`    → PRD草案v1完成
+- `11-field-research/05-iteration-log.md`   → 有迭代记录
+
 ### 步骤4: 从断点继续
 
 检测到项目进度后，询问用户：
