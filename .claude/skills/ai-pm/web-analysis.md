@@ -112,14 +112,14 @@ AI: 🔍 开始分析参考资源...
        $ playwright-cli snapshot
        🔐 检测到登录页，使用保存的会话...
        $ playwright-cli state-load session-auth.json
-       $ playwright-cli snapshot --filename=admin.yml
-       $ playwright-cli screenshot --filename=admin.png
+       $ playwright-cli snapshot --filename=00-web-analysis/admin.yml
+       $ playwright-cli screenshot --filename=00-web-analysis/admin.png
        ✅ 已获取页面结构和截图
 
     [2/2] 正在分析: https://m.example.com
        $ playwright-cli goto https://m.example.com
-       $ playwright-cli snapshot --filename=mobile.yml
-       $ playwright-cli screenshot --filename=mobile.png
+       $ playwright-cli snapshot --filename=00-web-analysis/mobile.yml
+       $ playwright-cli screenshot --filename=00-web-analysis/mobile.png
        ✅ 已获取页面结构和截图
 
     ✓ 已读取 3 张参考图片
@@ -252,7 +252,7 @@ playwright-cli snapshot
 
 # 5. 根据权限模式探索页面
 # 【仅查看模式】- 仅获取快照和截图
-playwright-cli screenshot --filename=page.png
+playwright-cli screenshot --filename=00-web-analysis/page.png
 
 # 【自由操作模式】- 可以点击查看不同页面
 playwright-cli click e5
@@ -278,10 +278,10 @@ playwright-cli -s=reference-session open --persistent
 
 # 逐个访问并分析
 playwright-cli -s=reference-session goto https://example.com/page1
-playwright-cli -s=reference-session snapshot --filename=page1.yml
+playwright-cli -s=reference-session snapshot --filename=00-web-analysis/page1.yml
 
 playwright-cli -s=reference-session goto https://example.com/page2
-playwright-cli -s=reference-session snapshot --filename=page2.yml
+playwright-cli -s=reference-session snapshot --filename=00-web-analysis/page2.yml
 
 # 保存会话供后续使用
 playwright-cli -s=reference-session state-save ./07-references/session.json
@@ -319,11 +319,11 @@ $ playwright-cli snapshot
 $ playwright-cli fill e1 "tyshuxue01"
 $ playwright-cli fill e2 "xjlgchy18!"
 $ playwright-cli click e3
-$ playwright-cli snapshot --filename=after-login.yml
+$ playwright-cli snapshot --filename=00-web-analysis/after-login.yml
 ✅ 登录成功，已获取登录后页面
 
 📸 正在截图...
-$ playwright-cli screenshot --filename=dashboard.png
+$ playwright-cli screenshot --filename=00-web-analysis/dashboard.png
 ✅ 截图已保存
 
 💾 保存会话状态供后续使用...
