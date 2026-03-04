@@ -105,6 +105,7 @@ output/projects/{项目名}/
 │   └── images/
 ├── 08-review-report-v{N}.md      # Phase 8: 评审报告
 ├── 09-analytics-requirement.md   # Phase 6: 数据埋点需求
+├── 10-retrospective.md            # retrospective 命令：项目复盘报告
 └── 11-field-research/            # 现场调研（可选）
 ```
 
