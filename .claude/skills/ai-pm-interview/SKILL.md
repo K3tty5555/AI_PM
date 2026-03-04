@@ -52,8 +52,8 @@ Phase 4: 导出交付
     ↓ 生成完整文档
 ```
 
-> 📋 **Phase 执行详情**：[interview-phases.md](./interview-phases.md)
-> 📤 **产出与协作**：[interview-output.md](./interview-output.md)
+> 📋 **Phase 0-3 执行详情**：[interview-phases.md](./interview-phases.md)（文件管理、断点续传、访谈流程）
+> 📤 **Phase 4 导出 + 快捷指令 + Agent Team**：[interview-output.md](./interview-output.md)
 
 ---
 
@@ -89,6 +89,6 @@ Phase 4: 导出交付
 
 - [SKILL.md](../ai-pm/SKILL.md) - 主技能入口
 - [user-interaction.md](../ai-pm/user-interaction.md) - 用户交互模式
-- [interview-templates.md](./interview-templates.md) - 访谈模板库
+- [interview-templates.md](./templates/interview-templates.md) - 访谈模板库
 - [interview-phases.md](./interview-phases.md) - Phase 0-3 执行详情、文件管理、断点续传
 - [interview-output.md](./interview-output.md) - Phase 4 导出、快捷指令、Agent Team 协作
