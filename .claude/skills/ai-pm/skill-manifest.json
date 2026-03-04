@@ -18,7 +18,7 @@
         "pipeline.json",
         "skill-manifest.json"
       ],
-      "depends": ["ai-pm-analyze", "ai-pm-research", "ai-pm-story", "ai-pm-prd", "ai-pm-data", "ai-pm-prototype", "ai-pm-review", "ai-pm-knowledge"],
+      "depends": ["ai-pm-analyze", "ai-pm-research", "ai-pm-story", "ai-pm-prd", "ai-pm-data", "ai-pm-prototype", "ai-pm-review", "ai-pm-knowledge", "ai-pm-config", "ai-pm-interview"],
       "commands": ["/ai-pm"]
     },
 
