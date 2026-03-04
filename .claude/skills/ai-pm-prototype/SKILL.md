@@ -3,7 +3,7 @@ name: ai-pm-prototype
 description: >-
   产品原型生成技能。基于 PRD 生成可交互的网页原型，支持移动端和 Web 端设计。
   使用 HTML/CSS/JS 生成单页应用原型，放在项目目录下供预览。
-  从项目配置读取 UI 规范，调用 ai-pm-ui-spec 导出设计令牌应用。
+  从项目配置读取 UI 规范，调用 ai-pm-config 导出设计令牌应用。
   无 UI 规范时遵循 Apple Human Interface Guidelines（默认）。
 argument-hint: "[PRD文件路径] [设备:mobile/web/responsive]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
@@ -13,22 +13,22 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ## 执行协议
 
-- **设计规范集成**：从项目配置读取选定的设计规范，调用 `ai-pm-ui-spec export` 获取设计令牌
+- **设计规范集成**：从项目配置读取选定的设计规范，调用 `ai-pm-config export` 获取设计令牌
 - **设备类型确认**：询问用户设备偏好（移动端/Web端/响应式）
 - **默认回退**：无设计规范时遵循 Apple Human Interface Guidelines
 - **基于 PRD**：从 PRD 中提取功能点和页面流程
 - **单页应用**：生成 HTML+CSS+JS，可直接在浏览器打开
 - **项目存放**：原型文件放在项目目录 `06-prototype/` 下
 
-## 设计规范集成（与 ai-pm-ui-spec 协作）
+## 设计规范集成（与 ai-pm-config 协作）
 
 ### 设计规范来源
 
-本技能**不直接管理**设计规范，而是调用独立技能 `ai-pm-ui-spec`：
+本技能**不直接管理**设计规范，而是调用独立技能 `ai-pm-config`：
 
 ```
 ┌─────────────────┐     ┌─────────────────────┐     ┌─────────────────┐
-│   ai-pm         │────▶│  ai-pm-ui-spec       │     │   ai-pm-prototype│
+│   ai-pm         │────▶│  ai-pm-config        │     │   ai-pm-prototype│
 │  (PRD生成阶段)   │     │   (独立管理技能)      │◀────│  (原型生成阶段)  │
 └─────────────────┘     └─────────────────────┘     └─────────────────┘
          │                                               │
@@ -50,11 +50,11 @@ const config = readProjectConfig(projectDir);
 const systemName = config.designSystem || null;  // 如 "my-company" 或 null
 ```
 
-**2. 调用 ai-pm-ui-spec 导出设计令牌：**
+**2. 调用 ai-pm-config 导出设计令牌：**
 ```javascript
 // 如果有选定设计规范，调用独立技能导出
 if (systemName) {
-    const tokens = exec(`ai-pm-ui-spec export ${systemName}`);
+    const tokens = exec(`ai-pm-config export ${systemName}`);
     // 返回完整的 design-tokens.json 内容
 }
 ```
@@ -94,8 +94,8 @@ if (systemName) {
    📄 读取 {项目目录}/.ai-pm-config.json
    ✅ 发现配置：designSystem = "my-company"
 
-步骤 2: 调用 ai-pm-ui-spec 导出
-   $ ai-pm-ui-spec export my-company
+步骤 2: 调用 ai-pm-config 导出
+   $ ai-pm-config export my-company
 
    返回结果：
    {
@@ -186,7 +186,7 @@ if (systemName) {
 ```
 🎨 准备：加载设计规范
 
-读取项目配置 → 调用 ai-pm-ui-spec export → 生成 CSS 变量
+读取项目配置 → 调用 ai-pm-config export → 生成 CSS 变量
 
 ✅ 设计规范 "{规范名}" 已加载（或未配置，使用默认）
 ```
@@ -210,19 +210,19 @@ if (systemName) {
    • 或直接回复"默认"（Web端 + 已选设计规范）
 
 💡 当前设计规范：{规范名}
-   如需更换，请在 PRD 生成阶段重新选择，或运行 `/ai-pm ui-spec`
+   如需更换，请在 PRD 生成阶段重新选择，或运行 `/ai-pm config`
 ```
 
 **设计规范已确定说明：**
 
 在原型生成阶段，**不再询问设计风格**，因为：
-- 设计规范（颜色、字体、间距）已在 PRD 阶段通过 `ai-pm-ui-spec` 选定并保存
+- 设计规范（颜色、字体、间距）已在 PRD 阶段通过 `ai-pm-config` 选定并保存
 - 本阶段只询问**设备类型**（影响布局结构）
 - 视觉风格由设计规范令牌自动决定
 
 这种分离确保：
 - **一致性**：同一项目的 PRD 和原型使用相同设计规范
-- **单一数据源**：设计规范只由 `ai-pm-ui-spec` 管理
+- **单一数据源**：设计规范只由 `ai-pm-config` 管理
 - **减少决策**：用户只需在 PRD 阶段选择一次设计规范
 
 ### Phase 1: 解析 PRD
@@ -250,7 +250,7 @@ if (systemName) {
 06-prototype/
 ├── index.html              # 入口页面
 ├── css/
-│   ├── design-tokens.css  # 设计令牌（从 ai-pm-ui-spec 导出）
+│   ├── design-tokens.css  # 设计令牌（从 ai-pm-config 导出）
 │   ├── style.css          # 主样式
 │   └── components.css     # 组件样式
 ├── js/
@@ -270,7 +270,7 @@ if (systemName) {
 ```css
 /* =========================================================
    Design Tokens
-   Source: ai-pm-ui-spec export {design-system-name}
+   Source: ai-pm-config export {design-system-name}
    Generated: {timestamp}
    ========================================================= */
 
@@ -374,7 +374,7 @@ if (systemName) {
 📄 生成文件：
    ├── index.html              # 入口页面
    ├── css/
-   │   ├── design-tokens.css  # 设计令牌（来自 ai-pm-ui-spec）
+   │   ├── design-tokens.css  # 设计令牌（来自 ai-pm-config）
    │   ├── style.css          # 主样式
    │   └── components.css     # 组件样式
    ├── js/app.js              # 交互逻辑
@@ -387,7 +387,7 @@ if (systemName) {
 
 📱 设计规格：
    • 设备类型：{mobile/web/responsive}
-   • 设计规范：{规范名}（via ai-pm-ui-spec）
+   • 设计规范：{规范名}（via ai-pm-config）
    • 颜色令牌：{N}个
    • 字体令牌：{N}个
    • 组件令牌：{N}个
@@ -399,9 +399,9 @@ if (systemName) {
    • 数据为模拟数据，仅展示界面
 
 🎨 设计规范来源：
-   • 管理：/ai-pm ui-spec
+   • 管理：/ai-pm config
    • 位置：templates/ui-specs/{规范名}/
-   • 导出：ai-pm-ui-spec export {规范名}
+   • 导出：ai-pm-config export {规范名}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -409,7 +409,7 @@ if (systemName) {
 
 ### 通用组件库（使用 Design Tokens）
 
-所有组件样式通过 CSS 变量引用设计令牌，确保与 `ai-pm-ui-spec` 导出的规范一致：
+所有组件样式通过 CSS 变量引用设计令牌，确保与 `ai-pm-config` 导出的规范一致：
 
 **按钮（引用 design-tokens.css）：**
 ```css

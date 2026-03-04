@@ -163,33 +163,5 @@
       "type": "maintenance",
       "description": "扫描技能文件，生成教程中心 HTML"
     }
-  },
-
-  "deprecated": {
-    "ai-pm-analytics": {
-      "reason": "已合并到 ai-pm-data",
-      "replacement": "ai-pm-data",
-      "status": "to-delete"
-    },
-    "ai-pm-dashboard": {
-      "reason": "已合并到 ai-pm-data",
-      "replacement": "ai-pm-data",
-      "status": "to-delete"
-    },
-    "ai-pm-data-insight": {
-      "reason": "已合并到 ai-pm-data",
-      "replacement": "ai-pm-data",
-      "status": "to-delete"
-    },
-    "ai-pm-writing-style": {
-      "reason": "已合并到 ai-pm-config",
-      "replacement": "ai-pm-config",
-      "status": "to-delete"
-    },
-    "ai-pm-ui-spec": {
-      "reason": "已合并到 ai-pm-config",
-      "replacement": "ai-pm-config",
-      "status": "to-delete"
-    }
   }
 }

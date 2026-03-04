@@ -153,7 +153,7 @@ agent-team (多代理协调)
 ├─ data-analyst
 └─ tech-writer
 
-ai-pm-dashboard (项目仪表盘)
+ai-pm-data (项目数据管理)
     ↓ 读取
 project-status.json (状态可视化)
 ```
