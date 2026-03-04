@@ -112,7 +112,7 @@ output/projects/{项目名}/
 |---------|---------|
 | 直接描述需求 | 进入「探索模式」→ 生成概念草图 |
 | 输入 "interview" / "访谈" | 调用 ai-pm-interview 技能 |
-| 输入 "data-insight" / 文件路径 | 调用 ai-pm-data-insight 技能 |
+| 输入 "data" / 文件路径 | 调用 ai-pm-data 技能 |
 
 ---
 
@@ -304,13 +304,13 @@ output/projects/{项目名}/
 
 ## 设计规范管理（独立能力）
 
-设计规范管理由**独立技能 `ai-pm-ui-spec`** 负责。本技能通过调用该独立技能来获取设计规范列表。
+设计规范管理由**独立技能 `ai-pm-config`** 负责。本技能通过调用该独立技能来获取设计规范列表。
 
 ### 职责分离
 
 | 技能 | 职责 |
 |------|------|
-| `ai-pm-ui-spec` | 设计规范的 CRUD 管理、解析、存储 |
+| `ai-pm-config` | 设计规范的 CRUD 管理、解析、存储 |
 | `ai-pm` (本技能) | 在 PRD 生成阶段调用设计规范列表，保存用户选择到项目配置 |
 | `ai-pm-prototype` | 读取项目配置，调用设计规范导出接口获取 tokens |
 
@@ -318,8 +318,8 @@ output/projects/{项目名}/
 
 **获取设计规范列表（Phase 5）：**
 ```javascript
-// 调用 ai-pm-ui-spec 技能
-const systems = exec('ai-pm-ui-spec list --json');
+// 调用 ai-pm-config 技能
+const systems = exec('ai-pm-config list --json');
 // 返回格式：[{name, description, fileCount, updatedAt}, ...]
 ```
 
@@ -348,7 +348,7 @@ saveToProjectConfig({
 
 🎨 设计规范选择：
 
-📁 调用 ai-pm-ui-spec list...
+📁 调用 ai-pm-config list...
 
 【情况A：检测到设计规范】
 可用设计规范：
@@ -358,31 +358,31 @@ saveToProjectConfig({
 
 【情况B：未检测到设计规范】
 ℹ️ 未检测到设计规范，将使用默认风格
-💡 提示：使用 `/ai-pm ui-spec upload {规范名}` 可上传设计规范
+💡 提示：使用 `/ai-pm config upload {规范名}` 可上传设计规范
 
 💬 请选择：
    • 回复数字 1/2/3 → 使用该规范（保存到项目配置）
    • "不使用规范" → 采用默认风格
-   • "管理规范" → 调用 ai-pm-ui-spec 进入管理界面
+   • "管理规范" → 调用 ai-pm-config 进入管理界面
 ```
 
-### 与 ai-pm-ui-spec 的协作流程
+### 与 ai-pm-config 的协作流程
 
 ```
-用户执行 /ai-pm ui-spec upload my-company
+用户执行 /ai-pm config upload my-company
     ↓
-ai-pm-ui-spec 技能处理（完全独立）
+ai-pm-config 技能处理（完全独立）
     • 创建目录 templates/ui-specs/my-company/
     • 解析设计资源
     • 生成 design-tokens.json
     ↓
 后续 PRD 生成时（本技能）：
-    • 调用 ai-pm-ui-spec list 获取列表
+    • 调用 ai-pm-config list 获取列表
     • 用户选择后保存到项目配置
     ↓
 原型生成时（ai-pm-prototype 技能）：
     • 读取项目配置获取 designSystem
-    • 调用 ai-pm-ui-spec export {name} 获取 tokens
+    • 调用 ai-pm-config export {name} 获取 tokens
     • 应用 tokens 生成 CSS
 ```
 
@@ -390,12 +390,12 @@ ai-pm-ui-spec 技能处理（完全独立）
 
 **管理设计规范（完全委托）：**
 ```
-用户: /ai-pm ui-spec upload my-company
+用户: /ai-pm config upload my-company
 
-AI: [调用 ai-pm-ui-spec 技能处理]
-    该操作由独立技能 ai-pm-ui-spec 处理
+AI: [调用 ai-pm-config 技能处理]
+    该操作由独立技能 ai-pm-config 处理
 
-📁 ai-pm-ui-spec 输出：
+📁 ai-pm-config 输出：
 ✅ 设计规范 "my-company" 创建完成！
    位置：templates/ui-specs/my-company/
    文件：README.md, design-tokens.json
@@ -404,7 +404,7 @@ AI: [调用 ai-pm-ui-spec 技能处理]
 **PRD 阶段使用：**
 ```
 AI: 🎨 正在获取设计规范列表...
-   $ ai-pm-ui-spec list --json
+   $ ai-pm-config list --json
 
    返回结果：
    [1] enterprise-standard
@@ -455,14 +455,14 @@ templates/prd-styles/
 
 | 命令 | 作用 | 示例 |
 |------|------|------|
-| `/ai-pm writing-style` | 进入风格管理菜单 | - |
-| `/ai-pm writing-style list` | 列出所有风格 | - |
-| `/ai-pm writing-style analyze {文件路径}` | 分析 PRD 创建风格 | `/ai-pm writing-style analyze ~/my-prd.md` |
+| `/ai-pm config` | 进入风格管理菜单 | - |
+| `/ai-pm config list` | 列出所有风格 | - |
+| `/ai-pm config analyze {文件路径}` | 分析 PRD 创建风格 | `/ai-pm config analyze ~/my-prd.md` |
 
 ### 工作流程
 
 ```
-用户执行 /ai-pm style
+用户执行 /ai-pm config
     ↓
 显示风格管理菜单
     ├─ 1. 分析 PRD 创建新风格
@@ -518,7 +518,7 @@ templates/prd-styles/
 
 【情况B：仅默认风格】
 ℹ️ 使用系统默认风格
-💡 提示：使用 `/ai-pm writing-style analyze {PRD文件}` 可创建自定义风格
+💡 提示：使用 `/ai-pm config analyze {PRD文件}` 可创建自定义风格
 
 💬 请选择：
    • 回复数字 1/2/3/4 → 使用该风格生成PRD
@@ -548,7 +548,7 @@ templates/prd-styles/
 **分析 PRD 创建风格：**
 
 ```
-用户: /ai-pm writing-style analyze ~/Documents/my-prd.md
+用户: /ai-pm config analyze ~/Documents/my-prd.md
 
 AI: 📁 即将分析 PRD 并创建风格
 

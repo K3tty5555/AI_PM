@@ -103,8 +103,8 @@ show_dashboard() {
         echo "   💬 例：做一个帮用户决定吃什么的 App"
         echo ""
         echo "2️⃣ 数据洞察（从数据中发现需求）"
-        echo "   📊 /ai-pm data-insight {数据文件路径}"
-        echo "   例：/ai-pm data-insight ./user_behavior.csv"
+        echo "   📊 /ai-pm-data {数据文件路径}"
+        echo "   例：/ai-pm-data ./user_behavior.csv"
         echo ""
         echo "3️⃣ 用户访谈（现场调研模式）"
         echo "   🎤 /ai-pm interview"
@@ -114,10 +114,10 @@ show_dashboard() {
         echo "   📋 /ai-pm list"
         echo ""
         echo "5️⃣ 管理写作风格"
-        echo "   📝 /ai-pm writing-style"
+        echo "   📝 /ai-pm-config"
         echo ""
         echo "6️⃣ 管理设计规范"
-        echo "   🎨 /ai-pm ui-spec"
+        echo "   🎨 /ai-pm-config"
         echo ""
     else
         # 有当前项目 - 显示仪表盘
