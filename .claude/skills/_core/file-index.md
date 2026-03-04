@@ -61,9 +61,23 @@ templates/ui-specs/
 ### 配置模板
 ```
 templates/configs/
-├── reference-config.md        # 参考资源配置
-├── project-config.json        # 项目配置
-└── project-config-schema.json # 配置 Schema
+├── reference-config.md            # 参考资源配置
+├── project-config.json            # 项目配置
+├── project-config-schema.json     # 配置 Schema
+├── npm-mirror-protocol.md         # npm 镜像检测规范（git add -f）
+└── interaction-copy-standard.md   # 交互文案规范（Humanizer 强制）
+```
+
+### 产品知识库
+```
+templates/knowledge-base/
+├── README.md
+├── patterns/    # 设计模式
+├── decisions/   # 决策记录（ADR）
+├── pitfalls/    # 踩坑记录
+├── metrics/     # 度量指标
+├── playbooks/   # 场景手册
+└── insights/    # 洞察报告
 ```
 
 ## 项目输出结构
