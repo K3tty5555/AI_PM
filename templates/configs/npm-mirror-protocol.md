@@ -27,7 +27,7 @@ detect_npm_registry() {
     "https://registry.npmjs.org"
   )
   for mirror in "${mirrors[@]}"; do
-    if npm ping --registry="$mirror" --timeout=3000 2>/dev/null | grep -q "PONG"; then
+    if timeout 3 npm ping --registry="$mirror" 2>&1 | grep -q "PONG"; then
       echo "$mirror"
       return 0
     fi
@@ -65,6 +65,6 @@ npm install --registry="$NPM_REGISTRY"
 
 ```bash
 # 快速测试某个镜像是否可用
-npm ping --registry=https://registry.npmmirror.com --timeout=3000
-# 返回 PONG 表示可用
+timeout 3 npm ping --registry=https://registry.npmmirror.com 2>&1 | grep "PONG"
+# 有输出表示可用
 ```
