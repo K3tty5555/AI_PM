@@ -87,6 +87,7 @@ AI_PM/
 | `knowledge list` | 列出所有知识分类 |
 | `knowledge sync` | 从当前项目提取可沉淀知识 |
 | `knowledge suggest {词}` | 推荐相关知识（内部调用） |
+| `retrospective` | 对当前项目执行复盘，生成 10-retrospective.md |
 | `switch {项目名}` | 切换到指定项目 |
 | `list` | 列出所有项目 |
 | `new {项目名}` | 创建新项目 |
@@ -225,6 +226,7 @@ Phase 8: 需求评审（可选，九角色多轮迭代）
 | `/ai-pm knowledge list` | 列出所有知识分类 |
 | `/ai-pm knowledge sync` | 从当前项目提取知识 |
 | `/ai-pm knowledge suggest {关键词}` | 推荐相关知识（内部调用） |
+| `/ai-pm retrospective` | 对当前项目执行复盘，生成 10-retrospective.md |
 | `/ai-pm https://example.com` | 分析参考网页（支持账号密码） |
 | `/ai-pm fetch` | 重新抓取参考网页 |
 | `/ai-pm reset` | 清空当前项目输出，重新开始 |
