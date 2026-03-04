@@ -31,12 +31,6 @@ templates/
 ├── retrospectives/                # 🔍 项目复盘模板
 │   └── retrospective-template.md  #    复盘报告模板
 │
-├── analytics/                     # 📊 数据分析模板
-│   └── analytics-template.md      #    数据分析需求模板
-│
-├── data-insight/                  # 💡 数据洞察模板
-│   └── dashboard-template.md      #    数据仪表盘模板
-│
 └── agent-team/                    # 🤖 多代理协作模板
     ├── README.md                  #    使用说明
     ├── task-template.json         #    任务定义模板
@@ -71,10 +65,10 @@ cp templates/ui-specs/enterprise-sample/* \
 分析你的 PRD 创建写作风格：
 ```bash
 # 分析你的 PRD 文件，自动提取写作风格
-/ai-pm writing-style analyze ~/path/to/your-prd.md
+/ai-pm-config writing-style analyze ~/path/to/your-prd.md
 
 # 查看所有可用写作风格
-/ai-pm writing-style list
+/ai-pm-config writing-style list
 ```
 
 ### 4. Agent Team 多代理协作
@@ -102,8 +96,6 @@ cp templates/ui-specs/enterprise-sample/* \
 | `prd-styles/` | PRD 写作风格（章节结构、用词习惯、导出模板） | 常用 |
 | `ui-specs/` | UI 设计规范（颜色、字体、组件） | 常用 |
 | `retrospectives/` | 项目复盘报告模板 | 项目结束时 |
-| `analytics/` | 数据分析需求模板 | 数据项目 |
-| `data-insight/` | 数据洞察仪表盘模板 | 数据可视化 |
 | `agent-team/` | 多代理协作任务、状态模板 | 复杂项目 |
 
 ---
@@ -111,7 +103,7 @@ cp templates/ui-specs/enterprise-sample/* \
 ## 💡 使用建议
 
 1. **UI 规范** → 放入 `ui-specs/`，所有项目共享
-2. **写作风格** → 通过 `/ai-pm writing-style analyze` 创建，保存到 `prd-styles/`
+2. **写作风格** → 通过 `/ai-pm-config writing-style analyze` 创建，保存到 `prd-styles/`
 3. **项目配置** → 复制 `configs/` 的模板到项目 `07-references/`
 4. **文档模板** → 上传到对应 `*-templates/` 或 `*-styles/` 文件夹
 5. **复盘模板** → 项目结束后使用 `retrospectives/` 的模板
