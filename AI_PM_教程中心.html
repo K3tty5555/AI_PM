@@ -1467,7 +1467,7 @@
              ============================================================ -->
         <div class="tab-panel active" data-panel="0" data-accent="var(--accent-1)">
             <header class="hero">
-                <div class="label reveal">AI_PM v3.1</div>
+                <div class="label reveal">AI_PM v3.2</div>
                 <h1 class="reveal reveal-delay-1">你的 AI<br>产品经理</h1>
                 <p class="subtitle reveal reveal-delay-2">
                     说一句你想做什么，拿到 PRD 和可交互原型<br>
@@ -1879,6 +1879,26 @@ cp -r .claude/skills/* ~/.claude/skills/</code></pre>
                     <div class="text-container">
                         <div class="changelog-item reveal">
                             <div class="changelog-version">
+                                <div class="version">V3.2.0</div>
+                                <div class="date">2026-03-05</div>
+                            </div>
+                            <div class="changelog-content">
+                                <h4>8项优化：4 bug 修复 + 4 功能新增</h4>
+                                <ul>
+                                    <li>修复 Phase 编号冲突（Phase 8 重复定义）</li>
+                                    <li>修复知识库 ID 重号问题</li>
+                                    <li>修复中文 Slug 生成异常</li>
+                                    <li>修复踩坑检查逻辑重复执行</li>
+                                    <li>新增 /pm-retrospective 项目复盘命令</li>
+                                    <li>新增 Phase 5 质量门禁机制</li>
+                                    <li>新增 PRD 评审后自动迭代流程</li>
+                                    <li>ai-pm-interview 按模块拆分，主文件缩至 94 行</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="changelog-item reveal">
+                            <div class="changelog-version">
                                 <div class="version">V3.1.0</div>
                                 <div class="date">2026-03-05</div>
                             </div>
@@ -2002,14 +2022,14 @@ cp -r .claude/skills/* ~/.claude/skills/</code></pre>
 
             // Skills Data
             const SKILLS_DATA = [
-                { name: "AI_PM 主控", command: "/ai-pm", icon: "🎯", desc: "从一句话到 PRD 和原型" },
+                { name: "AI_PM 主控", command: "/ai-pm", icon: "🎯", desc: "从一句话到 PRD 和原型", subcmds: ["retrospective"] },
                 { name: "需求分析", command: "/ai-pm-analyze", icon: "💬", desc: "聊几轮，把需求理清楚" },
                 { name: "竞品研究", command: "/ai-pm-research", icon: "🔍", desc: "看看对手都在做什么" },
                 { name: "用户故事", command: "/ai-pm-story", icon: "📖", desc: "写用户故事和验收标准" },
                 { name: "PRD 生成", command: "/ai-pm-prd", icon: "📝", desc: "写完整 PRD，支持多格式导出" },
                 { name: "原型设计", command: "/ai-pm-prototype", icon: "🎨", desc: "出可点击的网页原型" },
                 { name: "需求评审", command: "/ai-pm-review", icon: "👥", desc: "9 个角色帮你挑毛病" },
-                { name: "现场调研", command: "/ai-pm-interview", icon: "🎤", desc: "线下客户访谈，现场出方案" },
+                { name: "现场调研", command: "/ai-pm-interview", icon: "🎤", desc: "现场调研/客户访谈模式，支持结构化访谈、实时记录、现场PRD生成。已按模块拆分（phases/output），主文件缩至94行。" },
                 { name: "统一数据", command: "/ai-pm-data", icon: "📊", desc: "埋点设计、数据分析、看板" },
                 { name: "配置管理", command: "/ai-pm-config", icon: "⚙️", desc: "写作风格、UI 规范、项目配置" },
                 { name: "产品知识库", command: "/ai-pm-knowledge", icon: "📚", desc: "把项目里的方法论、决策、踩坑记录存下来，下次能搜出来", subcmds: ["add", "search", "list", "sync", "suggest"] },
