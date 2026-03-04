@@ -62,8 +62,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(find) Bash(grep) Bash(c
 **Step 6** — 适用范围（什么产品/阶段）
 
 六步问完后：
-1. 生成唯一 ID：扫描 `templates/knowledge-base/{分类}/` 下所有 .md 文件名（排除 README.md），提取 `{CATEGORY_UPPER}-{NNN}` 格式中的最大序号，+1 得到新序号；目录为空时从 001 开始。格式：`{CATEGORY_UPPER}-{序号三位}`（如 PATTERN-001）
-2. 生成 slug：英文标题 → 转小写，空格换连字符；中文标题 → 保留汉字及字母数字，去除 `/ \ : * ? " < > |` 等非法字符，空格换连字符（如"渐进式功能引导"→"渐进式功能引导"，可直接作为合法文件名）
+1. 生成唯一 ID：扫描 `templates/knowledge-base/{分类}/` 下所有 .md 文件名（排除 README.md），提取 `{CATEGORY_UPPER}-{NNN}` 格式中的最大序号，+1 得到新序号；若未找到任何符合格式的序号，从 001 开始。格式：`{CATEGORY_UPPER}-{序号三位}`（如 PATTERN-001）
+2. 生成 slug：英文标题 → 转小写，空格换连字符；中文标题 → 保留汉字及字母数字，去除 `/ \ : * ? " < > |` 等非法字符，空格换连字符（如"渐进式/功能引导（测试）"→"渐进式功能引导测试"）
 3. 写入文件：`templates/knowledge-base/{分类}/{id}-{slug}.md`
 
 知识卡片模板：
