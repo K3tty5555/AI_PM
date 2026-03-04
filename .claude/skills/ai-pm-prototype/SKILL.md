@@ -578,3 +578,10 @@ document.addEventListener('touchend', (e) => {
 ---
 
 *原型生成时间：{日期}*
+
+## 依赖安装规范
+
+生成原型时如需安装前端依赖（npm install 等操作），请先检测可用镜像源：
+
+> ⚠️ 参考 `templates/configs/npm-mirror-protocol.md` 中的检测脚本，
+> 选定可用镜像后加入 `--registry={检测结果}` 参数再执行安装。
