@@ -29,8 +29,9 @@ cat output/projects/{项目名}/project-status.json
 - `03-competitor-report.md`    → Phase 3 完成
 - `04-user-stories.md`         → Phase 4 完成
 - `05-prd/05-PRD-v1.0.md`      → Phase 5 完成
-- `06-prototype/index.html`    → Phase 6-8 完成
-- `08-review-report-v1.md`     → Phase 9 完成
+- `09-analytics-requirement.md` → Phase 6 完成
+- `06-prototype/index.html`    → Phase 7 完成
+- `08-review-report-v1.md`     → Phase 8 完成
 
 ### 现场调研模式检查清单
 
