@@ -170,7 +170,7 @@
       "description": "现场调研入口：客户访谈 → PRD"
     },
     "data-insight": {
-      "skill": "ai-pm-data-insight",
+      "skill": "ai-pm-data",
       "mergeToPhase": "analysis",
       "description": "数据驱动入口：数据洞察 → 需求分析"
     }

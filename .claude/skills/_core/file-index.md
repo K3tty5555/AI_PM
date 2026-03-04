@@ -35,15 +35,7 @@
 | ai-pm-knowledge | `ai-pm-knowledge/SKILL.md` | - | 产品知识库（stub） |
 | agent-team | `agent-team/SKILL.md` | - | 多代理协作 |
 | playwright-cli | `playwright-cli/SKILL.md` | - | 浏览器自动化 |
-
-### 已废弃技能（仅保留重定向）
-| 技能 | 替代 |
-|------|------|
-| ai-pm-analytics | → ai-pm-data |
-| ai-pm-dashboard | → ai-pm-data |
-| ai-pm-data-insight | → ai-pm-data |
-| ai-pm-writing-style | → ai-pm-config |
-| ai-pm-ui-spec | → ai-pm-config |
+| tutorial-center-update | `tutorial-center-update/SKILL.md` | - | 教程中心 HTML 生成 |
 
 ## 模板文件 (Templates)
 
