@@ -29,7 +29,7 @@ description: >-
 | `/ai-pm story` | Phase 4: 用户故事 |
 | `/ai-pm prd` | Phase 5: PRD生成 |
 | `/ai-pm prototype` | Phase 7: 原型生成 |
-| `/ai-pm review` | Phase 9: 需求评审 |
+| `/ai-pm review` | Phase 8: 需求评审 |
 
 ## 快捷指令
 
@@ -58,7 +58,7 @@ output/projects/{项目名}/
 2. **Phase 2-4 (分析)**: 静默执行，产出报告
 3. **Phase 5 (PRD)**: 生成后确认
 4. **Phase 7 (原型)**: 生成可交互 HTML
-5. **Phase 9 (评审)**: 多角色模拟评审
+5. **Phase 8 (评审)**: 多角色模拟评审
 
 ## 完整文档
 

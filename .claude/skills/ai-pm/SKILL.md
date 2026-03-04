@@ -38,6 +38,8 @@ AI_PM/
 ├── .claude/skills/
 │   └── ai-pm/
 │       ├── SKILL.md              # 本文件（入口）
+│       ├── pipeline.json         # Phase 流程唯一事实来源
+│       ├── skill-manifest.json   # 技能注册表
 │       ├── phase-workflows.md    # 阶段执行流程
 │       ├── user-interaction.md   # 用户交互模式
 │       ├── web-analysis.md       # 网页分析流程
@@ -72,8 +74,8 @@ AI_PM/
 | `review` | 在当前项目执行需求评审 |
 | `review --round=2` | 进行第二轮评审 |
 | `fetch` | 抓取参考网页进行分析 |
-| `ui-spec` | 进入 UI 规范管理 |
-| `writing-style` | 进入 PRD 写作风格管理 |
+| `config ui` | 进入 UI 规范管理 |
+| `config style` | 进入 PRD 写作风格管理 |
 | `data-insight {文件}` | 数据洞察与需求发现 |
 | `analytics` | 数据分析与埋点设计 |
 | `config` | 查看/修改用户配置 |
@@ -213,10 +215,12 @@ AI_PM/
 💡 你想用哪种方式？直接告诉我需求，或选择上面的方式
 ```
 
-## 阶段执行流程（精简）
+## 阶段执行流程
+
+> 流程定义的唯一事实来源：[pipeline.json](./pipeline.json)
 
 ```
-【可选】数据驱动入口
+【可选】数据驱动入口 / 现场调研入口
     ↓
 Phase 0: 参考资源收集（URL/图片分析）
     ↓
@@ -228,11 +232,11 @@ Phase 2-4: 需求分析/竞品研究/用户故事（静默执行）
     ↓
 Phase 5: PRD生成（支持风格+规范）
     ↓
-Phase 6: 数据分析与埋点设计（可选）
+Phase 6: 数据埋点设计（可选）
     ↓
-Phase 7-8: 原型生成（Token消耗提示）
+Phase 7: 原型生成（Token消耗提示）
     ↓
-Phase 9: 需求评审（可选，多轮迭代）
+Phase 8: 需求评审（可选，九角色多轮迭代）
 ```
 
 > 详细流程参见：[phase-workflows.md](./phase-workflows.md)
@@ -260,12 +264,12 @@ Phase 9: 需求评审（可选，多轮迭代）
 | `/ai-pm fetch` | 重新抓取参考网页 |
 | `/ai-pm reset` | 清空当前项目输出，重新开始 |
 | `/ai-pm delete {项目名}` | 删除指定项目 |
-| `/ai-pm writing-style` | 进入写作风格管理 |
-| `/ai-pm writing-style list` | 列出所有可用风格 |
-| `/ai-pm writing-style analyze {PRD文件}` | 分析 PRD 写作风格 |
-| `/ai-pm ui-spec` | 进入 UI 规范管理 |
-| `/ai-pm ui-spec list` | 列出所有 UI 规范 |
-| `/ai-pm ui-spec upload {规范名}` | 上传并解析 UI 规范 |
+| `/ai-pm config style` | 进入写作风格管理 |
+| `/ai-pm config style list` | 列出所有可用风格 |
+| `/ai-pm config style analyze {PRD文件}` | 分析 PRD 写作风格 |
+| `/ai-pm config ui` | 进入 UI 规范管理 |
+| `/ai-pm config ui list` | 列出所有 UI 规范 |
+| `/ai-pm config ui upload {规范名}` | 上传并解析 UI 规范 |
 
 ## Anti-Pattern
 
@@ -279,7 +283,9 @@ Phase 9: 需求评审（可选，多轮迭代）
 ---
 
 **子文档导航**：
-- 📋 [阶段执行流程](./phase-workflows.md) - Phase 0-9 详细流程、Yolo模式、进度显示
+- 📋 [阶段执行流程](./phase-workflows.md) - Phase 0-8 详细流程、Yolo模式、进度显示
+- 📊 [流水线配置](./pipeline.json) - Phase 流程唯一事实来源
+- 📦 [技能注册表](./skill-manifest.json) - 所有技能状态与依赖
 - 💬 [用户交互模式](./user-interaction.md) - 需求澄清、风格管理、设计规范
 - 🔍 [网页分析流程](./web-analysis.md) - playwright-cli 使用、网页分析报告
 - ⚠️ [边缘情况处理](./edge-cases.md) - 异常处理、需求评审详细说明

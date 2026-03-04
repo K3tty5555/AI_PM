@@ -1,0 +1,195 @@
+{
+  "version": "2.0",
+  "description": "AI_PM 技能注册表 - 所有技能的状态、依赖关系、版本",
+
+  "skills": {
+    "ai-pm": {
+      "name": "AI 产品经理主控",
+      "path": "ai-pm/SKILL.md",
+      "status": "active",
+      "version": "2.0",
+      "type": "controller",
+      "description": "主控技能，协调调用所有子技能",
+      "subFiles": [
+        "phase-workflows.md",
+        "user-interaction.md",
+        "web-analysis.md",
+        "edge-cases.md",
+        "pipeline.json",
+        "skill-manifest.json"
+      ],
+      "depends": ["ai-pm-analyze", "ai-pm-research", "ai-pm-story", "ai-pm-prd", "ai-pm-data", "ai-pm-prototype", "ai-pm-review"],
+      "commands": ["/ai-pm"]
+    },
+
+    "ai-pm-analyze": {
+      "name": "需求分析",
+      "path": "ai-pm-analyze/SKILL.md",
+      "status": "active",
+      "version": "1.0",
+      "type": "phase-skill",
+      "pipelinePhase": "analysis",
+      "description": "深入分析需求，输出目标用户、痛点、功能范围",
+      "depends": [],
+      "dependedBy": ["ai-pm-story", "ai-pm-prd"]
+    },
+
+    "ai-pm-research": {
+      "name": "竞品研究",
+      "path": "ai-pm-research/SKILL.md",
+      "status": "active",
+      "version": "1.0",
+      "type": "phase-skill",
+      "pipelinePhase": "research",
+      "description": "分析同类产品，输出竞品对比和差异化机会",
+      "depends": [],
+      "dependedBy": ["ai-pm-prd"]
+    },
+
+    "ai-pm-story": {
+      "name": "用户故事",
+      "path": "ai-pm-story/SKILL.md",
+      "status": "active",
+      "version": "1.0",
+      "type": "phase-skill",
+      "pipelinePhase": "story",
+      "description": "编写用户故事和用例",
+      "depends": ["ai-pm-analyze"],
+      "dependedBy": ["ai-pm-prd"]
+    },
+
+    "ai-pm-prd": {
+      "name": "PRD 生成",
+      "path": "ai-pm-prd/SKILL.md",
+      "status": "active",
+      "version": "2.0",
+      "type": "phase-skill",
+      "pipelinePhase": "prd",
+      "description": "整合分析/竞品/用户故事，生成完整 PRD 文档",
+      "depends": ["ai-pm-analyze", "ai-pm-research", "ai-pm-story"],
+      "dependedBy": ["ai-pm-data", "ai-pm-prototype", "ai-pm-review"]
+    },
+
+    "ai-pm-data": {
+      "name": "统一数据技能",
+      "path": "ai-pm-data/SKILL.md",
+      "status": "active",
+      "version": "2.0",
+      "type": "phase-skill",
+      "pipelinePhase": "analytics",
+      "description": "数据指标设计、数据洞察分析、项目仪表盘",
+      "depends": ["ai-pm-prd"],
+      "dependedBy": ["ai-pm-prototype"],
+      "mergedFrom": ["ai-pm-analytics", "ai-pm-data-insight", "ai-pm-dashboard"]
+    },
+
+    "ai-pm-prototype": {
+      "name": "原型生成",
+      "path": "ai-pm-prototype/SKILL.md",
+      "status": "active",
+      "version": "1.0",
+      "type": "phase-skill",
+      "pipelinePhase": "prototype",
+      "description": "基于 PRD 生成可交互 HTML 原型",
+      "depends": ["ai-pm-prd"],
+      "dependedBy": ["ai-pm-review"]
+    },
+
+    "ai-pm-review": {
+      "name": "需求评审",
+      "path": "ai-pm-review/SKILL.md",
+      "status": "active",
+      "version": "2.0",
+      "type": "phase-skill",
+      "pipelinePhase": "review",
+      "description": "九角色模拟评审，多轮迭代",
+      "depends": ["ai-pm-prd", "ai-pm-prototype"],
+      "dependedBy": []
+    },
+
+    "ai-pm-config": {
+      "name": "统一配置管理",
+      "path": "ai-pm-config/SKILL.md",
+      "status": "active",
+      "version": "1.0",
+      "type": "utility",
+      "description": "管理写作风格、UI 规范、项目配置",
+      "mergedFrom": ["ai-pm-writing-style", "ai-pm-ui-spec"]
+    },
+
+    "ai-pm-interview": {
+      "name": "现场调研/客户访谈",
+      "path": "ai-pm-interview/SKILL.md",
+      "status": "active",
+      "version": "1.0",
+      "type": "entry-point",
+      "description": "结构化访谈、实时记录、现场生成 PRD",
+      "depends": ["agent-team", "ai-pm-prd"]
+    },
+
+    "ai-pm-knowledge": {
+      "name": "产品知识库",
+      "path": "ai-pm-knowledge/SKILL.md",
+      "status": "stub",
+      "version": "0.1",
+      "type": "utility",
+      "description": "跨项目知识沉淀（尚未实现）",
+      "note": "知识库目录结构未创建，待实现"
+    },
+
+    "agent-team": {
+      "name": "多代理协作",
+      "path": "agent-team/SKILL.md",
+      "status": "active",
+      "version": "1.0",
+      "type": "infrastructure",
+      "description": "调度专业代理协同完成复杂任务"
+    },
+
+    "playwright-cli": {
+      "name": "浏览器自动化",
+      "path": "playwright-cli/SKILL.md",
+      "status": "active",
+      "version": "1.0",
+      "type": "tool",
+      "description": "网页抓取、截图、表单填写"
+    },
+
+    "tutorial-center-update": {
+      "name": "教程中心更新",
+      "path": "tutorial-center-update/SKILL.md",
+      "status": "active",
+      "version": "1.0",
+      "type": "maintenance",
+      "description": "扫描技能文件，生成教程中心 HTML"
+    }
+  },
+
+  "deprecated": {
+    "ai-pm-analytics": {
+      "reason": "已合并到 ai-pm-data",
+      "replacement": "ai-pm-data",
+      "status": "to-delete"
+    },
+    "ai-pm-dashboard": {
+      "reason": "已合并到 ai-pm-data",
+      "replacement": "ai-pm-data",
+      "status": "to-delete"
+    },
+    "ai-pm-data-insight": {
+      "reason": "已合并到 ai-pm-data",
+      "replacement": "ai-pm-data",
+      "status": "to-delete"
+    },
+    "ai-pm-writing-style": {
+      "reason": "已合并到 ai-pm-config",
+      "replacement": "ai-pm-config",
+      "status": "to-delete"
+    },
+    "ai-pm-ui-spec": {
+      "reason": "已合并到 ai-pm-config",
+      "replacement": "ai-pm-config",
+      "status": "to-delete"
+    }
+  }
+}
