@@ -37,29 +37,29 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(find) Bash(grep) Bash(c
 
 ## 添加知识（add）
 
-按顺序问以下问题，每次只问一个：
+逐步问，每次只问一个：
 
-**Step 1** — 问分类：
+**Step 1** — 分类：
 ```
-知识类型？
-  1  设计模式  — 可复用的产品设计方案
+类型？
+  1  设计模式  — 可复用方案
   2  决策记录  — 为什么选 A 不选 B
-  3  踩坑记录  — 哪里有坑，怎么躲
-  4  度量指标  — 好用的指标模板
+  3  踩坑记录  — 坑在哪，怎么躲
+  4  度量指标  — 指标模板
   5  场景手册  — 特定场景怎么做
-  6  洞察报告  — 用户/市场的发现
+  6  洞察报告  — 用户/市场发现
 ```
-分类映射：1→patterns，2→decisions，3→pitfalls，4→metrics，5→playbooks，6→insights
+映射：1→patterns，2→decisions，3→pitfalls，4→metrics，5→playbooks，6→insights
 
-**Step 2** — 用一句话概括标题
+**Step 2** — 标题（一句话）
 
-**Step 3** — 什么情况下遇到这个问题（问题场景）
+**Step 3** — 问题场景（什么情况下遇到的）
 
-**Step 4** — 怎么解决的（解决方案）
+**Step 4** — 解决方案
 
-**Step 5** — 有没有数据验证效果（没有就填"待验证"）
+**Step 5** — 验证数据（没有就写"待验证"）
 
-**Step 6** — 什么类型的产品/阶段适用（适用场景）
+**Step 6** — 适用范围（什么产品/阶段）
 
 收集完毕后：
 1. 生成唯一 ID：统计目标分类目录下现有文件数 +1，格式 `{CATEGORY_UPPER}-{序号三位}`（如 PATTERN-001）
@@ -94,8 +94,8 @@ confidence: low
 
 完成后确认：
 ```
-已保存  {ID}  {标题}
-路径：templates/knowledge-base/{分类}/{文件名}
+已保存 {ID}  {标题}
+→ templates/knowledge-base/{分类}/{文件名}
 ```
 
 ---
@@ -106,18 +106,18 @@ confidence: low
 2. 匹配范围：文件名、frontmatter tags/id、标题行、问题场景段落
 3. 有匹配时展示（最多5条）：
 ```
-找到 {N} 条相关知识：
+{N} 条相关知识：
 
   1  [PATTERN-001]  渐进式功能引导
-     分类：patterns  |  标签：mobile, onboarding
+     patterns  |  mobile, onboarding
      场景：用户首次使用复杂功能...
 
   2  ...
 
-输入数字查看详情，回车跳过
+数字查看详情，回车跳过
 ```
 4. 用户输入数字 → 输出完整知识卡片内容
-5. 无匹配 → 不输出（静默）
+5. 无匹配 → 静默
 
 ---
 
@@ -126,14 +126,14 @@ confidence: low
 遍历 6 个子目录，统计 .md 文件（排除 README.md）数量：
 
 ```
-📚 产品知识库
+产品知识库
 
-  patterns/    {N} 条  设计模式
-  decisions/   {N} 条  决策记录
-  pitfalls/    {N} 条  踩坑记录
-  metrics/     {N} 条  度量指标
-  playbooks/   {N} 条  场景手册
-  insights/    {N} 条  洞察报告
+  patterns/    {N}  设计模式
+  decisions/   {N}  决策记录
+  pitfalls/    {N}  踩坑记录
+  metrics/     {N}  度量指标
+  playbooks/   {N}  场景手册
+  insights/    {N}  洞察报告
 
 共 {总计} 条
 ```
@@ -153,13 +153,13 @@ confidence: low
 3. 基于读取内容，生成候选知识点列表（每项标注来源文件和推荐分类）
 4. 展示给用户选择：
 ```
-从「{项目名}」发现 {N} 个可沉淀知识点：
+「{项目名}」发现 {N} 个可沉淀知识点：
 
-  [1] ✓  渐进式引导设计（来自用户故事）→ 建议放 patterns/
-  [2] ✓  REST vs GraphQL 决策（来自 PRD）→ 建议放 decisions/
-  [3]    数据权限性能问题（来自评审报告）→ 建议放 pitfalls/
+  1  渐进式引导设计  → patterns/  （用户故事）
+  2  REST vs GraphQL 决策  → decisions/  （PRD）
+  3  数据权限性能问题  → pitfalls/  （评审报告）
 
-输入序号选择，all 全选，none 跳过：
+序号选择，all 全选，回车跳过
 ```
 5. 用户确认后，对每条选中内容执行 `add` 流程（已知字段自动填入，只问缺失项）
 
@@ -173,15 +173,14 @@ confidence: low
 2. 在所有知识文件中匹配（文件名 + tags + 标题 + 问题场景）
 3. 有匹配时展示（最多3条）：
 ```
-📚 发现 {N} 条相关经验：
+{N} 条相关经验：
 
-  1  [PATTERN-001]  渐进式功能引导
-     和「{关键词}」相关
-     → 输入 1 查看，回车跳过
-
+  1  [PATTERN-001]  渐进式功能引导  ← {关键词}
   2  ...
+
+数字查看，回车跳过
 ```
-4. 无匹配 → 完全静默，不输出任何内容
+4. 无匹配 → 静默
 
 ---
 
