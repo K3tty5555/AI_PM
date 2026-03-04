@@ -219,6 +219,26 @@ Phase 8: 需求评审（可选，多轮迭代）
 3. 确认后批量写入 `templates/knowledge-base/`
 4. 跳过时提示：「随时可用 `/ai-pm knowledge sync` 补充」
 
+### 项目复盘（可选）
+
+项目完成后，可执行 `/ai-pm retrospective` 进行结构化复盘：
+
+1. 检查当前项目是否至少完成 Phase 5（存在 `05-prd/05-PRD-v1.0.md`）
+2. 读取 `templates/retrospectives/retrospective-template.md`
+3. 自动填充已知信息：
+   - 项目名称（从项目目录名）
+   - 关键产出清单（扫描文件是否存在：01~09各阶段产出）
+   - 评审问题统计（从 `08-review-report-v*.md` 提取 Critical/Major/Minor 数量）
+4. 引导用户逐节填写主观部分（做得好的 / 待改进 / 经验沉淀）
+   - 每次只问一节，完成后继续下一节
+5. 保存到 `output/projects/{项目名}/10-retrospective.md`
+6. 询问是否将复盘中的经验同步到知识库：
+   ```
+   复盘完成。要把经验同步到知识库吗？
+     同步 / 跳过
+   ```
+   - 同步 → 触发 `knowledge sync`
+
 ## 用户体验优化点
 
 | 优化项 | 原流程 | 新流程 | 效果 |
