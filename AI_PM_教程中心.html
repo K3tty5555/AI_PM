@@ -643,6 +643,24 @@
             letter-spacing: -0.01em;
         }
 
+        .skill-subcmds {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-1);
+            margin-top: var(--space-3);
+        }
+
+        .skill-subcmd {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-tertiary);
+            background: var(--bg-secondary);
+            padding: 2px var(--space-2);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--divider);
+            letter-spacing: -0.01em;
+        }
+
         /* ============================================================
            CTA Button - Premium
            ============================================================ */
@@ -1449,7 +1467,7 @@
              ============================================================ -->
         <div class="tab-panel active" data-panel="0" data-accent="var(--accent-1)">
             <header class="hero">
-                <div class="label reveal">AI_PM v3.0</div>
+                <div class="label reveal">AI_PM v3.1</div>
                 <h1 class="reveal reveal-delay-1">你的 AI<br>产品经理</h1>
                 <p class="subtitle reveal reveal-delay-2">
                     说一句你想做什么，拿到 PRD 和可交互原型<br>
@@ -1861,6 +1879,24 @@ cp -r .claude/skills/* ~/.claude/skills/</code></pre>
                     <div class="text-container">
                         <div class="changelog-item reveal">
                             <div class="changelog-version">
+                                <div class="version">V3.1.0</div>
+                                <div class="date">2026-03-05</div>
+                            </div>
+                            <div class="changelog-content">
+                                <h4>知识库正式上线</h4>
+                                <ul>
+                                    <li>新增 ai-pm-knowledge：产品知识库（add / search / list / sync / suggest）</li>
+                                    <li>Phase 5 PRD 生成前加入知识库推荐</li>
+                                    <li>Phase 8 评审前加入踩坑提醒</li>
+                                    <li>项目完成后自动触发知识沉淀</li>
+                                    <li>新增 npm 镜像源检测规范</li>
+                                    <li>新增交互文案规范（Humanizer 强制要求）</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="changelog-item reveal">
+                            <div class="changelog-version">
                                 <div class="version">V3.0.0</div>
                                 <div class="date">2026-03-04</div>
                             </div>
@@ -1976,7 +2012,7 @@ cp -r .claude/skills/* ~/.claude/skills/</code></pre>
                 { name: "现场调研", command: "/ai-pm-interview", icon: "🎤", desc: "线下客户访谈，现场出方案" },
                 { name: "统一数据", command: "/ai-pm-data", icon: "📊", desc: "埋点设计、数据分析、看板" },
                 { name: "配置管理", command: "/ai-pm-config", icon: "⚙️", desc: "写作风格、UI 规范、项目配置" },
-                { name: "知识库", command: "/ai-pm-knowledge", icon: "📚", desc: "存下好用的设计和经验" },
+                { name: "产品知识库", command: "/ai-pm-knowledge", icon: "📚", desc: "把项目里的方法论、决策、踩坑记录存下来，下次能搜出来", subcmds: ["add", "search", "list", "sync", "suggest"] },
                 { name: "代理团队", command: "/agent-team", icon: "🤖", desc: "多个 AI 角色一起干活" },
                 { name: "浏览器自动化", command: "/playwright-cli", icon: "🌐", desc: "抓网页、截图、填表单" },
                 { name: "教程中心", command: "/tutorial-center-update", icon: "📖", desc: "这个页面就是它生成的" }
@@ -2089,6 +2125,7 @@ cp -r .claude/skills/* ~/.claude/skills/</code></pre>
                         </div>
                         <p>${skill.desc}</p>
                         <span class="skill-command">${skill.command}</span>
+                        ${skill.subcmds ? `<div class="skill-subcmds">${skill.subcmds.map(s => `<span class="skill-subcmd">${s}</span>`).join('')}</div>` : ''}
                     </div>
                 `).join('');
             }
