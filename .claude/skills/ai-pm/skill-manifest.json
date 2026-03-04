@@ -130,11 +130,10 @@
     "ai-pm-knowledge": {
       "name": "产品知识库",
       "path": "ai-pm-knowledge/SKILL.md",
-      "status": "stub",
-      "version": "0.1",
+      "status": "active",
+      "version": "1.0",
       "type": "utility",
-      "description": "跨项目知识沉淀（尚未实现）",
-      "note": "知识库目录结构未创建，待实现"
+      "description": "跨项目知识沉淀，支持 add/search/list/sync/suggest 命令"
     },
 
     "agent-team": {
