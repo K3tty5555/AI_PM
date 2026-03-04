@@ -81,6 +81,12 @@ AI_PM/
 | `config` | 查看/修改用户配置 |
 | `dashboard` | 显示项目仪表盘（默认） |
 | `interview` / `field` | 进入现场调研/客户访谈模式 |
+| `knowledge` | 显示知识库概况 |
+| `knowledge add` | 添加新知识卡片 |
+| `knowledge search {词}` | 搜索知识库 |
+| `knowledge list` | 列出所有知识分类 |
+| `knowledge sync` | 从当前项目提取可沉淀知识 |
+| `knowledge suggest {词}` | 推荐相关知识（内部调用） |
 | `switch {项目名}` | 切换到指定项目 |
 | `list` | 列出所有项目 |
 | `new {项目名}` | 创建新项目 |
@@ -213,6 +219,12 @@ Phase 8: 需求评审（可选，九角色多轮迭代）
 | `/ai-pm review --round=2` | 进行第二轮评审 |
 | `/ai-pm interview` | 进入现场调研/客户访谈模式 |
 | `/ai-pm interview {功能名}` | 针对指定功能进行现场调研 |
+| `/ai-pm knowledge` | 显示知识库概况 |
+| `/ai-pm knowledge add` | 添加新知识卡片 |
+| `/ai-pm knowledge search {关键词}` | 搜索知识库 |
+| `/ai-pm knowledge list` | 列出所有知识分类 |
+| `/ai-pm knowledge sync` | 从当前项目提取知识 |
+| `/ai-pm knowledge suggest {关键词}` | 推荐相关知识（内部调用） |
 | `/ai-pm https://example.com` | 分析参考网页（支持账号密码） |
 | `/ai-pm fetch` | 重新抓取参考网页 |
 | `/ai-pm reset` | 清空当前项目输出，重新开始 |
