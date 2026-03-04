@@ -32,7 +32,7 @@
 | ai-pm-review | `ai-pm-review/SKILL.md` | review (8) | 九角色需求评审 |
 | ai-pm-config | `ai-pm-config/SKILL.md` | - | 统一配置（写作风格+UI规范） |
 | ai-pm-interview | `ai-pm-interview/SKILL.md` | - | 现场调研/客户访谈 |
-| ai-pm-knowledge | `ai-pm-knowledge/SKILL.md` | - | 产品知识库（stub） |
+| ai-pm-knowledge | `ai-pm-knowledge/SKILL.md` | - | 产品知识库（add/search/list/sync/suggest） |
 | agent-team | `agent-team/SKILL.md` | - | 多代理协作 |
 | playwright-cli | `playwright-cli/SKILL.md` | - | 浏览器自动化 |
 | tutorial-center-update | `tutorial-center-update/SKILL.md` | - | 教程中心 HTML 生成 |
