@@ -1,9 +1,9 @@
 ---
 name: ai-pm-knowledge
 description: >-
-  产品知识库管理技能。沉淀产品方法论、设计模式、决策记录，
-  支持跨项目经验复用。自动提取项目中的关键决策、设计模式、
-  踩坑记录，构建可检索的产品知识图谱。
+  产品知识库管理技能。把项目里的方法论、决策、踩坑记录存下来，
+  下次遇到类似问题时能搜出来。手动添加或从项目自动提取，
+  支持 add/search/list/sync/suggest。
 argument-hint: "[search|add|list|sync|suggest] [关键词或内容]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(find) Bash(grep) Bash(cat)
 ---
@@ -61,7 +61,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(find) Bash(grep) Bash(c
 
 **Step 6** — 适用范围（什么产品/阶段）
 
-收集完毕后：
+六步问完后：
 1. 生成唯一 ID：统计目标分类目录下现有文件数 +1，格式 `{CATEGORY_UPPER}-{序号三位}`（如 PATTERN-001）
 2. 生成 slug：标题转小写，空格换连字符
 3. 写入文件：`templates/knowledge-base/{分类}/{id}-{slug}.md`
