@@ -73,51 +73,25 @@ show_dashboard() {
 
     if [ -z "$current_project" ]; then
         # 没有当前项目 - 显示引导页
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "🚀 欢迎来到 AI 产品经理"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "── AI 产品经理 ──"
         echo ""
-        echo "我是你的 AI 产品合伙人，可以帮你："
-        echo ""
-        echo "✅ 将一句话需求转化为完整 PRD"
-        echo "✅ 生成可交互网页原型"
-        echo "✅ 进行竞品分析和数据设计"
-        echo "✅ 模拟需求评审，提前发现问题"
+        echo "说需求就能出 PRD + 原型，也做竞品分析和需求评审。"
         echo ""
 
         # 快速检查项目数量（不遍历详情）
         local project_count=$(get_project_count)
         if [ "$project_count" -gt 0 ]; then
             local last_project=$(get_last_active_project)
-            echo "📁 你有 ${YELLOW}$((project_count - 1))${NC} 个项目"
-            if [ -n "$last_project" ]; then
-                echo "   最近项目: ${CYAN}$last_project${NC} → 输入 ${BOLD}继续${NC} 恢复"
-            fi
-            echo "   输入 ${BOLD}list${NC} 查看所有项目，${BOLD}状态${NC} 查看详情"
+            echo "$((project_count - 1)) 个项目  最近：${CYAN}$last_project${NC}"
+            echo "输入 ${BOLD}继续${NC} 恢复，${BOLD}list${NC} 看全部，${BOLD}状态${NC} 看详情"
             echo ""
         fi
 
-        echo "🎯 快速开始（直接输入）："
-        echo ""
-        echo "1️⃣ 一句话需求"
-        echo "   💬 例：做一个帮用户决定吃什么的 App"
-        echo ""
-        echo "2️⃣ 数据洞察（从数据中发现需求）"
-        echo "   📊 /ai-pm-data {数据文件路径}"
-        echo "   例：/ai-pm-data ./user_behavior.csv"
-        echo ""
-        echo "3️⃣ 用户访谈（现场调研模式）"
-        echo "   🎤 /ai-pm interview"
-        echo "   适用于：客户现场访谈、需求调研会议"
-        echo ""
-        echo "4️⃣ 查看项目列表"
-        echo "   📋 /ai-pm list"
-        echo ""
-        echo "5️⃣ 管理写作风格"
-        echo "   📝 /ai-pm-config"
-        echo ""
-        echo "6️⃣ 管理设计规范"
-        echo "   🎨 /ai-pm-config"
+        echo "怎么开始："
+        echo "  直接描述需求 → 例：做一个帮用户决定吃什么的 App"
+        echo "  interview    → 带客户现场用，边聊边出方案"
+        echo "  data-insight {文件} → 从数据里找需求"
+        echo "  list / config → 项目列表 / 风格规范配置"
         echo ""
     else
         # 有当前项目 - 显示仪表盘
@@ -134,9 +108,7 @@ show_dashboard() {
         read completed next_stage < <(get_project_progress "$project_dir")
         local total=${#STAGE_FILES[@]}
 
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "📁 项目：${BOLD}$current_project${NC}"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "── 项目：${BOLD}$current_project${NC} ──"
         echo ""
 
         # 渲染阶段流程图
@@ -148,7 +120,7 @@ show_dashboard() {
 
         # 显示已完成列表
         if [ $completed -gt 0 ]; then
-            echo "📋 已完成："
+            echo "已完成："
             local i file prd_file size
             for ((i=0; i<completed; i++)); do
                 file="${STAGE_FILES[$i]}"
@@ -172,10 +144,10 @@ show_dashboard() {
 
         # 显示下一步
         if [ $next_stage -lt $total ]; then
-            echo "⏳ 下一步：${STAGE_NAMES[$next_stage]}"
+            echo "下一步：${STAGE_NAMES[$next_stage]}"
             echo ""
         else
-            echo -e "${GREEN}🎉 所有阶段已完成！${NC}"
+            echo "全部完成。"
             echo ""
         fi
 
@@ -183,7 +155,6 @@ show_dashboard() {
         render_quick_actions $next_stage "$project_dir"
     fi
 
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
 # 获取项目进度详情（返回完成数量和下一个阶段索引）
@@ -296,25 +267,16 @@ render_quick_actions() {
     local next_stage=$1
     local project_dir=$2
 
-    echo "💡 快捷操作："
-    echo ""
-
     # 根据当前阶段显示不同的快捷操作
     if [ $next_stage -eq 0 ]; then
-        echo "   • 输入 ${BOLD}继续${NC} 或 ${BOLD}go${NC} → 开始需求分析"
-        echo "   • 输入 ${BOLD}跳过${NC} → 跳过需求澄清，直接生成PRD"
+        echo "  继续 / go → 开始需求分析"
+        echo "  跳过 → 直接生成PRD"
     elif [ $next_stage -lt ${#STAGE_FILES[@]} ]; then
-        echo "   • 输入 ${BOLD}继续${NC} 或 ${BOLD}go${NC} → ${STAGE_NAMES[$next_stage]}"
-        echo "   • 输入 ${BOLD}跳过${NC} → 跳过${STAGE_NAMES[$next_stage]}"
+        echo "  继续 / go → ${STAGE_NAMES[$next_stage]}"
+        echo "  跳过 → 跳过${STAGE_NAMES[$next_stage]}"
     else
-        echo "   • 输入 ${BOLD}看PRD${NC} → 查看PRD文档"
-        echo "   • 输入 ${BOLD}看原型${NC} → 查看原型"
-        echo "   • 输入 ${BOLD}评审${NC} → 开始需求评审"
+        echo "  看PRD / 看原型 / 评审 / 状态 / 列表"
     fi
-
-    # 通用的快捷操作
-    echo "   • 输入 ${BOLD}状态${NC} → 查看项目状态"
-    echo "   • 输入 ${BOLD}列表${NC} → 查看所有项目"
     echo ""
 }
 
