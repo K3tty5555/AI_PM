@@ -54,6 +54,9 @@ docs/
 templates/configs/*.md
 !templates/configs/reference-config.md
 
+# Knowledge base - contains internal business data, school names, product strategy
+templates/knowledge-base/
+
 # PRD Styles - keep default and examples
 templates/prd-styles/*/
 !templates/prd-styles/default/
