@@ -1,192 +1,152 @@
 ---
 name: ai-pm-data
-description: >-
-  AI_PM 统一数据技能。提供数据指标设计、数据洞察分析、项目仪表盘三大能力。
-  整合原 ai-pm-analytics、ai-pm-data-insight、ai-pm-dashboard 功能。
-argument-hint: "[metrics|insight|dashboard] [参数]"
-allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Agent
+description: 数据分析技能。提供数据指标设计、数据洞察分析、仪表盘生成三大能力。从数据中发现产品需求和优化机会。
+argument-hint: "[数据文件路径 | 命令: insight/metrics/dashboard]"
+allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(python3)
 ---
 
-# ai-pm-data - 统一数据技能
+# ai-pm-data — 数据分析技能
 
-> 整合数据分析、数据洞察、项目仪表盘三大能力
+## 命令路由
 
-## 快速开始
+根据 $ARGUMENTS 路由：
 
-```bash
-# 设计数据指标（基于PRD）
-/ai-pm data metrics
+| 输入 | 执行 |
+|------|------|
+| `metrics` | 数据指标设计 |
+| `insight {文件路径}` | 数据洞察分析 |
+| `dashboard` | 项目仪表盘 |
+| 直接传入文件路径 | 自动执行 insight |
+| 无参数 | 显示帮助 |
 
-# 分析数据文件
-/ai-pm data insight ./user-data.xlsx
+---
 
-# 查看项目仪表盘
+## 1. metrics — 数据指标设计
+
+基于 PRD 设计指标体系、埋点方案。
+
+**用法**:
+```
+/ai-pm data metrics           # 读取当前项目 PRD
+/ai-pm data metrics abtest    # 追加 A/B 测试设计
+```
+
+**流程**:
+```
+读取 05-prd/05-PRD-v1.0.md
+    ↓
+提取可量化目标
+    ↓
+设计指标体系（北极星 → 一级 → 二级 → 过程指标）
+    ↓
+设计埋点方案（事件名、属性、触发时机）
+    ↓
+输出 09-analytics-requirement.md
+```
+
+**输出**: `{项目目录}/09-analytics-requirement.md`
+
+---
+
+## 2. insight — 数据洞察分析
+
+上传数据文件（Excel/CSV），通过 EDA 发现业务洞察。
+
+**用法**:
+```
+/ai-pm data insight ./data.xlsx
+/ai-pm data insight ./data.csv --focus=conversion
+```
+
+**分析步骤**:
+1. 数据探索 — 加载文件，检查结构、字段、缺失值
+2. 关键指标 — 描述统计、分布特征
+3. 异常检测 — 识别异常值、数据质量问题
+4. 趋势分析 — 时间序列、周期性规律
+5. 产品洞察 — 提炼可操作的产品改进建议
+
+**强制规范 — Excel 读取**:
+```python
+# 必须用 data_only=True，否则读到的是公式而非值
+import openpyxl
+wb = openpyxl.load_workbook(file_path, data_only=True)
+```
+
+**执行方式**: 用 python3 直接执行分析脚本，脚本写入结果文件后退出。
+
+**输出**:
+- `{项目目录}/10-data-insight-report.md` — 洞察报告（含 Top 3 洞察摘要）
+- `{项目目录}/11-data-driven-requirements.md` — 数据驱动需求
+- `{项目目录}/12-data-insight-dashboard/index.html` — 可视化仪表盘
+
+---
+
+## 3. dashboard — 项目仪表盘
+
+生成当前项目的全景视图 HTML，展示进度和关键指标。
+
+**用法**:
+```
 /ai-pm data dashboard
 ```
 
-## 子命令
+**输出**: `{项目目录}/12-data-insight-dashboard/index.html`
 
-### 1. metrics - 数据指标设计
+---
 
-基于 PRD 设计完整的数据指标体系、埋点方案、A/B测试。
+## HTML 仪表盘规范（Apple HIG）
 
-**来源**: 原 `ai-pm-analytics`
+所有 HTML 输出强制遵循以下规范：
 
-**用法**:
-```bash
-/ai-pm data metrics                    # 基于当前 PRD
-/ai-pm data metrics --input=PRD.md     # 指定 PRD
-/ai-pm data metrics abtest             # 设计 A/B 测试
+**字体与背景**:
+```css
+font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+background-color: #f5f5f7;
+color: #1d1d1f;
 ```
 
-**输出**:
-- `09-analytics-requirement.md` - 数据需求文档
-- 指标体系、埋点方案、A/B测试设计
-
-**工作流程**:
-```
-读取 PRD
-    ↓
-提取可量化指标
-    ↓
-设计指标体系（北极星→一级→二级→过程）
-    ↓
-设计埋点方案
-    ↓
-输出数据需求文档
-```
-
-### 2. insight - 数据洞察分析
-
-上传数据文件（Excel/CSV/JSON），通过 EDA 发现业务洞察。
-
-**来源**: 原 `ai-pm-data-insight`
-
-**用法**:
-```bash
-/ai-pm data insight ./data.xlsx           # 分析数据文件
-/ai-pm data insight ./data.csv --focus=conversion  # 聚焦转化率
-/ai-pm data insight report                # 生成洞察报告
+**Chart.js 规范**:
+```javascript
+// indexAxis:'y' 必须在 options 顶层，不能放在 scales 里
+{
+  type: 'bar',
+  data: { ... },
+  options: {
+    indexAxis: 'y',   // ← 正确位置：options 顶层
+    scales: {
+      x: { ... },
+      y: { ... }
+    }
+  }
+}
 ```
 
-**执行模式（大文件自动隔离）**:
-
-当数据文件存在（`./data.xlsx` 等）时，自动使用 Subagent 隔离模式：
-
-```
-主线程：接收命令，准备以下参数
-  - 文件路径（绝对路径）
-  - 项目输出目录
-  - --focus 参数（如有）
-
-使用 Agent tool 派发 subagent：
-  系统提示词：「你是数据分析专家，仅完成以下任务，不与用户交互」
-  任务：
-    1. 用 openpyxl data_only=True 加载文件
-    2. 执行 EDA（描述统计、分布、异常值、相关性）
-    3. 输出分析结论到 {项目目录}/10-data-insight-report.md
-    4. 生成仪表盘 HTML 到 {项目目录}/12-data-insight-dashboard/index.html
-    5. 写完毕后退出
-
-主线程：读 10-data-insight-report.md，展示 Top 3 洞察给用户
+**卡片样式**:
+```css
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
 ```
 
-**约束**：subagent 不能向用户提问，所有参数必须在派发时传入。
+**布局**: CSS Grid，响应式，最大宽度 1200px，左右 padding 24px。
 
-**输出**:
-- `10-data-insight-report.md` - 数据洞察报告
-- `11-data-driven-requirements.md` - 数据驱动需求
-- `12-data-insight-dashboard/` - 可视化仪表盘
+---
 
-**分析维度**:
-- 用户行为分析（活跃度、留存、转化漏斗）
-- 用户分层分析（RFM、生命周期、价值分层）
-- 时间模式分析（日度趋势、时段分布、周期性）
+## 分析维度参考
 
-### 3. dashboard - 项目仪表盘
+- 用户行为：活跃度、留存率、转化漏斗
+- 用户分层：RFM 模型、生命周期阶段、价值分层
+- 时间模式：日/周/月趋势、时段分布、季节性
+- 异常检测：突变点、离群值、数据质量问题
 
-项目全景视图、进度追踪、关键指标可视化。
+---
 
-**来源**: 原 `ai-pm-dashboard`
+## Anti-Pattern
 
-**用法**:
-```bash
-/ai-pm data dashboard                    # 当前项目仪表盘
-/ai-pm data dashboard --project={ID}     # 指定项目
-/ai-pm data dashboard compare            # 多项目对比
-```
-
-**输出**:
-- 实时项目状态可视化
-- 多项目对比视图
-- 关键指标趋势图
-
-## 迁移指南
-
-### 从旧命令迁移
-
-| 旧命令 | 新命令 | 状态 |
-|--------|--------|------|
-| `/ai-pm analytics` | `/ai-pm data metrics` | ✅ 完全兼容 |
-| `/ai-pm analytics abtest` | `/ai-pm data metrics abtest` | ✅ 完全兼容 |
-| `/ai-pm data-insight` | `/ai-pm data insight` | ✅ 完全兼容 |
-| `/ai-pm dashboard` | `/ai-pm data dashboard` | ✅ 完全兼容 |
-
-### 过渡期说明
-
-- **2026-03-01 ~ 2026-03-15**: 新旧命令同时可用，旧命令输出重定向提示
-- **2026-03-15 后**: 旧命令将提示使用新命令
-
-## 架构整合说明
-
-### 为何合并
-
-原三个技能职责重叠：
-- `analytics`: 设计指标 → 但指标设计后需要洞察分析
-- `data-insight`: 分析数据 → 但分析结果需要仪表盘展示
-- `dashboard`: 展示数据 → 但展示内容来自前两者
-
-合并后优势：
-- 统一数据入口，降低用户认知负担
-- 数据流闭环：指标设计 → 数据采集 → 洞察分析 → 可视化
-- 减少技能数量：13 → 11
-
-### 数据流
-
-```
-PRD (输入)
-    ↓
-metrics (指标设计)
-    ↓
-[实际数据采集]
-    ↓
-insight (洞察分析)
-    ↓
-dashboard (可视化展示)
-    ↓
-产品决策 (输出)
-```
-
-## 质量门禁
-
-- [ ] 数据完整性检查（无缺失值、异常值）
-- [ ] 指标口径定义清晰
-- [ ] 埋点覆盖完整
-- [ ] 可视化准确无误
-
-详见 [_core/quality-gates.md](../_core/quality-gates.md)
-
-## 执行协议
-
-本技能遵循 [AI_PM 公共执行协议](../_core/common-protocol.md)。
-
-## 版本历史
-
-| 版本 | 日期 | 变更 |
-|-----|------|-----|
-| v1.0.0 | 2026-03-01 | 初始版本，合并 analytics + data-insight + dashboard |
-
-## 相关技能
-
-- [ai-pm-prd](../ai-pm-prd/SKILL.md) - PRD生成，metrics 的输入来源
-- [ai-pm-knowledge](../ai-pm-knowledge/SKILL.md) - 知识库，沉淀数据分析模式
+- Excel 文件不用 `data_only=True` → 读到公式字符串
+- `indexAxis:'y'` 放在 `scales` 里 → 图表渲染错误
+- 仪表盘使用非 Apple HIG 字体/配色
+- 分析结论不落到具体产品建议（只描述数据，不给洞察）
