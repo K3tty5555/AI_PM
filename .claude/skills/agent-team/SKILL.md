@@ -179,13 +179,17 @@ Agent → subagent-Review
     输出：{项目目录}/08-review-report-v1.md
 ```
 
+  启动规则：默认自动启动；若用户传入 `--skip-review` 则跳过。
+
 ### 模式映射（保持命令接口不变）
 
 | 参数 | Wave 执行策略 |
 |------|------------|
-| `--mode=serial` | Wave 1: PM → Wave 2: Analyst → Wave 3: PRD |
+| `--mode=serial` | Wave 1: PM → Wave 2: PRD（读取PM输出）→ Wave 3: Review |
 | `--mode=parallel`（默认） | Wave 1: PM+Analyst 同时 → Wave 2: PRD → Wave 3: Review |
 | `--mode=agile` | Wave 1: PM+Analyst+KB → Wave 2: PRD（轻量版）→ 快速交付 |
+
+> **serial 模式说明**：Wave 1 仅派发 subagent-PM（需求分析），Wave 2 的 PRD 基于 PM 产出生成（不含竞品研究），适用于快速小需求场景。
 
 ### 约束
 
