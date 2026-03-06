@@ -69,6 +69,30 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Agent
 /ai-pm data insight report                # 生成洞察报告
 ```
 
+**执行模式（大文件自动隔离）**:
+
+当数据文件存在（`./data.xlsx` 等）时，自动使用 Subagent 隔离模式：
+
+```
+主线程：接收命令，准备以下参数
+  - 文件路径（绝对路径）
+  - 项目输出目录
+  - --focus 参数（如有）
+
+使用 Agent tool 派发 subagent：
+  系统提示词：「你是数据分析专家，仅完成以下任务，不与用户交互」
+  任务：
+    1. 用 openpyxl data_only=True 加载文件
+    2. 执行 EDA（描述统计、分布、异常值、相关性）
+    3. 输出分析结论到 {项目目录}/10-data-insight-report.md
+    4. 生成仪表盘 HTML 到 {项目目录}/12-data-insight-dashboard/index.html
+    5. 写完毕后退出
+
+主线程：读 10-data-insight-report.md，展示 Top 3 洞察给用户
+```
+
+**约束**：subagent 不能向用户提问，所有参数必须在派发时传入。
+
 **输出**:
 - `10-data-insight-report.md` - 数据洞察报告
 - `11-data-driven-requirements.md` - 数据驱动需求
