@@ -181,6 +181,29 @@ find .claude/skills -name "SKILL.md" -type f
 - `icon` - Emoji 图标
 - `category` - 分类（产品/设计/数据/协作/工具）
 
+#### 已知技能列表（技能 Tab 展示顺序）
+
+| 命令 | 名称 | 分类 | 说明 |
+|------|------|------|------|
+| `/ai-pm` | AI_PM 主控 | 产品 | 完整产品流程，从需求到原型 |
+| `/ai-pm-priority` | 需求优先级评估 | 产品 | 批量评分、排序、生成回复模板 |
+| `/ai-pm-weekly` | 工作周报 | 产品 | 自动整理工作内容，生成结构化周报 |
+| `/ai-pm-interview` | 现场调研 | 产品 | 线下客户访谈，实时生成 PRD |
+| `/ai-pm-data` | 数据洞察 | 数据 | 数据分析、仪表盘、需求发现 |
+| `/ai-pm-persona` | 产品分身 | 产品 | 学习写作风格，让 AI 像你一样写 PRD |
+| `/ai-pm-design-spec` | 设计规范 | 设计 | 加载公司 UI 规范，统一原型风格 |
+| `/ai-pm-knowledge` | 产品知识库 | 工具 | 沉淀经验，搜索历史决策 |
+| `/ai-pm-analyze` | 需求分析 | 产品 | 深入分析需求，挖掘用户画像 |
+| `/ai-pm-research` | 竞品研究 | 产品 | 市场对标，识别差异化机会 |
+| `/ai-pm-story` | 用户故事 | 产品 | 生成用户故事和验收标准 |
+| `/ai-pm-prd` | PRD 生成 | 产品 | 输出完整产品需求文档 |
+| `/ai-pm-prototype` | 原型生成 | 设计 | 生成可交互 HTML 原型 |
+| `/ai-pm-review` | 需求评审 | 产品 | 九角色专家评审，支持多轮迭代 |
+| `/agent-team` | 多代理引擎 | 协作 | 内部引擎，通常由 `/ai-pm --team` 触发，也可直接调用 |
+| `/tutorial-center-update` | 教程中心更新 | 工具 | 扫描技能，生成离线 HTML 教程 |
+
+**注意**：不包含 `ai-pm-config`（已移除）。扫描到未在上表中的 SKILL.md 时，按文件元数据自动补充到列表末尾。
+
 ### Phase 2: 生成 HTML
 
 **内联内容**：
