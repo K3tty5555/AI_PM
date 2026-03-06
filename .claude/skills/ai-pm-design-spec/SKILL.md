@@ -112,6 +112,3 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 2. 若存在，加载对应 Token，替换模板中的 CSS 变量
 3. 若不存在，使用上方 Apple HIG 默认值
 
-## 执行协议
-
-本技能遵循 [AI_PM 公共执行协议](../_core/common-protocol.md)。
