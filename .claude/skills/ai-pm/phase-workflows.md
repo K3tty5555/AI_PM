@@ -84,13 +84,29 @@ Phase 1: 需求澄清（三种入口方式）
     【三种方式都导向：生成 01-requirement-draft.md】
     【自动进入下一阶段，不再单独确认】
 
-Phase 2: 需求分析
-    ↓ 静默执行，生成 02-analysis-report.md
-    【非关键阶段，自动执行，不询问】
+Phase 2 + 3: 需求分析 × 竞品研究（并行）
+    【调用 superpowers:dispatching-parallel-agents】
 
-Phase 3: 竞品研究
-    ↓ 静默执行，生成 03-competitor-report.md
-    【非关键阶段，自动执行，不询问】
+    并行派发两个 subagent：
+
+    Subagent A — 需求分析：
+      系统提示词：「你是产品需求分析师，不与用户交互」
+      任务：读取 01-requirement-draft.md，输出
+        - 目标用户画像（3个维度）
+        - 核心痛点分析（按频率/严重度排序）
+        - 功能范围建议（MVP + 后续迭代）
+      写入：{项目目录}/02-analysis-report.md
+
+    Subagent B — 竞品研究：
+      系统提示词：「你是竞品分析师，不与用户交互」
+      任务：读取 01-requirement-draft.md，输出
+        - 竞品功能对比矩阵
+        - 市场空白识别
+        - 差异化策略建议
+      写入：{项目目录}/03-competitor-report.md
+
+    主线程等待两个 subagent 完成后，进入 Phase 4。
+    【Phase 2 + 3 总时间预计缩短 40%+】
 
 Phase 4: 用户故事
     ↓ 静默执行，生成 04-user-stories.md
