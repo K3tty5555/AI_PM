@@ -41,7 +41,7 @@ Phase 0: 项目启动与参考资源收集（v2.0优化）
          🎯 竞品参考：竞品网址、截图、关注的功能点
          🎨 设计参考：UI设计稿、品牌规范、参考网站
     ↓ 如果用户提供了资源：
-         - URL → 使用playwright-cli自动抓取
+         - URL → 使用 Playwright MCP 自动抓取
          - 截图/图片 → 保存到 07-references/images/
          - 文件 → 保存到 07-references/
     ↓ 生成 07-references/reference-config.md 记录配置

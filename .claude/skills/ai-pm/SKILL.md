@@ -254,5 +254,5 @@ Phase 8: 需求评审（可选，九角色多轮迭代）
 - 📊 [流水线配置](./pipeline.json) - Phase 流程唯一事实来源
 - 📦 [技能注册表](./skill-manifest.json) - 所有技能状态与依赖
 - 💬 [用户交互模式](./user-interaction.md) - 需求澄清、风格管理、设计规范
-- 🔍 [网页分析流程](./web-analysis.md) - playwright-cli 使用、网页分析报告
+- 🔍 [网页分析流程](./web-analysis.md) - Playwright MCP 使用、网页分析报告
 - ⚠️ [边缘情况处理](./edge-cases.md) - 异常处理、需求评审详细说明
