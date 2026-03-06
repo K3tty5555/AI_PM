@@ -105,6 +105,94 @@ PM(需求澄清) → Architect(架构设计) → Designer(原型) → Writer(文
 ✗ 可能需要多轮迭代
 ```
 
+---
+
+## Orchestrator 执行协议（Wave 模式）
+
+> 本协议替代原有「模拟角色切换」方式。所有角色通过 Agent tool 真正并行执行。
+
+### 执行前准备
+
+1. 读取用户需求（`$ARGUMENTS`）
+2. 确认当前项目目录（`output/projects/{最近项目}/`）
+3. 根据需求内容决定启用哪些 Wave
+
+### Wave 执行模板
+
+**Wave 1（并行，无依赖）**：
+
+使用 Agent tool 同时派发以下 subagent（根据需求选择）：
+
+```
+Agent → subagent-PM
+  系统提示词：「你是资深产品经理，仅完成任务，不与用户交互」
+  任务：基于需求「{用户需求}」，完成需求分析
+  输出：{项目目录}/02-analysis-report.md
+
+Agent → subagent-Analyst
+  系统提示词：「你是竞品分析师，仅完成任务，不与用户交互」
+  任务：基于需求「{用户需求}」，完成竞品研究
+  输出：{项目目录}/03-competitor-report.md
+
+Agent → subagent-KB（可选，知识库有相关内容时启用）
+  系统提示词：「你是知识库检索员，仅完成任务，不与用户交互」
+  任务：搜索知识库中与「{需求关键词}」相关的经验
+  输出：/tmp/kb-insight.md
+```
+
+主线程向用户汇报：
+```
+🚀 Wave 1 启动
+   ├── 需求分析（进行中）
+   ├── 竞品研究（进行中）
+   └── 知识库检索（进行中）
+```
+
+等待 Wave 1 全部完成后，向用户汇报结果摘要。
+
+**Wave 2（依赖 Wave 1 输出）**：
+
+```
+Agent → subagent-PRD
+  系统提示词：「你是 PRD 撰写专家，仅完成任务，不与用户交互」
+  任务：
+    读取：{项目目录}/02-analysis-report.md
+    读取：{项目目录}/03-competitor-report.md
+    读取：/tmp/kb-insight.md（如存在）
+    输出：{项目目录}/05-prd/05-PRD-v1.0.md
+```
+
+主线程汇报：
+```
+📄 Wave 2 启动
+   └── PRD 生成（基于需求分析+竞品研究）
+```
+
+**Wave 3（依赖 Wave 2 输出，按需启动）**：
+
+```
+Agent → subagent-Review
+  系统提示词：「你是资深评审专家，仅完成任务，不与用户交互」
+  任务：
+    读取：{项目目录}/05-prd/05-PRD-v1.0.md
+    执行精简版三角色评审（产品总监+架构师+QA总监）
+    输出：{项目目录}/08-review-report-v1.md
+```
+
+### 模式映射（保持命令接口不变）
+
+| 参数 | Wave 执行策略 |
+|------|------------|
+| `--mode=serial` | Wave 1: PM → Wave 2: Analyst → Wave 3: PRD |
+| `--mode=parallel`（默认） | Wave 1: PM+Analyst 同时 → Wave 2: PRD → Wave 3: Review |
+| `--mode=agile` | Wave 1: PM+Analyst+KB → Wave 2: PRD（轻量版）→ 快速交付 |
+
+### 约束
+
+- 每个 subagent 的提示词必须包含「不与用户交互」
+- subagent 的所有输入（文件路径、项目目录）在 Agent tool 调用时传入，不能运行时询问
+- subagent 产出必须落文件，主线程读文件做汇总，不依赖 subagent 的返回文本
+
 ## 工作流程
 
 ### Phase 0: 任务接收与分析
