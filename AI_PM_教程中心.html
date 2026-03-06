@@ -1,2169 +1,1486 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI_PM - AI 产品经理</title>
-    <meta name="description" content="AI_PM：说一句需求，拿到 PRD 和可交互原型。AI 辅助产品管理工具集。">
-
-    <!-- CSS -->
-    <style>
-        /* ============================================================
-           CSS Reset & Design Tokens (Apple-style)
-           ============================================================ */
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        :root {
-            /* Typography - Apple System Fonts */
-            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
-            --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, "Courier New", monospace;
-
-            /* Apple Color Palette - Light Mode */
-            --white: #ffffff;
-            --black: #000000;
-
-            /* Grays */
-            --gray-100: #f5f5f7;
-            --gray-200: #e8e8ed;
-            --gray-300: #d2d2d7;
-            --gray-400: #86868b;
-            --gray-500: #6e6e73;
-            --gray-600: #424245;
-            --gray-700: #1d1d1f;
-
-            /* Backgrounds */
-            --bg-primary: #fbfbfd;
-            --bg-secondary: #f5f5f7;
-            --bg-tertiary: #ffffff;
-
-            /* Text */
-            --text-primary: #1d1d1f;
-            --text-secondary: #86868b;
-            --text-tertiary: #6e6e73;
-            --text-link: #0071e3;
-
-            /* Divider */
-            --divider: rgba(0, 0, 0, 0.08);
-            --divider-subtle: rgba(0, 0, 0, 0.04);
-
-            /* Tab Accent Colors - Apple Vibrant */
-            --accent-1: #0071e3;  /* Blue */
-            --accent-2: #ff9500;  /* Orange */
-            --accent-3: #34c759;  /* Green */
-            --accent-4: #af52de;  /* Purple */
-            --accent-5: #ff2d55;  /* Pink */
-            --accent: var(--accent-1);
-
-            /* Shadows - Apple Depth */
-            --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.08);
-            --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.12);
-            --shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.12);
-
-            /* Glow Effects */
-            --glow-blue: 0 0 20px rgba(0, 113, 227, 0.3);
-            --glow-orange: 0 0 20px rgba(255, 149, 0, 0.3);
-
-            /* Border Radius - Apple Round */
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 18px;
-            --radius-xl: 24px;
-            --radius-full: 9999px;
-
-            /* Spacing - 8pt Grid */
-            --space-1: 4px;
-            --space-2: 8px;
-            --space-3: 12px;
-            --space-4: 16px;
-            --space-5: 20px;
-            --space-6: 24px;
-            --space-8: 32px;
-            --space-10: 40px;
-            --space-12: 48px;
-            --space-16: 64px;
-            --space-20: 80px;
-            --space-24: 96px;
-
-            --content-width: 980px;
-            --section-gap: 100px;
-
-            /* Animation - Apple Smooth */
-            --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
-            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --ease-bounce: cubic-bezier(0.68, -0.15, 0.265, 1.35);
-            --duration-fast: 150ms;
-            --duration-normal: 300ms;
-            --duration-slow: 500ms;
-        }
-
-        /* Dark Mode - Apple Standard */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                /* Backgrounds */
-                --white: #1c1c1e;
-                --bg-primary: #000000;
-                --bg-secondary: #1c1c1e;
-                --bg-tertiary: #2c2c2e;
-
-                /* Text - Apple standard dark mode colors */
-                --text-primary: #f5f5f7;
-                --text-secondary: #98989d;
-                --text-tertiary: #6e6e73;
-                --text-link: #2997ff;
-
-                /* Divider */
-                --divider: rgba(255, 255, 255, 0.15);
-                --divider-subtle: rgba(255, 255, 255, 0.08);
-
-                /* Shadows - Dark mode */
-                --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-                --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
-                --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
-                --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.7);
-                --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.8);
-                --shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.9);
-
-                /* Glow Effects - Dark mode */
-                --glow-blue: 0 0 30px rgba(41, 151, 255, 0.4);
-                --glow-orange: 0 0 30px rgba(255, 159, 10, 0.4);
-            }
-
-            .nav {
-                background: rgba(30, 30, 30, 0.72);
-            }
-
-            .skill-card {
-                background: rgba(44, 44, 46, 0.8);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-
-            .feature-card,
-            .workflow-card {
-                background: var(--bg-secondary);
-            }
-
-            .content pre {
-                background: #1c1c1e;
-                border: 1px solid var(--divider);
-            }
-        }
-
-        html {
-            scroll-behavior: smooth;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        body {
-            font-family: var(--font-sans);
-            font-size: 17px;
-            line-height: 1.5;
-            color: var(--text-primary);
-            background: var(--bg-primary);
-            letter-spacing: -0.01em;
-            overflow-x: hidden;
-        }
-
-        /* ============================================================
-           Typography - Apple Style
-           ============================================================ */
-        h1 {
-            font-size: clamp(40px, 8vw, 64px);
-            font-weight: 700;
-            letter-spacing: -0.03em;
-            line-height: 1.05;
-            color: var(--text-primary);
-        }
-
-        h2 {
-            font-size: clamp(32px, 5vw, 48px);
-            font-weight: 600;
-            letter-spacing: -0.02em;
-            line-height: 1.1;
-            color: var(--text-primary);
-        }
-
-        h3 {
-            font-size: clamp(21px, 3vw, 28px);
-            font-weight: 600;
-            letter-spacing: -0.01em;
-            line-height: 1.25;
-            color: var(--text-primary);
-        }
-
-        h4 {
-            font-size: 19px;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-            color: var(--text-primary);
-        }
-
-        p {
-            margin-bottom: 1em;
-            color: var(--text-secondary);
-        }
-
-        a {
-            color: var(--text-link);
-            text-decoration: none;
-            transition: all var(--duration-fast) var(--ease-out);
-        }
-
-        a:hover {
-            opacity: 0.8;
-            transform: translateY(-1px);
-        }
-
-        /* ============================================================
-           Progress Bar - Glassmorphism
-           ============================================================ */
-        .progress-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--accent);
-            transform-origin: left;
-            transform: scaleX(0);
-            z-index: 1001;
-            transition: background var(--duration-normal) var(--ease-out),
-                        box-shadow var(--duration-normal) var(--ease-out);
-            box-shadow: 0 0 10px var(--accent);
-        }
-
-        /* ============================================================
-           Navigation - Glassmorphism
-           ============================================================ */
-        .nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 52px;
-            background: rgba(251, 251, 253, 0.72);
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            z-index: 1000;
-            border-bottom: 1px solid var(--divider-subtle);
-            transition: all var(--duration-normal) var(--ease-out);
-        }
-
-        .nav-inner {
-            max-width: var(--content-width);
-            margin: 0 auto;
-            padding: 0 var(--space-6);
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .nav-logo {
-            font-size: 21px;
-            font-weight: 700;
-            color: var(--text-primary);
-            letter-spacing: -0.03em;
-            background: linear-gradient(135deg, var(--accent-1), var(--accent-4));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .nav-tabs {
-            display: flex;
-            gap: var(--space-1);
-            background: rgba(0, 0, 0, 0.04);
-            padding: var(--space-1);
-            border-radius: var(--radius-full);
-        }
-
-        .nav-tab {
-            padding: var(--space-2) var(--space-4);
-            border-radius: var(--radius-full);
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            transition: all var(--duration-fast) var(--ease-out);
-            font-family: inherit;
-            letter-spacing: -0.01em;
-        }
-
-        .nav-tab:hover {
-            color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.5);
-        }
-
-        .nav-tab.active {
-            color: var(--text-primary);
-            background: var(--white);
-            box-shadow: var(--shadow-sm);
-        }
-
-        /* ============================================================
-           Tab Panels
-           ============================================================ */
-        .tab-panels {
-            padding-top: 52px;
-        }
-
-        .tab-panel {
-            display: none;
-            opacity: 0;
-            transition: opacity var(--duration-slow) var(--ease-out);
-        }
-
-        .tab-panel.active {
-            display: block;
-            opacity: 1;
-        }
-
-        /* ============================================================
-           Container
-           ============================================================ */
-        .container {
-            max-width: var(--content-width);
-            margin: 0 auto;
-            padding: 0 var(--space-6);
-        }
-
-        .text-container {
-            max-width: 680px;
-            margin: 0 auto;
-        }
-
-        /* ============================================================
-           Hero Section - Immersive
-           ============================================================ */
-        .hero {
-            min-height: calc(100vh - 52px);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: var(--space-20) var(--space-6);
-            background: radial-gradient(ellipse at 50% 0%, rgba(0, 113, 227, 0.08) 0%, transparent 50%),
-                        radial-gradient(ellipse at 80% 80%, rgba(175, 82, 222, 0.05) 0%, transparent 40%);
-        }
-
-        .hero .label {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space-2);
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            color: var(--accent);
-            text-transform: uppercase;
-            margin-bottom: var(--space-6);
-            padding: var(--space-2) var(--space-4);
-            background: rgba(0, 113, 227, 0.08);
-            border-radius: var(--radius-full);
-            border: 1px solid rgba(0, 113, 227, 0.15);
-        }
-
-        .hero .label::before {
-            content: '';
-            width: 6px;
-            height: 6px;
-            background: var(--accent);
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.9); }
-        }
-
-        .hero h1 {
-            margin-bottom: var(--space-6);
-            background: linear-gradient(180deg, var(--text-primary) 0%, var(--gray-600) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero .subtitle {
-            font-size: clamp(18px, 2.5vw, 21px);
-            line-height: 1.6;
-            color: var(--text-secondary);
-            max-width: 560px;
-            margin-bottom: var(--space-10);
-            font-weight: 400;
-        }
-
-        .hero-tags {
-            display: flex;
-            gap: var(--space-3);
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .hero-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space-2);
-            padding: var(--space-3) var(--space-4);
-            background: var(--white);
-            border-radius: var(--radius-full);
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-            box-shadow: var(--shadow-sm), 0 0 0 1px var(--divider-subtle);
-            transition: all var(--duration-fast) var(--ease-out);
-        }
-
-        .hero-tag:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md), 0 0 0 1px var(--divider);
-        }
-
-        /* ============================================================
-           Section
-           ============================================================ */
-        .section {
-            padding: var(--section-gap) 0;
-        }
-
-        .section-alt {
-            background: var(--bg-secondary);
-        }
-
-        .section-header {
-            text-align: center;
-            margin-bottom: var(--space-16);
-        }
-
-        .section-header .label {
-            display: inline-block;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            color: var(--accent);
-            text-transform: uppercase;
-            margin-bottom: var(--space-4);
-            padding: var(--space-2) var(--space-4);
-            background: rgba(0, 113, 227, 0.06);
-            border-radius: var(--radius-full);
-        }
-
-        .section-header h2 {
-            margin-bottom: var(--space-4);
-        }
-
-        .section-header p {
-            font-size: 19px;
-            color: var(--text-tertiary);
-            max-width: 540px;
-            margin: 0 auto;
-        }
-
-        /* ============================================================
-           Feature Cards - Premium
-           ============================================================ */
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: var(--space-6);
-        }
-
-        .feature-card {
-            background: var(--white);
-            border-radius: var(--radius-xl);
-            padding: var(--space-8);
-            box-shadow: var(--shadow-sm), 0 0 0 1px var(--divider-subtle);
-            transition: all var(--duration-normal) var(--ease-out);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent-1), var(--accent-4));
-            opacity: 0;
-            transition: opacity var(--duration-normal) var(--ease-out);
-        }
-
-        .feature-card:hover {
-            transform: translateY(-4px) scale(1.01);
-            box-shadow: var(--shadow-lg), 0 0 0 1px var(--divider);
-        }
-
-        .feature-card:hover::before {
-            opacity: 1;
-        }
-
-        .feature-icon {
-            width: 56px;
-            height: 56px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-lg);
-            margin-bottom: var(--space-5);
-            transition: all var(--duration-normal) var(--ease-out);
-        }
-
-        .feature-card:hover .feature-icon {
-            transform: scale(1.1) rotate(-4deg);
-            background: linear-gradient(135deg, var(--bg-secondary), var(--white));
-            box-shadow: var(--shadow-sm);
-        }
-
-        .feature-card h3 {
-            margin-bottom: var(--space-3);
-        }
-
-        .feature-card p {
-            font-size: 15px;
-            color: var(--text-secondary);
-            margin-bottom: var(--space-5);
-            line-height: 1.6;
-        }
-
-        .feature-card code {
-            display: inline-block;
-            font-family: var(--font-mono);
-            font-size: 13px;
-            color: var(--accent);
-            background: rgba(0, 113, 227, 0.06);
-            padding: var(--space-2) var(--space-3);
-            border-radius: var(--radius-md);
-            font-weight: 500;
-        }
-
-        /* ============================================================
-           Skill Cards - Glassmorphism
-           ============================================================ */
-        .skill-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: var(--space-5);
-        }
-
-        .skill-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border-radius: var(--radius-lg);
-            padding: var(--space-6);
-            box-shadow: var(--shadow-sm), 0 0 0 1px rgba(0, 0, 0, 0.04);
-            transition: all var(--duration-normal) var(--ease-spring);
-            position: relative;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        .skill-card::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: var(--radius-lg);
-            padding: 1px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
-
-        .skill-card:hover {
-            transform: translateY(-6px) scale(1.02);
-            box-shadow: var(--shadow-hover), 0 0 0 1px rgba(0, 0, 0, 0.06);
-            background: rgba(255, 255, 255, 0.95);
-        }
-
-        .skill-card-header {
-            display: flex;
-            align-items: center;
-            gap: var(--space-3);
-            margin-bottom: var(--space-4);
-        }
-
-        .skill-icon {
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            background: linear-gradient(135deg, var(--bg-secondary), var(--white));
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-xs), 0 0 0 1px var(--divider-subtle);
-            transition: all var(--duration-normal) var(--ease-out);
-        }
-
-        .skill-card:hover .skill-icon {
-            transform: scale(1.1);
-            box-shadow: var(--shadow-sm), 0 0 0 1px var(--divider);
-        }
-
-        .skill-card h3 {
-            font-size: 17px;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .skill-card p {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: var(--space-4);
-            line-height: 1.5;
-        }
-
-        .skill-command {
-            font-family: var(--font-mono);
-            font-size: 12px;
-            color: var(--accent);
-            background: rgba(0, 113, 227, 0.08);
-            padding: var(--space-2) var(--space-3);
-            border-radius: var(--radius-sm);
-            font-weight: 500;
-            letter-spacing: -0.01em;
-        }
-
-        .skill-subcmds {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--space-1);
-            margin-top: var(--space-3);
-        }
-
-        .skill-subcmd {
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--text-tertiary);
-            background: var(--bg-secondary);
-            padding: 2px var(--space-2);
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--divider);
-            letter-spacing: -0.01em;
-        }
-
-        /* ============================================================
-           CTA Button - Premium
-           ============================================================ */
-        .cta-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: var(--space-4) var(--space-8);
-            background: linear-gradient(135deg, var(--accent-1), #2997ff);
-            color: white;
-            font-size: 17px;
-            font-weight: 500;
-            border-radius: var(--radius-full);
-            border: none;
-            cursor: pointer;
-            transition: all var(--duration-fast) var(--ease-out);
-            font-family: inherit;
-            letter-spacing: -0.01em;
-            box-shadow: 0 4px 16px rgba(0, 113, 227, 0.3),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .cta-button::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-            opacity: 0;
-            transition: opacity var(--duration-fast) var(--ease-out);
-        }
-
-        .cta-button:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 8px 28px rgba(0, 113, 227, 0.4),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-
-        .cta-button:hover::before {
-            opacity: 1;
-        }
-
-        .cta-button:active {
-            transform: translateY(0) scale(0.98);
-        }
-
-        /* ============================================================
-           Workflow Cards - Minimal
-           ============================================================ */
-        .workflow-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: var(--space-5);
-        }
-
-        @media (max-width: 1024px) {
-            .workflow-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        .workflow-card {
-            background: var(--white);
-            border-radius: var(--radius-xl);
-            padding: var(--space-6);
-            box-shadow: var(--shadow-sm), 0 0 0 1px var(--divider-subtle);
-            transition: all var(--duration-normal) var(--ease-out);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .workflow-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--accent);
-            opacity: 0;
-            transition: opacity var(--duration-normal) var(--ease-out);
-        }
-
-        .workflow-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg), 0 0 0 1px var(--divider);
-        }
-
-        .workflow-card:hover::before {
-            opacity: 1;
-        }
-
-        .workflow-card .time {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: var(--space-3);
-            padding: var(--space-1) var(--space-3);
-            background: rgba(0, 113, 227, 0.06);
-            border-radius: var(--radius-full);
-        }
-
-        .workflow-card h4 {
-            margin-bottom: var(--space-2);
-            font-size: 18px;
-        }
-
-        .workflow-card p {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 0;
-        }
-
-        /* ============================================================
-           Changelog - Elegant
-           ============================================================ */
-        .changelog-item {
-            display: flex;
-            gap: var(--space-8);
-            padding: var(--space-8) 0;
-            border-bottom: 1px solid var(--divider-subtle);
-        }
-
-        .changelog-item:last-child {
-            border-bottom: none;
-        }
-
-        .changelog-version {
-            flex-shrink: 0;
-            width: 80px;
-        }
-
-        .changelog-version .version {
-            font-size: 17px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: -0.02em;
-        }
-
-        .changelog-version .date {
-            font-size: 13px;
-            color: var(--text-tertiary);
-            margin-top: var(--space-1);
-        }
-
-        .changelog-content h4 {
-            margin-bottom: var(--space-3);
-            font-size: 18px;
-        }
-
-        .changelog-content ul {
-            margin-left: var(--space-5);
-            margin-bottom: 0;
-        }
-
-        .changelog-content li {
-            margin-bottom: var(--space-2);
-            color: var(--text-secondary);
-            font-size: 15px;
-        }
-
-        /* ============================================================
-           Content Styles
-           ============================================================ */
-        .content h1 {
-            margin-bottom: var(--space-8);
-        }
-
-        .content h2 {
-            margin-top: var(--space-12);
-            margin-bottom: var(--space-5);
-            font-size: 28px;
-        }
-
-        .content h3 {
-            margin-top: var(--space-8);
-            margin-bottom: var(--space-4);
-            font-size: 21px;
-        }
-
-        .content p {
-            margin-bottom: var(--space-5);
-            color: var(--text-secondary);
-            font-size: 17px;
-            line-height: 1.7;
-        }
-
-        .content code {
-            font-family: var(--font-mono);
-            font-size: 14px;
-            color: var(--text-primary);
-            background: rgba(0, 0, 0, 0.04);
-            padding: var(--space-1) var(--space-2);
-            border-radius: var(--radius-sm);
-        }
-
-        .content pre {
-            background: #1d1d1f;
-            color: #f5f5f7;
-            padding: var(--space-6);
-            border-radius: var(--radius-xl);
-            overflow-x: auto;
-            margin: var(--space-6) 0;
-            font-size: 14px;
-            line-height: 1.6;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .content pre code {
-            background: none;
-            padding: 0;
-            color: inherit;
-        }
-
-        .content ul, .content ol {
-            margin-left: var(--space-6);
-            margin-bottom: var(--space-6);
-        }
-
-        .content li {
-            margin-bottom: var(--space-3);
-            color: var(--text-secondary);
-        }
-
-        .content strong {
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-
-        /* ============================================================
-           Scroll Reveal Animation
-           ============================================================ */
-        .reveal {
-            opacity: 0;
-            transform: translateY(40px);
-            transition: opacity 0.8s var(--ease-out),
-                        transform 0.8s var(--ease-out);
-        }
-
-        .reveal.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .reveal-delay-1 { transition-delay: 0.1s; }
-        .reveal-delay-2 { transition-delay: 0.2s; }
-        .reveal-delay-3 { transition-delay: 0.3s; }
-
-        .stagger .reveal {
-            transition-delay: calc(var(--i, 0) * 0.08s);
-        }
-
-        /* ============================================================
-           Workflow Map - Parallel Branches
-           ============================================================ */
-        .workflow-map {
-            max-width: 900px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: var(--space-6);
-        }
-
-        .workflow-start {
-            display: flex;
-            align-items: center;
-            gap: var(--space-3);
-            padding: var(--space-4) var(--space-8);
-            background: var(--accent);
-            color: white;
-            border-radius: var(--radius-full);
-            font-size: 18px;
-            font-weight: 600;
-            box-shadow: 0 4px 16px rgba(0, 113, 227, 0.3);
-        }
-
-        .start-icon {
-            font-size: 24px;
-        }
-
-        .workflow-branches-label {
-            font-size: 14px;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: var(--space-2);
-        }
-
-        .workflow-branches {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: var(--space-5);
-            width: 100%;
-        }
-
-        .branch {
-            background: var(--white);
-            border-radius: var(--radius-xl);
-            padding: var(--space-5);
-            box-shadow: var(--shadow-sm), 0 0 0 1px var(--divider-subtle);
-            transition: all var(--duration-normal) var(--ease-out);
-        }
-
-        .branch:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-md), 0 0 0 1px var(--divider);
-        }
-
-        .branch-header {
-            display: flex;
-            align-items: center;
-            gap: var(--space-3);
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--space-4);
-            padding-bottom: var(--space-3);
-            border-bottom: 1px solid var(--divider-subtle);
-        }
-
-        .branch-icon {
-            font-size: 20px;
-        }
-
-        .branch-steps {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-3);
-        }
-
-        .branch-step {
-            display: flex;
-            align-items: flex-start;
-            gap: var(--space-3);
-        }
-
-        .branch-step.mini {
-            padding: var(--space-3);
-            background: var(--bg-secondary);
-            border-radius: var(--radius-md);
-        }
-
-        .branch-step-group {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-3);
-        }
-
-        .branch-dot {
-            width: 12px;
-            height: 12px;
-            background: var(--accent);
-            border-radius: 50%;
-            margin-top: 4px;
-            flex-shrink: 0;
-        }
-
-        .branch-dot.alt {
-            background: var(--accent-2);
-        }
-
-        .branch-dot.alt2 {
-            background: var(--accent-3);
-        }
-
-        .branch-content h5 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: var(--space-1);
-            color: var(--text-primary);
-        }
-
-        .branch-output {
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--text-tertiary);
-            background: var(--bg-secondary);
-            padding: 2px 8px;
-            border-radius: var(--radius-sm);
-        }
-
-        .branch-badge {
-            font-size: 10px;
-            color: var(--accent-2);
-            background: rgba(255, 149, 0, 0.1);
-            padding: 2px 6px;
-            border-radius: var(--radius-sm);
-            margin-left: var(--space-2);
-        }
-
-        .branch-connector {
-            width: 2px;
-            height: 24px;
-            background: var(--accent);
-            margin-left: 5px;
-            opacity: 0.3;
-        }
-
-        .branch-connector.alt {
-            background: var(--accent-2);
-        }
-
-        .workflow-merge {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: var(--space-2);
-            padding: var(--space-4) 0;
-        }
-
-        .merge-arrow {
-            font-size: 24px;
-            color: var(--accent);
-            opacity: 0.6;
-        }
-
-        .merge-label {
-            font-size: 13px;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .workflow-design {
-            width: 100%;
-            background: linear-gradient(135deg, rgba(175, 82, 222, 0.05), rgba(255, 45, 85, 0.05));
-            border-radius: var(--radius-xl);
-            padding: var(--space-6);
-            border: 1px solid rgba(175, 82, 222, 0.1);
-        }
-
-        .design-header {
-            display: flex;
-            align-items: center;
-            gap: var(--space-3);
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--accent-4);
-            margin-bottom: var(--space-5);
-        }
-
-        .design-icon {
-            font-size: 20px;
-        }
-
-        .design-steps {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--space-4);
-            flex-wrap: wrap;
-        }
-
-        .design-step {
-            display: flex;
-            align-items: center;
-            gap: var(--space-3);
-            padding: var(--space-4) var(--space-5);
-            background: var(--white);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            transition: all var(--duration-normal) var(--ease-out);
-        }
-
-        .design-step:hover {
-            transform: scale(1.02);
-            box-shadow: var(--shadow-md);
-        }
-
-        .design-step.optional {
-            border: 1px dashed var(--accent-4);
-        }
-
-        .design-number {
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--accent-4);
-            color: white;
-            font-size: 13px;
-            font-weight: 700;
-            border-radius: var(--radius-full);
-        }
-
-        .design-content h5 {
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: var(--space-1);
-        }
-
-        .design-content span {
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--text-tertiary);
-        }
-
-        .design-badge {
-            font-size: 10px;
-            color: var(--accent-4);
-            background: rgba(175, 82, 222, 0.1);
-            padding: 2px 6px;
-            border-radius: var(--radius-sm);
-            margin-left: var(--space-2);
-        }
-
-        .design-arrow {
-            font-size: 20px;
-            color: var(--accent-4);
-            opacity: 0.5;
-        }
-
-        .workflow-outputs {
-            width: 100%;
-        }
-
-        .outputs-header {
-            text-align: center;
-            font-size: 14px;
-            color: var(--text-tertiary);
-            margin-bottom: var(--space-4);
-        }
-
-        .outputs-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: var(--space-4);
-        }
-
-        .output-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: var(--space-2);
-            padding: var(--space-5);
-            background: var(--white);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-sm), 0 0 0 1px var(--divider-subtle);
-            transition: all var(--duration-normal) var(--ease-out);
-        }
-
-        .output-item:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-md), 0 0 0 1px var(--divider);
-        }
-
-        .output-icon {
-            font-size: 28px;
-        }
-
-        .output-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .output-file {
-            font-family: var(--font-mono);
-            font-size: 10px;
-            color: var(--text-tertiary);
-            text-align: center;
-        }
-
-        .workflow-complete {
-            display: flex;
-            align-items: center;
-            gap: var(--space-3);
-            padding: var(--space-5) var(--space-8);
-            background: linear-gradient(135deg, #34c759, #30d158);
-            color: white;
-            border-radius: var(--radius-full);
-            font-size: 18px;
-            font-weight: 600;
-            box-shadow: 0 4px 20px rgba(52, 199, 89, 0.4);
-        }
-
-        /* ============================================================
-           Footer
-           ============================================================ */
-        .footer {
-            padding: var(--space-12) 0;
-            border-top: 1px solid var(--divider-subtle);
-            text-align: center;
-            background: var(--bg-secondary);
-        }
-
-        .footer p {
-            font-size: 13px;
-            color: var(--text-tertiary);
-            margin-bottom: var(--space-2);
-        }
-
-        /* ============================================================
-           Responsive - Apple Design
-           ============================================================ */
-        @media (max-width: 900px) {
-            .workflow-branches {
-                grid-template-columns: 1fr;
-            }
-
-            .outputs-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .design-steps {
-                flex-direction: column;
-            }
-
-            .design-arrow {
-                transform: rotate(90deg);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .workflow-map {
-                padding: 0 var(--space-4);
-            }
-
-            .outputs-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .branch-step-group {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-
-            .branch-step.mini {
-                flex: 1;
-                min-width: 140px;
-            }
-
-            .nav-tabs {
-                gap: var(--space-1);
-                padding: var(--space-1);
-            }
-
-            .nav-tab {
-                padding: var(--space-2) var(--space-3);
-                font-size: 12px;
-            }
-
-            .nav-logo {
-                font-size: 18px;
-            }
-
-            .hero {
-                min-height: auto;
-                padding: var(--space-16) var(--space-4);
-            }
-
-            .hero h1 {
-                font-size: 36px;
-                letter-spacing: -0.02em;
-            }
-
-            .hero .subtitle {
-                font-size: 17px;
-                padding: 0 var(--space-4);
-            }
-
-            .section {
-                padding: var(--space-16) 0;
-            }
-
-            .section-header {
-                margin-bottom: var(--space-10);
-                padding: 0 var(--space-4);
-            }
-
-            .section-header h2 {
-                font-size: 28px;
-            }
-
-            .section-header p {
-                font-size: 17px;
-            }
-
-            .feature-grid,
-            .skill-grid {
-                grid-template-columns: 1fr;
-                gap: var(--space-4);
-            }
-
-            .feature-card {
-                padding: var(--space-6);
-            }
-
-            .workflow-grid {
-                grid-template-columns: 1fr;
-                gap: var(--space-4);
-            }
-
-            .container {
-                padding: 0 var(--space-4);
-            }
-
-            .changelog-item {
-                flex-direction: column;
-                gap: var(--space-4);
-                padding: var(--space-6) 0;
-            }
-
-            .text-container {
-                padding: 0 var(--space-4);
-            }
-
-            .content h2 {
-                font-size: 24px;
-                margin-top: var(--space-10);
-            }
-
-            .content h3 {
-                font-size: 19px;
-            }
-        }
-
-        /* 手机竖屏 */
-        @media (max-width: 480px) {
-            .hero h1 {
-                font-size: 32px;
-            }
-
-            .hero .subtitle {
-                font-size: 16px;
-            }
-
-            .section-header h2 {
-                font-size: 24px;
-            }
-
-            .nav-logo {
-                font-size: 16px;
-            }
-
-            .nav-tab {
-                padding: var(--space-1) var(--space-2);
-                font-size: 11px;
-            }
-        }
-
-        /* 平板 */
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .container {
-                max-width: 90vw;
-            }
-
-            .feature-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .skill-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* ============================================================
-           Reduced Motion
-           ============================================================ */
-        @media (prefers-reduced-motion: reduce) {
-            .reveal {
-                opacity: 1;
-                transform: none;
-                transition: none;
-            }
-        }
-
-        /* ============================================================
-           noscript fallback
-           ============================================================ */
-        noscript .reveal {
-            opacity: 1 !important;
-            transform: none !important;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI_PM - AI 产品经理教程中心</title>
+  <style>
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+      --bg: #f5f5f7;
+      --surface: #ffffff;
+      --text: #1d1d1f;
+      --text-secondary: #6e6e73;
+      --text-tertiary: #86868b;
+      --border: rgba(0,0,0,0.08);
+      --accent: #0071e3;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --space-16: 64px;
+      --space-20: 80px;
+      --space-24: 96px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+      --nav-h: 52px;
+      --progress-h: 3px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 17px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Progress Bar */
+    #progressBar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: var(--progress-h);
+      background: var(--accent);
+      transform-origin: left;
+      transform: scaleX(0);
+      z-index: 1000;
+      transition: background var(--transition);
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      top: var(--progress-h); left: 0; right: 0;
+      height: var(--nav-h);
+      background: rgba(245,245,247,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-6);
+      z-index: 900;
+    }
+
+    .nav-logo {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+    }
+
+    .nav-logo span {
+      color: var(--accent);
+      transition: color var(--transition);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: var(--space-1);
+      align-items: center;
+    }
+
+    .nav-tab {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: var(--space-2) var(--space-4);
+      border-radius: 20px;
+      font-size: 15px;
+      font-family: var(--font-sans);
+      color: var(--text-secondary);
+      font-weight: 400;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+
+    .nav-tab:hover { color: var(--text); background: rgba(0,0,0,0.04); }
+
+    .nav-tab.active {
+      color: var(--accent);
+      font-weight: 600;
+      background: rgba(0,113,227,0.08);
+    }
+
+    /* Tab Panels */
+    .tab-panels { padding-top: calc(var(--nav-h) + var(--progress-h)); }
+
+    .tab-panel { display: none; min-height: 100vh; }
+    .tab-panel.active { display: block; }
+
+    /* Container */
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 0 var(--space-6);
+    }
+
+    .text-container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Section */
+    .section { padding: var(--space-20) 0; }
+    .section-sm { padding: var(--space-12) 0; }
+
+    .section-eyebrow {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: var(--space-3);
+      transition: color var(--transition);
+    }
+
+    .section-title {
+      font-size: clamp(32px, 5vw, 40px);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: var(--space-5);
+    }
+
+    .section-subtitle {
+      font-size: 21px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: calc(100vh - var(--nav-h) - var(--progress-h));
+      display: flex;
+      align-items: center;
+      padding: var(--space-20) var(--space-6);
+      text-align: center;
+    }
+
+    .hero-inner { width: 100%; }
+
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: var(--space-5);
+      transition: color var(--transition);
+    }
+
+    .hero-title {
+      font-size: clamp(48px, 8vw, 64px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      margin-bottom: var(--space-5);
+      color: var(--text);
+    }
+
+    .hero-subtitle {
+      font-size: 21px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      max-width: 560px;
+      margin: 0 auto var(--space-10);
+      font-weight: 400;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: var(--space-4);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 14px 28px;
+      border-radius: 980px;
+      font-size: 17px;
+      font-weight: 500;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: all var(--transition);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      transition: background var(--transition), opacity var(--transition), transform var(--transition);
+    }
+    .btn-primary:hover { opacity: 0.85; transform: scale(1.02); }
+
+    .btn-secondary {
+      background: rgba(0,0,0,0.05);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: rgba(0,0,0,0.09); }
+
+    /* Feature Cards */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-5);
+      margin-top: var(--space-10);
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+      box-shadow: var(--shadow-md);
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .feature-icon {
+      font-size: 36px;
+      margin-bottom: var(--space-5);
+      display: block;
+    }
+
+    .feature-title {
+      font-size: 21px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: var(--space-3);
+    }
+
+    .feature-desc {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Code Block */
+    .code-block {
+      background: #1d1d1f;
+      border-radius: var(--radius-lg);
+      padding: var(--space-8);
+      margin-top: var(--space-8);
+      text-align: left;
+      overflow-x: auto;
+    }
+
+    .code-block pre {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      color: #f5f5f7;
+      white-space: pre;
+    }
+
+    .code-comment { color: #6e6e73; }
+    .code-cmd { color: #30d158; }
+    .code-string { color: #ff9f0a; }
+
+    /* Skill Categories */
+    .skills-section { padding: var(--space-16) 0; }
+
+    .skill-category { margin-bottom: var(--space-12); }
+
+    .skill-category-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+
+    .skill-category-icon { font-size: 24px; }
+
+    .skill-category-title {
+      font-size: 21px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .skill-category-count {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      background: rgba(0,0,0,0.05);
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-left: auto;
+    }
+
+    .skill-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .skill-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .skill-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .skill-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .skill-card:hover::before { opacity: 1; }
+
+    .skill-card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+
+    .skill-card-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .skill-card-name {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .skill-card-cmd {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent);
+      background: rgba(0,113,227,0.08);
+      padding: 2px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-top: var(--space-1);
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .skill-card-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .skill-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: var(--space-3);
+      background: rgba(0,0,0,0.05);
+      color: var(--text-tertiary);
+    }
+
+    /* Guide */
+    .guide-section { padding: var(--space-16) 0; }
+
+    .guide-step {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6) var(--space-8);
+      margin-bottom: var(--space-4);
+      display: flex;
+      gap: var(--space-6);
+      align-items: flex-start;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+
+    .guide-step-num {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      transition: background var(--transition);
+    }
+
+    .guide-step-title {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+    }
+
+    .guide-step-desc {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .guide-workflow {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      margin-bottom: var(--space-3);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+
+    .guide-workflow-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+      color: var(--text);
+    }
+
+    .guide-workflow-cmd {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-2);
+      background: rgba(0,0,0,0.03);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-sm);
+      display: block;
+    }
+
+    .guide-workflow-desc { font-size: 14px; color: var(--text-tertiary); }
+
+    .tip-card {
+      background: linear-gradient(135deg, rgba(0,113,227,0.06), rgba(0,113,227,0.02));
+      border: 1px solid rgba(0,113,227,0.15);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5) var(--space-6);
+      margin-bottom: var(--space-3);
+    }
+
+    .tip-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: var(--space-2);
+      transition: color var(--transition);
+    }
+
+    .tip-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Workflow */
+    .workflow-card {
+      background: var(--surface);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+      margin-bottom: var(--space-5);
+      box-shadow: var(--shadow-md);
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+
+    .workflow-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .workflow-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+    }
+
+    .workflow-num {
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      transition: background var(--transition);
+    }
+
+    .workflow-title {
+      font-size: 21px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .workflow-subtitle {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      margin-top: 2px;
+    }
+
+    .workflow-flow {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-bottom: var(--space-5);
+      padding: var(--space-5);
+      background: var(--bg);
+      border-radius: var(--radius-md);
+    }
+
+    .flow-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .flow-arrow {
+      color: var(--text-tertiary);
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .workflow-desc {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .workflow-cmd-block {
+      background: #1d1d1f;
+      border-radius: var(--radius-md);
+      padding: var(--space-4) var(--space-5);
+      margin-top: var(--space-4);
+    }
+
+    .workflow-cmd-block code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: #30d158;
+    }
+
+    /* About */
+    .changelog-item {
+      display: flex;
+      gap: var(--space-8);
+      padding: var(--space-8) 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .changelog-item:last-child { border-bottom: none; }
+
+    .changelog-version {
+      flex-shrink: 0;
+      width: 60px;
+    }
+
+    .changelog-version-tag {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      background: rgba(0,113,227,0.1);
+      padding: 3px 10px;
+      border-radius: 6px;
+      transition: color var(--transition), background var(--transition);
+    }
+
+    .changelog-date {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-2);
+    }
+
+    .changelog-desc {
+      font-size: 15px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+      margin-top: var(--space-8);
+    }
+
+    .info-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+
+    .info-card-icon { font-size: 28px; margin-bottom: var(--space-3); }
+
+    .info-card-title {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+    }
+
+    .info-card-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: var(--space-12) 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav { padding: 0 var(--space-4); }
+      .nav-tab { padding: var(--space-2) var(--space-3); font-size: 14px; }
+      .hero { padding: var(--space-12) var(--space-4); }
+      .hero-title { font-size: 40px; }
+      .hero-subtitle { font-size: 17px; }
+      .section { padding: var(--space-12) 0; }
+      .container { padding: 0 var(--space-4); }
+      .guide-step { flex-direction: column; }
+      .changelog-item { flex-direction: column; gap: var(--space-3); }
+      .workflow-flow { gap: var(--space-1); }
+      .btn { padding: 12px 20px; font-size: 15px; }
+    }
+  </style>
 </head>
 <body>
-    <!-- Progress Bar -->
-    <div class="progress-bar" id="progressBar"></div>
 
-    <!-- Navigation -->
-    <nav class="nav" id="nav">
-        <div class="nav-inner">
-            <div class="nav-logo">AI_PM</div>
-            <div class="nav-tabs" id="navTabs" role="tablist">
-                <button class="nav-tab active" data-tab="0" role="tab" aria-selected="true">首页</button>
-                <button class="nav-tab" data-tab="1" role="tab" aria-selected="false">技能</button>
-                <button class="nav-tab" data-tab="2" role="tab" aria-selected="false">指南</button>
-                <button class="nav-tab" data-tab="3" role="tab" aria-selected="false">工作流</button>
-                <button class="nav-tab" data-tab="4" role="tab" aria-selected="false">关于</button>
+  <!-- Progress Bar -->
+  <div id="progressBar"></div>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-logo">AI<span>_PM</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="0">首页</button>
+      <button class="nav-tab" data-tab="1">技能</button>
+      <button class="nav-tab" data-tab="2">指南</button>
+      <button class="nav-tab" data-tab="3">工作流</button>
+      <button class="nav-tab" data-tab="4">关于</button>
+    </div>
+  </nav>
+
+  <!-- Tab Panels -->
+  <div class="tab-panels">
+
+    <!-- Tab 0: 首页 -->
+    <div class="tab-panel active" id="tab-0" data-panel="0">
+
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero-inner">
+          <span class="hero-eyebrow reveal">Claude Code Skills</span>
+          <h1 class="hero-title reveal reveal-delay-1">AI 产品经理</h1>
+          <p class="hero-subtitle reveal reveal-delay-2">Claude Code 的产品经理技能集合。输入需求，输出 PRD、原型、评审报告。</p>
+          <div class="hero-actions reveal reveal-delay-3">
+            <button class="btn btn-primary" onclick="switchTab(1)">开始体验</button>
+            <button class="btn btn-secondary" onclick="switchTab(2)">查看指南</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Core Features -->
+      <section class="section" style="background: var(--surface);">
+        <div class="container">
+          <div class="text-container" style="text-align:center;">
+            <p class="section-eyebrow reveal">核心能力</p>
+            <h2 class="section-title reveal reveal-delay-1">为产品经理而生</h2>
+            <p class="section-subtitle reveal reveal-delay-2">覆盖产品经理完整工作场景，从灵感到可交付物。</p>
+          </div>
+          <div class="feature-grid">
+            <div class="feature-card reveal">
+              <span class="feature-icon">🎯</span>
+              <h3 class="feature-title">全流程覆盖</h3>
+              <p class="feature-desc">从需求澄清到九角色评审，覆盖产品经理完整工作流。需求分析、竞品研究、用户故事、PRD 到原型，一气呵成。</p>
             </div>
+            <div class="feature-card reveal reveal-delay-1">
+              <span class="feature-icon">🤝</span>
+              <h3 class="feature-title">多代理协作</h3>
+              <p class="feature-desc">复杂需求自动启用多代理并行处理，产品经理、架构师、设计师同时工作，效率翻倍，质量不打折。</p>
+            </div>
+            <div class="feature-card reveal reveal-delay-2">
+              <span class="feature-icon">📚</span>
+              <h3 class="feature-title">越用越懂你</h3>
+              <p class="feature-desc">产品分身学习你的 PRD 写作风格，知识库沉淀团队经验。用过的决策、踩过的坑，下次自动推荐。</p>
+            </div>
+          </div>
         </div>
-    </nav>
+      </section>
 
-    <div class="tab-panels" id="tabPanels">
-        <!-- ============================================================
-             Tab 1: 首页
-             ============================================================ -->
-        <div class="tab-panel active" data-panel="0" data-accent="var(--accent-1)">
-            <header class="hero">
-                <div class="label reveal">AI_PM v3.2</div>
-                <h1 class="reveal reveal-delay-1">你的 AI<br>产品经理</h1>
-                <p class="subtitle reveal reveal-delay-2">
-                    说一句你想做什么，拿到 PRD 和可交互原型<br>
-                    分析、研究、写文档这些中间步骤，AI 帮你跑完
-                </p>
-                <div class="hero-tags reveal reveal-delay-3">
-                    <span class="hero-tag">🎯 AI 主控</span>
-                    <span class="hero-tag">💬 需求分析</span>
-                    <span class="hero-tag">🔍 竞品研究</span>
-                    <span class="hero-tag">📝 PRD 生成</span>
-                    <span class="hero-tag">🎨 原型设计</span>
-                    <span class="hero-tag">🤖 代理团队</span>
-                </div>
-            </header>
+      <!-- Quick Start -->
+      <section class="section">
+        <div class="container">
+          <div class="text-container" style="text-align:center;">
+            <p class="section-eyebrow reveal">快速开始</p>
+            <h2 class="section-title reveal reveal-delay-1">三步开启 AI 产品经理</h2>
+            <p class="section-subtitle reveal reveal-delay-2">从安装到产出 PRD，最快 10 分钟。</p>
+          </div>
+          <div class="code-block reveal" style="max-width: 640px; margin: var(--space-10) auto 0;">
+            <pre><span class="code-comment"># 1. 克隆项目</span>
+<span class="code-cmd">git clone</span> <span class="code-string">&lt;repo-url&gt;</span> &amp;&amp; <span class="code-cmd">cd</span> AI_PM
 
-            <section class="section section-alt">
-                <div class="container">
-                    <div class="section-header">
-                        <div class="label reveal">核心能力</div>
-                        <h2 class="reveal">你说需求，AI 跑流程</h2>
-                        <p class="reveal">一个想法进去，分析报告、PRD、可点击原型出来</p>
-                    </div>
-                    <div class="feature-grid stagger">
-                        <div class="feature-card reveal" style="--i: 0">
-                            <div class="feature-icon">💬</div>
-                            <h3>需求分析</h3>
-                            <p>跟你聊几轮，把模糊想法变成清晰的用户画像和痛点</p>
-                            <code>/ai-pm-analyze</code>
-                        </div>
-                        <div class="feature-card reveal" style="--i: 1">
-                            <div class="feature-icon">🔍</div>
-                            <h3>竞品研究</h3>
-                            <p>看看同类产品都在做什么，找到你能做不同的地方</p>
-                            <code>/ai-pm-research</code>
-                        </div>
-                        <div class="feature-card reveal" style="--i: 2">
-                            <div class="feature-icon">📝</div>
-                            <h3>PRD 生成</h3>
-                            <p>写出完整 PRD，能导出 Markdown、PDF、飞书格式</p>
-                            <code>/ai-pm-prd</code>
-                        </div>
-                        <div class="feature-card reveal" style="--i: 3">
-                            <div class="feature-icon">🎨</div>
-                            <h3>原型设计</h3>
-                            <p>直接出可点击的网页原型，手机端和桌面端都行</p>
-                            <code>/ai-pm-prototype</code>
-                        </div>
-                        <div class="feature-card reveal" style="--i: 4">
-                            <div class="feature-icon">👥</div>
-                            <h3>需求评审</h3>
-                            <p>9 个虚拟角色帮你挑毛病，研发、设计、QA 视角都有</p>
-                            <code>/ai-pm-review</code>
-                        </div>
-                        <div class="feature-card reveal" style="--i: 5">
-                            <div class="feature-icon">🤖</div>
-                            <h3>AI 代理团队</h3>
-                            <p>产品经理、架构师、UI 设计师各干各的，自动汇总结果</p>
-                            <code>/agent-team</code>
-                        </div>
-                    </div>
-                </div>
-            </section>
+<span class="code-comment"># 2. 在 Claude Code 中打开项目目录</span>
 
-            <section class="section">
-                <div class="container" style="text-align: center;">
-                    <h2 class="reveal">开始体验</h2>
-                    <p class="reveal" style="margin-bottom: var(--space-8);">一条命令，AI 引导你完成整个过程</p>
-                    <button class="cta-button reveal" onclick="switchTab(2)">查看指南</button>
-                </div>
-            </section>
+<span class="code-comment"># 3. 开始使用</span>
+<span class="code-cmd">/ai-pm</span> <span class="code-string">"我想做一个帮用户决定吃什么的 App"</span></pre>
+          </div>
         </div>
+      </section>
 
-        <!-- ============================================================
-             Tab 2: 技能
-             ============================================================ -->
-        <div class="tab-panel" data-panel="1" data-accent="var(--accent-2)">
-            <section class="section">
-                <div class="container">
-                    <div class="section-header">
-                        <div class="label reveal">技能列表</div>
-                        <h2 class="reveal">所有技能</h2>
-                        <p class="reveal">14 个技能，从分析到交付都能用</p>
-                    </div>
-                    <div class="skill-grid stagger" id="skillGrid">
-                        <!-- Skills will be inserted here -->
-                    </div>
-                </div>
-            </section>
+      <!-- Stats Banner -->
+      <section class="section-sm" style="background: var(--surface); text-align:center;">
+        <div class="container">
+          <div class="reveal" style="display:flex; justify-content:center; gap:var(--space-16); flex-wrap:wrap;">
+            <div>
+              <div style="font-size:48px; font-weight:700; letter-spacing:-0.03em; color:var(--accent);">15</div>
+              <div style="font-size:15px; color:var(--text-secondary); margin-top:4px;">产品技能</div>
+            </div>
+            <div>
+              <div style="font-size:48px; font-weight:700; letter-spacing:-0.03em; color:var(--accent);">9</div>
+              <div style="font-size:15px; color:var(--text-secondary); margin-top:4px;">评审角色</div>
+            </div>
+            <div>
+              <div style="font-size:48px; font-weight:700; letter-spacing:-0.03em; color:var(--accent);">4</div>
+              <div style="font-size:15px; color:var(--text-secondary); margin-top:4px;">工作流模式</div>
+            </div>
+            <div>
+              <div style="font-size:48px; font-weight:700; letter-spacing:-0.03em; color:var(--accent);">0</div>
+              <div style="font-size:15px; color:var(--text-secondary); margin-top:4px;">外部依赖</div>
+            </div>
+          </div>
         </div>
+      </section>
 
-        <!-- ============================================================
-             Tab 3: 指南
-             ============================================================ -->
-        <div class="tab-panel" data-panel="2" data-accent="var(--accent-3)">
-            <section class="section">
-                <div class="container">
-                    <div class="text-container content">
-                        <h1>快速开始</h1>
-
-                        <h2>安装</h2>
-                        <p>AI_PM 是一套 Claude Code 技能套件，无需复杂安装。</p>
-
-                        <h3>1. 克隆项目</h3>
-                        <pre><code>git clone https://github.com/K3tty5555/AI_PM.git
-cd AI_PM</code></pre>
-
-                        <h3>2. 配置 Claude Code 技能</h3>
-                        <pre><code>mkdir -p ~/.claude/skills
-cp -r .claude/skills/* ~/.claude/skills/</code></pre>
-
-                        <h3>3. 启动 Claude Code</h3>
-                        <pre><code>claude</code></pre>
-
-                        <h2>你的第一个项目</h2>
-                        <p>一条命令就行：</p>
-                        <pre><code>/ai-pm "我想做一个记账小程序，帮助年轻人管理日常开支"</code></pre>
-
-                        <p>AI 先问你几个问题：</p>
-                        <ul>
-                            <li>目标用户是谁？</li>
-                            <li>核心功能有哪些？</li>
-                            <li>和竞品有什么区别？</li>
-                        </ul>
-
-                        <p>回答完，后面全自动：</p>
-                        <ol>
-                            <li><strong>需求分析</strong> - 理清用户是谁、痛点在哪</li>
-                            <li><strong>竞品研究</strong> - 看同类产品都在做什么</li>
-                            <li><strong>PRD 编写</strong> - 写出完整的产品需求文档</li>
-                            <li><strong>原型设计</strong> - 出可点击的网页原型</li>
-                        </ol>
-
-                        <h2>更多工作流示例</h2>
-
-                        <h3>团队协作模式</h3>
-                        <p>人多力量大，复杂项目派团队上：</p>
-                        <pre><code>/agent-team "开发一个智能客服系统" --mode=serial</code></pre>
-
-                        <h3>竞品分析模式</h3>
-                        <p>想看竞品长什么样？直接抓：</p>
-                        <pre><code>/playwright-cli open https:// competitor.com</code></pre>
-
-                        <h3>经验复用模式</h3>
-                        <p>做过类似的？从知识库里翻：</p>
-                        <pre><code>/ai-pm-knowledge search "登录注册设计"</code></pre>
-
-                        <h3>规范驱动模式</h3>
-                        <p>有设计规范？先导入，再出图：</p>
-                        <pre><code>/ai-pm-config ui upload enterprise ./design-spec.pdf
-/ai-pm-prototype --spec=enterprise</code></pre>
-
-                        <h2>快捷键</h2>
-                        <ul>
-                            <li><strong>左右方向键</strong> - 切换 Tab</li>
-                            <li><strong>触摸滑动</strong> - 移动端左右滑动切换 Tab</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- ============================================================
-             Tab 4: 工作流
-             ============================================================ -->
-        <div class="tab-panel" data-panel="3" data-accent="var(--accent-4)">
-            <section class="section">
-                <div class="container">
-                    <div class="section-header">
-                        <div class="label reveal">工作流模式</div>
-                        <h2 class="reveal">挑一个顺手的</h2>
-                        <p class="reveal">9 种模式，看你有多少时间和耐心</p>
-                    </div>
-
-                    <div class="workflow-grid stagger">
-                        <div class="workflow-card reveal" style="--i: 0">
-                            <div class="time">15 分钟</div>
-                            <h4>⚡ 快速模式</h4>
-                            <p>需求澄清 → PRD → 原型，最短路径输出</p>
-                        </div>
-                        <div class="workflow-card reveal" style="--i: 1">
-                            <div class="time">45 分钟</div>
-                            <h4>📊 标准模式</h4>
-                            <p>完整流程：分析 → 竞品 → 故事 → PRD → 原型</p>
-                        </div>
-                        <div class="workflow-card reveal" style="--i: 2">
-                            <div class="time">2 小时</div>
-                            <h4>🔬 精打细磨模式</h4>
-                            <p>加上评审和反复打磨，适合比较大的项目</p>
-                        </div>
-                        <div class="workflow-card reveal" style="--i: 3">
-                            <div class="time">60 分钟</div>
-                            <h4>📈 数据先行模式</h4>
-                            <p>用数据说话，先看数再拍板</p>
-                        </div>
-                        <div class="workflow-card reveal" style="--i: 4">
-                            <div class="time">30 分钟</div>
-                            <h4>🎤 现场调研模式</h4>
-                            <p>线下客户访谈，现场生成 PRD 和原型</p>
-                        </div>
-                        <div class="workflow-card reveal" style="--i: 5">
-                            <div class="time">90 分钟</div>
-                            <h4>🤖 团队协作模式</h4>
-                            <p>多个 AI 角色同时干活，适合大项目</p>
-                        </div>
-                        <div class="workflow-card reveal" style="--i: 6">
-                            <div class="time">40 分钟</div>
-                            <h4>🌐 竞品分析模式</h4>
-                            <p>自动抓网页，看看对手都在干嘛</p>
-                        </div>
-                        <div class="workflow-card reveal" style="--i: 7">
-                            <div class="time">20 分钟</div>
-                            <h4>📚 经验复用模式</h4>
-                            <p>翻翻以前做过的，少走弯路</p>
-                        </div>
-                        <div class="workflow-card reveal" style="--i: 8">
-                            <div class="time">50 分钟</div>
-                            <h4>🎯 规范驱动模式</h4>
-                            <p>按企业设计规范生成标准化原型</p>
-                        </div>
-                    </div>
-
-                    <div class="section" style="margin-top: var(--space-20);">
-                        <div class="section-header">
-                            <h2 class="reveal">标准工作流程</h2>
-                            <p class="reveal">三条线可以同时跑，按需要选</p>
-                        </div>
-
-                        <div class="workflow-map reveal">
-                            <!-- 起点 -->
-                            <div class="workflow-start">
-                                <span class="start-icon">🚀</span>
-                                <span>需求输入</span>
-                            </div>
-
-                            <!-- 并行路径标题 -->
-                            <div class="workflow-branches-label">三条并行调研路径（可同时启动）</div>
-
-                            <!-- 并行路径 -->
-                            <div class="workflow-branches">
-                                <!-- 路径1: 需求线 -->
-                                <div class="branch">
-                                    <div class="branch-header">
-                                        <span class="branch-icon">💬</span>
-                                        <span>需求调研</span>
-                                    </div>
-                                    <div class="branch-steps">
-                                        <div class="branch-step">
-                                            <div class="branch-dot"></div>
-                                            <div class="branch-content">
-                                                <h5>需求澄清</h5>
-                                                <span class="branch-output">01-requirement-draft.md</span>
-                                            </div>
-                                        </div>
-                                        <div class="branch-connector"></div>
-                                        <div class="branch-step">
-                                            <div class="branch-dot"></div>
-                                            <div class="branch-content">
-                                                <h5>需求分析</h5>
-                                                <span class="branch-output">02-analysis-report.md</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 路径2: 市场线 -->
-                                <div class="branch">
-                                    <div class="branch-header">
-                                        <span class="branch-icon">🔍</span>
-                                        <span>市场研究</span>
-                                    </div>
-                                    <div class="branch-steps">
-                                        <div class="branch-step">
-                                            <div class="branch-dot"></div>
-                                            <div class="branch-content">
-                                                <h5>竞品研究</h5>
-                                                <span class="branch-output">03-competitor-report.md</span>
-                                            </div>
-                                        </div>
-                                        <div class="branch-connector alt"></div>
-                                        <div class="branch-step">
-                                            <div class="branch-dot alt"></div>
-                                            <div class="branch-content">
-                                                <h5>浏览器自动化</h5>
-                                                <span class="branch-output">/playwright-cli</span>
-                                                <span class="branch-badge">可选</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 路径3: 数据/现场线 -->
-                                <div class="branch">
-                                    <div class="branch-header">
-                                        <span class="branch-icon">📊</span>
-                                        <span>数据验证</span>
-                                    </div>
-                                    <div class="branch-steps">
-                                        <div class="branch-step-group">
-                                            <div class="branch-step mini">
-                                                <div class="branch-dot alt2"></div>
-                                                <div class="branch-content">
-                                                    <h5>数据分析</h5>
-                                                    <span class="branch-output">/ai-pm-data</span>
-                                                </div>
-                                            </div>
-                                            <div class="branch-step mini">
-                                                <div class="branch-dot alt2"></div>
-                                                <div class="branch-content">
-                                                    <h5>现场调研</h5>
-                                                    <span class="branch-output">/ai-pm-interview</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 汇合点 -->
-                            <div class="workflow-merge">
-                                <div class="merge-arrow">↓</div>
-                                <div class="merge-label">调研结果汇总</div>
-                            </div>
-
-                            <!-- 设计阶段 -->
-                            <div class="workflow-design">
-                                <div class="design-header">
-                                    <span class="design-icon">✏️</span>
-                                    <span>设计阶段</span>
-                                </div>
-                                <div class="design-steps">
-                                    <div class="design-step">
-                                        <div class="design-number">1</div>
-                                        <div class="design-content">
-                                            <h5>用户故事</h5>
-                                            <span>04-user-stories.md</span>
-                                        </div>
-                                    </div>
-                                    <div class="design-arrow">→</div>
-                                    <div class="design-step">
-                                        <div class="design-number">2</div>
-                                        <div class="design-content">
-                                            <h5>PRD 生成</h5>
-                                            <span>05-prd/05-PRD-v1.0.md</span>
-                                        </div>
-                                    </div>
-                                    <div class="design-arrow">→</div>
-                                    <div class="design-step optional">
-                                        <div class="design-number">3</div>
-                                        <div class="design-content">
-                                            <h5>知识库检索</h5>
-                                            <span>/ai-pm-knowledge</span>
-                                            <span class="design-badge">可选</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 输出阶段 -->
-                            <div class="workflow-outputs">
-                                <div class="outputs-header">
-                                    <span>并行输出（根据需求选择）</span>
-                                </div>
-                                <div class="outputs-grid">
-                                    <div class="output-item">
-                                        <span class="output-icon">📊</span>
-                                        <span class="output-name">数据分析</span>
-                                        <span class="output-file">/ai-pm-data</span>
-                                    </div>
-                                    <div class="output-item">
-                                        <span class="output-icon">🎨</span>
-                                        <span class="output-name">UI 规范</span>
-                                        <span class="output-file">/ai-pm-config</span>
-                                    </div>
-                                    <div class="output-item">
-                                        <span class="output-icon">🖼️</span>
-                                        <span class="output-name">原型设计</span>
-                                        <span class="output-file">06-prototype/</span>
-                                    </div>
-                                    <div class="output-item">
-                                        <span class="output-icon">👥</span>
-                                        <span class="output-name">需求评审</span>
-                                        <span class="output-file">08-review-report-v1.md</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 完成 -->
-                            <div class="workflow-complete">
-                                <span class="complete-icon">✅</span>
-                                <span>方案完成</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- ============================================================
-             Tab 5: 关于
-             ============================================================ -->
-        <div class="tab-panel" data-panel="4" data-accent="var(--accent-5)">
-            <section class="section">
-                <div class="container">
-                    <div class="section-header">
-                        <div class="label reveal">关于</div>
-                        <h2 class="reveal">更新日志</h2>
-                    </div>
-
-                    <div class="text-container">
-                        <div class="changelog-item reveal">
-                            <div class="changelog-version">
-                                <div class="version">V3.2.0</div>
-                                <div class="date">2026-03-05</div>
-                            </div>
-                            <div class="changelog-content">
-                                <h4>8项优化：4 bug 修复 + 4 功能新增</h4>
-                                <ul>
-                                    <li>修复 Phase 编号冲突（Phase 8 重复定义）</li>
-                                    <li>修复知识库 ID 重号问题</li>
-                                    <li>修复中文 Slug 生成异常</li>
-                                    <li>修复踩坑检查逻辑重复执行</li>
-                                    <li>新增 /ai-pm retrospective 项目复盘命令</li>
-                                    <li>新增 Phase 5 质量门禁机制</li>
-                                    <li>新增 PRD 评审后自动迭代流程</li>
-                                    <li>ai-pm-interview 按模块拆分，主文件缩至 94 行</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="changelog-item reveal">
-                            <div class="changelog-version">
-                                <div class="version">V3.1.0</div>
-                                <div class="date">2026-03-05</div>
-                            </div>
-                            <div class="changelog-content">
-                                <h4>知识库正式上线</h4>
-                                <ul>
-                                    <li>新增 ai-pm-knowledge：产品知识库（add / search / list / sync / suggest）</li>
-                                    <li>Phase 5 PRD 生成前加入知识库推荐</li>
-                                    <li>Phase 8 评审前加入踩坑提醒</li>
-                                    <li>项目完成后自动触发知识沉淀</li>
-                                    <li>新增 npm 镜像源检测规范</li>
-                                    <li>新增交互文案规范（Humanizer 强制要求）</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="changelog-item reveal">
-                            <div class="changelog-version">
-                                <div class="version">V3.0.0</div>
-                                <div class="date">2026-03-04</div>
-                            </div>
-                            <div class="changelog-content">
-                                <h4>统一 Phase 配置与技能整合</h4>
-                                <ul>
-                                    <li>统一 Phase 0-9 配置，修复文档不一致</li>
-                                    <li>ai-pm-config 整合原 ai-pm-writing-style 和 ai-pm-ui-spec</li>
-                                    <li>ai-pm-data 整合原 ai-pm-analytics、ai-pm-data-insight、ai-pm-dashboard</li>
-                                    <li>拆分主技能文件为子模块（phase-workflows / user-interaction / web-analysis / edge-cases）</li>
-                                    <li>PRD 文件统一迁移至 05-prd/ 目录管理</li>
-                                    <li>活跃技能精简至 14 个，废弃 5 个冗余技能</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="changelog-item reveal">
-                            <div class="changelog-version">
-                                <div class="version">V2.1.0</div>
-                                <div class="date">2026-03-03</div>
-                            </div>
-                            <div class="changelog-content">
-                                <h4>新技能 + 合并整理</h4>
-                                <ul>
-                                    <li>新增 ai-pm-interview 现场调研技能</li>
-                                    <li>新增 playwright-cli 浏览器自动化技能</li>
-                                    <li>新增 ai-pm-data 统一数据技能（整合 analytics/insight/dashboard）</li>
-                                    <li>优化 ai-pm-prd 多格式导出（Markdown/PDF/飞书）</li>
-                                    <li>重构 ai-pm 主控技能，支持 4 种工作流模式</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="changelog-item reveal">
-                            <div class="changelog-version">
-                                <div class="version">V2.0.0</div>
-                                <div class="date">2026-03-01</div>
-                            </div>
-                            <div class="changelog-content">
-                                <h4>大更新：代理团队、知识库上线</h4>
-                                <ul>
-                                    <li>新增 agent-team AI 代理团队协作</li>
-                                    <li>新增 ai-pm-knowledge 知识库管理</li>
-                                    <li>新增项目仪表盘和可视化追踪</li>
-                                    <li>新增数据分析仪表盘（可视化交互）</li>
-                                    <li>新增 PRD 写作风格分析</li>
-                                    <li>新增 UI 规范管理（design tokens）</li>
-                                    <li>新增需求评审多轮迭代支持</li>
-                                    <li>支持多项目管理</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="changelog-item reveal">
-                            <div class="changelog-version">
-                                <div class="version">V1.0.0</div>
-                                <div class="date">2026-02-28</div>
-                            </div>
-                            <div class="changelog-content">
-                                <h4>初始版本</h4>
-                                <ul>
-                                    <li>基础技能框架：需求分析、PRD 生成、原型设计</li>
-                                    <li>竞品研究和用户故事编写</li>
-                                    <li>数据分析与埋点设计</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <footer class="footer">
-                <div class="container">
-                    <p>AI_PM - AI 辅助产品管理工具集</p>
-                    <p>基于 MIT 协议开源 · 完全离线可用</p>
-                </div>
-            </footer>
-        </div>
     </div>
 
-    <!-- ============================================================
-         JavaScript - Pure Native
-         ============================================================ -->
-    <script>
-        (function() {
-            'use strict';
+    <!-- Tab 1: 技能 -->
+    <div class="tab-panel" id="tab-1" data-panel="1">
+      <div class="skills-section">
+        <div class="container">
 
-            // State
-            let currentTab = 0;
-            const tabCount = 5;
-            const accentColors = [
-                'var(--accent-1)', '#0071e3',
-                'var(--accent-2)', '#ff9500',
-                'var(--accent-3)', '#34c759',
-                'var(--accent-4)', '#af52de',
-                'var(--accent-5)', '#ff2d55'
-            ];
+          <div class="text-container" style="text-align:center; padding-top:var(--space-12);">
+            <p class="section-eyebrow reveal">技能库</p>
+            <h2 class="section-title reveal reveal-delay-1">15 个专业技能</h2>
+            <p class="section-subtitle reveal reveal-delay-2">覆盖产品全生命周期，按场景分类，即用即找。</p>
+          </div>
 
-            // Elements
-            const navTabs = document.querySelectorAll('.nav-tab');
-            const panels = document.querySelectorAll('.tab-panel');
-            const progressBar = document.getElementById('progressBar');
+          <!-- 产品流程类 -->
+          <div class="skill-category" style="margin-top: var(--space-12);">
+            <div class="skill-category-header reveal">
+              <span class="skill-category-icon">🎯</span>
+              <h3 class="skill-category-title">产品流程类</h3>
+              <span class="skill-category-count">7 个技能</span>
+            </div>
+            <div class="skill-grid">
 
-            // Skills Data
-            const SKILLS_DATA = [
-                { name: "AI_PM 主控", command: "/ai-pm", icon: "🎯", desc: "从一句话到 PRD 和原型", subcmds: ["retrospective"] },
-                { name: "需求分析", command: "/ai-pm-analyze", icon: "💬", desc: "聊几轮，把需求理清楚" },
-                { name: "竞品研究", command: "/ai-pm-research", icon: "🔍", desc: "看看对手都在做什么" },
-                { name: "用户故事", command: "/ai-pm-story", icon: "📖", desc: "写用户故事和验收标准" },
-                { name: "PRD 生成", command: "/ai-pm-prd", icon: "📝", desc: "写完整 PRD，支持多格式导出" },
-                { name: "原型设计", command: "/ai-pm-prototype", icon: "🎨", desc: "出可点击的网页原型" },
-                { name: "需求评审", command: "/ai-pm-review", icon: "👥", desc: "9 个角色帮你挑毛病" },
-                { name: "现场调研", command: "/ai-pm-interview", icon: "🎤", desc: "现场调研/客户访谈模式，支持结构化访谈、实时记录、现场PRD生成。已按模块拆分（phases/output），主文件缩至94行。" },
-                { name: "统一数据", command: "/ai-pm-data", icon: "📊", desc: "埋点设计、数据分析、看板" },
-                { name: "配置管理", command: "/ai-pm-config", icon: "⚙️", desc: "写作风格、UI 规范、项目配置" },
-                { name: "产品知识库", command: "/ai-pm-knowledge", icon: "📚", desc: "把项目里的方法论、决策、踩坑记录存下来，下次能搜出来", subcmds: ["add", "search", "list", "sync", "suggest"] },
-                { name: "代理团队", command: "/agent-team", icon: "🤖", desc: "多个 AI 角色一起干活" },
-                { name: "浏览器自动化", command: "/playwright-cli", icon: "🌐", desc: "抓网页、截图、填表单" },
-                { name: "教程中心", command: "/tutorial-center-update", icon: "📖", desc: "这个页面就是它生成的" }
-            ];
+              <div class="skill-card reveal">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">🎯</span>
+                  <div>
+                    <div class="skill-card-name">AI_PM 主控</div>
+                    <code class="skill-card-cmd">/ai-pm</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">AI 产品经理。输入需求，引导完善，输出 PRD + 原型。支持需求分析、竞品研究、用户故事、PRD、原型、评审全流程。多项目管理，断点续传。复杂需求自动启用多代理协作（/ai-pm --team）。</p>
+              </div>
 
-            // Tab Switching
-            window.switchTab = function(index) {
-                if (index < 0 || index >= tabCount || index === currentTab) return;
-                currentTab = index;
+              <div class="skill-card reveal reveal-delay-1">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">🔍</span>
+                  <div>
+                    <div class="skill-card-name">需求分析</div>
+                    <code class="skill-card-cmd">/ai-pm-analyze</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">深入分析产品需求，挖掘用户画像、核心痛点、功能范围和优先级。通过对话引导用户补充信息，不满足于表面描述。</p>
+              </div>
 
-                // Update nav
-                navTabs.forEach((tab, i) => {
-                    tab.classList.toggle('active', i === index);
-                    tab.setAttribute('aria-selected', i === index ? 'true' : 'false');
-                });
+              <div class="skill-card reveal reveal-delay-2">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">🔭</span>
+                  <div>
+                    <div class="skill-card-name">竞品研究</div>
+                    <code class="skill-card-cmd">/ai-pm-research</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">分析市场同类产品，输出功能对比、差异化机会和市场定位建议。</p>
+              </div>
 
-                // Reset progress bar
-                progressBar.style.transform = 'scaleX(0)';
+              <div class="skill-card reveal">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">📖</span>
+                  <div>
+                    <div class="skill-card-name">用户故事</div>
+                    <code class="skill-card-cmd">/ai-pm-story</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">基于需求分析和竞品研究，编写详细的用户故事和验收标准。</p>
+              </div>
 
-                // Update panels
-                panels.forEach((panel, i) => {
-                    if (i === index) {
-                        panel.classList.add('active');
-                        panel.style.display = 'block';
-                        panel.style.opacity = '0';
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => {
-                                panel.style.opacity = '1';
-                            });
-                        });
-                    } else {
-                        panel.style.opacity = '0';
-                        panel.classList.remove('active');
-                        setTimeout(() => {
-                            if (!panel.classList.contains('active')) {
-                                panel.style.display = 'none';
-                            }
-                        }, 400);
-                    }
-                });
+              <div class="skill-card reveal reveal-delay-1">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">📄</span>
+                  <div>
+                    <div class="skill-card-name">PRD 生成</div>
+                    <code class="skill-card-cmd">/ai-pm-prd</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">整合需求分析、竞品研究、用户故事，输出完整的产品需求文档。支持产品分身写作风格和设计规范。</p>
+              </div>
 
-                // Update theme color
-                document.documentElement.style.setProperty('--accent', accentColors[index * 2]);
-                progressBar.style.background = accentColors[index * 2 + 1];
+              <div class="skill-card reveal reveal-delay-2">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">🖥️</span>
+                  <div>
+                    <div class="skill-card-name">原型生成</div>
+                    <code class="skill-card-cmd">/ai-pm-prototype</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">基于 PRD 生成可交互的单页网页原型，支持移动端和 Web 端。自动应用产品设计规范，默认遵循 Apple HIG。</p>
+              </div>
 
-                // Scroll to top
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+              <div class="skill-card reveal">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">⚖️</span>
+                  <div>
+                    <div class="skill-card-name">需求评审</div>
+                    <code class="skill-card-cmd">/ai-pm-review</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">模拟真实评审会议，九大专家角色从专业角度评审 PRD 和原型，输出评审意见和修改建议。支持多轮迭代。</p>
+              </div>
 
-                // Re-observe reveals
-                setTimeout(observeReveals, 100);
-            };
+            </div>
+          </div>
 
-            // Event Listeners
-            navTabs.forEach((tab) => {
-                tab.addEventListener('click', () => switchTab(parseInt(tab.dataset.tab)));
-            });
+          <!-- 日常工作类 -->
+          <div class="skill-category">
+            <div class="skill-category-header reveal">
+              <span class="skill-category-icon">📋</span>
+              <h3 class="skill-category-title">日常工作类</h3>
+              <span class="skill-category-count">3 个技能</span>
+            </div>
+            <div class="skill-grid">
 
-            // Keyboard navigation
-            document.addEventListener('keydown', (e) => {
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                if (e.key === 'ArrowRight') switchTab(currentTab + 1);
-                if (e.key === 'ArrowLeft') switchTab(currentTab - 1);
-            });
+              <div class="skill-card reveal">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">⚡</span>
+                  <div>
+                    <div class="skill-card-name">需求优先级</div>
+                    <code class="skill-card-cmd">/ai-pm-priority</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">接收批量提报需求，按四维评分模型（业务价值/实现成本/用户影响/战略契合度）自动评估优先级，输出排序结果和可直接发给提报方的回复模板。</p>
+              </div>
 
-            // Touch swipe
-            let touchStartX = 0;
-            document.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].screenX;
-            }, { passive: true });
+              <div class="skill-card reveal reveal-delay-1">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">📝</span>
+                  <div>
+                    <div class="skill-card-name">工作周报</div>
+                    <code class="skill-card-cmd">/ai-pm-weekly</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">引导输入本周工作内容（随意描述即可），自动归类整理，生成结构化周报。支持向上汇报版（简洁）和团队同步版（详细）。</p>
+              </div>
 
-            document.addEventListener('touchend', (e) => {
-                const touchEndX = e.changedTouches[0].screenX;
-                const diff = touchStartX - touchEndX;
-                if (Math.abs(diff) > 80) {
-                    diff > 0 ? switchTab(currentTab + 1) : switchTab(currentTab - 1);
-                }
-            }, { passive: true });
+              <div class="skill-card reveal reveal-delay-2">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">🎙️</span>
+                  <div>
+                    <div class="skill-card-name">现场调研</div>
+                    <code class="skill-card-cmd">/ai-pm-interview</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">适用于线下与客户面对面沟通场景，支持结构化访谈、实时记录和快速生成 PRD。</p>
+              </div>
 
-            // Progress bar
-            window.addEventListener('scroll', () => {
-                const scrolled = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
-                progressBar.style.transform = 'scaleX(' + Math.min(scrolled, 1) + ')';
-            }, { passive: true });
+            </div>
+          </div>
 
-            // Scroll Reveal
-            function observeReveals() {
-                const reveals = document.querySelectorAll('.tab-panel.active .reveal:not(.visible)');
-                const observer = new IntersectionObserver((entries) => {
-                    entries.forEach((entry) => {
-                        if (entry.isIntersecting) {
-                            entry.target.classList.add('visible');
-                            observer.unobserve(entry.target);
-                        }
-                    });
-                }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+          <!-- 个性化类 -->
+          <div class="skill-category">
+            <div class="skill-category-header reveal">
+              <span class="skill-category-icon">✨</span>
+              <h3 class="skill-category-title">个性化类</h3>
+              <span class="skill-category-count">2 个技能</span>
+            </div>
+            <div class="skill-grid">
 
-                reveals.forEach((el) => observer.observe(el));
+              <div class="skill-card reveal">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">🪞</span>
+                  <div>
+                    <div class="skill-card-name">产品分身</div>
+                    <code class="skill-card-cmd">/ai-pm-persona</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">分析你的历史需求文档，学习你的写作风格、措辞习惯和结构偏好。让 AI 生成的 PRD 越来越像你写的。</p>
+              </div>
+
+              <div class="skill-card reveal reveal-delay-1">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">🎨</span>
+                  <div>
+                    <div class="skill-card-name">设计规范</div>
+                    <code class="skill-card-cmd">/ai-pm-design-spec</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">加载公司或团队的 UI 规范，让 ai-pm-prototype 生成的原型自动遵守你们的设计标准，而不是默认的 Apple HIG。</p>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 数据与知识类 -->
+          <div class="skill-category">
+            <div class="skill-category-header reveal">
+              <span class="skill-category-icon">📊</span>
+              <h3 class="skill-category-title">数据与知识类</h3>
+              <span class="skill-category-count">2 个技能</span>
+            </div>
+            <div class="skill-grid">
+
+              <div class="skill-card reveal">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">📈</span>
+                  <div>
+                    <div class="skill-card-name">数据洞察</div>
+                    <code class="skill-card-cmd">/ai-pm-data</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">提供数据指标设计、数据洞察分析、仪表盘生成三大能力。从数据中发现产品需求和优化机会。</p>
+              </div>
+
+              <div class="skill-card reveal reveal-delay-1">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">🗂️</span>
+                  <div>
+                    <div class="skill-card-name">产品知识库</div>
+                    <code class="skill-card-cmd">/ai-pm-knowledge</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">沉淀方法论、决策记录、踩坑经验，下次遇到类似问题时自动推荐。</p>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 高级功能 -->
+          <div class="skill-category">
+            <div class="skill-category-header reveal">
+              <span class="skill-category-icon">🚀</span>
+              <h3 class="skill-category-title">高级功能</h3>
+              <span class="skill-category-count">1 个技能</span>
+            </div>
+            <div class="skill-grid" style="grid-template-columns: 1fr;">
+
+              <div class="skill-card reveal" style="max-width: 580px;">
+                <div class="skill-card-top">
+                  <span class="skill-card-icon">🤖</span>
+                  <div>
+                    <div class="skill-card-name">多代理引擎</div>
+                    <code class="skill-card-cmd">/agent-team</code>
+                  </div>
+                </div>
+                <p class="skill-card-desc">多代理协作引擎。通常由 ai-pm 主控自动调度（/ai-pm --team 触发）。并行派出产品经理、架构师、UI设计师、数据分析师、文档工程师协同完成复杂产品项目。也可直接调用：/agent-team [需求描述]。</p>
+                <span class="skill-badge">通常由 /ai-pm --team 自动触发</span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 指南 -->
+    <div class="tab-panel" id="tab-2" data-panel="2">
+      <div class="guide-section">
+        <div class="container">
+
+          <div class="text-container" style="text-align:center; padding-top:var(--space-12);">
+            <p class="section-eyebrow reveal">使用指南</p>
+            <h2 class="section-title reveal reveal-delay-1">从零开始，10 分钟上手</h2>
+            <p class="section-subtitle reveal reveal-delay-2">跟着步骤走，第一次就能产出完整 PRD。</p>
+          </div>
+
+          <!-- 第一次使用 -->
+          <div style="margin-top: var(--space-12);">
+            <h3 class="reveal" style="font-size:21px; font-weight:600; margin-bottom:var(--space-6);">第一次使用</h3>
+
+            <div class="guide-step reveal">
+              <div class="guide-step-num">1</div>
+              <div class="guide-step-content">
+                <div class="guide-step-title">安装 Claude Code</div>
+                <div class="guide-step-desc">前往 Anthropic 官网下载并安装 Claude Code CLI，需要 Claude Pro 或 API 账号。</div>
+              </div>
+            </div>
+
+            <div class="guide-step reveal reveal-delay-1">
+              <div class="guide-step-num">2</div>
+              <div class="guide-step-content">
+                <div class="guide-step-title">克隆 AI_PM 项目</div>
+                <div class="guide-step-desc">将 AI_PM 项目克隆到本地，并在 Claude Code 中打开该目录。技能文件会自动被识别。</div>
+              </div>
+            </div>
+
+            <div class="guide-step reveal reveal-delay-2">
+              <div class="guide-step-num">3</div>
+              <div class="guide-step-content">
+                <div class="guide-step-title">输入 /ai-pm 查看状态</div>
+                <div class="guide-step-desc">首次运行会显示欢迎界面，告诉你如何开始第一个项目。无项目时会看到引导提示。</div>
+              </div>
+            </div>
+
+            <div class="guide-step reveal">
+              <div class="guide-step-num">4</div>
+              <div class="guide-step-content">
+                <div class="guide-step-title">输入需求开始第一个项目</div>
+                <div class="guide-step-desc">直接描述你的产品需求，AI 会引导你逐步完善，并自动执行分析、研究、PRD、原型全流程。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider reveal"></div>
+
+          <!-- 常用工作流 -->
+          <div>
+            <h3 class="reveal" style="font-size:21px; font-weight:600; margin-bottom:var(--space-6);">常用工作流</h3>
+
+            <div class="guide-workflow reveal">
+              <div class="guide-workflow-title">完整新产品</div>
+              <code class="guide-workflow-cmd">/ai-pm "你的需求描述" → 全自动执行到原型</code>
+              <div class="guide-workflow-desc">从需求澄清开始，经过分析、竞研、用户故事、PRD，最终生成可交互原型。</div>
+            </div>
+
+            <div class="guide-workflow reveal reveal-delay-1">
+              <div class="guide-workflow-title">快速周报</div>
+              <code class="guide-workflow-cmd">/ai-pm weekly → 输入本周工作 → 生成周报</code>
+              <div class="guide-workflow-desc">随意描述这周干了什么，AI 自动归类整理，生成向上汇报版或团队同步版周报。</div>
+            </div>
+
+            <div class="guide-workflow reveal reveal-delay-2">
+              <div class="guide-workflow-title">需求评估</div>
+              <code class="guide-workflow-cmd">/ai-pm priority → 粘贴需求列表 → 获得优先级排序</code>
+              <div class="guide-workflow-desc">支持 Excel/CSV 文件或直接粘贴需求，四维评分模型自动排序，生成可发送的回复模板。</div>
+            </div>
+
+            <div class="guide-workflow reveal">
+              <div class="guide-workflow-title">现场调研</div>
+              <code class="guide-workflow-cmd">/ai-pm interview → 访谈 → 自动生成 PRD</code>
+              <div class="guide-workflow-desc">带着客户在场时使用，边聊边记录，访谈结束立刻产出需求草稿，当场确认。</div>
+            </div>
+          </div>
+
+          <div class="divider reveal"></div>
+
+          <!-- 效率技巧 -->
+          <div>
+            <h3 class="reveal" style="font-size:21px; font-weight:600; margin-bottom:var(--space-6);">效率技巧</h3>
+
+            <div class="tip-card reveal">
+              <div class="tip-title">输入「加急」或「yolo」跳过所有确认</div>
+              <div class="tip-desc">在 /ai-pm 主流程中输入「加急」，AI 会自动执行 Phase 1-4，仅在 PRD 生成前停一次确认，生成原型前再停一次，其余全部自动完成。</div>
+            </div>
+
+            <div class="tip-card reveal reveal-delay-1">
+              <div class="tip-title">用 --team 启动多代理，处理大型复杂需求</div>
+              <div class="tip-desc">输入 /ai-pm --team "需求描述" 或直接 /agent-team "需求描述"，多个 AI 代理并行工作，速度比标准模式快约 40%。适合需求文字超过 200 字、包含多个独立功能模块的复杂项目。</div>
+            </div>
+
+            <div class="tip-card reveal reveal-delay-2">
+              <div class="tip-title">配置产品分身，PRD 风格越来越像你</div>
+              <div class="tip-desc">用 /ai-pm persona analyze 分析你历史写的 PRD，AI 提取你的写作特征（用词、句式、结构偏好），之后生成的所有 PRD 都会模仿你的风格。分析文档越多越准确。</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: 工作流 -->
+    <div class="tab-panel" id="tab-3" data-panel="3">
+      <div style="padding: var(--space-12) 0 var(--space-20);">
+        <div class="container">
+
+          <div class="text-container" style="text-align:center; padding-top:var(--space-4);">
+            <p class="section-eyebrow reveal">工作流模式</p>
+            <h2 class="section-title reveal reveal-delay-1">四种模式，按需选择</h2>
+            <p class="section-subtitle reveal reveal-delay-2">根据项目复杂度和时间约束，选择最合适的执行路径。</p>
+          </div>
+
+          <div style="margin-top: var(--space-12);">
+
+            <div class="workflow-card reveal">
+              <div class="workflow-header">
+                <div class="workflow-num">1</div>
+                <div>
+                  <div class="workflow-title">标准流程</div>
+                  <div class="workflow-subtitle">最完整，质量最高，适合新产品立项</div>
+                </div>
+              </div>
+              <div class="workflow-flow">
+                <span class="flow-step">需求澄清</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">需求分析</span>
+                <span class="flow-arrow">+</span>
+                <span class="flow-step">竞品研究</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">用户故事</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">PRD</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">原型</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">九角色评审</span>
+              </div>
+              <p class="workflow-desc">Phase 2+3 并行执行（需求分析与竞品研究同时进行），PRD 生成前有一次统一确认节点，原型生成前有 Token 消耗提示。整个流程覆盖产品生命周期所有关键输出物。</p>
+              <div class="workflow-cmd-block">
+                <code>/ai-pm "我想做一个帮用户决定吃什么的 App"</code>
+              </div>
+            </div>
+
+            <div class="workflow-card reveal">
+              <div class="workflow-header">
+                <div class="workflow-num">2</div>
+                <div>
+                  <div class="workflow-title">快速模式</div>
+                  <div class="workflow-subtitle">跳过中间阶段，直达 PRD 和原型</div>
+                </div>
+              </div>
+              <div class="workflow-flow">
+                <span class="flow-step">需求描述</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">⚡ 加急</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">自动分析</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">PRD 确认</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">原型生成</span>
+              </div>
+              <p class="workflow-desc">在主流程中输入「加急」或「yolo」，Phase 1-4 全自动执行，仅在 PRD 生成前停一次确认，生成原型前再停一次。适合已经想清楚需求、只需要快速产出文档的场景。</p>
+              <div class="workflow-cmd-block">
+                <code>/ai-pm "需求描述"  →  输入 "加急"</code>
+              </div>
+            </div>
+
+            <div class="workflow-card reveal">
+              <div class="workflow-header">
+                <div class="workflow-num">3</div>
+                <div>
+                  <div class="workflow-title">多代理模式</div>
+                  <div class="workflow-subtitle">并行执行，速度快 40%，适合大型复杂需求</div>
+                </div>
+              </div>
+              <div class="workflow-flow">
+                <span class="flow-step">Wave 1: PM + 分析师</span>
+                <span class="flow-arrow">↓</span>
+                <span class="flow-step">Wave 2: PRD 专家</span>
+                <span class="flow-arrow">↓</span>
+                <span class="flow-step">Wave 3: 评审专家</span>
+              </div>
+              <p class="workflow-desc">多个 AI 代理并行执行独立子任务。Wave 1 产品经理和竞品分析师同时工作，Wave 2 读取 Wave 1 输出生成 PRD，Wave 3 执行三角色精简评审。需求超过 200 字或包含多个独立模块时建议使用。</p>
+              <div class="workflow-cmd-block">
+                <code>/ai-pm --team "复杂需求描述"</code>
+              </div>
+            </div>
+
+            <div class="workflow-card reveal">
+              <div class="workflow-header">
+                <div class="workflow-num">4</div>
+                <div>
+                  <div class="workflow-title">现场调研模式</div>
+                  <div class="workflow-subtitle">有客户在场时使用，边访谈边产出</div>
+                </div>
+              </div>
+              <div class="workflow-flow">
+                <span class="flow-step">准备提问</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">逐步访谈</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">实时记录</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">需求草稿</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">客户确认</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step">正式 PRD</span>
+              </div>
+              <p class="workflow-desc">专为线下拜访客户场景设计。AI 生成提问方向，你逐步访谈，AI 同步记录用户原话、痛点和期望。访谈结束立刻生成需求草稿，客户当场确认，然后触发 PRD 生成。生成内容要快，客户不能等超过 30 秒。</p>
+              <div class="workflow-cmd-block">
+                <code>/ai-pm interview</code>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: 关于 -->
+    <div class="tab-panel" id="tab-4" data-panel="4">
+      <div style="padding: var(--space-12) 0 var(--space-20);">
+        <div class="container">
+
+          <div class="text-container" style="text-align:center; padding-top:var(--space-4);">
+            <p class="section-eyebrow reveal">关于</p>
+            <h2 class="section-title reveal reveal-delay-1">AI_PM 项目</h2>
+            <p class="section-subtitle reveal reveal-delay-2">基于 Claude Code Skills 构建的产品经理工具集，持续迭代。</p>
+          </div>
+
+          <!-- Project Info -->
+          <div class="info-grid" style="margin-top: var(--space-12);">
+            <div class="info-card reveal">
+              <div class="info-card-icon">🛠️</div>
+              <div class="info-card-title">Claude Code Skills</div>
+              <div class="info-card-desc">基于 Claude Code 技能系统构建，无需额外安装</div>
+            </div>
+            <div class="info-card reveal reveal-delay-1">
+              <div class="info-card-icon">🔒</div>
+              <div class="info-card-title">本地运行</div>
+              <div class="info-card-desc">所有数据本地处理，不上传到第三方服务</div>
+            </div>
+            <div class="info-card reveal reveal-delay-2">
+              <div class="info-card-icon">📄</div>
+              <div class="info-card-title">MIT License</div>
+              <div class="info-card-desc">开源协议，可自由使用和修改</div>
+            </div>
+            <div class="info-card reveal">
+              <div class="info-card-icon">⚡</div>
+              <div class="info-card-title">零外部依赖</div>
+              <div class="info-card-desc">本教程中心纯原生实现，完全离线可用</div>
+            </div>
+          </div>
+
+          <!-- Changelog -->
+          <div style="margin-top: var(--space-16);">
+            <h3 class="reveal" style="font-size:21px; font-weight:600; margin-bottom:var(--space-2);">更新日志</h3>
+            <p class="reveal" style="font-size:15px; color:var(--text-secondary); margin-bottom:var(--space-8);">记录 AI_PM 技能的重要变更。</p>
+
+            <div>
+
+              <div class="changelog-item reveal">
+                <div class="changelog-version">
+                  <span class="changelog-version-tag">v2.0</span>
+                </div>
+                <div>
+                  <div class="changelog-date">2026-03-06</div>
+                  <div class="changelog-desc">大规模重构：单文件架构、新增需求优先级评估（/ai-pm-priority）、工作周报（/ai-pm-weekly）、产品分身（/ai-pm-persona）、设计规范（/ai-pm-design-spec）四个新技能。agent-team 改为内部引擎，通常由 /ai-pm --team 自动触发。移除 ai-pm-config 技能，PRD 目录结构统一到 05-prd/ 子目录。</div>
+                </div>
+              </div>
+
+              <div class="changelog-item reveal reveal-delay-1">
+                <div class="changelog-version">
+                  <span class="changelog-version-tag">v1.5</span>
+                </div>
+                <div>
+                  <div class="changelog-date">2026-03-05</div>
+                  <div class="changelog-desc">添加知识库管理技能（/ai-pm-knowledge），支持 add/search/list/sync/suggest 五个命令。agent-team 引入 Wave Orchestrator 执行协议，实现真正并行的多代理协作。主流程 Phase 5/8 前自动推荐相关知识。</div>
+                </div>
+              </div>
+
+              <div class="changelog-item reveal reveal-delay-2">
+                <div class="changelog-version">
+                  <span class="changelog-version-tag">v1.0</span>
+                </div>
+                <div>
+                  <div class="changelog-date">2026-03-01</div>
+                  <div class="changelog-desc">初始版本。包含 ai-pm 主控、ai-pm-analyze、ai-pm-research、ai-pm-story、ai-pm-prd、ai-pm-prototype、ai-pm-review、ai-pm-data、ai-pm-interview 九个核心技能。</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Footer info -->
+          <div style="margin-top: var(--space-12); padding: var(--space-6); background:var(--surface); border-radius:var(--radius-lg); border:1px solid var(--border);" class="reveal">
+            <p style="font-size:13px; color:var(--text-tertiary); font-family:var(--font-mono);">
+              生成时间：2026-03-06 &nbsp;|&nbsp; 技能总数：15 &nbsp;|&nbsp; 架构：纯原生 HTML，零外部依赖
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var accentColors = [
+        '#0071e3',
+        '#ff9f0a',
+        '#30d158',
+        '#bf5af2',
+        '#ff375f'
+      ];
+
+      var currentTab = 0;
+
+      function switchTab(index) {
+        var panels = document.querySelectorAll('.tab-panel');
+        var buttons = document.querySelectorAll('.nav-tab');
+        var total = panels.length;
+
+        if (index < 0) index = 0;
+        if (index >= total) index = total - 1;
+        if (index === currentTab) return;
+
+        panels[currentTab].classList.remove('active');
+        buttons[currentTab].classList.remove('active');
+
+        currentTab = index;
+
+        panels[currentTab].classList.add('active');
+        buttons[currentTab].classList.add('active');
+
+        var accent = accentColors[currentTab];
+        document.documentElement.style.setProperty('--accent', accent);
+
+        var logoSpan = document.querySelector('.nav-logo span');
+        if (logoSpan) logoSpan.style.color = accent;
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        requestAnimationFrame(function () {
+          initReveal();
+        });
+      }
+
+      window.switchTab = switchTab;
+
+      var navTabs = document.querySelectorAll('.nav-tab');
+      navTabs.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var idx = parseInt(btn.getAttribute('data-tab'), 10);
+          switchTab(idx);
+        });
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 'ArrowRight') switchTab(currentTab + 1);
+        if (e.key === 'ArrowLeft') switchTab(currentTab - 1);
+      });
+
+      var touchStartX = 0;
+      document.addEventListener('touchstart', function (e) {
+        touchStartX = e.changedTouches[0].screenX;
+      }, { passive: true });
+
+      document.addEventListener('touchend', function (e) {
+        var diff = touchStartX - e.changedTouches[0].screenX;
+        if (Math.abs(diff) > 80) {
+          if (diff > 0) { switchTab(currentTab + 1); }
+          else { switchTab(currentTab - 1); }
+        }
+      }, { passive: true });
+
+      var progressBar = document.getElementById('progressBar');
+      window.addEventListener('scroll', function () {
+        var total = document.documentElement.scrollHeight - window.innerHeight;
+        var scrolled = total > 0 ? window.scrollY / total : 0;
+        if (progressBar) {
+          progressBar.style.transform = 'scaleX(' + Math.min(Math.max(scrolled, 0), 1) + ')';
+        }
+      }, { passive: true });
+
+      function initReveal() {
+        var elements = document.querySelectorAll('.reveal:not(.visible)');
+        if (!elements.length) return;
+
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              observer.unobserve(entry.target);
             }
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 
-            // Render Skills
-            function renderSkills() {
-                const grid = document.getElementById('skillGrid');
-                if (!grid) return;
+        elements.forEach(function (el) {
+          observer.observe(el);
+        });
+      }
 
-                grid.innerHTML = SKILLS_DATA.map((skill, i) => `
-                    <div class="skill-card reveal" style="--i: ${i % 6}">
-                        <div class="skill-card-header">
-                            <span class="skill-icon">${skill.icon}</span>
-                            <h3>${skill.name}</h3>
-                        </div>
-                        <p>${skill.desc}</p>
-                        <span class="skill-command">${skill.command}</span>
-                        ${skill.subcmds ? `<div class="skill-subcmds">${skill.subcmds.map(s => `<span class="skill-subcmd">${s}</span>`).join('')}</div>` : ''}
-                    </div>
-                `).join('');
-            }
+      document.documentElement.style.setProperty('--accent', accentColors[0]);
+      initReveal();
 
-            // Initialize
-            function init() {
-                renderSkills();
-                observeReveals();
-                document.documentElement.style.setProperty('--accent', accentColors[0]);
-                progressBar.style.background = accentColors[1];
-            }
+    })();
+  </script>
 
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else {
-                init();
-            }
-        })();
-    </script>
 </body>
 </html>
