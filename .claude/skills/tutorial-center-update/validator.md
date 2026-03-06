@@ -218,7 +218,7 @@ selfCheck.run();
 ### 阶段 3: 浏览器自动化测试
 
 ```javascript
-// 使用 playwright-cli 进行端到端测试
+// 使用 Playwright MCP 进行端到端测试
 const tests = [
     {
         name: '页面加载',

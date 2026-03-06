@@ -36,7 +36,6 @@
 | ↳ output | `ai-pm-interview/interview-output.md` | - | Phase 4 导出 + 快捷指令 + Agent Team |
 | ai-pm-knowledge | `ai-pm-knowledge/SKILL.md` | - | 产品知识库（add/search/list/sync/suggest） |
 | agent-team | `agent-team/SKILL.md` | - | 多代理协作 |
-| playwright-cli | `playwright-cli/SKILL.md` | - | 浏览器自动化 |
 | tutorial-center-update | `tutorial-center-update/SKILL.md` | - | 教程中心 HTML 生成 |
 
 ## 模板文件 (Templates)
