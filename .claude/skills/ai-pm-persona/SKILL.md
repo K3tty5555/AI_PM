@@ -99,6 +99,3 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep)
 2. 若存在，加载对应风格档案，调整措辞和结构偏好
 3. 若不存在，使用 `templates/prd-styles/default/style-config.json`
 
-## 执行协议
-
-本技能遵循 [AI_PM 公共执行协议](../_core/common-protocol.md)。
