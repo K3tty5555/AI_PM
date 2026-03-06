@@ -259,7 +259,7 @@ find .claude/skills -name "SKILL.md" -type f
 - [ ] 技能数据完整
 - [ ] HTML 标签平衡
 
-**运行时检查**（可选，用 playwright-cli）：
+**运行时检查**（可选，用 Playwright MCP）：
 - [ ] Tab 切换正常
 - [ ] 键盘导航正常
 - [ ] 触摸滑动正常
