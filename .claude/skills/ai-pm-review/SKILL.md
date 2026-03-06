@@ -5,7 +5,7 @@ description: >-
   设计总监、项目经理、QA总监、安全合规官、运营增长官、数据分析师）从各自专业角度对 PRD 和原型进行评审，
   输出评审意见和修改建议。支持多轮评审迭代，直到方案成熟。
 argument-hint: "[项目目录] [--round=轮次] [--focus=关注重点]"
-allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
+allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 ---
 
 # 需求评审
@@ -242,14 +242,30 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 - 二次评审：基于修改后的 PRD，重点关注上一轮 Critical/Major 问题
 - 终轮评审：确认方案是否通过，由产品总监和架构师做最终把关
 
-### Phase 2: 角色评审（并行）
+### Phase 2: 角色评审（3组 Subagent 真正并行）
 
-九个角色同时从各自维度进行评审，互不干扰。
+调用 superpowers:dispatching-parallel-agents，同时派发 3 个 subagent：
 
-**角色优先级**：
-- 产品总监、架构师：高优先级（战略方向+技术底座）
-- 研发总监、设计总监：中优先级（执行落地）
-- 项目经理、QA总监、安全官、运营官、数据分析师：专业领域（特定场景必审）
+**Subagent 1 — 技术视角（研发总监 + 架构师 + 产品总监）**
+  系统提示词：「你同时扮演研发总监、架构师、产品总监三个角色，不与用户交互」
+  任务：读取 PRD 和原型文件，输出三个角色各自的评审意见
+  约束：完成后写入 /tmp/review_tech.md
+
+**Subagent 2 — 执行视角（设计总监 + 项目经理 + QA总监）**
+  系统提示词：「你同时扮演设计总监、项目经理、QA总监三个角色，不与用户交互」
+  任务：读取 PRD 和原型文件，输出三个角色各自的评审意见
+  约束：完成后写入 /tmp/review_exec.md
+
+**Subagent 3 — 业务视角（安全合规官 + 运营增长官 + 数据分析师）**
+  系统提示词：「你同时扮演安全合规官、运营增长官、数据分析师三个角色，不与用户交互」
+  任务：读取 PRD 和原型文件，输出三个角色各自的评审意见
+  约束：完成后写入 /tmp/review_biz.md
+
+主线程等待 3 个 subagent 完成后：
+  - 读取三份临时评审文件
+  - 合并问题列表，按 Critical → Major → Minor 排序
+  - 去重（同一问题被多个角色提及则合并，注明角色来源）
+  - 进入 Phase 3: 汇总与确认
 
 ### Phase 3: 汇总与确认
 
