@@ -7,7 +7,7 @@
       "id": "reference",
       "order": 0,
       "name": "参考资源收集",
-      "description": "收集参考资料（URL/图片/竞品），使用 playwright-cli 抓取网页",
+      "description": "收集参考资料（URL/图片/竞品），使用 playwright MCP 抓取网页",
       "skill": "ai-pm",
       "output": ["00-reference-analysis.md", "07-references/"],
       "confirm": false,

@@ -145,13 +145,13 @@
       "description": "调度专业代理协同完成复杂任务"
     },
 
-    "playwright-cli": {
+    "playwright-mcp": {
       "name": "浏览器自动化",
-      "path": "playwright-cli/SKILL.md",
+      "path": "plugin:playwright@claude-plugins-official",
       "status": "active",
-      "version": "1.0",
+      "version": "0.0.68",
       "type": "tool",
-      "description": "网页抓取、截图、表单填写"
+      "description": "网页抓取、截图、表单填写（Microsoft 官方 MCP 插件）"
     },
 
     "tutorial-center-update": {

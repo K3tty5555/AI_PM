@@ -14,7 +14,6 @@
 用户提前准备：
 output/projects/项目名/07-references/
 ├── reference-config.md    # 包含多个URL、账号密码、说明
-├── session-auth.json      # 保存的登录会话（自动生成）
 └── images/
     ├── homepage.png       # 首页截图
     ├── dashboard.png      # 仪表盘截图
@@ -25,9 +24,9 @@ output/projects/项目名/07-references/
 ```
 
 **技术说明：**
-- 使用 `playwright-cli` 进行浏览器自动化
+- 使用 Playwright MCP（Microsoft 官方插件）进行浏览器自动化
+- 浏览器上下文在分析期间自动保持，登录状态无需手动保存/恢复
 - 支持动态渲染页面（JavaScript 执行后内容）
-- 支持保存/恢复登录会话，避免重复输入账密
 - 获取页面快照（结构化元素列表）而非原始 HTML
 
 ## 参考资源配置文件
@@ -95,8 +94,6 @@ AI: 📁 发现参考资源配置文件
        • dashboard.png - 仪表盘设计
        • workflow.gif - 操作流程
 
-    💾 已保存会话: session-auth.json (可复用)
-
 💬 请确认：
     1. 开始分析所有参考资源
     2. 只分析部分资源（请告诉我）
@@ -105,21 +102,22 @@ AI: 📁 发现参考资源配置文件
 你: 1
 
 AI: 🔍 开始分析参考资源...
-    使用 playwright-cli 打开浏览器...
+    使用 Playwright MCP 打开浏览器...
 
     [1/2] 正在分析: https://example.com/admin
-       $ playwright-cli open https://example.com/admin
-       $ playwright-cli snapshot
-       🔐 检测到登录页，使用保存的会话...
-       $ playwright-cli state-load session-auth.json
-       $ playwright-cli snapshot --filename=00-web-analysis/admin.yml
-       $ playwright-cli screenshot --filename=00-web-analysis/admin.png
+       → browser_navigate url="https://example.com/admin"
+       → browser_snapshot
+       🔐 检测到登录页，执行登录...
+       → browser_type（填写账号密码）
+       → browser_click（点击登录）
+       → browser_snapshot（登录后页面结构，上下文自动保持）
+       → browser_take_screenshot（保存截图到 00-web-analysis/admin.png）
        ✅ 已获取页面结构和截图
 
     [2/2] 正在分析: https://m.example.com
-       $ playwright-cli goto https://m.example.com
-       $ playwright-cli snapshot --filename=00-web-analysis/mobile.yml
-       $ playwright-cli screenshot --filename=00-web-analysis/mobile.png
+       → browser_navigate url="https://m.example.com"（登录状态自动延续）
+       → browser_snapshot（保存页面结构分析）
+       → browser_take_screenshot（保存截图到 00-web-analysis/mobile.png）
        ✅ 已获取页面结构和截图
 
     ✓ 已读取 3 张参考图片
@@ -127,7 +125,7 @@ AI: 🔍 开始分析参考资源...
     📊 生成综合分析报告...
 ```
 
-## 分析流程（使用 playwright-cli）
+## 分析流程（使用 Playwright MCP）
 
 **流程1：直接输入URL**
 ```
@@ -139,7 +137,7 @@ AI: 🔍 开始分析参考资源...
     ↓
 确认操作权限（仅查看 / 自由操作 / 无限制）
     ↓
-使用 playwright-cli 打开浏览器并访问URL
+使用 Playwright MCP 打开浏览器并访问URL
     ↓
 根据权限模式操作网页
     ↓
@@ -164,9 +162,7 @@ AI: 🔍 开始分析参考资源...
     ↓
 读取 images/ 文件夹图片
     ↓
-使用 playwright-cli 批量抓取网页
-    ↓
-保存会话状态以便后续复用
+使用 Playwright MCP 批量抓取网页（上下文自动保持登录状态）
     ↓
 综合分析（网页+图片+文字说明）
     ↓
@@ -231,71 +227,57 @@ AI: 🔍 开始分析参考资源...
 - 选择【无限制】前，系统会再次确认："确定要启用无限制模式吗？此操作可能修改或删除数据。"
 - 优先选择对数据零影响的方式体验交互
 
-## playwright-cli 使用指南
+## Playwright MCP 使用指南
+
+**会话说明：** Playwright MCP 在分析期间自动保持浏览器上下文（含登录状态），无需手动保存/恢复会话文件。
 
 **基本流程：**
 
-```bash
-# 1. 打开浏览器并访问目标页面
-playwright-cli open https://example.com
+1. 导航到目标页面
+   → browser_navigate url="https://example.com"
 
-# 2. 获取页面快照（显示可交互元素）
-playwright-cli snapshot
+2. 获取页面快照（显示可交互元素的可访问性树）
+   → browser_snapshot
 
-# 3. 如需登录，填写表单
-playwright-cli fill e1 "username"
-playwright-cli fill e2 "password"
-playwright-cli click e3
+3. 如需登录，填写表单
+   → browser_type（填用户名）
+   → browser_type（填密码）
+   → browser_click（点击登录按钮）
 
-# 4. 等待页面加载后再次获取快照
-playwright-cli snapshot
+4. 登录后上下文自动保持，直接继续分析
+   → browser_snapshot
 
-# 5. 根据权限模式探索页面
-# 【仅查看模式】- 仅获取快照和截图
-playwright-cli screenshot --filename=00-web-analysis/page.png
+5. 根据权限模式探索页面
+   【仅查看模式】
+   → browser_take_screenshot（保存截图）
 
-# 【自由操作模式】- 可以点击查看不同页面
-playwright-cli click e5
-playwright-cli snapshot
+   【自由操作模式】
+   → browser_click（点击查看不同页面）
+   → browser_snapshot
 
-# 6. 多标签页管理（分析多个页面）
-playwright-cli tab-new https://example.com/page2
-playwright-cli tab-list
-playwright-cli tab-select 0
+6. 多页面分析（browser_navigate 直接跳转，上下文共享登录状态）
+   → browser_navigate url="https://example.com/page2"
+   → browser_snapshot
 
-# 7. 保存会话状态（供后续复用）
-playwright-cli state-save ./07-references/session-auth.json
+7. 多标签页管理
+   → browser_tabs action=create url="https://example.com/other"
+   → browser_tabs action=list
+   → browser_tabs action=select index=0
 
-# 8. 关闭浏览器
-playwright-cli close
-```
+8. 完成分析后关闭浏览器
+   → browser_close
 
 **批量分析多个URL：**
 
-```bash
-# 使用命名会话，保持登录状态
-playwright-cli -s=reference-session open --persistent
+登录后浏览器上下文自动保持，直接在同一上下文中跳转：
 
-# 逐个访问并分析
-playwright-cli -s=reference-session goto https://example.com/page1
-playwright-cli -s=reference-session snapshot --filename=00-web-analysis/page1.yml
+→ browser_navigate url="https://example.com/page1"
+→ browser_snapshot（分析 page1）
 
-playwright-cli -s=reference-session goto https://example.com/page2
-playwright-cli -s=reference-session snapshot --filename=00-web-analysis/page2.yml
+→ browser_navigate url="https://example.com/page2"
+→ browser_snapshot（分析 page2）
 
-# 保存会话供后续使用
-playwright-cli -s=reference-session state-save ./07-references/session.json
-playwright-cli -s=reference-session close
-```
-
-**复用已保存的会话：**
-
-```bash
-# 下次分析时直接加载会话（免登录）
-playwright-cli -s=reference-session open --persistent
-playwright-cli -s=reference-session state-load ./07-references/session.json
-playwright-cli -s=reference-session snapshot
-```
+→ browser_close
 
 **交互式分析示例：**
 
@@ -303,32 +285,28 @@ playwright-cli -s=reference-session snapshot
 AI: 🔍 开始分析参考网页...
 
 步骤 1/3: 打开浏览器并访问
-$ playwright-cli open https://www.zhixue.com/admin
+→ browser_navigate url="https://www.zhixue.com/admin"
 ✅ 浏览器已打开，页面已加载
 
 步骤 2/3: 获取页面快照
-$ playwright-cli snapshot
+→ browser_snapshot
 ✅ 已获取页面结构
 
 检测到登录表单：
-  - e1: 用户名输入框
-  - e2: 密码输入框
-  - e3: 登录按钮
+  - 用户名输入框
+  - 密码输入框
+  - 登录按钮
 
 步骤 3/3: 执行登录
-$ playwright-cli fill e1 "tyshuxue01"
-$ playwright-cli fill e2 "xjlgchy18!"
-$ playwright-cli click e3
-$ playwright-cli snapshot --filename=00-web-analysis/after-login.yml
-✅ 登录成功，已获取登录后页面
+→ browser_type（填写账号：tyshuxue01）
+→ browser_type（填写密码）
+→ browser_click（点击登录按钮）
+→ browser_snapshot（登录后页面结构）
+✅ 登录成功，上下文自动保持
 
 📸 正在截图...
-$ playwright-cli screenshot --filename=00-web-analysis/dashboard.png
+→ browser_take_screenshot（保存到 00-web-analysis/dashboard.png）
 ✅ 截图已保存
-
-💾 保存会话状态供后续使用...
-$ playwright-cli state-save ./07-references/zhixue-session.json
-✅ 会话已保存
 
 🔍 页面分析中...
    • 识别页面结构... ✅
