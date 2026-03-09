@@ -55,6 +55,12 @@ README.md                  项目介绍
 - 所有项目文件输出到 `output/projects/{项目名}/`，不在该目录外新建子目录
 - 交互文案须经 Humanizer-zh 处理，避免 AI 味
 
+### Playwright MCP 使用规范
+
+- Playwright MCP 配置为 headless Chromium（后台无界面运行），无需启动本地 HTTP 服务器
+- 查看原生 HTML 文件直接用 `file:///绝对路径/文件名.html`，不需要 `python3 -m http.server`
+- 截图/DOM 验证优先用 `browser_run_code` + `page.evaluate()` 而非 `browser_take_screenshot`（后者等待字体加载易超时）
+
 ## 禁止事项
 
 - 不自动 git commit/push，除非用户明确要求
