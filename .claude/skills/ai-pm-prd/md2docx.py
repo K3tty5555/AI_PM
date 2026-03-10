@@ -20,19 +20,24 @@ def set_heading_style(para, level):
     run.font.color.rgb = RGBColor(r, g, b)
 
 def add_inline_formats(para, text):
-    """处理粗体 **text** 和行内代码 `code`"""
-    parts = re.split(r'(\*\*[^*]+\*\*|`[^`]+`)', text)
-    for part in parts:
-        if part.startswith('**') and part.endswith('**'):
-            run = para.add_run(part[2:-2])
-            run.bold = True
-        elif part.startswith('`') and part.endswith('`'):
-            run = para.add_run(part[1:-1])
-            run.font.name = 'Courier New'
-            run.font.size = Pt(10)
-        else:
-            if part:
-                para.add_run(part)
+    """处理粗体 **text**、行内代码 `code`、<br> 换行"""
+    # 先按 <br> 切分成多段，段间插入真实换行符
+    segments = re.split(r'<br\s*/?>', text, flags=re.IGNORECASE)
+    for seg_idx, segment in enumerate(segments):
+        if seg_idx > 0:
+            para.add_run().add_break()
+        parts = re.split(r'(\*\*[^*]+\*\*|`[^`]+`)', segment)
+        for part in parts:
+            if part.startswith('**') and part.endswith('**'):
+                run = para.add_run(part[2:-2])
+                run.bold = True
+            elif part.startswith('`') and part.endswith('`'):
+                run = para.add_run(part[1:-1])
+                run.font.name = 'Courier New'
+                run.font.size = Pt(10)
+            else:
+                if part:
+                    para.add_run(part)
 
 def shade_cell(cell, hex_color='F5F5F7'):
     tc = cell._tc
@@ -85,6 +90,26 @@ def fill_cell(cell, text, is_header=False, screenshot_map=None):
         for run in para.runs:
             run.font.size = Pt(10)
 
+def set_col_width(cell, width_cm):
+    """设置单元格固定宽度"""
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    for old in tcPr.findall(qn('w:tcW')):
+        tcPr.remove(old)
+    tcW = OxmlElement('w:tcW')
+    tcW.set(qn('w:w'), str(int(width_cm * 567)))  # 567 twips/cm
+    tcW.set(qn('w:type'), 'dxa')
+    tcPr.append(tcW)
+
+def apply_col_widths(table, num_cols):
+    """A4 正文宽约 16cm；2列时标题列4cm，内容列12cm；多列均分"""
+    PAGE_W = 16.0
+    widths = [4.0, 12.0] if num_cols == 2 else [PAGE_W / num_cols] * num_cols
+    for row in table.rows:
+        for i, cell in enumerate(row.cells):
+            if i < len(widths):
+                set_col_width(cell, widths[i])
+
 def add_table(doc, lines, screenshot_map=None):
     """解析 Markdown 表格并插入 DOCX，支持单元格内插图"""
     rows = [l for l in lines if not re.match(r'^\|[-| :]+\|$', l)]
@@ -112,6 +137,8 @@ def add_table(doc, lines, screenshot_map=None):
             if i < len(row.cells):
                 fill_cell(row.cells[i], val, screenshot_map=screenshot_map)
 
+    # 设置列宽
+    apply_col_widths(table, len(headers))
     doc.add_paragraph()
 
 def convert(prd_path, output_path, manifest_path=None):
