@@ -2,7 +2,7 @@
 name: ai-pm-prd
 description: PRD 生成技能。整合需求分析、竞品研究、用户故事，输出完整的产品需求文档。支持产品分身写作风格和设计规范。
 argument-hint: "[项目目录路径 | --style=风格名]"
-allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat)
+allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm)
 ---
 
 # PRD 生成
@@ -155,6 +155,70 @@ mkdir -p {项目目录}/05-prd/
 
 | 命令 | 输出 |
 |------|------|
-| `--export=pdf` | 依赖 pandoc，使用 `templates/prd-styles/{风格名}/pdf-style.css` |
+| `--export=pdf` | 生成 `05-PRD-v1.0.pdf`，应用 `pdf-style.css` |
 | `--export=feishu` | 生成飞书云文档优化版 Markdown |
 | `--export=all` | 同时生成所有格式 |
+
+### PDF 导出实现
+
+**依赖**：Node.js（已内置）+ 系统 Chromium（`~/Library/Caches/ms-playwright/chromium-1212/`）
+
+**步骤**：
+
+1. 读取 `templates/prd-styles/{风格名}/pdf-style.css`（默认用 `default`）
+2. 用内联 Node.js 脚本把 PRD Markdown 转为 HTML，将 CSS 直接嵌入 `<style>` 标签
+3. 调用 Chrome headless `--print-to-pdf` 输出 PDF
+4. 删除临时 HTML 文件
+
+**实现模板**：
+
+```bash
+# 步骤1：生成带样式的临时 HTML
+node -e "
+const fs = require('fs');
+const md = fs.readFileSync('{项目目录}/05-prd/05-PRD-v1.0.md', 'utf8');
+const css = fs.readFileSync('{CSS路径}/pdf-style.css', 'utf8');
+
+// 基础 Markdown 转 HTML（标题/表格/列表/粗体/代码块/分隔线）
+let html = md
+  .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+  .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+  .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+  .replace(/\*\*(.+?)\*\*/g, '<strong>\$1</strong>')
+  .replace(/\`(.+?)\`/g, '<code>\$1</code>')
+  .replace(/^---$/gm, '<hr>')
+  .replace(/^- (.+)$/gm, '<li>\$1</li>')
+  .replace(/(<li>.*<\/li>\n?)+/g, '<ul>\$&</ul>')
+  .split('\n\n').map(block => {
+    if (block.match(/^<(h[1-4]|ul|hr|pre)/)) return block;
+    if (block.includes('|')) return convertTable(block);
+    return '<p>' + block + '</p>';
+  }).join('\n');
+
+function convertTable(block) {
+  const rows = block.trim().split('\n').filter(r => !r.match(/^\|[-| ]+\|$/));
+  if (rows.length < 1) return block;
+  const header = rows[0].split('|').filter(c => c.trim()).map(c => '<th>' + c.trim() + '</th>').join('');
+  const body = rows.slice(1).map(r => '<tr>' + r.split('|').filter(c => c.trim()).map(c => '<td>' + c.trim() + '</td>').join('') + '</tr>').join('');
+  return '<table><thead><tr>' + header + '</tr></thead><tbody>' + body + '</tbody></table>';
+}
+
+const output = '<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"UTF-8\"><style>' + css + '</style></head><body>' + html + '</body></html>';
+fs.writeFileSync('{项目目录}/05-prd/_tmp_prd.html', output);
+"
+
+# 步骤2：Chrome headless 打印 PDF
+CHROME=~/Library/Caches/ms-playwright/chromium-1212/chrome-mac-arm64/"Google Chrome for Testing.app"/Contents/MacOS/"Google Chrome for Testing"
+"$CHROME" --headless=new --no-sandbox --disable-gpu \
+  --print-to-pdf="{项目目录}/05-prd/05-PRD-v1.0.pdf" \
+  --print-to-pdf-no-header \
+  "file://{项目目录}/05-prd/_tmp_prd.html" 2>/dev/null
+
+# 步骤3：清理临时文件
+rm "{项目目录}/05-prd/_tmp_prd.html"
+```
+
+**注意事项**：
+- 上面的 Node.js 转换脚本是简化版，处理常见 Markdown 语法足够，但嵌套列表、复杂代码块等边界情况建议先用 `marked`（已在 `/tmp/node_modules/marked` 缓存），复杂文档时优先使用
+- `marked` 版本：`require('/tmp/node_modules/marked')`，若缓存失效则先 `cd /tmp && npm install marked`
+- Chrome 路径仅适用于 macOS，Windows/Linux 路径不同
