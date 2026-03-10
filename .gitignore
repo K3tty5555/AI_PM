@@ -44,6 +44,7 @@ docs/
 
 # Playwright
 .playwright/
+.playwright-mcp/
 .claude/**/.playwright-cli/
 
 # -----------------------------------------------------------------------------
