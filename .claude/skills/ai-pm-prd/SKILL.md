@@ -229,6 +229,19 @@ CHROME=~/Library/Caches/ms-playwright/chromium-1212/chrome-mac-arm64/"Google Chr
 PRD_DIR="{项目目录}/05-prd"
 PROTO_DIR="{项目目录}/06-prototype"
 CSS_PATH="templates/prd-styles/default/pdf-style.css"
+SKILL_DIR=".claude/skills/ai-pm-prd"
+```
+
+**含图片路径（B/C/D/E）的 Mermaid 预处理**（在 HTML 构建之前执行）：
+
+```bash
+# 预渲染 Mermaid 流程图 → 生成临时 MD（mermaid 块替换为 base64 <img>）
+python3 "$SKILL_DIR/preprocess_mermaid.py" \
+  "{项目目录}/05-prd/05-PRD-v1.0.md" \
+  "{项目目录}/05-prd/_tmp_preprocessed.md"
+
+# 后续 HTML 构建使用 _tmp_preprocessed.md 而非原始 MD
+# 最终清理：rm "{项目目录}/05-prd/_tmp_preprocessed.md"
 ```
 
 ```javascript
@@ -301,6 +314,8 @@ module.exports = { buildHtml };
 
 #### 路径 A：纯文字版（5 秒）
 
+> 不含原型截图，Mermaid 不预处理（保持代码块原样）。
+
 ```bash
 node -e "
 const { buildHtml } = require('./build-pdf-html.js');
@@ -319,24 +334,37 @@ fs.writeFileSync('{项目目录}/05-prd/_tmp.html', html);
 rm "{项目目录}/05-prd/_tmp.html"
 ```
 
-#### 路径 B：含原型截图版（30-40 秒）
+#### 路径 B：含原型截图 + 流程图版（30-40 秒）
+
+> 先执行 Mermaid 预处理，再构建 HTML（使用 `_tmp_preprocessed.md`）。
 
 ```bash
+# 1. Mermaid 预处理
+python3 "$SKILL_DIR/preprocess_mermaid.py" \
+  "{项目目录}/05-prd/05-PRD-v1.0.md" \
+  "{项目目录}/05-prd/_tmp_preprocessed.md"
+
+# 2. 构建 HTML（用预处理后的 MD）
 node -e "
 const { buildHtml } = require('./build-pdf-html.js');
 const fs = require('fs');
 const html = buildHtml(
-  '{项目目录}/05-prd/05-PRD-v1.0.md',
+  '{项目目录}/05-prd/_tmp_preprocessed.md',
   'templates/prd-styles/default/pdf-style.css',
   true    // ← 嵌入原型截图
 );
 fs.writeFileSync('{项目目录}/05-prd/_tmp_illustrated.html', html);
 "
+
+# 3. 打印 PDF
 "$CHROME" --headless=new --no-sandbox --disable-gpu \
   --print-to-pdf="{项目目录}/05-prd/05-PRD-v1.0-illustrated.pdf" \
   --print-to-pdf-no-header \
   "file://{项目目录}/05-prd/_tmp_illustrated.html" 2>/dev/null
+
+# 4. 清理临时文件
 rm "{项目目录}/05-prd/_tmp_illustrated.html"
+rm "{项目目录}/05-prd/_tmp_preprocessed.md"
 ```
 
 #### 路径 C：先文字版，后截图版
