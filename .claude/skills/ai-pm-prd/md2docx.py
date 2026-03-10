@@ -103,8 +103,14 @@ def set_col_width(cell, width_cm):
 
 def apply_col_widths(table, num_cols):
     """A4 正文宽约 16cm；2列时标题列4cm，内容列12cm；多列均分"""
+    from docx.shared import Cm as _Cm
     PAGE_W = 16.0
     widths = [4.0, 12.0] if num_cols == 2 else [PAGE_W / num_cols] * num_cols
+    # 设置 w:tblGrid（飞书优先读取此处）
+    for i, col in enumerate(table.columns):
+        if i < len(widths):
+            col.width = _Cm(widths[i])
+    # 同时设置每格 w:tcW（Office 读取此处）
     for row in table.rows:
         for i, cell in enumerate(row.cells):
             if i < len(widths):
