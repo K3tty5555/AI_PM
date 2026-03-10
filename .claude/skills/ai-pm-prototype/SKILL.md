@@ -2,7 +2,7 @@
 name: ai-pm-prototype
 description: 原型生成技能。基于 PRD 生成可交互的单页网页原型，支持移动端和 Web 端。自动应用产品设计规范，默认遵循 Apple HIG。
 argument-hint: "[PRD路径 | --mobile | --web]"
-allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
+allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 ---
 
 # 原型生成
@@ -112,21 +112,85 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 - 空状态、加载状态、错误状态均需要呈现
 - 还原 PRD 中的核心用户流程（至少覆盖主流程）
 
+### 步骤5：截图与 manifest 生成
+
+原型 HTML 生成完毕后，立即执行截图并写出 manifest，供后续 PDF 导出使用。
+
+#### 5.1 截图
+
+```bash
+CHROME=~/Library/Caches/ms-playwright/chromium-1212/chrome-mac-arm64/"Google Chrome for Testing.app"/Contents/MacOS/"Google Chrome for Testing"
+
+mkdir -p {项目目录}/06-prototype/screenshots/
+
+# 对每个原型页面截图（file:// 对 Chrome 二进制直接可用）
+"$CHROME" --headless=new --no-sandbox --disable-gpu \
+  --screenshot="{项目目录}/06-prototype/screenshots/01-{slug}.png" \
+  --window-size=1440,900 \
+  "file://{项目目录}/06-prototype/index.html" 2>/dev/null
+
+# 若有子页面，逐一截图
+"$CHROME" --headless=new --no-sandbox --disable-gpu \
+  --screenshot="{项目目录}/06-prototype/screenshots/02-{slug}.png" \
+  --window-size=1440,900 \
+  "file://{项目目录}/06-prototype/pages/{page}.html" 2>/dev/null
+```
+
+**截图命名规则**：`{两位序号}-{小节slug}.png`，slug 取 PRD 章节标题的拼音首字母或英文关键词（如 `01-task-list.png`、`02-grading.png`）。
+
+#### 5.2 写出 manifest.json
+
+```bash
+node -e "
+const manifest = {
+  generated_at: new Date().toISOString(),
+  sections: [
+    {
+      prd_section: '6.1',
+      label: '{章节标题，与 PRD 第六章小节标题一致}',
+      file: 'index.html',
+      screenshot: 'screenshots/01-{slug}.png'
+    },
+    {
+      prd_section: '6.2',
+      label: '{章节标题}',
+      file: 'pages/{page}.html',
+      screenshot: 'screenshots/02-{slug}.png'
+    }
+    // ... 按实际页面数量填写
+  ]
+};
+require('fs').writeFileSync(
+  '{项目目录}/06-prototype/screenshots/manifest.json',
+  JSON.stringify(manifest, null, 2)
+);
+"
+```
+
+**关键约定**：`label` 字段必须与 PRD 第六章对应小节的标题**完全一致**（如 `"任务列表与任务分配"`），PDF 导出时依此做精确匹配。
+
 ## 文件结构
 
 生成单文件原型（首选），所有代码内联：
 ```
 {项目目录}/06-prototype/
-└── index.html   # 全部 HTML + CSS + JS，无外部依赖
+├── index.html          # 全部 HTML + CSS + JS，无外部依赖
+└── screenshots/        # 步骤5 自动生成
+    ├── manifest.json
+    └── 01-{slug}.png
 ```
 
 若原型复杂（页面 > 5 个），可拆分为多文件：
 ```
 {项目目录}/06-prototype/
-├── index.html       # 入口页面
-├── pages/           # 各页面 HTML
-├── style.css        # 样式
-└── app.js           # 交互逻辑
+├── index.html          # 入口页面
+├── pages/              # 各页面 HTML
+├── style.css
+├── app.js
+└── screenshots/        # 步骤5 自动生成
+    ├── manifest.json
+    ├── 01-{slug}.png
+    └── 02-{slug}.png
 ```
 
 ## 完成提示
@@ -141,6 +205,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 设计规范：{规范名}
 页面数量：{N} 个
 核心流程：{流程描述}
+
+截图已生成：06-prototype/screenshots/（共 {N} 张，供 PDF 导出使用）
 
 提示：点击可交互元素体验流程，数据为模拟数据。
 ```
