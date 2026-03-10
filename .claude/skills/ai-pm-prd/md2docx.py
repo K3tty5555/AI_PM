@@ -1,14 +1,79 @@
 """
 PRD Markdown → DOCX 转换器
-支持：标题、段落、表格（含单元格内插图）、列表、粗体、代码、分隔线
+支持：标题、段落、表格（含单元格内插图）、列表、粗体、代码、分隔线、Mermaid 流程图
 """
-import re, json, sys
+import re, json, sys, os, subprocess, tempfile, threading
 from pathlib import Path
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+
+# Chrome headless 二进制路径
+CHROME = os.path.expanduser(
+    '~/Library/Caches/ms-playwright/chromium-1212/chrome-mac-arm64/'
+    'Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'
+)
+
+MERMAID_HTML = '''<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>* {{margin:0;padding:0;box-sizing:border-box;}}
+body {{background:white;padding:16px;font-family:-apple-system,"PingFang SC",sans-serif;display:inline-block;}}</style>
+</head><body><div class="mermaid">{code}</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({{startOnLoad:true,theme:"default"}});</script>
+</body></html>'''
+
+def render_mermaid(code):
+    """渲染 Mermaid 代码为 PNG，返回临时文件路径（调用方负责删除）"""
+    import http.server, random
+    port = random.randint(20000, 29999)
+
+    # 写临时 HTML
+    html_file = tempfile.NamedTemporaryFile(suffix='.html', dir='/tmp', delete=False, mode='w', encoding='utf-8')
+    html_file.write(MERMAID_HTML.format(code=code))
+    html_file.close()
+
+    # 起临时 HTTP server（Mermaid.js 需要 http:// 加载）
+    class QuietHandler(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, *a): pass
+        def __init__(self, *a, **kw): super().__init__(*a, directory='/tmp', **kw)
+
+    server = http.server.HTTPServer(('127.0.0.1', port), QuietHandler)
+    t = threading.Thread(target=server.serve_forever)
+    t.daemon = True
+    t.start()
+
+    # Chrome headless 截图
+    out_png = tempfile.mktemp(suffix='.png', dir='/tmp')
+    url = f'http://127.0.0.1:{port}/{os.path.basename(html_file.name)}'
+    try:
+        subprocess.run(
+            [CHROME, '--headless=new', '--no-sandbox', '--disable-gpu',
+             f'--screenshot={out_png}', '--window-size=700,1200',
+             '--hide-scrollbars', '--virtual-time-budget=8000', url],
+            capture_output=True, timeout=30
+        )
+    finally:
+        server.shutdown()
+        os.unlink(html_file.name)
+
+    if not os.path.exists(out_png):
+        return None
+
+    # 裁剪底部空白
+    try:
+        from PIL import Image, ImageChops
+        img = Image.open(out_png).convert('RGB')
+        bg = Image.new('RGB', img.size, (255, 255, 255))
+        bbox = ImageChops.difference(img, bg).getbbox()
+        if bbox:
+            cropped = img.crop((0, 0, img.width, min(bbox[3] + 20, img.height)))
+            cropped.save(out_png)
+    except ImportError:
+        pass  # Pillow 未安装时保留原图
+
+    return out_png
 
 def set_heading_style(para, level):
     run = para.runs[0] if para.runs else para.add_run()
@@ -188,6 +253,29 @@ def convert(prd_path, output_path, manifest_path=None):
         if re.match(r'^---+$', line.strip()):
             doc.add_paragraph('─' * 40)
             i += 1
+            continue
+
+        # Mermaid 流程图
+        if re.match(r'^```mermaid\s*$', line.strip()):
+            mermaid_lines = []
+            i += 1
+            while i < len(lines) and not re.match(r'^```\s*$', lines[i].strip()):
+                mermaid_lines.append(lines[i])
+                i += 1
+            i += 1  # 跳过结束 ```
+            code = '\n'.join(mermaid_lines)
+            print(f'  渲染 Mermaid 流程图...')
+            tmp_png = render_mermaid(code)
+            if tmp_png:
+                para = doc.add_paragraph()
+                run = para.add_run()
+                run.add_picture(tmp_png, width=Cm(12))
+                para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                os.unlink(tmp_png)
+            else:
+                # 降级：显示为代码块
+                para = doc.add_paragraph(code)
+                para.style = 'No Spacing'
             continue
 
         # 表格
