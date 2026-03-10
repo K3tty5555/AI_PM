@@ -2,7 +2,7 @@
 name: ai-pm-prd
 description: PRD 生成技能。整合需求分析、竞品研究、用户故事，输出完整的产品需求文档。支持产品分身写作风格和设计规范。
 argument-hint: "[项目目录路径 | --style=风格名]"
-allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm)
+allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm) Bash(python3)
 ---
 
 # PRD 生成
@@ -27,7 +27,36 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm
 
 ## 执行步骤
 
-### 步骤1：读取风格配置（可选）
+### 步骤1：询问导出格式（生成前确认）
+
+**先检测** `06-prototype/screenshots/manifest.json` 是否存在，决定是否展示含截图选项。
+
+```
+在生成 PRD 前，请选择导出格式：
+
+  A. 仅 Markdown（默认）
+     最快，无额外等待。适合：版本管理、后续在编辑器中修改、不需要分发给他人。
+
+  B. Markdown + 纯文字 PDF（+5 秒）
+     干净的 PDF，无图片。适合：快速打印存档、邮件发送给不需要看原型的人。
+
+  C. Markdown + DOCX（含原型截图，+20 秒）          ← 有原型时显示
+     Word 格式，截图嵌在对应功能章节内。适合：上传飞书转成可编辑云文档，
+     也可在 Word/WPS 中继续编辑。
+
+  D. Markdown + PDF（含原型截图，+30 秒）            ← 有原型时显示
+     完整演示版 PDF，自包含、无外部依赖。适合：正式评审会议分发、
+     存档留底、发给不用飞书的合作方。
+
+  E. 全套（DOCX + PDF 均含截图，+40 秒）            ← 有原型时显示
+     一次生成所有格式。适合：正式立项/需求冻结节点，需要同时备份多种格式。
+```
+
+**无 manifest.json 时**：只显示 A/B 两项，并提示"如需含截图版，请先运行 /ai-pm prototype"。
+
+用户选择后记录 `$EXPORT_MODE`，继续执行步骤2。
+
+### 步骤2：读取风格配置（可选）
 
 检查是否有 `--style` 参数或 `$PM_STYLE` 环境变量，若有则读取对应的 `style-config.json` 并应用：
 - 章节顺序（`structure.chapterOrder`）
@@ -35,9 +64,9 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm
 - 表格字段（`formatting.tableFields`）
 - 内容侧重（`contentFocus`：用户故事篇幅、指标详细程度等）
 
-### 步骤2：读取所有输入文档，整合信息
+### 步骤3：读取所有输入文档，整合信息
 
-### 步骤3：按 8 章结构生成 PRD
+### 步骤4：按 8 章结构生成 PRD
 
 ```
 mkdir -p {项目目录}/05-prd/
@@ -45,28 +74,18 @@ mkdir -p {项目目录}/05-prd/
 
 生成 `05-PRD-v1.0.md` 并创建 `README.md`（说明目录用途）。
 
-### 步骤4：完成提示 + PDF 导出询问
+### 步骤5：完成提示 + 执行导出
 
-输出 PRD 关键摘要后，询问是否导出 PDF：
+输出 PRD 关键摘要，然后按步骤1所选 `$EXPORT_MODE` 执行导出：
 
 ```
 ✅ PRD 已生成：05-prd/05-PRD-v1.0.md
    功能模块：{N} 个 | P0：{N} 项 | 核心指标：{N} 条
 
-是否需要导出 PDF？
-
-  A. 纯文字版（立即，约 5 秒）
-  B. 含原型截图版（约 30-40 秒）  ← 仅当 06-prototype/screenshots/manifest.json 存在时显示
-  C. 先给文字版，后台继续生成截图版  ← 同上
-  D. 不需要，Markdown 版本足够
+⏳ 正在生成 {所选格式}...
+✅ {格式A} → 05-prd/05-PRD-v1.0.{ext}
+✅ {格式B} → 05-prd/05-PRD-v1.0.{ext}   （全套时）
 ```
-
-若用户选 A → 执行"纯文字 PDF"路径
-若用户选 B → 执行"含原型截图 PDF"路径
-若用户选 C → 先执行 A，完成后继续执行截图嵌入，生成 illustrated 版本
-若用户选 D → 结束
-
-**若 manifest.json 不存在**：跳过询问，仅显示 A/D 两个选项，并提示"如需带截图版，请先运行 /ai-pm prototype"。
 
 ## PRD 8 章结构
 
@@ -170,13 +189,15 @@ mkdir -p {项目目录}/05-prd/
 - 评审后修改：**不创建新文件**，在原文档直接修改，修订日志追加新记录（v1.1、v1.2...）
 - 不生成 `.bak` 备份文件，Git 历史已足够
 
-## 导出格式（可选）
+## 导出格式参考
 
-| 命令 | 输出 |
-|------|------|
-| `--export=pdf` | 生成 `05-PRD-v1.0.pdf`，应用 `pdf-style.css` |
-| `--export=feishu` | 生成飞书云文档优化版 Markdown |
-| `--export=all` | 同时生成所有格式 |
+| 选项 | 产物文件 | 命令（独立触发时） |
+|------|---------|----------------|
+| A 仅 Markdown | `05-PRD-v1.0.md` | 默认 |
+| B 纯文字 PDF | `05-PRD-v1.0.pdf` | `--export=pdf` |
+| C DOCX 含截图 | `05-PRD-v1.0.docx` | `--export=docx` |
+| D PDF 含截图 | `05-PRD-v1.0-illustrated.pdf` | `--export=pdf-illustrated` |
+| E 全套 | DOCX + 两个 PDF | `--export=all` |
 
 ### PDF 导出实现
 
@@ -318,4 +339,28 @@ rm "{项目目录}/05-prd/_tmp_illustrated.html"
 | `05-PRD-v1.0.pdf` | 纯文字版（路径 A/C） |
 | `05-PRD-v1.0-illustrated.pdf` | 含原型截图版（路径 B/C） |
 
-**注意**：`build-pdf-html.js` 在执行时以内联方式写在 `node -e` 里，无需单独建文件；若 PRD 复杂导致命令过长，可先写到 `/tmp/build-pdf-html.js` 再 `require`。
+---
+
+#### 路径 C：DOCX 含截图（约 20 秒）
+
+```bash
+SKILL_DIR=".claude/skills/ai-pm-prd"
+python3 "$SKILL_DIR/md2docx.py" \
+  "{项目目录}/05-prd/05-PRD-v1.0.md" \
+  "{项目目录}/05-prd/05-PRD-v1.0.docx" \
+  "{项目目录}/06-prototype/screenshots/manifest.json"
+```
+
+**依赖**：`python-docx`（`python3 -m pip install python-docx`）。首次使用时自动安装，后续复用。
+
+**飞书导入方式**：飞书「新建文档」→「导入」→ 选择 `.docx` 文件，飞书自动转为可编辑云文档，截图保留在对应章节。
+
+---
+
+**产物命名约定**：
+
+| 文件 | 说明 |
+|------|------|
+| `05-PRD-v1.0.pdf` | 纯文字 PDF（路径 B） |
+| `05-PRD-v1.0.docx` | 含截图 DOCX，用于飞书导入（路径 C） |
+| `05-PRD-v1.0-illustrated.pdf` | 含截图 PDF，自包含（路径 D） |
