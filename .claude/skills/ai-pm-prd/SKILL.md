@@ -45,9 +45,28 @@ mkdir -p {项目目录}/05-prd/
 
 生成 `05-PRD-v1.0.md` 并创建 `README.md`（说明目录用途）。
 
-### 步骤4：完成提示
+### 步骤4：完成提示 + PDF 导出询问
 
-输出 PRD 关键摘要（功能数量、P0 数量、核心指标）。
+输出 PRD 关键摘要后，询问是否导出 PDF：
+
+```
+✅ PRD 已生成：05-prd/05-PRD-v1.0.md
+   功能模块：{N} 个 | P0：{N} 项 | 核心指标：{N} 条
+
+是否需要导出 PDF？
+
+  A. 纯文字版（立即，约 5 秒）
+  B. 含原型截图版（约 30-40 秒）  ← 仅当 06-prototype/screenshots/manifest.json 存在时显示
+  C. 先给文字版，后台继续生成截图版  ← 同上
+  D. 不需要，Markdown 版本足够
+```
+
+若用户选 A → 执行"纯文字 PDF"路径
+若用户选 B → 执行"含原型截图 PDF"路径
+若用户选 C → 先执行 A，完成后继续执行截图嵌入，生成 illustrated 版本
+若用户选 D → 结束
+
+**若 manifest.json 不存在**：跳过询问，仅显示 A/D 两个选项，并提示"如需带截图版，请先运行 /ai-pm prototype"。
 
 ## PRD 8 章结构
 
@@ -163,62 +182,140 @@ mkdir -p {项目目录}/05-prd/
 
 **依赖**：Node.js（已内置）+ 系统 Chromium（`~/Library/Caches/ms-playwright/chromium-1212/`）
 
-**步骤**：
-
-1. 读取 `templates/prd-styles/{风格名}/pdf-style.css`（默认用 `default`）
-2. 用内联 Node.js 脚本把 PRD Markdown 转为 HTML，将 CSS 直接嵌入 `<style>` 标签
-3. 调用 Chrome headless `--print-to-pdf` 输出 PDF
-4. 删除临时 HTML 文件
-
-**实现模板**：
+**三条路径共用的 HTML 构建逻辑**：
 
 ```bash
-# 步骤1：生成带样式的临时 HTML
-node -e "
-const fs = require('fs');
-const md = fs.readFileSync('{项目目录}/05-prd/05-PRD-v1.0.md', 'utf8');
-const css = fs.readFileSync('{CSS路径}/pdf-style.css', 'utf8');
+CHROME=~/Library/Caches/ms-playwright/chromium-1212/chrome-mac-arm64/"Google Chrome for Testing.app"/Contents/MacOS/"Google Chrome for Testing"
+PRD_DIR="{项目目录}/05-prd"
+PROTO_DIR="{项目目录}/06-prototype"
+CSS_PATH="templates/prd-styles/default/pdf-style.css"
+```
 
-// 基础 Markdown 转 HTML（标题/表格/列表/粗体/代码块/分隔线）
-let html = md
-  .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-  .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-  .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-  .replace(/\*\*(.+?)\*\*/g, '<strong>\$1</strong>')
-  .replace(/\`(.+?)\`/g, '<code>\$1</code>')
-  .replace(/^---$/gm, '<hr>')
-  .replace(/^- (.+)$/gm, '<li>\$1</li>')
-  .replace(/(<li>.*<\/li>\n?)+/g, '<ul>\$&</ul>')
-  .split('\n\n').map(block => {
-    if (block.match(/^<(h[1-4]|ul|hr|pre)/)) return block;
-    if (block.includes('|')) return convertTable(block);
+```javascript
+// build-pdf-html.js（通用 HTML 构建，withPrototype 参数控制是否嵌图）
+const fs = require('fs'), path = require('path');
+
+function buildHtml(prdPath, cssPath, withPrototype = false) {
+  let md = fs.readFileSync(prdPath, 'utf8');
+  const css = fs.readFileSync(cssPath, 'utf8');
+  const projectDir = path.resolve(path.dirname(prdPath), '..');
+
+  // 若嵌入原型截图：读 manifest，将 [xxx原型] 替换为 base64 <img>
+  if (withPrototype) {
+    const manifestPath = path.join(projectDir, '06-prototype/screenshots/manifest.json');
+    if (fs.existsSync(manifestPath)) {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      manifest.sections.forEach(section => {
+        const placeholder = '[' + section.label + '原型]';
+        const screenshotPath = path.join(projectDir, '06-prototype', section.screenshot);
+        if (fs.existsSync(screenshotPath)) {
+          const b64 = fs.readFileSync(screenshotPath).toString('base64');
+          const imgTag = '<figure class="prototype-figure">'
+            + '<img src="data:image/png;base64,' + b64 + '" alt="' + section.label + '" '
+            + 'style="max-width:100%;border:1px solid #e0e0e0;border-radius:8px;margin:8pt 0;">'
+            + '<figcaption style="text-align:center;font-size:9pt;color:#86868b;margin-top:4pt;">'
+            + section.label + '</figcaption></figure>';
+          md = md.split(placeholder).join(imgTag);
+        }
+      });
+    }
+  }
+
+  // Markdown → HTML（标题/表格/列表/粗体/代码）
+  let html = md
+    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>[^]*?<\/li>\n?)+/g, s => '<ul>' + s + '</ul>');
+
+  html = html.split('\n\n').map(block => {
+    if (block.match(/^<(h[1-4]|ul|hr|pre|figure)/)) return block;
+    if (block.trim().startsWith('|')) return convertTable(block);
     return '<p>' + block + '</p>';
   }).join('\n');
 
-function convertTable(block) {
-  const rows = block.trim().split('\n').filter(r => !r.match(/^\|[-| ]+\|$/));
-  if (rows.length < 1) return block;
-  const header = rows[0].split('|').filter(c => c.trim()).map(c => '<th>' + c.trim() + '</th>').join('');
-  const body = rows.slice(1).map(r => '<tr>' + r.split('|').filter(c => c.trim()).map(c => '<td>' + c.trim() + '</td>').join('') + '</tr>').join('');
-  return '<table><thead><tr>' + header + '</tr></thead><tbody>' + body + '</tbody></table>';
+  function convertTable(block) {
+    const rows = block.trim().split('\n').filter(r => !r.match(/^\|[-| :]+\|$/));
+    if (!rows.length) return block;
+    const cells = r => r.split('|').slice(1, -1).map(c => c.trim());
+    const header = cells(rows[0]).map(c => '<th>' + c + '</th>').join('');
+    const body = rows.slice(1).map(r =>
+      '<tr>' + cells(r).map(c => '<td>' + c + '</td>').join('') + '</tr>'
+    ).join('');
+    return '<table><thead><tr>' + header + '</tr></thead><tbody>' + body + '</tbody></table>';
+  }
+
+  return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">'
+    + '<style>' + css + '</style></head><body>' + html + '</body></html>';
 }
 
-const output = '<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"UTF-8\"><style>' + css + '</style></head><body>' + html + '</body></html>';
-fs.writeFileSync('{项目目录}/05-prd/_tmp_prd.html', output);
-"
+module.exports = { buildHtml };
+```
 
-# 步骤2：Chrome headless 打印 PDF
-CHROME=~/Library/Caches/ms-playwright/chromium-1212/chrome-mac-arm64/"Google Chrome for Testing.app"/Contents/MacOS/"Google Chrome for Testing"
+---
+
+#### 路径 A：纯文字版（5 秒）
+
+```bash
+node -e "
+const { buildHtml } = require('./build-pdf-html.js');
+const fs = require('fs');
+const html = buildHtml(
+  '{项目目录}/05-prd/05-PRD-v1.0.md',
+  'templates/prd-styles/default/pdf-style.css',
+  false   // ← 不嵌图
+);
+fs.writeFileSync('{项目目录}/05-prd/_tmp.html', html);
+"
 "$CHROME" --headless=new --no-sandbox --disable-gpu \
   --print-to-pdf="{项目目录}/05-prd/05-PRD-v1.0.pdf" \
   --print-to-pdf-no-header \
-  "file://{项目目录}/05-prd/_tmp_prd.html" 2>/dev/null
-
-# 步骤3：清理临时文件
-rm "{项目目录}/05-prd/_tmp_prd.html"
+  "file://{项目目录}/05-prd/_tmp.html" 2>/dev/null
+rm "{项目目录}/05-prd/_tmp.html"
 ```
 
-**注意事项**：
-- 上面的 Node.js 转换脚本是简化版，处理常见 Markdown 语法足够，但嵌套列表、复杂代码块等边界情况建议先用 `marked`（已在 `/tmp/node_modules/marked` 缓存），复杂文档时优先使用
-- `marked` 版本：`require('/tmp/node_modules/marked')`，若缓存失效则先 `cd /tmp && npm install marked`
-- Chrome 路径仅适用于 macOS，Windows/Linux 路径不同
+#### 路径 B：含原型截图版（30-40 秒）
+
+```bash
+node -e "
+const { buildHtml } = require('./build-pdf-html.js');
+const fs = require('fs');
+const html = buildHtml(
+  '{项目目录}/05-prd/05-PRD-v1.0.md',
+  'templates/prd-styles/default/pdf-style.css',
+  true    // ← 嵌入原型截图
+);
+fs.writeFileSync('{项目目录}/05-prd/_tmp_illustrated.html', html);
+"
+"$CHROME" --headless=new --no-sandbox --disable-gpu \
+  --print-to-pdf="{项目目录}/05-prd/05-PRD-v1.0-illustrated.pdf" \
+  --print-to-pdf-no-header \
+  "file://{项目目录}/05-prd/_tmp_illustrated.html" 2>/dev/null
+rm "{项目目录}/05-prd/_tmp_illustrated.html"
+```
+
+#### 路径 C：先文字版，后截图版
+
+先执行路径 A，告知用户纯文字 PDF 已就绪，再执行路径 B，完成后告知 illustrated 版本路径。
+
+```
+✅ 纯文字版已生成：05-prd/05-PRD-v1.0.pdf
+⏳ 正在生成带原型截图版，请稍候...
+✅ 截图版已生成：05-prd/05-PRD-v1.0-illustrated.pdf
+```
+
+---
+
+**产物命名约定**：
+
+| 文件 | 说明 |
+|------|------|
+| `05-PRD-v1.0.pdf` | 纯文字版（路径 A/C） |
+| `05-PRD-v1.0-illustrated.pdf` | 含原型截图版（路径 B/C） |
+
+**注意**：`build-pdf-html.js` 在执行时以内联方式写在 `node -e` 里，无需单独建文件；若 PRD 复杂导致命令过长，可先写到 `/tmp/build-pdf-html.js` 再 `require`。
