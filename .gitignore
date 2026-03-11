@@ -36,6 +36,9 @@ temp/
 # Project outputs (may contain sensitive corporate data)
 output/
 
+# Presentation files (local use only)
+AI_PM_提效分享.html
+
 # Documentation build output
 .docs/
 
