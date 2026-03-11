@@ -867,7 +867,7 @@ body {
           <p class="card-desc">不知道从哪里开始就从这里开始。告诉 AI 你想做什么，它会一步步引导你把需求、竞品、PRD、原型都跑完。中途可以随时暂停，下次接着来。</p>
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
-            <div class="card-example-code">/ai-pm "帮年轻人记账的小程序"<br>/ai-pm --team "企业级 CRM 系统"<br>/ai-pm continue<br>/ai-pm list</div>
+            <div class="card-example-code">/ai-pm "帮年轻人记账的小程序"<br>加急 "帮年轻人记账的小程序"    （跳过追问，直跑到原型）<br>/ai-pm --team "企业级 CRM 系统"<br>/ai-pm continue<br>/ai-pm list</div>
           </div>
           <div class="card-footer">
             <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
@@ -969,7 +969,7 @@ body {
             <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
           </div>
           <span class="card-name">PROTOTYPE GENERATOR</span>
-          <p class="card-desc">根据 PRD 生成一个能点击的 HTML 原型，不需要装任何工具，双击文件在浏览器里直接预览。产出：06-prototype/index.html</p>
+          <p class="card-desc">根据 PRD 生成一个能点击的 HTML 原型。首次使用时选设计规范（公司规范 / AI 情境定制 / 主流组件库），项目内记住偏好。双击 index.html 直接预览。</p>
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
             <div class="card-example-code">/ai-pm-prototype</div>
@@ -1151,7 +1151,7 @@ body {
             <span class="card-rarity rarity-p2">P2 ◆</span>
           </div>
           <span class="card-name">DESIGN SPEC</span>
-          <p class="card-desc">上传团队的 UI 规范（截图或 PDF 都行），原型生成时会自动套用设计标准，不用每次再手动说颜色和字体。</p>
+          <p class="card-desc">上传公司/团队 UI 规范，优先级高于 AI 情境定制。原型和仪表盘生成时自动套用，不用每次指定颜色和字体。</p>
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
             <div class="card-example-code">/ai-pm-design-spec upload 公司规范.pdf<br>/ai-pm-design-spec list<br>/ai-pm-design-spec apply 公司规范</div>

@@ -1,6 +1,6 @@
 ---
 name: ai-pm-prototype
-description: 原型生成技能。基于 PRD 生成可交互的单页网页原型，支持移动端和 Web 端。自动应用产品设计规范，默认遵循 Apple HIG。
+description: 原型生成技能。基于 PRD 生成可交互的单页网页原型，支持移动端和 Web 端。首次生成时询问设计规范（公司规范 / AI 情境定制 / 主流组件库），项目内记住偏好。
 argument-hint: "[PRD路径 | --mobile | --web]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 ---
@@ -19,29 +19,32 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 
 ## 执行步骤
 
-### 步骤1：加载设计规范并询问
+### 步骤1：原型配置（一次性）
 
-1. 读取 `{项目目录}/.ai-pm-config.json`，检查 `designSystem` 字段
-2. 用 `ls templates/ui-specs/` 列出所有可用规范目录
+读取 `{项目目录}/.ai-pm-config.json`，检查 `designMode` 和 `deviceType` 字段：
+- **两项都有** → 直接沿用，告知用户，跳至步骤2
+- **缺少任一项** → 用 **AskUserQuestion 工具** 同时询问两个问题（缺哪问哪）
 
-使用 **AskUserQuestion 工具**（交互式单选）询问用户，选项为：
-- 可用规范列表（每条附一行简介，从对应目录的 README.md 提取）
-- Apple HIG（默认） — 通用 Apple 设计规范，适合无品牌定制需求的场景
+**问题一：设计规范**（若 `designMode` 已有则跳过）
 
-用户选择后读取对应 `design-tokens.json`，记录 `$DESIGN_SYSTEM`，继续步骤2。
+先检查 `templates/ui-specs/.active-spec`，若已激活公司规范直接填入，否则询问：
 
-**若项目 `.ai-pm-config.json` 中已有 `designSystem` 字段**：跳过询问，直接加载该规范，并告知用户已自动应用。
+| 选项 | 说明 |
+|------|------|
+| 公司/团队规范 | 应用已上传的 UI 规范；未上传将引导先上传 |
+| AI 情境定制 | 分析产品场景后自主选择风格，确保有记忆点 |
+| 主流组件库 | Ant Design / Material / Element Plus 等（追加询问具体选哪个） |
 
-### 步骤2：询问设备类型
+**问题二：设备类型**（若用户已说明或 `deviceType` 已有则跳过）
 
-使用 **AskUserQuestion 工具**（交互式单选）询问：
+| 选项 | 说明 |
+|------|------|
+| 移动端 | 手机 App，375px 基准宽度 |
+| Web 端 | 桌面浏览器，左侧 Sidebar 布局 |
+| 响应式 | 同时适配手机和电脑 |
+| 混合 | 各页面独立指定设备类型 |
 
-- 移动端（手机 App，375px 基准宽度）
-- Web 端（桌面浏览器，左侧 Sidebar 布局）
-- 响应式（同时适配手机和电脑）
-- 混合（描述各页面各自的设备类型）
-
-**注意**：若用户在调用前已说明设备类型，直接跳过询问。
+两项结果写入 `{项目目录}/.ai-pm-config.json`，继续步骤2。
 
 ### 步骤3：解析 PRD，提取页面信息
 
@@ -55,40 +58,24 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 
 ## 技术规范
 
-### 默认设计规范（Apple HIG）
+### 三档设计规范应用规则
 
-```css
-:root {
-  /* 颜色 */
-  --color-primary: #007AFF;
-  --color-background: #F5F5F7;
-  --color-surface: #FFFFFF;
-  --color-text-primary: #1D1D1F;
-  --color-text-secondary: #86868B;
-  --color-success: #34C759;
-  --color-danger: #FF3B30;
+**① 公司/团队规范**
+加载 `templates/ui-specs/{规范名}/design-tokens.json`，将其中颜色、字体、间距、圆角 Token 映射为 CSS variables 写入 `<style>` 标签。
 
-  /* 字体 */
-  --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
-  --font-size-sm: 14px;
-  --font-size-base: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 24px;
+**② AI 情境定制**
+不预设 CSS variables。生成 HTML 前先分析产品情境：
+- 行业属性（教育 / 金融 / 电商 / 工具…）
+- 用户群体（学生 / 教师 / 消费者 / 企业用户…）
+- 产品类型（移动端 App / B 端管理台 / C 端内容…）
 
-  /* 间距 */
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
+确定一个清晰的设计方向并显式说明（如："教育 B 端管理台 → 采用简洁专业的数据密度型风格，主色深蓝，无装饰"），再执行设计。确保每次有鲜明的设计主张，不走保守路线。
 
-  /* 圆角 */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-
-  /* 阴影 */
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
-}
-```
+**③ 主流组件库**
+追加询问具体选哪个组件库（Ant Design / Material Design / Element Plus / Arco Design），按对应设计规范生成 CSS 风格和组件结构：
+- Ant Design：`--primary: #1677ff`，圆角 6px，表格/表单密集布局
+- Material Design：`--primary: #6750A4`，圆角 12px，Material You 风格
+- Element Plus：`--primary: #409EFF`，圆角 4px，企业中后台风格
 
 ### 移动端布局模式
 
@@ -218,21 +205,18 @@ require('fs').writeFileSync(
 提示：点击可交互元素体验流程，数据为模拟数据。
 ```
 
-### 6.2 交互确认（必须执行）
+### 6.2 下一步选择（必须执行）
 
 输出完成摘要后，**立即**使用 **AskUserQuestion 工具**询问：
 
-```
-选项A：原型有问题，需要修改
-  描述：说明具体要改什么，继续完善原型
+| 选项 | 说明 |
+|------|------|
+| 原型有问题，需要修改 | 说明具体要改什么，改完后重新截图，再回到本步骤 |
+| 进行六角色评审 | 自动将原型截图更新至 PRD，启动评审（推荐）|
+| 完成，不评审 | 自动将原型截图更新至 PRD，触发知识沉淀，项目收尾 |
 
-选项B：原型没问题，生成带截图的 PRD
-  描述：调用 ai-pm-prd 技能，生成含原型截图版的 PRD（DOCX 或 illustrated PDF）
+**选「修改」时**：处理完用户反馈，重新执行步骤5截图，然后再次执行本步骤。
 
-选项C：两个都做——先修改原型，再生成 PRD
-  描述：先处理原型反馈，完成后自动继续生成 PRD
-```
+**选「评审」时**：先将截图写入 PRD，再调用 `ai-pm-review` 技能执行六角色评审，完成后触发知识沉淀。
 
-**用户选 A 或 C 时**：根据用户描述的问题修改原型，修改完毕后重新截图（重新执行步骤5），然后再次询问是否继续生成 PRD。
-
-**用户选 B 时**：直接调用 ai-pm-prd 技能，并告知用户截图已就绪，建议选择含截图的导出格式（DOCX 或 illustrated PDF）。
+**选「完成」时**：将截图写入 PRD，触发 knowledge sync，输出项目总结。
