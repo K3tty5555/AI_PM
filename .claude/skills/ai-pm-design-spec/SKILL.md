@@ -1,17 +1,17 @@
 ---
 name: ai-pm-design-spec
-description: 设计规范技能。加载公司或团队的 UI 规范，让 ai-pm-prototype 生成的原型自动遵守你们的设计标准，而不是默认的 Apple HIG。
+description: 设计规范技能。上传公司或团队的 UI 规范，让所有 HTML 输出（原型、仪表盘）自动遵守你们的设计标准，优先级高于 AI 情境定制。
 argument-hint: "[命令: upload/list/apply/show/reset] [规范名]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ---
 
 # ai-pm-design-spec - 设计规范
 
-> 用公司/团队的 UI 规范替换默认 Apple HIG，让原型更贴近真实产品
+> 上传公司/团队的 UI 规范，优先级高于 AI 情境定制，让原型更贴近真实产品
 
 ## 角色说明
 
-- 解决不同公司/团队有自己 UI 规范、原型却默认用 Apple HIG 的问题
+- 解决不同公司/团队有自己 UI 规范、原型却用通用风格的问题
 - 上传规范后，`ai-pm-prototype` 生成原型时自动应用，无需每次手动指定
 - 规范以设计 Token 形式存储，清晰、可版本化管理
 
@@ -23,7 +23,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 | `list` | 列出所有已保存的设计规范 |
 | `apply [规范名]` | 将指定规范设为当前生效规范 |
 | `show` | 展示当前生效规范的 Token 摘要 |
-| `reset` | 清除当前规范设置，恢复 Apple HIG 默认值 |
+| `reset` | 清除当前规范设置，恢复为 AI 情境定制 |
 
 ## upload 执行步骤
 
@@ -91,24 +91,12 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ## reset 执行步骤
 
 删除 `templates/ui-specs/.active-spec` 文件，
-输出确认：已恢复 Apple HIG 默认值，后续原型将使用以下默认设置。
-
-## 默认值（Apple HIG）
-
-未设置规范时，`ai-pm-prototype` 自动使用：
-
-| Token | 默认值 |
-|-------|--------|
-| 字体族 | -apple-system, PingFang SC, sans-serif |
-| 背景色 | #f5f5f7 |
-| 主色 | #007aff |
-| 圆角 | 10px |
-| 页面边距 | 24px |
+输出确认：已清除公司规范，后续 HTML 输出将使用 AI 情境定制（frontend-design 根据产品场景自主设计）。
 
 ## 与主技能集成
 
-`ai-pm-prototype` 在生成原型（Phase 6）时：
+`ai-pm-prototype` 在生成原型时：
 1. 检查 `templates/ui-specs/.active-spec` 是否存在
-2. 若存在，加载对应 Token，替换模板中的 CSS 变量
-3. 若不存在，使用上方 Apple HIG 默认值
+2. 若存在 → 加载对应 Token，替换 CSS 变量（公司规范模式）
+3. 若不存在 → 按项目 `.ai-pm-config.json` 的 `designMode` 执行（AI 情境定制 / 主流组件库）
 
