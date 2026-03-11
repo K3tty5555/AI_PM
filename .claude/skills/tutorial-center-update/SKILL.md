@@ -260,6 +260,24 @@ function scrollToSec(id) {
 ./.claude/skills/tutorial-center-update/validate-html.sh
 ```
 
+## ⚠️ 核心原则：增量更新，不重写
+
+**现有 `AI_PM_教程中心.html` 是经过多轮打磨的复杂文件（1700+ 行），包含 SVG 六边形工作流节点、稀有度色条、暗色代码块、汉堡移动导航、速查表、Back-to-top 等组件。每次更新必须增量编辑，绝对不能整体重写。**
+
+### 强制执行步骤（违反即视为错误）
+
+1. **先读文件**：用 Read 工具读取 `AI_PM_教程中心.html`，记录当前行数
+2. **识别差异**：对比 skill 列表变化、persona 变更、版本号更新等，明确需要改哪几处
+3. **精准 Edit**：用 Edit 工具做局部插入/替换，每次只改需要改的内容
+4. **禁止 Write**：不得用 Write 工具覆盖整个文件，不得从空白重新生成 HTML
+5. **验证行数**：编辑后文件行数必须 ≥ 原始行数（新增内容会增加行数，不应大幅减少）
+
+### 什么情况才允许重写？
+
+只有在用户明确说"我知道会丢失现有样式，请从头生成新版本"时，才可以整体重写。普通的"更新教程中心"指令 = 增量更新，不是重写。
+
+---
+
 ## 工作流程
 
 ### Phase 1: 扫描 Skills
@@ -292,22 +310,34 @@ find .claude/skills -name "SKILL.md" -type f
 | `/ai-pm-story` | 用户故事 | 产品 | 生成用户故事和验收标准 |
 | `/ai-pm-prd` | PRD 生成 | 产品 | 输出完整产品需求文档 |
 | `/ai-pm-prototype` | 原型生成 | 设计 | 生成可交互 HTML 原型 |
-| `/ai-pm-review` | 需求评审 | 产品 | 九角色专家评审，支持多轮迭代 |
+| `/ai-pm-review` | 需求评审 | 产品 | 六角色评审（产品/设计/前端/后端/测试/运营），支持多轮迭代 |
 | `/agent-team` | 多代理引擎 | 协作 | 内部引擎，通常由 `/ai-pm --team` 触发，也可直接调用 |
 | `/tutorial-center-update` | 教程中心更新 | 工具 | 扫描技能，生成离线 HTML 教程 |
 
 **注意**：不包含 `ai-pm-config`（已移除）。扫描到未在上表中的 SKILL.md 时，按文件元数据自动补充到列表末尾。
 
-### Phase 2: 生成 HTML
+### Phase 2: 更新 HTML（增量）
 
-**内联内容**：
-1. CSS Variables → 设计系统（颜色/字体/间距/动画）
-2. CSS Animations → Scroll Reveal + Tab Transition
-3. JavaScript → Tab切换 + 键盘/触摸 + 进度条 + IntersectionObserver
-4. SKILLS_DATA → 技能列表
-5. GUIDE_CONTENT → Markdown 教程（原生解析）
+**执行前必做**：
+```
+1. Read AI_PM_教程中心.html → 记录行数（期望 1700+）
+2. 对比差异：
+   - 新增/删除了哪些 skill 卡片？
+   - persona / 版本号是否变更？
+   - 导航锚点是否需要调整？
+3. 仅对有差异的部分执行 Edit
+```
 
-**HTML 结构**：
+**常见增量操作示例**：
+
+| 需要更新的内容 | 操作 | 注意事项 |
+|--------------|------|---------|
+| 新增 skill 卡片 | Edit：在对应 tab 末尾插入新 `<div class="skill-card">` | 复制相邻卡片格式，data-delay 递增 |
+| 修改 persona 说明 | Edit：找到 hero 中的 badge 文本，局部替换 | 保留 animation/style 不变 |
+| 更新版本号 | Edit：找 `v2.x.x` 字符串，精准替换 | 同步更新 footer + changelog |
+| 删除 skill | Edit：删除对应 `<div class="skill-card">` 块 | 不影响其他卡片的 data-delay |
+
+**如需了解现有 HTML 的完整结构**（如首次接触此文件），参考以下骨架：
 ```html
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -368,6 +398,7 @@ find .claude/skills -name "SKILL.md" -type f
 ### Phase 3: 全量自检
 
 **静态检查**：
+- [ ] 文件行数 ≥ 更新前行数（增量编辑不会大幅减少行数）
 - [ ] 文件存在
 - [ ] 无 CDN 依赖
 - [ ] 无本地文件引用
@@ -411,6 +442,8 @@ find .claude/skills -name "SKILL.md" -type f
 
 | 问题 | 原因 | 解决 |
 |-----|------|------|
+| **更新后页面大幅简化，组件丢失** | 用 Write 整体重写了 HTML | 从备份恢复（`AI_PM_教程中心V2.html`），改用 Edit 增量编辑 |
+| 更新后行数从 1700+ 降至 600- | 同上，整体重写 | 同上 |
 | Tab 不切换 | JS 语法错误 | 检查 switchTab 函数 |
 | 动画不生效 | CSS 类名错误 | 检查 reveal/visible 类 |
 | 进度条不动 | 滚动事件未触发 | 检查 scroll 监听器 |
