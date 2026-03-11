@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI_PM TERMINAL v2.2.0 · K3TTY_WU</title>
+<title>AI_PM TERMINAL v2.3.0 · K3TTY_WU</title>
 <style>
 /* ===== CSS VARIABLES — EDITORIAL ENDFIELD ===== */
 :root {
@@ -708,7 +708,7 @@ body {
     <span class="brand-slash">//</span>
     <div>
       <span class="brand-name">AI_PM</span>
-      <span class="brand-ver"> v2.2.0</span>
+      <span class="brand-ver"> v2.3.0</span>
     </div>
   </a>
 
@@ -745,14 +745,14 @@ body {
       <div class="tag-block"><span>CLAUDE CODE · SKILL SUITE</span></div>
       <p class="hero-subtitle">
         描述你想做的产品，AI 帮你研究市场、拆功能、写 PRD、做原型，<br>
-        再从产品、开发、设计等九个角色的视角帮你找漏洞。<br>
+        再从产品、开发、设计、测试、运营六个角色的视角帮你找漏洞。<br>
         产出文档可直接导入飞书。
       </p>
-      <a href="#quickstart" class="hero-cta ripple-host">
+<a href="#quickstart" class="hero-cta ripple-host">
         开始使用 <span style="font-size:13px">▶</span>
       </a>
       <div class="hero-features">
-        <span class="feat-tag">九角色并行评审</span>
+        <span class="feat-tag">六角色并行评审</span>
         <span class="feat-tag">PRD 导入飞书</span>
         <span class="feat-tag">原型双击预览</span>
         <span class="feat-tag">分身学你的风格</span>
@@ -990,7 +990,7 @@ body {
             <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
           </div>
           <span class="card-name">REQUIREMENTS REVIEW</span>
-          <p class="card-desc">模拟一场评审会。产品、开发、设计、测试、运营、商务、法务、目标用户、CEO——九个角色同时开口，从各自立场找问题、给意见。产出：08-review-report-v1.md</p>
+          <p class="card-desc">模拟一场评审会。产品、设计、前端、后端、测试、运营——六个角色同时开口，从各自立场找问题、给意见。产出：08-review-report-v1.md</p>
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
             <div class="card-example-code">/ai-pm-review<br>/ai-pm-review --round=2    （第二轮修改后再评）</div>
@@ -1085,6 +1085,27 @@ body {
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
             <div class="card-example-code">/ai-pm-data 用户行为数据.xlsx<br>/ai-pm-data report.csv<br>/ai-pm-data metrics.json</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-ext">EXT</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="4">
+        <div class="card-body" style="--prog:88%">
+          <div class="rarity-stripe stripe-teal"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm --team</span>
+            <span class="card-rarity rarity-p1">P1 ◆◆</span>
+          </div>
+          <span class="card-name">MULTI-AGENT MODE</span>
+          <p class="card-desc">复杂需求用多代理并行处理。产品分析师拆需求、竞品研究员做市场分析、主控 PM 整合产出，比标准模式快约 40%。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm --team "企业级 CRM 系统"<br>/agent-team "需要多角色协作的复杂需求"</div>
           </div>
           <div class="card-footer">
             <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
@@ -1329,11 +1350,11 @@ body {
       <div class="tl-label">
         <span class="tl-name">需求评审</span>
         <span class="tl-cmd">/ai-pm-review</span>
-        <span class="tl-info">// 九角色评审会</span>
+        <span class="tl-info">// 六角色评审会</span>
       </div>
       <div class="node-detail">
         <div class="node-detail-inner">
-          <div class="nd-row"><span class="nd-label">阶段</span>九角色专家并行评审</div>
+          <div class="nd-row"><span class="nd-label">阶段</span>六角色并行评审</div>
           <div class="nd-row"><span class="nd-label">产物</span>08-review-report-v1.md</div>
           <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm-review',this)">/ai-pm-review</button></div>
         </div>
@@ -1368,7 +1389,7 @@ body {
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-story')"><span class="ref-cmd">/ai-pm-story</span><span class="ref-desc">用户故事</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-prd')"><span class="ref-cmd">/ai-pm-prd</span><span class="ref-desc">PRD 生成</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-prototype')"><span class="ref-cmd">/ai-pm-prototype</span><span class="ref-desc">原型生成</span><span class="ref-ok">✓ COPIED</span></div>
-      <div class="ref-row" onclick="refCopy(this, '/ai-pm-review')"><span class="ref-cmd">/ai-pm-review</span><span class="ref-desc">需求评审（九角色）</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-review')"><span class="ref-cmd">/ai-pm-review</span><span class="ref-desc">需求评审（六角色）</span><span class="ref-ok">✓ COPIED</span></div>
     </div>
 
     <div>
@@ -1401,11 +1422,11 @@ body {
     <span>SYSTEM STATUS: <span class="footer-on">ONLINE</span></span>
   </div>
   <div class="footer-mid">
-    <span class="footer-slash">//</span>AI_PM v2.2.0
+    <span class="footer-slash">//</span>AI_PM v2.3.0
   </div>
   <div class="footer-right">
     <div>© 2026 K3TTY_WU</div>
-    <div>最后更新: 2026-03-11</div>
+    <div>最后更新: 2026-03-11 · 新增 KettyWu 人设 + --team 模式</div>
   </div>
 </footer>
 
