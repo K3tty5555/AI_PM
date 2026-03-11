@@ -1,1486 +1,1711 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI_PM - AI 产品经理教程中心</title>
-  <style>
-    :root {
-      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
-      --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
-      --bg: #f5f5f7;
-      --surface: #ffffff;
-      --text: #1d1d1f;
-      --text-secondary: #6e6e73;
-      --text-tertiary: #86868b;
-      --border: rgba(0,0,0,0.08);
-      --accent: #0071e3;
-      --space-1: 4px;
-      --space-2: 8px;
-      --space-3: 12px;
-      --space-4: 16px;
-      --space-5: 20px;
-      --space-6: 24px;
-      --space-8: 32px;
-      --space-10: 40px;
-      --space-12: 48px;
-      --space-16: 64px;
-      --space-20: 80px;
-      --space-24: 96px;
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 18px;
-      --radius-xl: 24px;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
-      --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
-      --nav-h: 52px;
-      --progress-h: 3px;
-      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: var(--font-sans);
-      background: var(--bg);
-      color: var(--text);
-      font-size: 17px;
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    /* Progress Bar */
-    #progressBar {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: var(--progress-h);
-      background: var(--accent);
-      transform-origin: left;
-      transform: scaleX(0);
-      z-index: 1000;
-      transition: background var(--transition);
-    }
-
-    /* Navigation */
-    .nav {
-      position: fixed;
-      top: var(--progress-h); left: 0; right: 0;
-      height: var(--nav-h);
-      background: rgba(245,245,247,0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 var(--space-6);
-      z-index: 900;
-    }
-
-    .nav-logo {
-      font-size: 17px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.02em;
-      flex-shrink: 0;
-    }
-
-    .nav-logo span {
-      color: var(--accent);
-      transition: color var(--transition);
-    }
-
-    .nav-tabs {
-      display: flex;
-      gap: var(--space-1);
-      align-items: center;
-    }
-
-    .nav-tab {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: var(--space-2) var(--space-4);
-      border-radius: 20px;
-      font-size: 15px;
-      font-family: var(--font-sans);
-      color: var(--text-secondary);
-      font-weight: 400;
-      transition: all var(--transition);
-      white-space: nowrap;
-    }
-
-    .nav-tab:hover { color: var(--text); background: rgba(0,0,0,0.04); }
-
-    .nav-tab.active {
-      color: var(--accent);
-      font-weight: 600;
-      background: rgba(0,113,227,0.08);
-    }
-
-    /* Tab Panels */
-    .tab-panels { padding-top: calc(var(--nav-h) + var(--progress-h)); }
-
-    .tab-panel { display: none; min-height: 100vh; }
-    .tab-panel.active { display: block; }
-
-    /* Container */
-    .container {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 0 var(--space-6);
-    }
-
-    .text-container {
-      max-width: 680px;
-      margin: 0 auto;
-    }
-
-    /* Section */
-    .section { padding: var(--space-20) 0; }
-    .section-sm { padding: var(--space-12) 0; }
-
-    .section-eyebrow {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: var(--space-3);
-      transition: color var(--transition);
-    }
-
-    .section-title {
-      font-size: clamp(32px, 5vw, 40px);
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
-      margin-bottom: var(--space-5);
-    }
-
-    .section-subtitle {
-      font-size: 21px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-      font-weight: 400;
-    }
-
-    /* Hero */
-    .hero {
-      min-height: calc(100vh - var(--nav-h) - var(--progress-h));
-      display: flex;
-      align-items: center;
-      padding: var(--space-20) var(--space-6);
-      text-align: center;
-    }
-
-    .hero-inner { width: 100%; }
-
-    .hero-eyebrow {
-      display: inline-block;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: var(--space-5);
-      transition: color var(--transition);
-    }
-
-    .hero-title {
-      font-size: clamp(48px, 8vw, 64px);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1.05;
-      margin-bottom: var(--space-5);
-      color: var(--text);
-    }
-
-    .hero-subtitle {
-      font-size: 21px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-      max-width: 560px;
-      margin: 0 auto var(--space-10);
-      font-weight: 400;
-    }
-
-    .hero-actions {
-      display: flex;
-      gap: var(--space-4);
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      padding: 14px 28px;
-      border-radius: 980px;
-      font-size: 17px;
-      font-weight: 500;
-      font-family: var(--font-sans);
-      cursor: pointer;
-      text-decoration: none;
-      border: none;
-      transition: all var(--transition);
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: white;
-      transition: background var(--transition), opacity var(--transition), transform var(--transition);
-    }
-    .btn-primary:hover { opacity: 0.85; transform: scale(1.02); }
-
-    .btn-secondary {
-      background: rgba(0,0,0,0.05);
-      color: var(--text);
-    }
-    .btn-secondary:hover { background: rgba(0,0,0,0.09); }
-
-    /* Feature Cards */
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: var(--space-5);
-      margin-top: var(--space-10);
-    }
-
-    .feature-card {
-      background: var(--surface);
-      border-radius: var(--radius-xl);
-      padding: var(--space-8);
-      box-shadow: var(--shadow-md);
-      transition: transform var(--transition), box-shadow var(--transition);
-    }
-
-    .feature-card:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .feature-icon {
-      font-size: 36px;
-      margin-bottom: var(--space-5);
-      display: block;
-    }
-
-    .feature-title {
-      font-size: 21px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      margin-bottom: var(--space-3);
-    }
-
-    .feature-desc {
-      font-size: 15px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-    }
-
-    /* Code Block */
-    .code-block {
-      background: #1d1d1f;
-      border-radius: var(--radius-lg);
-      padding: var(--space-8);
-      margin-top: var(--space-8);
-      text-align: left;
-      overflow-x: auto;
-    }
-
-    .code-block pre {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      line-height: 1.6;
-      color: #f5f5f7;
-      white-space: pre;
-    }
-
-    .code-comment { color: #6e6e73; }
-    .code-cmd { color: #30d158; }
-    .code-string { color: #ff9f0a; }
-
-    /* Skill Categories */
-    .skills-section { padding: var(--space-16) 0; }
-
-    .skill-category { margin-bottom: var(--space-12); }
-
-    .skill-category-header {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      margin-bottom: var(--space-6);
-    }
-
-    .skill-category-icon { font-size: 24px; }
-
-    .skill-category-title {
-      font-size: 21px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .skill-category-count {
-      font-size: 13px;
-      color: var(--text-tertiary);
-      background: rgba(0,0,0,0.05);
-      padding: 2px 10px;
-      border-radius: 20px;
-      margin-left: auto;
-    }
-
-    .skill-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: var(--space-4);
-    }
-
-    .skill-card {
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      padding: var(--space-6);
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--border);
-      transition: all var(--transition);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .skill-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: var(--accent);
-      opacity: 0;
-      transition: opacity var(--transition);
-    }
-
-    .skill-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-    }
-
-    .skill-card:hover::before { opacity: 1; }
-
-    .skill-card-top {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--space-3);
-      margin-bottom: var(--space-3);
-    }
-
-    .skill-card-icon {
-      font-size: 28px;
-      flex-shrink: 0;
-      line-height: 1;
-    }
-
-    .skill-card-name {
-      font-size: 17px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      line-height: 1.2;
-    }
-
-    .skill-card-cmd {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--accent);
-      background: rgba(0,113,227,0.08);
-      padding: 2px 8px;
-      border-radius: 6px;
-      display: inline-block;
-      margin-top: var(--space-1);
-      transition: background var(--transition), color var(--transition);
-    }
-
-    .skill-card-desc {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-    }
-
-    .skill-badge {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 20px;
-      margin-top: var(--space-3);
-      background: rgba(0,0,0,0.05);
-      color: var(--text-tertiary);
-    }
-
-    /* Guide */
-    .guide-section { padding: var(--space-16) 0; }
-
-    .guide-step {
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      padding: var(--space-6) var(--space-8);
-      margin-bottom: var(--space-4);
-      display: flex;
-      gap: var(--space-6);
-      align-items: flex-start;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--border);
-    }
-
-    .guide-step-num {
-      flex-shrink: 0;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-      font-weight: 700;
-      transition: background var(--transition);
-    }
-
-    .guide-step-title {
-      font-size: 17px;
-      font-weight: 600;
-      margin-bottom: var(--space-2);
-    }
-
-    .guide-step-desc {
-      font-size: 15px;
-      color: var(--text-secondary);
-    }
-
-    .guide-workflow {
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      padding: var(--space-6);
-      margin-bottom: var(--space-3);
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--border);
-    }
-
-    .guide-workflow-title {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: var(--space-2);
-      color: var(--text);
-    }
-
-    .guide-workflow-cmd {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-bottom: var(--space-2);
-      background: rgba(0,0,0,0.03);
-      padding: var(--space-2) var(--space-3);
-      border-radius: var(--radius-sm);
-      display: block;
-    }
-
-    .guide-workflow-desc { font-size: 14px; color: var(--text-tertiary); }
-
-    .tip-card {
-      background: linear-gradient(135deg, rgba(0,113,227,0.06), rgba(0,113,227,0.02));
-      border: 1px solid rgba(0,113,227,0.15);
-      border-radius: var(--radius-lg);
-      padding: var(--space-5) var(--space-6);
-      margin-bottom: var(--space-3);
-    }
-
-    .tip-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: var(--space-2);
-      transition: color var(--transition);
-    }
-
-    .tip-desc {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-    }
-
-    /* Workflow */
-    .workflow-card {
-      background: var(--surface);
-      border-radius: var(--radius-xl);
-      padding: var(--space-8);
-      margin-bottom: var(--space-5);
-      box-shadow: var(--shadow-md);
-      transition: transform var(--transition), box-shadow var(--transition);
-    }
-
-    .workflow-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .workflow-header {
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
-      margin-bottom: var(--space-5);
-    }
-
-    .workflow-num {
-      flex-shrink: 0;
-      width: 44px;
-      height: 44px;
-      border-radius: var(--radius-md);
-      background: var(--accent);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      font-weight: 700;
-      transition: background var(--transition);
-    }
-
-    .workflow-title {
-      font-size: 21px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .workflow-subtitle {
-      font-size: 14px;
-      color: var(--text-tertiary);
-      margin-top: 2px;
-    }
-
-    .workflow-flow {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: var(--space-2);
-      margin-bottom: var(--space-5);
-      padding: var(--space-5);
-      background: var(--bg);
-      border-radius: var(--radius-md);
-    }
-
-    .flow-step {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 6px 14px;
-      font-size: 13px;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    .flow-arrow {
-      color: var(--text-tertiary);
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .workflow-desc {
-      font-size: 15px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-
-    .workflow-cmd-block {
-      background: #1d1d1f;
-      border-radius: var(--radius-md);
-      padding: var(--space-4) var(--space-5);
-      margin-top: var(--space-4);
-    }
-
-    .workflow-cmd-block code {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      color: #30d158;
-    }
-
-    /* About */
-    .changelog-item {
-      display: flex;
-      gap: var(--space-8);
-      padding: var(--space-8) 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .changelog-item:last-child { border-bottom: none; }
-
-    .changelog-version {
-      flex-shrink: 0;
-      width: 60px;
-    }
-
-    .changelog-version-tag {
-      display: inline-block;
-      font-size: 13px;
-      font-weight: 700;
-      font-family: var(--font-mono);
-      color: var(--accent);
-      background: rgba(0,113,227,0.1);
-      padding: 3px 10px;
-      border-radius: 6px;
-      transition: color var(--transition), background var(--transition);
-    }
-
-    .changelog-date {
-      font-size: 13px;
-      color: var(--text-tertiary);
-      margin-bottom: var(--space-2);
-    }
-
-    .changelog-desc {
-      font-size: 15px;
-      color: var(--text);
-      line-height: 1.5;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: var(--space-4);
-      margin-top: var(--space-8);
-    }
-
-    .info-card {
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      padding: var(--space-6);
-      text-align: center;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--border);
-    }
-
-    .info-card-icon { font-size: 28px; margin-bottom: var(--space-3); }
-
-    .info-card-title {
-      font-size: 17px;
-      font-weight: 600;
-      margin-bottom: var(--space-2);
-    }
-
-    .info-card-desc {
-      font-size: 14px;
-      color: var(--text-secondary);
-    }
-
-    /* Scroll Reveal */
-    .reveal {
-      opacity: 0;
-      transform: translateY(24px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
-    }
-
-    .reveal.visible {
-      opacity: 1;
-      transform: none;
-    }
-
-    .reveal-delay-1 { transition-delay: 0.1s; }
-    .reveal-delay-2 { transition-delay: 0.2s; }
-    .reveal-delay-3 { transition-delay: 0.3s; }
-
-    /* Divider */
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: var(--space-12) 0;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .nav { padding: 0 var(--space-4); }
-      .nav-tab { padding: var(--space-2) var(--space-3); font-size: 14px; }
-      .hero { padding: var(--space-12) var(--space-4); }
-      .hero-title { font-size: 40px; }
-      .hero-subtitle { font-size: 17px; }
-      .section { padding: var(--space-12) 0; }
-      .container { padding: 0 var(--space-4); }
-      .guide-step { flex-direction: column; }
-      .changelog-item { flex-direction: column; gap: var(--space-3); }
-      .workflow-flow { gap: var(--space-1); }
-      .btn { padding: 12px 20px; font-size: 15px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI_PM TERMINAL v2.2.0 · K3TTY_WU</title>
+<style>
+/* ===== CSS VARIABLES — EDITORIAL ENDFIELD ===== */
+:root {
+  --white:       #FFFFFF;
+  --light:       #F5F5F5;
+  --dark:        #191919;
+  --dark2:       #252525;
+  --yellow:      #fffa00;
+  --yellow-dim:  rgba(255,250,0,0.08);
+  --text:        #141414;
+  --text-title:  #141414;
+  --text-muted:  #6b6b6b;
+  --border:      rgba(0,0,0,0.10);
+  --border-y:    rgba(255,250,0,0.5);
+  --green:       #4CAF50;
+  --font-mono:   'Courier New', 'Consolas', monospace;
+  --font-sans:   -apple-system, 'PingFang SC', sans-serif;
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --tr:          0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  background: var(--light);
+  color: var(--text);
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--light); }
+::-webkit-scrollbar-thumb { background: var(--yellow); }
+
+/* ===== NAV ===== */
+#hud-nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 54px; z-index: 1000;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 0 56px;
+}
+.hud-brand {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+}
+.brand-slash {
+  font-family: var(--font-sans); font-size: 20px; font-weight: 900;
+  color: var(--yellow); letter-spacing: -2px; line-height: 1;
+}
+.brand-name {
+  font-family: var(--font-mono); font-size: 12px;
+  font-weight: bold; letter-spacing: 2px; color: var(--text-title);
+}
+.brand-ver {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 1px; color: var(--text-muted);
+}
+.hud-tabs { display: flex; }
+.hud-tab {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-muted); padding: 0 20px; height: 54px;
+  display: flex; align-items: center;
+  cursor: pointer; border: none; background: none;
+  position: relative; transition: color var(--tr);
+}
+.hud-tab:hover { color: var(--text-title); }
+.hud-tab.active { color: var(--text-title); font-weight: bold; }
+.hud-tab.active::after {
+  content: ''; position: absolute;
+  bottom: 0; left: 16px; right: 16px; height: 2px;
+  background: var(--yellow);
+  animation: lineIn 0.3s ease; transform-origin: left;
+}
+@keyframes lineIn { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.hud-status {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text-muted); white-space: nowrap;
+}
+.hud-clock { color: var(--text-title); letter-spacing: 1.5px; font-weight: bold; }
+.status-dot {
+  width: 7px; height: 7px; background: var(--green);
+  border-radius: 50%; flex-shrink: 0;
+  animation: dotPulse 2.5s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(76,175,80,0.5); }
+  50%      { opacity:0.7; box-shadow:0 0 0 4px rgba(76,175,80,0); }
+}
+
+/* ===== HERO ===== */
+#hero {
+  min-height: 100vh;
+  background: var(--white);
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  padding: 108px 80px 64px;
+  position: relative; overflow: hidden;
+  scroll-margin-top: 54px;
+}
+/* Right edge yellow accent bar */
+.hero-accent-bar {
+  position: absolute; top: 54px; right: 0; bottom: 0;
+  width: 8px; background: var(--yellow);
+}
+/* Giant display title */
+.hero-title {
+  font-family: var(--font-sans);
+  font-size: clamp(76px, 12.5vw, 164px);
+  font-weight: 900; line-height: 0.86;
+  letter-spacing: -4px;
+}
+.line-ai   { display: block; color: var(--text-title); }
+.line-prod { display: block; color: var(--text-title); }
+.line-mgr  { display: block; color: rgba(29,29,31,0.08); }
+.hero-slash { color: var(--yellow); }
+
+/* Hero footer row */
+.hero-foot {
+  display: flex; align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 56px; padding-right: 40px;
+}
+.hero-info { }
+.tag-block {
+  display: inline-block; background: var(--yellow);
+  padding: 5px 14px; margin-bottom: 18px;
+}
+.tag-block span {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 3px; font-weight: bold;
+  color: #000; text-transform: uppercase;
+}
+.hero-subtitle {
+  font-family: var(--font-mono); font-size: 12px;
+  letter-spacing: 1px; color: var(--text-muted);
+  line-height: 1.9; max-width: 420px;
+}
+.hero-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-top: 28px;
+  font-family: var(--font-mono); font-size: 11px;
+  font-weight: bold; letter-spacing: 2.5px;
+  color: var(--yellow); background: var(--text-title);
+  border: none; padding: 14px 30px; cursor: pointer;
+  transition: background var(--tr);
+  text-decoration: none; text-transform: uppercase;
+}
+.hero-cta:hover { background: #333; }
+.hero-features {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;
+}
+.feat-tag {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px;
+  color: var(--text-muted); border: 1px solid var(--border);
+  padding: 4px 12px; text-transform: uppercase; white-space: nowrap;
+}
+.hero-stats { display: flex; gap: 44px; align-items: flex-end; }
+.stat-block {
+  text-align: right;
+  opacity: 0; transform: translateY(20px);
+  transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out);
+}
+.stat-block.visible { opacity: 1; transform: translateY(0); }
+.stat-number {
+  font-family: var(--font-sans); font-size: 56px; font-weight: 900;
+  color: var(--text-title); line-height: 1; display: block;
+}
+.stat-label {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 3.5px; color: var(--text-muted); text-transform: uppercase;
+}
+
+/* Scroll margin */
+#quickstart, #skills, #workflow, #reference { scroll-margin-top: 54px; }
+
+/* ===== SECTION TITLE — ENDFIELD ADAPTATION ===== */
+.sec-header { margin-bottom: 52px; }
+
+/* Slide-in label block: // + EN text */
+.sec-label-block {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 2rem; margin-bottom: 10px;
+  transform: translateX(-28px); opacity: 0;
+  transition: transform 0.5s ease-out, opacity 0.35s ease;
+}
+.sec-header.sh-in .sec-label-block { transform: translateX(0); opacity: 1; }
+
+.sec-sl {
+  font-family: var(--font-sans); font-weight: 900; font-size: 18px;
+  color: var(--yellow); letter-spacing: -2px; line-height: 1;
+}
+.sec-en {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: var(--text-muted); font-weight: bold; white-space: nowrap;
+}
+
+/* Chinese main title — fades up with slight delay */
+.sec-cn {
+  display: block;
+  font-family: var(--font-sans); font-size: 3rem;
+  font-weight: 900; line-height: 1; letter-spacing: -0.03em;
+  color: var(--text-title);
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 0.55s ease 0.18s, transform 0.55s ease 0.18s;
+}
+.sec-header.sh-in .sec-cn { opacity: 1; transform: translateY(0); }
+
+/* Section-level reveal (content below title) */
+.sec-reveal {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1) 0.1s,
+              transform 0.7s cubic-bezier(0.16,1,0.3,1) 0.1s;
+}
+.sec-reveal.sr-in { opacity: 1; transform: translateY(0); }
+
+/* ===== SECTION DIVIDER ===== */
+.sec-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1), transparent);
+  margin: 0 80px;
+}
+
+/* ===== QUICK START ===== */
+#quickstart { padding: 88px 80px; background: var(--light); }
+.hud-box {
+  border: 1px solid var(--border);
+  background: var(--white);
+  position: relative; padding: 52px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+}
+.hud-box::before { content: ''; position: absolute; top: 0; left: 24px; width: 40px; height: 2px; background: var(--yellow); }
+.hud-box::after  { content: ''; position: absolute; bottom: 0; right: 24px; width: 40px; height: 2px; background: var(--yellow); opacity: 0.4; }
+.hud-corner { position: absolute; width: 14px; height: 14px; border-color: rgba(255,250,0,0.4); border-style: solid; }
+.hud-corner.tl { top: 8px; left: 8px; border-width: 1.5px 0 0 1.5px; }
+.hud-corner.tr { top: 8px; right: 8px; border-width: 1.5px 1.5px 0 0; }
+.hud-corner.bl { bottom: 8px; left: 8px; border-width: 0 0 1.5px 1.5px; }
+.hud-corner.br { bottom: 8px; right: 8px; border-width: 0 1.5px 1.5px 0; }
+
+.steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 36px; margin-bottom: 52px; }
+.step-item  { display: flex; flex-direction: column; gap: 12px; }
+.step-num   { font-family: var(--font-sans); font-size: 56px; font-weight: 900; color: var(--text-title); opacity: 0.10; line-height: 1; }
+.step-tag   { display: inline-block; background: var(--yellow); padding: 3px 10px; }
+.step-tag span { font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px; font-weight: bold; color: #000; }
+.step-title { font-family: var(--font-sans); font-size: 14px; font-weight: 700; color: var(--text-title); letter-spacing: 0.5px; }
+.step-desc  { font-size: 15px; color: var(--text-muted); line-height: 1.7; }
+
+/* Dark code blocks */
+.code-block {
+  background: var(--dark2);
+  border-left: 3px solid var(--yellow);
+  padding: 13px 72px 13px 16px;
+  font-family: var(--font-mono); font-size: 13px;
+  position: relative; margin-top: 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.code-prompt { color: var(--yellow); margin-right: 8px; }
+.code-text   { color: #A8D8A8; }
+.copy-btn {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  background: rgba(255,250,0,0.08); border: 1px solid rgba(255,250,0,0.3);
+  color: var(--yellow); font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 1.5px; padding: 4px 10px; cursor: pointer;
+  transition: all var(--tr);
+}
+.copy-btn:hover  { background: var(--yellow); color: #000; }
+.copy-btn.copied { background: var(--green); border-color: var(--green); color: #fff; }
+
+.qs-footer-row { border-top: 1px solid var(--border); padding-top: 24px; display: flex; align-items: center; gap: 12px; }
+.qs-note { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+.qs-note span { color: var(--text-title); font-weight: bold; }
+.qs-diamond { width: 7px; height: 7px; background: var(--yellow); transform: rotate(45deg); flex-shrink: 0; }
+
+/* ===== SKILLS ===== */
+#skills { padding: 88px 80px; background: var(--white); }
+.skills-subtitle { font-size: 14px; color: var(--text-muted); margin-top: -44px; margin-bottom: 0; }
+
+/* Skill tabs */
+.skill-tabs {
+  display: flex; gap: 0; margin-top: 40px;
+  border-bottom: 1px solid var(--border);
+}
+.skill-tab {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-muted);
+  background: none; border: none; padding: 10px 22px 12px;
+  cursor: pointer; position: relative; transition: color var(--tr);
+}
+.skill-tab:hover  { color: var(--text-title); }
+.skill-tab.active { color: var(--text-title); font-weight: bold; }
+.skill-tab.active::after {
+  content: ''; position: absolute; bottom: -1px;
+  left: 14px; right: 14px; height: 2px; background: var(--yellow);
+  animation: lineIn 0.3s ease;
+}
+
+/* Tab content */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.tab-fade { animation: tabIn 0.3s ease; }
+@keyframes tabIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* Skills grid */
+.skills-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px; margin-top: 48px;
+}
+
+/* ===== SKILL CARD ===== */
+.skill-card {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
+}
+.skill-card.visible { opacity: 1; transform: translateY(0); }
+
+.card-body {
+  background: var(--white);
+  border: 1px solid var(--border);
+  padding: 18px 20px 14px 22px;
+  height: 100%; position: relative;
+  transition: border-color 0.22s, box-shadow 0.22s, transform 0.22s var(--ease-out);
+  display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+}
+.card-body:hover {
+  border-color: var(--yellow);
+  box-shadow: 0 4px 24px rgba(255,250,0,0.12), 0 0 0 1px rgba(255,250,0,0.08);
+  transform: translateY(-2px);
+}
+
+/* Left rarity stripe */
+.rarity-stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+.stripe-gold   { background: var(--yellow); }
+.stripe-teal   { background: #4ECDC4; }
+.stripe-gray   { background: #9E9E9E; }
+
+/* Card top */
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.card-command {
+  font-family: var(--font-mono); font-size: 13px; font-weight: bold;
+  color: var(--text-title); letter-spacing: 0.5px;
+}
+.card-rarity { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; flex-shrink: 0; margin-left: 8px; }
+.rarity-p0 { color: #8B7300; }
+.rarity-p1 { color: #2D9B93; }
+.rarity-p2 { color: var(--text-muted); }
+.card-name { font-family: var(--font-mono); font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-muted); }
+.card-desc { font-size: 14px; color: var(--text); line-height: 1.65; flex: 1; }
+
+/* Hover-reveal example */
+.card-example { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.35s var(--ease-out), opacity 0.3s ease, padding-top 0.3s ease; }
+.card-body:hover .card-example {
+  max-height: 140px; opacity: 1; padding-top: 10px; margin-top: 2px;
+  border-top: 1px solid rgba(0,0,0,0.07);
+}
+.card-example-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 3px; color: var(--text-muted); margin-bottom: 6px; }
+.card-example-code {
+  font-family: var(--font-mono); font-size: 12px; color: #555;
+  background: var(--light); padding: 8px 12px;
+  border-left: 2px solid var(--yellow); line-height: 1.75;
+}
+
+/* Card footer */
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: auto; padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.deploy-btn {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px;
+  color: #000; background: var(--yellow); border: none;
+  padding: 5px 14px; cursor: pointer;
+  transition: background var(--tr);
+  position: relative; overflow: hidden; text-transform: uppercase;
+}
+.deploy-btn:hover { background: #FFE040; }
+
+/* Card type tags — solid blocks */
+.card-type-tag {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; padding: 2px 8px;
+}
+.tag-core { background: rgba(255,250,0,0.15); color: #8B7300; }
+.tag-ext  { background: rgba(78,205,196,0.12); color: #2D9B93; }
+.tag-cfg  { background: rgba(0,0,0,0.06);       color: var(--text-muted); }
+
+/* Progress bar */
+.card-progress { position: absolute; bottom: 0; left: 3px; right: 0; height: 2px; background: rgba(0,0,0,0.04); overflow: hidden; }
+.card-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--yellow), rgba(255,250,0,0.3));
+  width: 0;
+  transition: width 1.6s cubic-bezier(0.4,0,0.2,1) 0.3s;
+}
+.skill-card.visible .card-progress-fill { width: var(--prog, 80%); }
+
+/* ===== WORKFLOW ===== */
+#workflow { padding: 88px 80px; background: var(--light); position: relative; }
+.workflow-subtitle { color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; letter-spacing: 1.5px; margin-top: -46px; margin-bottom: 0; }
+
+.timeline-wrap {
+  display: flex; align-items: flex-start; justify-content: center;
+  gap: 0; margin-top: 72px; overflow-x: auto; padding-bottom: 16px;
+}
+.tl-node { display: flex; flex-direction: column; align-items: center; gap: 16px; flex-shrink: 0; }
+.node-hex { width: 80px; height: 80px; cursor: pointer; transition: transform 0.22s var(--ease-out); }
+.node-hex:hover { transform: scale(1.08); }
+.node-hex svg { width: 100%; height: 100%; }
+.hex-bg  { fill: rgba(255,250,0,0.04); stroke: rgba(0,0,0,0.15); stroke-width: 1.5; transition: fill 0.22s, stroke 0.22s; }
+.node-hex:hover .hex-bg { fill: rgba(255,250,0,0.12); stroke: var(--yellow); stroke-width: 2; }
+.hex-label { font-family: var(--font-mono); font-size: 18px; font-weight: 900; fill: var(--text-title); }
+
+.tl-label { text-align: center; display: flex; flex-direction: column; gap: 4px; }
+.tl-name { font-family: var(--font-sans); font-size: 13px; font-weight: 600; letter-spacing: 1px; color: var(--text-title); }
+.tl-cmd  { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.tl-info {
+  font-family: var(--font-mono); font-size: 10px; color: #8B7300;
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height 0.28s ease, opacity 0.22s ease, padding-top 0.22s ease;
+  white-space: nowrap; display: block;
+  border-top: 0px solid rgba(255,250,0,0.22);
+}
+.tl-node:hover .tl-info {
+  max-height: 28px; opacity: 1; padding-top: 4px; margin-top: 1px;
+  border-top-width: 1px;
+}
+.tl-connector { display: flex; align-items: center; flex-shrink: 0; margin-bottom: 50px; padding: 0 2px; }
+.conn-line  { width: 28px; height: 1px; background: rgba(0,0,0,0.15); }
+.conn-arrow { width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 6px solid rgba(0,0,0,0.2); }
+
+/* Decorative geo element */
+.wf-geo { position: absolute; bottom: 28px; right: 72px; opacity: 0.06; pointer-events: none; }
+
+/* ===== FOOTER ===== */
+#footer {
+  background: var(--dark);
+  border-top: 2px solid rgba(255,250,0,0.2);
+  padding: 24px 80px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative; overflow: hidden;
+}
+#footer::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,250,0,0.35), transparent);
+}
+.footer-left  { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.35); }
+.footer-dot   { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: dotPulse 2.5s ease-in-out infinite; }
+.footer-on    { color: var(--green); font-weight: bold; }
+.footer-mid   { font-family: var(--font-sans); font-size: 15px; font-weight: 900; color: var(--yellow); letter-spacing: 1px; }
+.footer-slash { color: var(--yellow); margin-right: 2px; }
+.footer-right { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.25); text-align: right; line-height: 1.7; }
+
+/* ===== RIPPLE ===== */
+.ripple-host { position: relative; overflow: hidden; }
+.ripple-wave {
+  position: absolute; border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  transform: scale(0); animation: rippleOut 0.6s linear forwards; pointer-events: none;
+}
+@keyframes rippleOut { to { transform: scale(4); opacity: 0; } }
+
+/* ===== RESPONSIVE ===== */
+
+/* Wide 1600px+ */
+@media (min-width: 1600px) {
+  #hero, #quickstart, #skills, #workflow { padding-left: 10%; padding-right: 10%; }
+  #footer { padding-left: 10%; padding-right: 10%; }
+  .sec-divider { margin: 0 10%; }
+}
+
+/* Medium 1300px */
+@media (max-width: 1300px) {
+  #hero { padding: 96px 56px 56px; }
+  #quickstart, #skills, #workflow { padding: 72px 56px; }
+  .sec-divider { margin: 0 56px; }
+  #hud-nav, #footer { padding-left: 32px; padding-right: 32px; }
+}
+
+/* Tablet 1000px */
+@media (max-width: 1000px) {
+  .skills-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .hero-foot { flex-direction: column; align-items: flex-start; gap: 36px; }
+  .hero-stats { gap: 32px; }
+}
+
+/* Mobile 900px */
+@media (max-width: 900px) {
+  #hero { padding: 88px 32px 56px; }
+  #quickstart, #skills, #workflow { padding: 56px 28px; }
+  .sec-divider { margin: 0 28px; }
+  #hud-nav { padding: 0 20px; }
+  #footer { padding: 20px 28px; flex-direction: column; gap: 14px; text-align: center; }
+  .steps-grid { gap: 28px; }
+  .skills-grid { grid-template-columns: 1fr; }
+  .hud-box { padding: 32px 22px; }
+  .timeline-wrap { justify-content: flex-start; }
+  .hero-title { font-size: clamp(64px, 15vw, 120px); letter-spacing: -3px; }
+  .hero-accent-bar { width: 5px; }
+}
+
+/* Hamburger 768px */
+@media (max-width: 768px) {
+  .hud-tabs { display: none; }
+  .hud-status { display: none; }
+  .hamburger { display: flex; }
+}
+
+/* Small mobile 480px */
+@media (max-width: 480px) {
+  #hero { padding: 80px 20px 48px; }
+  .hero-title { font-size: clamp(52px, 14vw, 88px); letter-spacing: -2px; }
+  #quickstart, #skills, #workflow { padding: 48px 20px; }
+  .sec-divider { margin: 0 20px; }
+  #footer { padding: 16px 20px; }
+  .hud-box { padding: 24px 16px; }
+  .stat-number { font-size: 44px; }
+  .node-hex { width: 64px; height: 64px; }
+  .conn-line { width: 18px; }
+  .hero-accent-bar { display: none; }
+}
+
+/* Tiny 380px */
+@media (max-width: 380px) {
+  .hero-title { font-size: 44px; letter-spacing: -1px; }
+  #quickstart, #skills, #workflow { padding: 40px 16px; }
+  .sec-cn { font-size: 2rem; letter-spacing: -0.02em; }
+}
+@media (max-width: 480px) {
+  .sec-cn { font-size: 2.4rem; }
+}
+
+/* ===== 2a: HAMBURGER NAV ===== */
+.hamburger {
+  display: none; flex-direction: column; gap: 5px;
+  cursor: pointer; background: none; border: none; padding: 8px;
+}
+.hamburger span {
+  display: block; width: 22px; height: 2px; background: var(--yellow);
+  transition: transform 0.3s var(--ease-out), opacity 0.3s;
+}
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.nav-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+  z-index: 998; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.nav-overlay.open { opacity: 1; pointer-events: all; }
+.nav-drawer {
+  position: fixed; top: 54px; right: 0; bottom: 0; width: 220px;
+  background: var(--white); border-left: 1px solid var(--border);
+  transform: translateX(100%);
+  transition: transform 0.35s var(--ease-out);
+  z-index: 999; padding: 16px 0;
+}
+.nav-drawer.open { transform: translateX(0); }
+.drawer-item {
+  display: block; width: 100%; text-align: left;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-muted);
+  padding: 15px 28px; border: none; background: none; cursor: pointer;
+  border-bottom: 1px solid var(--border); transition: color 0.15s, background 0.15s;
+}
+.drawer-item:hover { color: var(--text-title); background: var(--light); }
+.drawer-item.active { color: var(--text-title); font-weight: bold; }
+.drawer-item.active::before { content: '▶ '; color: var(--yellow); font-size: 9px; }
+
+/* ===== 2c: BACK TO TOP ===== */
+#back-top {
+  position: fixed; bottom: 32px; right: 32px;
+  width: 44px; height: 44px; background: var(--yellow);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0; transform: translateY(8px);
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 900; font-size: 18px; user-select: none;
+  border: none;
+}
+#back-top.visible { opacity: 1; transform: translateY(0); }
+#back-top:hover { background: #e6e100; }
+
+/* ===== 2d: TIMELINE SCROLL HINT ===== */
+.timeline-wrap-outer {
+  position: relative; overflow: hidden;
+}
+.timeline-wrap-outer::after {
+  content: '';
+  position: absolute; top: 0; right: 0; bottom: 0; width: 60px;
+  background: linear-gradient(to right, transparent, var(--light));
+  pointer-events: none; transition: opacity 0.3s;
+}
+.timeline-wrap-outer.scrolled-end::after { opacity: 0; }
+
+/* ===== 1b: MOBILE TAP EXPAND ===== */
+@media (pointer: coarse) {
+  .card-body:hover .card-example { max-height: 0; opacity: 0; padding-top: 0; }
+  .card-body.card-expanded .card-example { max-height: 160px; opacity: 1; padding-top: 10px; }
+}
+
+/* ===== 1c: WORKFLOW NODE DETAILS ===== */
+.node-detail {
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height 0.4s var(--ease-out), opacity 0.3s ease;
+  width: 140px;
+}
+.tl-node.nd-open .node-detail { max-height: 200px; opacity: 1; }
+.node-detail-inner {
+  background: var(--white); border: 1px solid var(--border);
+  border-top: 2px solid var(--yellow);
+  padding: 10px 12px; margin-top: 8px;
+  font-size: 11px; line-height: 1.65;
+}
+.nd-row { margin-bottom: 6px; }
+.nd-label {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);
+  letter-spacing: 1.5px; text-transform: uppercase; display: block; margin-bottom: 2px;
+}
+.nd-cmd {
+  background: var(--dark2); color: var(--yellow); font-family: var(--font-mono);
+  font-size: 11px; border: none; padding: 2px 8px; cursor: pointer; transition: background 0.15s;
+}
+.nd-cmd:hover { background: var(--yellow); color: #000; }
+.tl-node.nd-open .node-hex { transform: scale(1.08); }
+.node-hex { transition: transform 0.22s var(--ease-out); }
+
+/* ===== 1d: COMMAND REFERENCE ===== */
+#reference {
+  background: var(--dark); padding: 72px 80px; position: relative;
+}
+.ref-header { margin-bottom: 36px; }
+.ref-top-label {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 3px; color: rgba(255,255,255,0.3);
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.ref-title {
+  font-family: var(--font-mono); font-size: 22px; font-weight: bold;
+  color: var(--white); letter-spacing: -0.5px;
+}
+.ref-title span { color: var(--yellow); }
+.ref-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 56px;
+}
+.ref-col-label {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.25); text-transform: uppercase;
+  margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.ref-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer; position: relative;
+}
+.ref-row:hover .ref-cmd { color: var(--yellow); }
+.ref-cmd {
+  font-family: var(--font-mono); font-size: 12px; color: rgba(255,255,255,0.7);
+  flex-shrink: 0; transition: color 0.15s;
+}
+.ref-desc { font-size: 11px; color: rgba(255,255,255,0.3); font-family: var(--font-mono); }
+.ref-ok {
+  font-family: var(--font-mono); font-size: 10px; color: var(--green);
+  position: absolute; right: 0; opacity: 0; transition: opacity 0.3s;
+}
+.ref-row.ref-copied .ref-ok { opacity: 1; }
+.ref-section-full { margin-top: 24px; grid-column: 1 / -1; }
+.ref-sub-label {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.25); text-transform: uppercase;
+  margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.ref-hint {
+  font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,0.2);
+  margin-top: 20px; text-align: right;
+}
+@media (max-width: 900px) {
+  #reference { padding: 56px 28px; }
+  .ref-grid { grid-template-columns: 1fr; gap: 0; }
+  .ref-section-full { grid-column: 1; }
+}
+</style>
 </head>
 <body>
 
-  <!-- Progress Bar -->
-  <div id="progressBar"></div>
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="回到顶部">↑</button>
 
-  <!-- Navigation -->
-  <nav class="nav">
-    <div class="nav-logo">AI<span>_PM</span></div>
-    <div class="nav-tabs">
-      <button class="nav-tab active" data-tab="0">首页</button>
-      <button class="nav-tab" data-tab="1">技能</button>
-      <button class="nav-tab" data-tab="2">指南</button>
-      <button class="nav-tab" data-tab="3">工作流</button>
-      <button class="nav-tab" data-tab="4">关于</button>
+<div class="nav-overlay" id="nav-overlay" onclick="toggleDrawer()"></div>
+<div class="nav-drawer" id="nav-drawer">
+  <button class="drawer-item active" data-sec="quickstart" onclick="drawerNav('quickstart')">快速开始</button>
+  <button class="drawer-item" data-sec="skills" onclick="drawerNav('skills')">技能列表</button>
+  <button class="drawer-item" data-sec="workflow" onclick="drawerNav('workflow')">工作流</button>
+  <button class="drawer-item" data-sec="reference" onclick="drawerNav('reference')">速查表</button>
+</div>
+
+<!-- ===== NAV ===== -->
+<nav id="hud-nav">
+  <a class="hud-brand" href="#">
+    <span class="brand-slash">//</span>
+    <div>
+      <span class="brand-name">AI_PM</span>
+      <span class="brand-ver"> v2.2.0</span>
     </div>
-  </nav>
+  </a>
 
-  <!-- Tab Panels -->
-  <div class="tab-panels">
+  <div class="hud-tabs">
+    <button class="hud-tab active" data-sec="quickstart" onclick="scrollToSec('quickstart')">快速开始</button>
+    <button class="hud-tab" data-sec="skills" onclick="scrollToSec('skills')">技能列表</button>
+    <button class="hud-tab" data-sec="workflow" onclick="scrollToSec('workflow')">工作流</button>
+    <button class="hud-tab" data-sec="reference" onclick="scrollToSec('reference')">速查表</button>
+  </div>
 
-    <!-- Tab 0: 首页 -->
-    <div class="tab-panel active" id="tab-0" data-panel="0">
+  <button class="hamburger" id="hamburger" onclick="toggleDrawer()" aria-label="菜单">
+    <span></span><span></span><span></span>
+  </button>
 
-      <!-- Hero -->
-      <section class="hero">
-        <div class="hero-inner">
-          <span class="hero-eyebrow reveal">Claude Code Skills</span>
-          <h1 class="hero-title reveal reveal-delay-1">AI 产品经理</h1>
-          <p class="hero-subtitle reveal reveal-delay-2">Claude Code 的产品经理技能集合。输入需求，输出 PRD、原型、评审报告。</p>
-          <div class="hero-actions reveal reveal-delay-3">
-            <button class="btn btn-primary" onclick="switchTab(1)">开始体验</button>
-            <button class="btn btn-secondary" onclick="switchTab(2)">查看指南</button>
-          </div>
-        </div>
-      </section>
+  <div class="hud-status">
+    <span class="hud-clock" id="hud-clock">00:00:00</span>
+    <span>K3TTY_WU</span>
+    <div class="status-dot"></div>
+  </div>
+</nav>
 
-      <!-- Core Features -->
-      <section class="section" style="background: var(--surface);">
-        <div class="container">
-          <div class="text-container" style="text-align:center;">
-            <p class="section-eyebrow reveal">核心能力</p>
-            <h2 class="section-title reveal reveal-delay-1">为产品经理而生</h2>
-            <p class="section-subtitle reveal reveal-delay-2">覆盖产品经理完整工作场景，从灵感到可交付物。</p>
-          </div>
-          <div class="feature-grid">
-            <div class="feature-card reveal">
-              <span class="feature-icon">🎯</span>
-              <h3 class="feature-title">全流程覆盖</h3>
-              <p class="feature-desc">从需求澄清到九角色评审，覆盖产品经理完整工作流。需求分析、竞品研究、用户故事、PRD 到原型，一气呵成。</p>
-            </div>
-            <div class="feature-card reveal reveal-delay-1">
-              <span class="feature-icon">🤝</span>
-              <h3 class="feature-title">多代理协作</h3>
-              <p class="feature-desc">复杂需求自动启用多代理并行处理，产品经理、架构师、设计师同时工作，效率翻倍，质量不打折。</p>
-            </div>
-            <div class="feature-card reveal reveal-delay-2">
-              <span class="feature-icon">📚</span>
-              <h3 class="feature-title">越用越懂你</h3>
-              <p class="feature-desc">产品分身学习你的 PRD 写作风格，知识库沉淀团队经验。用过的决策、踩过的坑，下次自动推荐。</p>
-            </div>
-          </div>
-        </div>
-      </section>
+<!-- ===== HERO ===== -->
+<section id="hero">
+  <div class="hero-accent-bar"></div>
 
-      <!-- Quick Start -->
-      <section class="section">
-        <div class="container">
-          <div class="text-container" style="text-align:center;">
-            <p class="section-eyebrow reveal">快速开始</p>
-            <h2 class="section-title reveal reveal-delay-1">三步开启 AI 产品经理</h2>
-            <p class="section-subtitle reveal reveal-delay-2">从安装到产出 PRD，最快 10 分钟。</p>
-          </div>
-          <div class="code-block reveal" style="max-width: 640px; margin: var(--space-10) auto 0;">
-            <pre><span class="code-comment"># 1. 克隆项目</span>
-<span class="code-cmd">git clone</span> <span class="code-string">&lt;repo-url&gt;</span> &amp;&amp; <span class="code-cmd">cd</span> AI_PM
+  <div class="hero-title">
+    <span class="line-ai"><span class="hero-slash">//</span><span id="hero-ai"></span></span>
+    <span class="line-prod" id="hero-prod"></span>
+    <span class="line-mgr"  id="hero-mgr"></span>
+  </div>
 
-<span class="code-comment"># 2. 在 Claude Code 中打开项目目录</span>
-
-<span class="code-comment"># 3. 开始使用</span>
-<span class="code-cmd">/ai-pm</span> <span class="code-string">"我想做一个帮用户决定吃什么的 App"</span></pre>
-          </div>
-        </div>
-      </section>
-
-      <!-- Stats Banner -->
-      <section class="section-sm" style="background: var(--surface); text-align:center;">
-        <div class="container">
-          <div class="reveal" style="display:flex; justify-content:center; gap:var(--space-16); flex-wrap:wrap;">
-            <div>
-              <div style="font-size:48px; font-weight:700; letter-spacing:-0.03em; color:var(--accent);">15</div>
-              <div style="font-size:15px; color:var(--text-secondary); margin-top:4px;">产品技能</div>
-            </div>
-            <div>
-              <div style="font-size:48px; font-weight:700; letter-spacing:-0.03em; color:var(--accent);">9</div>
-              <div style="font-size:15px; color:var(--text-secondary); margin-top:4px;">评审角色</div>
-            </div>
-            <div>
-              <div style="font-size:48px; font-weight:700; letter-spacing:-0.03em; color:var(--accent);">4</div>
-              <div style="font-size:15px; color:var(--text-secondary); margin-top:4px;">工作流模式</div>
-            </div>
-            <div>
-              <div style="font-size:48px; font-weight:700; letter-spacing:-0.03em; color:var(--accent);">0</div>
-              <div style="font-size:15px; color:var(--text-secondary); margin-top:4px;">外部依赖</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+  <div class="hero-foot">
+    <div class="hero-info">
+      <div class="tag-block"><span>CLAUDE CODE · SKILL SUITE</span></div>
+      <p class="hero-subtitle">
+        描述你想做的产品，AI 帮你研究市场、拆功能、写 PRD、做原型，<br>
+        再从产品、开发、设计等九个角色的视角帮你找漏洞。<br>
+        产出文档可直接导入飞书。
+      </p>
+      <a href="#quickstart" class="hero-cta ripple-host">
+        开始使用 <span style="font-size:13px">▶</span>
+      </a>
+      <div class="hero-features">
+        <span class="feat-tag">九角色并行评审</span>
+        <span class="feat-tag">PRD 导入飞书</span>
+        <span class="feat-tag">原型双击预览</span>
+        <span class="feat-tag">分身学你的风格</span>
+        <span class="feat-tag">多项目断点续传</span>
+      </div>
     </div>
+    <div class="hero-stats">
+      <div class="stat-block" id="sb-0">
+        <span class="stat-number" data-to="15">0</span>
+        <span class="stat-label">SKILLS</span>
+      </div>
+      <div class="stat-block" id="sb-1">
+        <span class="stat-number" data-to="7">0</span>
+        <span class="stat-label">PHASES</span>
+      </div>
+      <div class="stat-block" id="sb-2">
+        <span class="stat-number" style="font-size:48px">∞</span>
+        <span class="stat-label">PROJECTS</span>
+      </div>
+    </div>
+  </div>
+</section>
 
-    <!-- Tab 1: 技能 -->
-    <div class="tab-panel" id="tab-1" data-panel="1">
-      <div class="skills-section">
-        <div class="container">
+<!-- ===== QUICK START ===== -->
+<section id="quickstart">
+  <div class="sec-header" id="sh-qs">
+    <div class="sec-label-block"><span class="sec-sl">//</span><span class="sec-en">GETTING STARTED</span></div>
+    <h2 class="sec-cn">快速开始</h2>
+  </div>
 
-          <div class="text-container" style="text-align:center; padding-top:var(--space-12);">
-            <p class="section-eyebrow reveal">技能库</p>
-            <h2 class="section-title reveal reveal-delay-1">15 个专业技能</h2>
-            <p class="section-subtitle reveal reveal-delay-2">覆盖产品全生命周期，按场景分类，即用即找。</p>
-          </div>
+  <div class="hud-box sec-reveal" id="sr-qs">
+    <div class="hud-corner tl"></div>
+    <div class="hud-corner tr"></div>
+    <div class="hud-corner bl"></div>
+    <div class="hud-corner br"></div>
 
-          <!-- 产品流程类 -->
-          <div class="skill-category" style="margin-top: var(--space-12);">
-            <div class="skill-category-header reveal">
-              <span class="skill-category-icon">🎯</span>
-              <h3 class="skill-category-title">产品流程类</h3>
-              <span class="skill-category-count">7 个技能</span>
-            </div>
-            <div class="skill-grid">
+    <div class="steps-grid">
+      <div class="step-item">
+        <span class="step-num">01</span>
+        <div class="step-tag"><span>TERMINAL</span></div>
+        <span class="step-title">克隆项目</span>
+        <p class="step-desc">打开终端，把项目拉到本地。没用过命令行？把下面这行复制进去回车就行。</p>
+        <div class="code-block">
+          <span class="code-prompt">$</span>
+          <span class="code-text">git clone https://github.com/K3tty5555/AI_PM.git &amp;&amp; cd AI_PM</span>
+          <button class="copy-btn" onclick="doCopy(this,'git clone https://github.com/K3tty5555/AI_PM.git && cd AI_PM')">COPY</button>
+        </div>
+      </div>
 
-              <div class="skill-card reveal">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">🎯</span>
-                  <div>
-                    <div class="skill-card-name">AI_PM 主控</div>
-                    <code class="skill-card-cmd">/ai-pm</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">AI 产品经理。输入需求，引导完善，输出 PRD + 原型。支持需求分析、竞品研究、用户故事、PRD、原型、评审全流程。多项目管理，断点续传。复杂需求自动启用多代理协作（/ai-pm --team）。</p>
-              </div>
+      <div class="step-item">
+        <span class="step-num">02</span>
+        <div class="step-tag"><span>CLAUDE CODE</span></div>
+        <span class="step-title">打开目录</span>
+        <p class="step-desc">Claude Code 是 Anthropic 的官方命令行工具。装好后用它打开 AI_PM 目录（File &gt; Open Folder）。还没装？→ claude.ai/code</p>
+        <div class="code-block">
+          <span class="code-prompt">&gt;</span>
+          <span class="code-text" style="color:rgba(255,255,255,0.3);">File &gt; Open Folder &gt; AI_PM/</span>
+        </div>
+      </div>
 
-              <div class="skill-card reveal reveal-delay-1">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">🔍</span>
-                  <div>
-                    <div class="skill-card-name">需求分析</div>
-                    <code class="skill-card-cmd">/ai-pm-analyze</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">深入分析产品需求，挖掘用户画像、核心痛点、功能范围和优先级。通过对话引导用户补充信息，不满足于表面描述。</p>
-              </div>
-
-              <div class="skill-card reveal reveal-delay-2">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">🔭</span>
-                  <div>
-                    <div class="skill-card-name">竞品研究</div>
-                    <code class="skill-card-cmd">/ai-pm-research</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">分析市场同类产品，输出功能对比、差异化机会和市场定位建议。</p>
-              </div>
-
-              <div class="skill-card reveal">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">📖</span>
-                  <div>
-                    <div class="skill-card-name">用户故事</div>
-                    <code class="skill-card-cmd">/ai-pm-story</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">基于需求分析和竞品研究，编写详细的用户故事和验收标准。</p>
-              </div>
-
-              <div class="skill-card reveal reveal-delay-1">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">📄</span>
-                  <div>
-                    <div class="skill-card-name">PRD 生成</div>
-                    <code class="skill-card-cmd">/ai-pm-prd</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">整合需求分析、竞品研究、用户故事，输出完整的产品需求文档。支持产品分身写作风格和设计规范。</p>
-              </div>
-
-              <div class="skill-card reveal reveal-delay-2">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">🖥️</span>
-                  <div>
-                    <div class="skill-card-name">原型生成</div>
-                    <code class="skill-card-cmd">/ai-pm-prototype</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">基于 PRD 生成可交互的单页网页原型，支持移动端和 Web 端。自动应用产品设计规范，默认遵循 Apple HIG。</p>
-              </div>
-
-              <div class="skill-card reveal">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">⚖️</span>
-                  <div>
-                    <div class="skill-card-name">需求评审</div>
-                    <code class="skill-card-cmd">/ai-pm-review</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">模拟真实评审会议，九大专家角色从专业角度评审 PRD 和原型，输出评审意见和修改建议。支持多轮迭代。</p>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- 日常工作类 -->
-          <div class="skill-category">
-            <div class="skill-category-header reveal">
-              <span class="skill-category-icon">📋</span>
-              <h3 class="skill-category-title">日常工作类</h3>
-              <span class="skill-category-count">3 个技能</span>
-            </div>
-            <div class="skill-grid">
-
-              <div class="skill-card reveal">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">⚡</span>
-                  <div>
-                    <div class="skill-card-name">需求优先级</div>
-                    <code class="skill-card-cmd">/ai-pm-priority</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">接收批量提报需求，按四维评分模型（业务价值/实现成本/用户影响/战略契合度）自动评估优先级，输出排序结果和可直接发给提报方的回复模板。</p>
-              </div>
-
-              <div class="skill-card reveal reveal-delay-1">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">📝</span>
-                  <div>
-                    <div class="skill-card-name">工作周报</div>
-                    <code class="skill-card-cmd">/ai-pm-weekly</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">引导输入本周工作内容（随意描述即可），自动归类整理，生成结构化周报。支持向上汇报版（简洁）和团队同步版（详细）。</p>
-              </div>
-
-              <div class="skill-card reveal reveal-delay-2">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">🎙️</span>
-                  <div>
-                    <div class="skill-card-name">现场调研</div>
-                    <code class="skill-card-cmd">/ai-pm-interview</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">适用于线下与客户面对面沟通场景，支持结构化访谈、实时记录和快速生成 PRD。</p>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- 个性化类 -->
-          <div class="skill-category">
-            <div class="skill-category-header reveal">
-              <span class="skill-category-icon">✨</span>
-              <h3 class="skill-category-title">个性化类</h3>
-              <span class="skill-category-count">2 个技能</span>
-            </div>
-            <div class="skill-grid">
-
-              <div class="skill-card reveal">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">🪞</span>
-                  <div>
-                    <div class="skill-card-name">产品分身</div>
-                    <code class="skill-card-cmd">/ai-pm-persona</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">分析你的历史需求文档，学习你的写作风格、措辞习惯和结构偏好。让 AI 生成的 PRD 越来越像你写的。</p>
-              </div>
-
-              <div class="skill-card reveal reveal-delay-1">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">🎨</span>
-                  <div>
-                    <div class="skill-card-name">设计规范</div>
-                    <code class="skill-card-cmd">/ai-pm-design-spec</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">加载公司或团队的 UI 规范，让 ai-pm-prototype 生成的原型自动遵守你们的设计标准，而不是默认的 Apple HIG。</p>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- 数据与知识类 -->
-          <div class="skill-category">
-            <div class="skill-category-header reveal">
-              <span class="skill-category-icon">📊</span>
-              <h3 class="skill-category-title">数据与知识类</h3>
-              <span class="skill-category-count">2 个技能</span>
-            </div>
-            <div class="skill-grid">
-
-              <div class="skill-card reveal">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">📈</span>
-                  <div>
-                    <div class="skill-card-name">数据洞察</div>
-                    <code class="skill-card-cmd">/ai-pm-data</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">提供数据指标设计、数据洞察分析、仪表盘生成三大能力。从数据中发现产品需求和优化机会。</p>
-              </div>
-
-              <div class="skill-card reveal reveal-delay-1">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">🗂️</span>
-                  <div>
-                    <div class="skill-card-name">产品知识库</div>
-                    <code class="skill-card-cmd">/ai-pm-knowledge</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">沉淀方法论、决策记录、踩坑经验，下次遇到类似问题时自动推荐。</p>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- 高级功能 -->
-          <div class="skill-category">
-            <div class="skill-category-header reveal">
-              <span class="skill-category-icon">🚀</span>
-              <h3 class="skill-category-title">高级功能</h3>
-              <span class="skill-category-count">1 个技能</span>
-            </div>
-            <div class="skill-grid" style="grid-template-columns: 1fr;">
-
-              <div class="skill-card reveal" style="max-width: 580px;">
-                <div class="skill-card-top">
-                  <span class="skill-card-icon">🤖</span>
-                  <div>
-                    <div class="skill-card-name">多代理引擎</div>
-                    <code class="skill-card-cmd">/agent-team</code>
-                  </div>
-                </div>
-                <p class="skill-card-desc">多代理协作引擎。通常由 ai-pm 主控自动调度（/ai-pm --team 触发）。并行派出产品经理、架构师、UI设计师、数据分析师、文档工程师协同完成复杂产品项目。也可直接调用：/agent-team [需求描述]。</p>
-                <span class="skill-badge">通常由 /ai-pm --team 自动触发</span>
-              </div>
-
-            </div>
-          </div>
-
+      <div class="step-item">
+        <span class="step-num">03</span>
+        <div class="step-tag"><span>SKILL</span></div>
+        <span class="step-title">输入需求</span>
+        <p class="step-desc">输入命令描述你的想法，AI 会先问几个问题确认方向，然后自动推进。产出文件在 output/projects/ 目录下。</p>
+        <div class="code-block">
+          <span class="code-prompt">/</span>
+          <span class="code-text">ai-pm "帮年轻人记账的小程序"</span>
+          <button class="copy-btn" onclick='doCopy(this,"/ai-pm \"帮年轻人记账的小程序\"")'>COPY</button>
         </div>
       </div>
     </div>
 
-    <!-- Tab 2: 指南 -->
-    <div class="tab-panel" id="tab-2" data-panel="2">
-      <div class="guide-section">
-        <div class="container">
+    <div class="qs-footer-row">
+      <div class="qs-diamond"></div>
+      <p class="qs-note">
+        前置条件：已安装 <span>Claude Code</span> ·
+        产出文件在 output/projects/{项目名}/ · 支持断点续传 · 多项目隔离
+      </p>
+    </div>
+  </div>
+</section>
 
-          <div class="text-container" style="text-align:center; padding-top:var(--space-12);">
-            <p class="section-eyebrow reveal">使用指南</p>
-            <h2 class="section-title reveal reveal-delay-1">从零开始，10 分钟上手</h2>
-            <p class="section-subtitle reveal reveal-delay-2">跟着步骤走，第一次就能产出完整 PRD。</p>
+<div class="sec-divider"></div>
+
+<!-- ===== SKILLS ===== -->
+<section id="skills">
+  <div class="sec-header" id="sh-sk">
+    <div class="sec-label-block"><span class="sec-sl">//</span><span class="sec-en">SKILL MANIFEST</span></div>
+    <h2 class="sec-cn">技能列表</h2>
+  </div>
+  <p class="skills-subtitle sec-reveal" id="sr-sk">悬停卡片查看示例 — 点击「复制命令」粘贴到 Claude Code 运行</p>
+
+  <div class="skill-tabs sec-reveal">
+    <button class="skill-tab active" onclick="switchSkillTab(this,'core')">主流程</button>
+    <button class="skill-tab" onclick="switchSkillTab(this,'ext')">扩展工具</button>
+    <button class="skill-tab" onclick="switchSkillTab(this,'cfg')">配置管理</button>
+  </div>
+
+  <!-- Tab: Core -->
+  <div id="tab-core" class="tab-content active tab-fade">
+    <div class="skills-grid">
+
+      <div class="skill-card" data-delay="0">
+        <div class="card-body" style="--prog:95%">
+          <div class="rarity-stripe stripe-gold"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm</span>
+            <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
           </div>
-
-          <!-- 第一次使用 -->
-          <div style="margin-top: var(--space-12);">
-            <h3 class="reveal" style="font-size:21px; font-weight:600; margin-bottom:var(--space-6);">第一次使用</h3>
-
-            <div class="guide-step reveal">
-              <div class="guide-step-num">1</div>
-              <div class="guide-step-content">
-                <div class="guide-step-title">安装 Claude Code</div>
-                <div class="guide-step-desc">前往 Anthropic 官网下载并安装 Claude Code CLI，需要 Claude Pro 或 API 账号。</div>
-              </div>
-            </div>
-
-            <div class="guide-step reveal reveal-delay-1">
-              <div class="guide-step-num">2</div>
-              <div class="guide-step-content">
-                <div class="guide-step-title">克隆 AI_PM 项目</div>
-                <div class="guide-step-desc">将 AI_PM 项目克隆到本地，并在 Claude Code 中打开该目录。技能文件会自动被识别。</div>
-              </div>
-            </div>
-
-            <div class="guide-step reveal reveal-delay-2">
-              <div class="guide-step-num">3</div>
-              <div class="guide-step-content">
-                <div class="guide-step-title">输入 /ai-pm 查看状态</div>
-                <div class="guide-step-desc">首次运行会显示欢迎界面，告诉你如何开始第一个项目。无项目时会看到引导提示。</div>
-              </div>
-            </div>
-
-            <div class="guide-step reveal">
-              <div class="guide-step-num">4</div>
-              <div class="guide-step-content">
-                <div class="guide-step-title">输入需求开始第一个项目</div>
-                <div class="guide-step-desc">直接描述你的产品需求，AI 会引导你逐步完善，并自动执行分析、研究、PRD、原型全流程。</div>
-              </div>
-            </div>
+          <span class="card-name">AI PRODUCT MANAGER</span>
+          <p class="card-desc">不知道从哪里开始就从这里开始。告诉 AI 你想做什么，它会一步步引导你把需求、竞品、PRD、原型都跑完。中途可以随时暂停，下次接着来。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm "帮年轻人记账的小程序"<br>/ai-pm --team "企业级 CRM 系统"<br>/ai-pm continue<br>/ai-pm list</div>
           </div>
-
-          <div class="divider reveal"></div>
-
-          <!-- 常用工作流 -->
-          <div>
-            <h3 class="reveal" style="font-size:21px; font-weight:600; margin-bottom:var(--space-6);">常用工作流</h3>
-
-            <div class="guide-workflow reveal">
-              <div class="guide-workflow-title">完整新产品</div>
-              <code class="guide-workflow-cmd">/ai-pm "你的需求描述" → 全自动执行到原型</code>
-              <div class="guide-workflow-desc">从需求澄清开始，经过分析、竞研、用户故事、PRD，最终生成可交互原型。</div>
-            </div>
-
-            <div class="guide-workflow reveal reveal-delay-1">
-              <div class="guide-workflow-title">快速周报</div>
-              <code class="guide-workflow-cmd">/ai-pm weekly → 输入本周工作 → 生成周报</code>
-              <div class="guide-workflow-desc">随意描述这周干了什么，AI 自动归类整理，生成向上汇报版或团队同步版周报。</div>
-            </div>
-
-            <div class="guide-workflow reveal reveal-delay-2">
-              <div class="guide-workflow-title">需求评估</div>
-              <code class="guide-workflow-cmd">/ai-pm priority → 粘贴需求列表 → 获得优先级排序</code>
-              <div class="guide-workflow-desc">支持 Excel/CSV 文件或直接粘贴需求，四维评分模型自动排序，生成可发送的回复模板。</div>
-            </div>
-
-            <div class="guide-workflow reveal">
-              <div class="guide-workflow-title">现场调研</div>
-              <code class="guide-workflow-cmd">/ai-pm interview → 访谈 → 自动生成 PRD</code>
-              <div class="guide-workflow-desc">带着客户在场时使用，边聊边记录，访谈结束立刻产出需求草稿，当场确认。</div>
-            </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-core">CORE</span>
           </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
 
-          <div class="divider reveal"></div>
-
-          <!-- 效率技巧 -->
-          <div>
-            <h3 class="reveal" style="font-size:21px; font-weight:600; margin-bottom:var(--space-6);">效率技巧</h3>
-
-            <div class="tip-card reveal">
-              <div class="tip-title">输入「加急」或「yolo」跳过所有确认</div>
-              <div class="tip-desc">在 /ai-pm 主流程中输入「加急」，AI 会自动执行 Phase 1-4，仅在 PRD 生成前停一次确认，生成原型前再停一次，其余全部自动完成。</div>
-            </div>
-
-            <div class="tip-card reveal reveal-delay-1">
-              <div class="tip-title">用 --team 启动多代理，处理大型复杂需求</div>
-              <div class="tip-desc">输入 /ai-pm --team "需求描述" 或直接 /agent-team "需求描述"，多个 AI 代理并行工作，速度比标准模式快约 40%。适合需求文字超过 200 字、包含多个独立功能模块的复杂项目。</div>
-            </div>
-
-            <div class="tip-card reveal reveal-delay-2">
-              <div class="tip-title">配置产品分身，PRD 风格越来越像你</div>
-              <div class="tip-desc">用 /ai-pm persona analyze 分析你历史写的 PRD，AI 提取你的写作特征（用词、句式、结构偏好），之后生成的所有 PRD 都会模仿你的风格。分析文档越多越准确。</div>
-            </div>
+      <div class="skill-card" data-delay="1">
+        <div class="card-body" style="--prog:82%">
+          <div class="rarity-stripe stripe-gold"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-analyze</span>
+            <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
           </div>
+          <span class="card-name">REQUIREMENTS ANALYSIS</span>
+          <p class="card-desc">把模糊的需求问清楚。会问你目标用户是谁、痛点在哪、想做哪些功能，整理成分析报告存下来。产出：02-analysis-report.md</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-analyze "企业内部审批系统"<br>/ai-pm-analyze "医疗问诊 App"</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-core">CORE</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
 
+      <div class="skill-card" data-delay="2">
+        <div class="card-body" style="--prog:86%">
+          <div class="rarity-stripe stripe-gold"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-research</span>
+            <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
+          </div>
+          <span class="card-name">COMPETITIVE RESEARCH</span>
+          <p class="card-desc">扫一遍市场上的同类产品，看他们做了什么、没做什么，帮你找到差异化的切入点。产出：03-competitor-report.md</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-research "记账类 App"<br>/ai-pm-research "企业 OA 系统"</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-core">CORE</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="3">
+        <div class="card-body" style="--prog:78%">
+          <div class="rarity-stripe stripe-gold"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-story</span>
+            <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
+          </div>
+          <span class="card-name">USER STORY WRITER</span>
+          <p class="card-desc">把功能拆成用户故事格式，每条附带验收标准，可以直接给开发团队用。产出：04-user-stories.md</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-story</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-core">CORE</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="4">
+        <div class="card-body" style="--prog:92%">
+          <div class="rarity-stripe stripe-gold"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-prd</span>
+            <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
+          </div>
+          <span class="card-name">PRD GENERATOR</span>
+          <p class="card-desc">把前面分析的结论整合成一份完整 PRD。DOCX 格式可以直接导入飞书变成可编辑云文档。产出：05-prd/05-PRD-v1.0.md</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-prd<br>/ai-pm-prd --export=pdf<br>/ai-pm-prd --export=docx    （导飞书用这个）<br>/ai-pm-prd --export=all</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-core">CORE</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="5">
+        <div class="card-body" style="--prog:88%">
+          <div class="rarity-stripe stripe-gold"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-prototype</span>
+            <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
+          </div>
+          <span class="card-name">PROTOTYPE GENERATOR</span>
+          <p class="card-desc">根据 PRD 生成一个能点击的 HTML 原型，不需要装任何工具，双击文件在浏览器里直接预览。产出：06-prototype/index.html</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-prototype</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-core">CORE</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="6">
+        <div class="card-body" style="--prog:90%">
+          <div class="rarity-stripe stripe-gold"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-review</span>
+            <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
+          </div>
+          <span class="card-name">REQUIREMENTS REVIEW</span>
+          <p class="card-desc">模拟一场评审会。产品、开发、设计、测试、运营、商务、法务、目标用户、CEO——九个角色同时开口，从各自立场找问题、给意见。产出：08-review-report-v1.md</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-review<br>/ai-pm-review --round=2    （第二轮修改后再评）</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-core">CORE</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Tab: Extension tools -->
+  <div id="tab-ext" class="tab-content tab-fade">
+    <div class="skills-grid">
+
+      <div class="skill-card" data-delay="0">
+        <div class="card-body" style="--prog:75%">
+          <div class="rarity-stripe stripe-teal"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-priority</span>
+            <span class="card-rarity rarity-p1">P1 ◆◆</span>
+          </div>
+          <span class="card-name">PRIORITY EVALUATOR</span>
+          <p class="card-desc">把各方提来的需求集中评估。按业务价值、实现难度、用户影响、战略方向四个维度打分，排出优先级，顺带生成一份可以直接发给提报人的回复。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-priority</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-ext">EXT</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="1">
+        <div class="card-body" style="--prog:70%">
+          <div class="rarity-stripe stripe-teal"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-weekly</span>
+            <span class="card-rarity rarity-p1">P1 ◆◆</span>
+          </div>
+          <span class="card-name">WEEKLY REPORT</span>
+          <p class="card-desc">把这周做的事随便说一遍，AI 帮你归类整理成周报。可以出两个版本：给上级看的简洁版，和给团队看的详细版。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-weekly</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-ext">EXT</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="2">
+        <div class="card-body" style="--prog:68%">
+          <div class="rarity-stripe stripe-teal"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-interview</span>
+            <span class="card-rarity rarity-p1">P1 ◆◆</span>
+          </div>
+          <span class="card-name">FIELD INTERVIEW</span>
+          <p class="card-desc">带着电脑去和客户面谈时用。AI 给出访谈提纲，你跟着走，谈完直接生成需求草稿，不用事后再整理。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-interview</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-ext">EXT</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="3">
+        <div class="card-body" style="--prog:83%">
+          <div class="rarity-stripe stripe-teal"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-data</span>
+            <span class="card-rarity rarity-p1">P1 ◆◆</span>
+          </div>
+          <span class="card-name">DATA INSIGHT</span>
+          <p class="card-desc">上传你的业务数据表，AI 读出规律，生成一个浏览器里能点的交互图表页面，并告诉你数据背后可能藏着哪些产品机会。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-data 用户行为数据.xlsx<br>/ai-pm-data report.csv<br>/ai-pm-data metrics.json</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-ext">EXT</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Tab: Config management -->
+  <div id="tab-cfg" class="tab-content tab-fade">
+    <div class="skills-grid">
+
+      <div class="skill-card" data-delay="0">
+        <div class="card-body" style="--prog:58%">
+          <div class="rarity-stripe stripe-gray"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-persona</span>
+            <span class="card-rarity rarity-p2">P2 ◆</span>
+          </div>
+          <span class="card-name">PRODUCT PERSONA</span>
+          <p class="card-desc">分析你写过的 PRD，提取表达习惯和结构偏好。之后生成的文档会按你的风格来写，不是标准 AI 腔。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-persona analyze 05-PRD-v1.0.md<br>/ai-pm-persona list<br>/ai-pm-persona apply</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-cfg">CFG</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="1">
+        <div class="card-body" style="--prog:55%">
+          <div class="rarity-stripe stripe-gray"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-design-spec</span>
+            <span class="card-rarity rarity-p2">P2 ◆</span>
+          </div>
+          <span class="card-name">DESIGN SPEC</span>
+          <p class="card-desc">上传团队的 UI 规范（截图或 PDF 都行），原型生成时会自动套用设计标准，不用每次再手动说颜色和字体。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-design-spec upload 公司规范.pdf<br>/ai-pm-design-spec list<br>/ai-pm-design-spec apply 公司规范</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-cfg">CFG</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="2">
+        <div class="card-body" style="--prog:72%">
+          <div class="rarity-stripe stripe-gray"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-knowledge</span>
+            <span class="card-rarity rarity-p2">P2 ◆</span>
+          </div>
+          <span class="card-name">KNOWLEDGE BASE</span>
+          <p class="card-desc">把你踩过的坑、做过的决策记进来。下次遇到类似场景，AI 会主动提醒你：这里之前出过问题。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-knowledge add<br>/ai-pm-knowledge search "登录"<br>/ai-pm-knowledge sync</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-cfg">CFG</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="sec-divider"></div>
+
+<!-- ===== WORKFLOW ===== -->
+<section id="workflow">
+  <div class="sec-header" id="sh-wf">
+    <div class="sec-label-block"><span class="sec-sl">//</span><span class="sec-en">OPERATION FLOW</span></div>
+    <h2 class="sec-cn">工作流程</h2>
+  </div>
+  <p class="workflow-subtitle sec-reveal" id="sr-wf">点击节点查看阶段详情</p>
+
+  <div class="timeline-wrap-outer">
+  <div class="timeline-wrap sec-reveal">
+
+    <div class="tl-node">
+      <div class="node-hex">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22"/>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">01</text>
+        </svg>
+      </div>
+      <div class="tl-label">
+        <span class="tl-name">需求输入</span>
+        <span class="tl-cmd">/ai-pm</span>
+        <span class="tl-info">// 输入需求描述</span>
+      </div>
+      <div class="node-detail">
+        <div class="node-detail-inner">
+          <div class="nd-row"><span class="nd-label">阶段</span>描述产品需求，AI 引导澄清</div>
+          <div class="nd-row"><span class="nd-label">产物</span>01-requirement-draft.md</div>
+          <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm &quot;你的需求&quot;',this)">/ai-pm</button></div>
         </div>
       </div>
     </div>
 
-    <!-- Tab 3: 工作流 -->
-    <div class="tab-panel" id="tab-3" data-panel="3">
-      <div style="padding: var(--space-12) 0 var(--space-20);">
-        <div class="container">
+    <div class="tl-connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
 
-          <div class="text-container" style="text-align:center; padding-top:var(--space-4);">
-            <p class="section-eyebrow reveal">工作流模式</p>
-            <h2 class="section-title reveal reveal-delay-1">四种模式，按需选择</h2>
-            <p class="section-subtitle reveal reveal-delay-2">根据项目复杂度和时间约束，选择最合适的执行路径。</p>
-          </div>
-
-          <div style="margin-top: var(--space-12);">
-
-            <div class="workflow-card reveal">
-              <div class="workflow-header">
-                <div class="workflow-num">1</div>
-                <div>
-                  <div class="workflow-title">标准流程</div>
-                  <div class="workflow-subtitle">最完整，质量最高，适合新产品立项</div>
-                </div>
-              </div>
-              <div class="workflow-flow">
-                <span class="flow-step">需求澄清</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">需求分析</span>
-                <span class="flow-arrow">+</span>
-                <span class="flow-step">竞品研究</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">用户故事</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">PRD</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">原型</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">九角色评审</span>
-              </div>
-              <p class="workflow-desc">Phase 2+3 并行执行（需求分析与竞品研究同时进行），PRD 生成前有一次统一确认节点，原型生成前有 Token 消耗提示。整个流程覆盖产品生命周期所有关键输出物。</p>
-              <div class="workflow-cmd-block">
-                <code>/ai-pm "我想做一个帮用户决定吃什么的 App"</code>
-              </div>
-            </div>
-
-            <div class="workflow-card reveal">
-              <div class="workflow-header">
-                <div class="workflow-num">2</div>
-                <div>
-                  <div class="workflow-title">快速模式</div>
-                  <div class="workflow-subtitle">跳过中间阶段，直达 PRD 和原型</div>
-                </div>
-              </div>
-              <div class="workflow-flow">
-                <span class="flow-step">需求描述</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">⚡ 加急</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">自动分析</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">PRD 确认</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">原型生成</span>
-              </div>
-              <p class="workflow-desc">在主流程中输入「加急」或「yolo」，Phase 1-4 全自动执行，仅在 PRD 生成前停一次确认，生成原型前再停一次。适合已经想清楚需求、只需要快速产出文档的场景。</p>
-              <div class="workflow-cmd-block">
-                <code>/ai-pm "需求描述"  →  输入 "加急"</code>
-              </div>
-            </div>
-
-            <div class="workflow-card reveal">
-              <div class="workflow-header">
-                <div class="workflow-num">3</div>
-                <div>
-                  <div class="workflow-title">多代理模式</div>
-                  <div class="workflow-subtitle">并行执行，速度快 40%，适合大型复杂需求</div>
-                </div>
-              </div>
-              <div class="workflow-flow">
-                <span class="flow-step">Wave 1: PM + 分析师</span>
-                <span class="flow-arrow">↓</span>
-                <span class="flow-step">Wave 2: PRD 专家</span>
-                <span class="flow-arrow">↓</span>
-                <span class="flow-step">Wave 3: 评审专家</span>
-              </div>
-              <p class="workflow-desc">多个 AI 代理并行执行独立子任务。Wave 1 产品经理和竞品分析师同时工作，Wave 2 读取 Wave 1 输出生成 PRD，Wave 3 执行三角色精简评审。需求超过 200 字或包含多个独立模块时建议使用。</p>
-              <div class="workflow-cmd-block">
-                <code>/ai-pm --team "复杂需求描述"</code>
-              </div>
-            </div>
-
-            <div class="workflow-card reveal">
-              <div class="workflow-header">
-                <div class="workflow-num">4</div>
-                <div>
-                  <div class="workflow-title">现场调研模式</div>
-                  <div class="workflow-subtitle">有客户在场时使用，边访谈边产出</div>
-                </div>
-              </div>
-              <div class="workflow-flow">
-                <span class="flow-step">准备提问</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">逐步访谈</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">实时记录</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">需求草稿</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">客户确认</span>
-                <span class="flow-arrow">→</span>
-                <span class="flow-step">正式 PRD</span>
-              </div>
-              <p class="workflow-desc">专为线下拜访客户场景设计。AI 生成提问方向，你逐步访谈，AI 同步记录用户原话、痛点和期望。访谈结束立刻生成需求草稿，客户当场确认，然后触发 PRD 生成。生成内容要快，客户不能等超过 30 秒。</p>
-              <div class="workflow-cmd-block">
-                <code>/ai-pm interview</code>
-              </div>
-            </div>
-
-          </div>
+    <div class="tl-node">
+      <div class="node-hex">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22"/>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">02</text>
+        </svg>
+      </div>
+      <div class="tl-label">
+        <span class="tl-name">需求分析</span>
+        <span class="tl-cmd">/ai-pm-analyze</span>
+        <span class="tl-info">// 深度需求分析</span>
+      </div>
+      <div class="node-detail">
+        <div class="node-detail-inner">
+          <div class="nd-row"><span class="nd-label">阶段</span>挖掘用户画像、痛点、MVP 范围</div>
+          <div class="nd-row"><span class="nd-label">产物</span>02-analysis-report.md</div>
+          <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm-analyze',this)">/ai-pm-analyze</button></div>
         </div>
       </div>
     </div>
 
-    <!-- Tab 4: 关于 -->
-    <div class="tab-panel" id="tab-4" data-panel="4">
-      <div style="padding: var(--space-12) 0 var(--space-20);">
-        <div class="container">
+    <div class="tl-connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
 
-          <div class="text-container" style="text-align:center; padding-top:var(--space-4);">
-            <p class="section-eyebrow reveal">关于</p>
-            <h2 class="section-title reveal reveal-delay-1">AI_PM 项目</h2>
-            <p class="section-subtitle reveal reveal-delay-2">基于 Claude Code Skills 构建的产品经理工具集，持续迭代。</p>
-          </div>
+    <div class="tl-node">
+      <div class="node-hex">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22"/>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">03</text>
+        </svg>
+      </div>
+      <div class="tl-label">
+        <span class="tl-name">竞品研究</span>
+        <span class="tl-cmd">/ai-pm-research</span>
+        <span class="tl-info">// 竞品市场分析</span>
+      </div>
+      <div class="node-detail">
+        <div class="node-detail-inner">
+          <div class="nd-row"><span class="nd-label">阶段</span>对标竞品，识别差异化机会</div>
+          <div class="nd-row"><span class="nd-label">产物</span>03-competitor-report.md</div>
+          <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm-research',this)">/ai-pm-research</button></div>
+        </div>
+      </div>
+    </div>
 
-          <!-- Project Info -->
-          <div class="info-grid" style="margin-top: var(--space-12);">
-            <div class="info-card reveal">
-              <div class="info-card-icon">🛠️</div>
-              <div class="info-card-title">Claude Code Skills</div>
-              <div class="info-card-desc">基于 Claude Code 技能系统构建，无需额外安装</div>
-            </div>
-            <div class="info-card reveal reveal-delay-1">
-              <div class="info-card-icon">🔒</div>
-              <div class="info-card-title">本地运行</div>
-              <div class="info-card-desc">所有数据本地处理，不上传到第三方服务</div>
-            </div>
-            <div class="info-card reveal reveal-delay-2">
-              <div class="info-card-icon">📄</div>
-              <div class="info-card-title">MIT License</div>
-              <div class="info-card-desc">开源协议，可自由使用和修改</div>
-            </div>
-            <div class="info-card reveal">
-              <div class="info-card-icon">⚡</div>
-              <div class="info-card-title">零外部依赖</div>
-              <div class="info-card-desc">本教程中心纯原生实现，完全离线可用</div>
-            </div>
-          </div>
+    <div class="tl-connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
 
-          <!-- Changelog -->
-          <div style="margin-top: var(--space-16);">
-            <h3 class="reveal" style="font-size:21px; font-weight:600; margin-bottom:var(--space-2);">更新日志</h3>
-            <p class="reveal" style="font-size:15px; color:var(--text-secondary); margin-bottom:var(--space-8);">记录 AI_PM 技能的重要变更。</p>
+    <div class="tl-node">
+      <div class="node-hex">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22"/>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">04</text>
+        </svg>
+      </div>
+      <div class="tl-label">
+        <span class="tl-name">用户故事</span>
+        <span class="tl-cmd">/ai-pm-story</span>
+        <span class="tl-info">// 用户故事与 AC</span>
+      </div>
+      <div class="node-detail">
+        <div class="node-detail-inner">
+          <div class="nd-row"><span class="nd-label">阶段</span>拆解功能为可验收的用户故事</div>
+          <div class="nd-row"><span class="nd-label">产物</span>04-user-stories.md</div>
+          <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm-story',this)">/ai-pm-story</button></div>
+        </div>
+      </div>
+    </div>
 
-            <div>
+    <div class="tl-connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
 
-              <div class="changelog-item reveal">
-                <div class="changelog-version">
-                  <span class="changelog-version-tag">v2.0</span>
-                </div>
-                <div>
-                  <div class="changelog-date">2026-03-06</div>
-                  <div class="changelog-desc">大规模重构：单文件架构、新增需求优先级评估（/ai-pm-priority）、工作周报（/ai-pm-weekly）、产品分身（/ai-pm-persona）、设计规范（/ai-pm-design-spec）四个新技能。agent-team 改为内部引擎，通常由 /ai-pm --team 自动触发。移除 ai-pm-config 技能，PRD 目录结构统一到 05-prd/ 子目录。</div>
-                </div>
-              </div>
+    <div class="tl-node">
+      <div class="node-hex">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22"/>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">05</text>
+        </svg>
+      </div>
+      <div class="tl-label">
+        <span class="tl-name">PRD</span>
+        <span class="tl-cmd">/ai-pm-prd</span>
+        <span class="tl-info">// 输出完整 PRD</span>
+      </div>
+      <div class="node-detail">
+        <div class="node-detail-inner">
+          <div class="nd-row"><span class="nd-label">阶段</span>生成完整 PRD，支持多格式导出</div>
+          <div class="nd-row"><span class="nd-label">产物</span>05-prd/05-PRD-v1.0.md</div>
+          <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm-prd',this)">/ai-pm-prd</button></div>
+        </div>
+      </div>
+    </div>
 
-              <div class="changelog-item reveal reveal-delay-1">
-                <div class="changelog-version">
-                  <span class="changelog-version-tag">v1.5</span>
-                </div>
-                <div>
-                  <div class="changelog-date">2026-03-05</div>
-                  <div class="changelog-desc">添加知识库管理技能（/ai-pm-knowledge），支持 add/search/list/sync/suggest 五个命令。agent-team 引入 Wave Orchestrator 执行协议，实现真正并行的多代理协作。主流程 Phase 5/8 前自动推荐相关知识。</div>
-                </div>
-              </div>
+    <div class="tl-connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
 
-              <div class="changelog-item reveal reveal-delay-2">
-                <div class="changelog-version">
-                  <span class="changelog-version-tag">v1.0</span>
-                </div>
-                <div>
-                  <div class="changelog-date">2026-03-01</div>
-                  <div class="changelog-desc">初始版本。包含 ai-pm 主控、ai-pm-analyze、ai-pm-research、ai-pm-story、ai-pm-prd、ai-pm-prototype、ai-pm-review、ai-pm-data、ai-pm-interview 九个核心技能。</div>
-                </div>
-              </div>
+    <div class="tl-node">
+      <div class="node-hex">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22"/>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">06</text>
+        </svg>
+      </div>
+      <div class="tl-label">
+        <span class="tl-name">原型设计</span>
+        <span class="tl-cmd">/ai-pm-prototype</span>
+        <span class="tl-info">// 可交互原型</span>
+      </div>
+      <div class="node-detail">
+        <div class="node-detail-inner">
+          <div class="nd-row"><span class="nd-label">阶段</span>生成可交互 HTML 原型</div>
+          <div class="nd-row"><span class="nd-label">产物</span>06-prototype/index.html</div>
+          <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm-prototype',this)">/ai-pm-prototype</button></div>
+        </div>
+      </div>
+    </div>
 
-            </div>
-          </div>
+    <div class="tl-connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
 
-          <!-- Footer info -->
-          <div style="margin-top: var(--space-12); padding: var(--space-6); background:var(--surface); border-radius:var(--radius-lg); border:1px solid var(--border);" class="reveal">
-            <p style="font-size:13px; color:var(--text-tertiary); font-family:var(--font-mono);">
-              生成时间：2026-03-06 &nbsp;|&nbsp; 技能总数：15 &nbsp;|&nbsp; 架构：纯原生 HTML，零外部依赖
-            </p>
-          </div>
-
+    <div class="tl-node">
+      <div class="node-hex">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22" stroke="#FFD700" stroke-width="2"/>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">07</text>
+        </svg>
+      </div>
+      <div class="tl-label">
+        <span class="tl-name">需求评审</span>
+        <span class="tl-cmd">/ai-pm-review</span>
+        <span class="tl-info">// 九角色评审会</span>
+      </div>
+      <div class="node-detail">
+        <div class="node-detail-inner">
+          <div class="nd-row"><span class="nd-label">阶段</span>九角色专家并行评审</div>
+          <div class="nd-row"><span class="nd-label">产物</span>08-review-report-v1.md</div>
+          <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm-review',this)">/ai-pm-review</button></div>
         </div>
       </div>
     </div>
 
   </div>
+  </div><!-- /timeline-wrap-outer -->
 
-  <script>
-    (function () {
-      'use strict';
+  <div class="wf-geo">
+    <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="60,4 112,32 112,88 60,116 8,88 8,32"  fill="none" stroke="#000" stroke-width="1.5"/>
+      <polygon points="60,22 96,43 96,77 60,98 24,77 24,43"  fill="none" stroke="#000" stroke-width="1"/>
+      <polygon points="60,40 80,51 80,69 60,80 40,69 40,51"  fill="none" stroke="#FFD700" stroke-width="0.8"/>
+    </svg>
+  </div>
+</section>
 
-      var accentColors = [
-        '#0071e3',
-        '#ff9f0a',
-        '#30d158',
-        '#bf5af2',
-        '#ff375f'
-      ];
+<!-- ===== REFERENCE ===== -->
+<section id="reference">
+  <div class="ref-header">
+    <div class="ref-top-label">// COMMAND REFERENCE</div>
+    <div class="ref-title">速查表 <span>·</span> 所有命令一览</div>
+  </div>
+  <div class="ref-grid">
 
-      var currentTab = 0;
+    <div>
+      <div class="ref-col-label">// 主流程</div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm')"><span class="ref-cmd">/ai-pm</span><span class="ref-desc">完整流程入口</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-analyze')"><span class="ref-cmd">/ai-pm-analyze</span><span class="ref-desc">需求分析</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-research')"><span class="ref-cmd">/ai-pm-research</span><span class="ref-desc">竞品研究</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-story')"><span class="ref-cmd">/ai-pm-story</span><span class="ref-desc">用户故事</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-prd')"><span class="ref-cmd">/ai-pm-prd</span><span class="ref-desc">PRD 生成</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-prototype')"><span class="ref-cmd">/ai-pm-prototype</span><span class="ref-desc">原型生成</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-review')"><span class="ref-cmd">/ai-pm-review</span><span class="ref-desc">需求评审（九角色）</span><span class="ref-ok">✓ COPIED</span></div>
+    </div>
 
-      function switchTab(index) {
-        var panels = document.querySelectorAll('.tab-panel');
-        var buttons = document.querySelectorAll('.nav-tab');
-        var total = panels.length;
+    <div>
+      <div class="ref-col-label">// 扩展工具</div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-priority')"><span class="ref-cmd">/ai-pm-priority</span><span class="ref-desc">需求优先级</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-weekly')"><span class="ref-cmd">/ai-pm-weekly</span><span class="ref-desc">工作周报</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-interview')"><span class="ref-cmd">/ai-pm-interview</span><span class="ref-desc">现场访谈</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-data')"><span class="ref-cmd">/ai-pm-data</span><span class="ref-desc">数据洞察</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-persona')"><span class="ref-cmd">/ai-pm-persona</span><span class="ref-desc">产品分身（风格学习）</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-design-spec')"><span class="ref-cmd">/ai-pm-design-spec</span><span class="ref-desc">设计规范</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-knowledge')"><span class="ref-cmd">/ai-pm-knowledge</span><span class="ref-desc">知识库</span><span class="ref-ok">✓ COPIED</span></div>
+    </div>
 
-        if (index < 0) index = 0;
-        if (index >= total) index = total - 1;
-        if (index === currentTab) return;
+    <div class="ref-section-full">
+      <div class="ref-sub-label">// 配置管理</div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-knowledge add')"><span class="ref-cmd">/ai-pm-knowledge add</span><span class="ref-desc">记录踩坑经验</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-knowledge search')"><span class="ref-cmd">/ai-pm-knowledge search &quot;关键词&quot;</span><span class="ref-desc">搜索知识库</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-knowledge sync')"><span class="ref-cmd">/ai-pm-knowledge sync</span><span class="ref-desc">同步当前项目经验到知识库</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/tutorial-center-update')"><span class="ref-cmd">/tutorial-center-update</span><span class="ref-desc">重新生成本教程页</span><span class="ref-ok">✓ COPIED</span></div>
+    </div>
 
-        panels[currentTab].classList.remove('active');
-        buttons[currentTab].classList.remove('active');
+  </div>
+  <div class="ref-hint">// 点击任意行复制命令</div>
+</section>
 
-        currentTab = index;
+<!-- ===== FOOTER ===== -->
+<footer id="footer">
+  <div class="footer-left">
+    <div class="footer-dot"></div>
+    <span>SYSTEM STATUS: <span class="footer-on">ONLINE</span></span>
+  </div>
+  <div class="footer-mid">
+    <span class="footer-slash">//</span>AI_PM v2.2.0
+  </div>
+  <div class="footer-right">
+    <div>© 2026 K3TTY_WU</div>
+    <div>最后更新: 2026-03-11</div>
+  </div>
+</footer>
 
-        panels[currentTab].classList.add('active');
-        buttons[currentTab].classList.add('active');
+<script>
+/* ===== CLOCK ===== */
+(function() {
+  function tick() {
+    const d = new Date(), pad = n => String(n).padStart(2,'0');
+    const el = document.getElementById('hud-clock');
+    if (el) el.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  tick(); setInterval(tick, 1000);
+})();
 
-        var accent = accentColors[currentTab];
-        document.documentElement.style.setProperty('--accent', accent);
+/* ===== TYPEWRITER ===== */
+(function() {
+  const lines = [
+    { id: 'hero-ai',   text: 'AI',      delay: 0    },
+    { id: 'hero-prod', text: 'PRODUCT', delay: 700  },
+    { id: 'hero-mgr',  text: 'MANAGER', delay: 1200 }
+  ];
+  lines.forEach(({ id, text, delay }) => {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = ''; let i = 0;
+      function type() { el.textContent = text.slice(0,i); i++; if (i<=text.length) setTimeout(type,55); }
+      type();
+    }, delay);
+  });
+})();
 
-        var logoSpan = document.querySelector('.nav-logo span');
-        if (logoSpan) logoSpan.style.color = accent;
-
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        requestAnimationFrame(function () {
-          initReveal();
-        });
-      }
-
-      window.switchTab = switchTab;
-
-      var navTabs = document.querySelectorAll('.nav-tab');
-      navTabs.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var idx = parseInt(btn.getAttribute('data-tab'), 10);
-          switchTab(idx);
-        });
+/* ===== COUNTER ANIMATION ===== */
+function countUp(el, target, dur) {
+  const t0 = performance.now();
+  (function frame(t) {
+    const p = Math.min((t-t0)/dur,1), e = 1-Math.pow(1-p,3);
+    el.textContent = Math.round(e*target);
+    if (p<1) requestAnimationFrame(frame); else el.textContent = target;
+  })(t0);
+}
+(function() {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      document.querySelectorAll('.stat-block').forEach((sb,i) => {
+        setTimeout(() => {
+          sb.classList.add('visible');
+          const n = sb.querySelector('[data-to]');
+          if (n) countUp(n, parseInt(n.dataset.to), 900);
+        }, i*200);
       });
+      io.disconnect();
+    });
+  }, { threshold: 0.3 });
+  const h = document.getElementById('hero');
+  if (h) io.observe(h);
+})();
 
-      document.addEventListener('keydown', function (e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-        if (e.key === 'ArrowRight') switchTab(currentTab + 1);
-        if (e.key === 'ArrowLeft') switchTab(currentTab - 1);
-      });
+/* ===== SCROLL NAV ===== */
+let _navLock = false;
+function scrollToSec(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({behavior:'smooth'});
+  /* Immediately highlight clicked tab, lock scroll-spy briefly */
+  document.querySelectorAll('.hud-tab').forEach(t => t.classList.toggle('active', t.dataset.sec===id));
+  _navLock = true;
+  setTimeout(() => { _navLock = false; }, 900);
+}
+(function() {
+  const MAP = [
+    { id:'quickstart', tabSec:'quickstart' },
+    { id:'skills',     tabSec:'skills' },
+    { id:'workflow',   tabSec:'workflow' },
+    { id:'reference',  tabSec:'reference' }
+  ];
+  function onScroll() {
+    if (_navLock) return;
+    const y = window.scrollY+80; let active='quickstart';
+    MAP.forEach(({id,tabSec}) => { const el=document.getElementById(id); if(el&&el.offsetTop<=y) active=tabSec; });
+    document.querySelectorAll('.hud-tab').forEach(t => t.classList.toggle('active', t.dataset.sec===active));
+  }
+  window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+})();
 
-      var touchStartX = 0;
-      document.addEventListener('touchstart', function (e) {
-        touchStartX = e.changedTouches[0].screenX;
-      }, { passive: true });
+/* ===== SECTION HEADER + CONTENT REVEAL ===== */
+(function() {
+  /* Section headers: slide-in label + fade-up title */
+  const shObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('sh-in'); shObs.unobserve(e.target); }});
+  }, { threshold: 0.25 });
+  document.querySelectorAll('.sec-header').forEach(el => shObs.observe(el));
 
-      document.addEventListener('touchend', function (e) {
-        var diff = touchStartX - e.changedTouches[0].screenX;
-        if (Math.abs(diff) > 80) {
-          if (diff > 0) { switchTab(currentTab + 1); }
-          else { switchTab(currentTab - 1); }
-        }
-      }, { passive: true });
+  /* Section content: fade-up reveal */
+  const srObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('sr-in'); srObs.unobserve(e.target); }});
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.sec-reveal').forEach(el => srObs.observe(el));
+})();
 
-      var progressBar = document.getElementById('progressBar');
-      window.addEventListener('scroll', function () {
-        var total = document.documentElement.scrollHeight - window.innerHeight;
-        var scrolled = total > 0 ? window.scrollY / total : 0;
-        if (progressBar) {
-          progressBar.style.transform = 'scaleX(' + Math.min(Math.max(scrolled, 0), 1) + ')';
-        }
-      }, { passive: true });
+/* ===== SKILL TABS ===== */
+function switchSkillTab(btn, tabId) {
+  document.querySelectorAll('.skill-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const target = document.getElementById('tab-'+tabId);
+  if (!target) return;
+  target.classList.add('active');
+  target.classList.remove('tab-fade'); void target.offsetHeight; target.classList.add('tab-fade');
+  setTimeout(() => observeCards(target.querySelectorAll('.skill-card')), 40);
+}
 
-      function initReveal() {
-        var elements = document.querySelectorAll('.reveal:not(.visible)');
-        if (!elements.length) return;
+/* ===== CARD ENTRANCE ===== */
+function observeCards(cards) {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const c = entry.target, d = parseInt(c.dataset.delay||0)*65;
+      setTimeout(() => c.classList.add('visible'), d);
+      io.unobserve(c);
+    });
+  }, {threshold:0.1});
+  cards.forEach(c => io.observe(c));
+}
+observeCards(document.querySelectorAll('#tab-core .skill-card'));
 
-        var observer = new IntersectionObserver(function (entries) {
-          entries.forEach(function (entry) {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('visible');
-              observer.unobserve(entry.target);
-            }
-          });
-        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+/* ===== COPY ===== */
+function doCopy(btn, text) {
+  function ok() {
+    const p=btn.textContent; btn.textContent='✓ DONE'; btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent=p; btn.classList.remove('copied');},2200);
+  }
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(ok).catch(fb); else fb();
+  function fb() {
+    const ta=document.createElement('textarea'); ta.value=text;
+    ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+    try{document.execCommand('copy');ok();}catch(e){} document.body.removeChild(ta);
+  }
+}
 
-        elements.forEach(function (el) {
-          observer.observe(el);
-        });
-      }
+/* ===== RIPPLE ===== */
+document.addEventListener('click', function(e) {
+  const host=e.target.closest('.ripple-host'); if(!host) return;
+  const rect=host.getBoundingClientRect(), wave=document.createElement('span');
+  wave.className='ripple-wave';
+  const sz=Math.max(rect.width,rect.height)*2.2;
+  wave.style.cssText=`width:${sz}px;height:${sz}px;left:${e.clientX-rect.left-sz/2}px;top:${e.clientY-rect.top-sz/2}px;`;
+  host.appendChild(wave); setTimeout(()=>wave.remove(),700);
+});
 
-      document.documentElement.style.setProperty('--accent', accentColors[0]);
-      initReveal();
+/* ===== DEPLOY ===== */
+function deployCard(e, btn) {
+  e.stopPropagation();
+  const card=btn.closest('.skill-card'), cmd=card&&card.querySelector('.card-command');
+  const text=cmd?cmd.textContent.trim():'';
+  function flash() {
+    const p=btn.textContent; btn.style.background='#4CAF50'; btn.style.color='#fff'; btn.textContent='✓ COPIED';
+    setTimeout(()=>{btn.style.background='';btn.style.color='';btn.textContent=p;},1400);
+  }
+  if (text&&navigator.clipboard) navigator.clipboard.writeText(text).then(flash).catch(flash); else flash();
+}
 
-    })();
-  </script>
+/* ===== HERO CTA ===== */
+(function() {
+  const cta=document.querySelector('.hero-cta'); if(!cta) return;
+  cta.addEventListener('click',function(e){
+    e.preventDefault();
+    setTimeout(()=>{ const qs=document.getElementById('quickstart'); if(qs) qs.scrollIntoView({behavior:'smooth'}); },160);
+  });
+})();
 
+/* ===== STEP ANIMATIONS ===== */
+(function() {
+  const steps=document.querySelectorAll('.step-item');
+  steps.forEach(s=>{s.style.cssText='opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease';});
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(!entry.isIntersecting) return;
+      steps.forEach((s,i)=>setTimeout(()=>{s.style.opacity='1';s.style.transform='translateY(0)';},i*130));
+      io.disconnect();
+    });
+  },{threshold:0.25});
+  const qs=document.getElementById('quickstart'); if(qs) io.observe(qs);
+})();
+
+/* ===== WORKFLOW NODE ACCORDION ===== */
+document.querySelectorAll('.tl-node').forEach(node=>{
+  const hex=node.querySelector('.node-hex');
+  if(!hex) return;
+  hex.addEventListener('click',function(e){
+    e.stopPropagation();
+    const isOpen=node.classList.contains('nd-open');
+    document.querySelectorAll('.tl-node.nd-open').forEach(n=>n.classList.remove('nd-open'));
+    if(!isOpen) node.classList.add('nd-open');
+  });
+});
+
+/* ===== COPY HELPER (node detail commands) ===== */
+function copyText(text, btn) {
+  if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>flashBtn(btn)).catch(()=>fbCopy(text,btn));
+  else fbCopy(text,btn);
+}
+function flashBtn(btn) {
+  const p=btn.textContent; btn.style.background='#fffa00'; btn.style.color='#000';
+  setTimeout(()=>{btn.style.background='';btn.style.color='';},1200);
+}
+function fbCopy(text,btn) {
+  const ta=document.createElement('textarea'); ta.value=text;
+  ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+  try{document.execCommand('copy');flashBtn(btn);}catch(e){} document.body.removeChild(ta);
+}
+
+/* ===== REFERENCE TABLE COPY ===== */
+function refCopy(row, text) {
+  const actualText = text.replace(/&quot;/g, '"');
+  function ok() {
+    row.classList.add('ref-copied');
+    setTimeout(()=>row.classList.remove('ref-copied'),1800);
+  }
+  if(navigator.clipboard) navigator.clipboard.writeText(actualText).then(ok).catch(ok); else ok();
+}
+
+/* ===== MOBILE TAP EXPAND CARDS ===== */
+if(window.matchMedia('(pointer: coarse)').matches) {
+  document.querySelectorAll('.card-body').forEach(card=>{
+    card.addEventListener('click',function(e){
+      if(e.target.closest('.deploy-btn')) return;
+      card.classList.toggle('card-expanded');
+    });
+  });
+}
+
+/* ===== 2a: HAMBURGER NAV ===== */
+function toggleDrawer() {
+  const hbg=document.getElementById('hamburger');
+  const drw=document.getElementById('nav-drawer');
+  const ovl=document.getElementById('nav-overlay');
+  if(!hbg||!drw||!ovl) return;
+  const open=drw.classList.toggle('open');
+  hbg.classList.toggle('open',open);
+  ovl.classList.toggle('open',open);
+  document.body.style.overflow=open?'hidden':'';
+}
+function drawerNav(sec) {
+  toggleDrawer();
+  setTimeout(()=>scrollToSec(sec),200);
+}
+// Sync drawer active state with scroll
+window.addEventListener('scroll',function(){
+  const active=document.querySelector('.hud-tab.active');
+  if(!active) return;
+  const sec=active.dataset.sec;
+  document.querySelectorAll('.drawer-item').forEach(d=>d.classList.toggle('active',d.dataset.sec===sec));
+},{passive:true});
+
+/* ===== 2b: CARD STAGGER (delay already set via data-delay, amplify) ===== */
+(function(){
+  document.querySelectorAll('.skill-card').forEach(card=>{
+    const d=parseInt(card.dataset.delay||0)*80;
+    card.style.transitionDelay=d+'ms';
+  });
+})();
+
+/* ===== 2b: TIMELINE SEQUENTIAL REVEAL ===== */
+(function(){
+  const wrap=document.querySelector('.timeline-wrap'); if(!wrap) return;
+  const items=wrap.querySelectorAll('.tl-node,.tl-connector');
+  items.forEach((el,i)=>{
+    el.style.opacity='0';
+    el.style.transform='translateY(20px)';
+    el.style.transition=`opacity 0.5s ease ${i*100}ms, transform 0.5s ease ${i*100}ms`;
+  });
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(!e.isIntersecting) return;
+      items.forEach(el=>{ el.style.opacity='1'; el.style.transform='translateY(0)'; });
+      io.disconnect();
+    });
+  },{threshold:0.1});
+  io.observe(wrap);
+})();
+
+/* ===== 2c: BACK TO TOP ===== */
+(function(){
+  const btn=document.getElementById('back-top'); if(!btn) return;
+  window.addEventListener('scroll',function(){ btn.classList.toggle('visible',window.scrollY>300); },{passive:true});
+})();
+
+/* ===== 2d: TIMELINE SCROLL HINT ===== */
+(function(){
+  const outer=document.querySelector('.timeline-wrap-outer');
+  const wrap=document.querySelector('.timeline-wrap');
+  if(!outer||!wrap) return;
+  function checkEnd(){
+    if(wrap.scrollLeft+wrap.clientWidth>=wrap.scrollWidth-4) outer.classList.add('scrolled-end');
+    else outer.classList.remove('scrolled-end');
+  }
+  wrap.addEventListener('scroll',checkEnd,{passive:true});
+  checkEnd();
+})();
+</script>
 </body>
 </html>

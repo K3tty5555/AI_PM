@@ -16,47 +16,54 @@ CHROME = os.path.expanduser(
     'Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'
 )
 
-MERMAID_HTML = '''<!DOCTYPE html><html><head><meta charset="UTF-8">
+MERMAID_LOCAL = '/tmp/mermaid.min.js'   # 首次用时执行: curl -sL https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js -o /tmp/mermaid.min.js
+
+# HTML 模板：内联 mermaid.js（避免 --allow-file-access-from-files 标志在 Python subprocess 下的兼容问题）
+MERMAID_HTML_TMPL = '''<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>* {{margin:0;padding:0;box-sizing:border-box;}}
 body {{background:white;padding:16px;font-family:-apple-system,"PingFang SC",sans-serif;display:inline-block;}}</style>
 </head><body><div class="mermaid">{code}</div>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>{mermaid_js_inline}</script>
 <script>mermaid.initialize({{startOnLoad:true,theme:"default"}});</script>
 </body></html>'''
 
 def render_mermaid(code):
-    """渲染 Mermaid 代码为 PNG，返回临时文件路径（调用方负责删除）"""
-    import http.server, random
-    port = random.randint(20000, 29999)
+    """渲染 Mermaid 代码为 PNG（内联 JS，无需 --allow-file-access-from-files）"""
+    if not os.path.exists(MERMAID_LOCAL):
+        print(f'  ⚠️ 本地 mermaid.js 不存在，尝试下载...')
+        try:
+            subprocess.run(
+                ['curl', '-sL', 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+                 '-o', MERMAID_LOCAL],
+                timeout=30, check=True, capture_output=True
+            )
+        except Exception:
+            return None
 
-    # 写临时 HTML
+    # 读取 mermaid.js 并内联到 HTML（避免 file:// 跨源问题）
+    mermaid_js_inline = open(MERMAID_LOCAL, encoding='utf-8').read()
+
+    # 写临时 HTML 到 /tmp/
     html_file = tempfile.NamedTemporaryFile(suffix='.html', dir='/tmp', delete=False, mode='w', encoding='utf-8')
-    html_file.write(MERMAID_HTML.format(code=code))
+    html_file.write(MERMAID_HTML_TMPL.format(code=code, mermaid_js_inline=mermaid_js_inline))
     html_file.close()
 
-    # 起临时 HTTP server（Mermaid.js 需要 http:// 加载）
-    class QuietHandler(http.server.SimpleHTTPRequestHandler):
-        def log_message(self, *a): pass
-        def __init__(self, *a, **kw): super().__init__(*a, directory='/tmp', **kw)
-
-    server = http.server.HTTPServer(('127.0.0.1', port), QuietHandler)
-    t = threading.Thread(target=server.serve_forever)
-    t.daemon = True
-    t.start()
-
-    # Chrome headless 截图
+    # Chrome headless 截图（内联 JS，无需 --allow-file-access-from-files）
+    # shell=True 避免 macOS 下 Python subprocess list 模式与 Chrome 进程组的兼容问题
+    # 渲染完成后等待 2s，让 Chrome 完全释放资源，避免多实例连续调用时 exit 133（SIGTRAP）
     out_png = tempfile.mktemp(suffix='.png', dir='/tmp')
-    url = f'http://127.0.0.1:{port}/{os.path.basename(html_file.name)}'
     try:
-        subprocess.run(
-            [CHROME, '--headless=new', '--no-sandbox', '--disable-gpu',
-             f'--screenshot={out_png}', '--window-size=700,1200',
-             '--hide-scrollbars', '--virtual-time-budget=8000', url],
-            capture_output=True, timeout=30
-        )
+        cmd = (f'"{CHROME}" --headless=new --no-sandbox --disable-gpu '
+               f'--screenshot="{out_png}" --window-size=700,1200 '
+               f'--hide-scrollbars --virtual-time-budget=8000 '
+               f'"file://{html_file.name}" 2>/dev/null')
+        subprocess.run(cmd, shell=True, timeout=30)
+    except (subprocess.TimeoutExpired, Exception):
+        return None
     finally:
-        server.shutdown()
         os.unlink(html_file.name)
+
+    import time; time.sleep(2)
 
     if not os.path.exists(out_png):
         return None
@@ -307,6 +314,28 @@ def convert(prd_path, output_path, manifest_path=None):
         if not line.strip():
             i += 1
             continue
+
+        # 原型截图占位符（独立行 [xxx原型]）
+        m_proto = re.match(r'^\[(.+?)原型\]$', line.strip())
+        if m_proto and screenshot_map:
+            label = m_proto.group(1)
+            img_path = screenshot_map.get(label)
+            if img_path:
+                try:
+                    para = doc.add_paragraph()
+                    run = para.add_run()
+                    run.add_picture(img_path, width=Cm(14))
+                    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    caption = doc.add_paragraph(label + ' 原型截图')
+                    caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    for r in caption.runs:
+                        r.font.size = Pt(9)
+                        r.font.color.rgb = RGBColor(0x86, 0x86, 0x8b)
+                    print(f'  ✅ 截图已嵌入: [{label}]')
+                except Exception as e:
+                    print(f'  ⚠️ 截图插入失败 [{label}]: {e}')
+                i += 1
+                continue
 
         # 普通段落
         para = doc.add_paragraph()
