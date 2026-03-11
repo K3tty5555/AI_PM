@@ -94,16 +94,9 @@ wb = openpyxl.load_workbook(file_path, data_only=True)
 
 ---
 
-## HTML 仪表盘规范（Apple HIG）
+## HTML 仪表盘规范
 
-所有 HTML 输出强制遵循以下规范：
-
-**字体与背景**:
-```css
-font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
-background-color: #f5f5f7;
-color: #1d1d1f;
-```
+数据仪表盘为展示型产物，默认使用 **AI 情境定制**：分析汇报场景、受众和数据类型后自主选择设计风格，确保有记忆点。若项目已加载公司规范（`templates/ui-specs/.active-spec`），则优先使用公司规范。
 
 **Chart.js 规范**:
 ```javascript
@@ -148,5 +141,5 @@ color: #1d1d1f;
 
 - Excel 文件不用 `data_only=True` → 读到公式字符串
 - `indexAxis:'y'` 放在 `scales` 里 → 图表渲染错误
-- 仪表盘使用非 Apple HIG 字体/配色
+- 仪表盘设计方向不明确，沦为通用 AI 审美（蓝白配色 + 圆角卡片）
 - 分析结论不落到具体产品建议（只描述数据，不给洞察）
