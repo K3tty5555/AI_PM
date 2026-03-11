@@ -49,7 +49,8 @@ README.md                  项目介绍
 
 ## 强制规范（Claude 必须遵守）
 
-- UI/HTML 输出强制遵循 Apple HIG：`-apple-system, PingFang SC`，`#f5f5f7` 背景
+- UI/HTML 输出设计规范三档可选，**首次生成 HTML 时询问用户并记住项目偏好**：①公司/团队规范（已上传后自动生效）②AI 情境定制（frontend-design 根据产品场景自主设计）③主流组件库（Ant Design / Material / Element Plus 等）
+- PRD/PDF/DOCX 导出的中文字体仍使用 `PingFang SC`，不受设计规范选择影响
 - 数据分析 Excel 文件必须用 `openpyxl data_only=True`
 - Chart.js `indexAxis:'y'` 必须在 `options` 顶层，不能放在 `scales` 里
 - 所有项目文件输出到 `output/projects/{项目名}/`，不在该目录外新建子目录
