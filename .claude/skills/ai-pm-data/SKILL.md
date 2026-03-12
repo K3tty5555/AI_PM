@@ -1,6 +1,9 @@
 ---
 name: ai-pm-data
-description: 数据分析技能。提供数据指标设计、数据洞察分析、仪表盘生成三大能力。从数据中发现产品需求和优化机会。
+description: >-
+  数据分析技能。提供数据指标设计、数据洞察分析、仪表盘生成三大能力。从数据中发现产品需求和优化机会。
+  当用户说「分析数据」「上传Excel」「数据洞察」「数据可视化」「做仪表盘」「数据看板」
+  「指标设计」「埋点方案」「从数据里找需求」「数据报表」时，立即使用此技能。
 argument-hint: "[数据文件路径 | 命令: insight/metrics/dashboard]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(python3)
 ---

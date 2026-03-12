@@ -1,12 +1,9 @@
 ---
 name: tutorial-center-update
 description: >-
-  AI_PM 教程中心自动化更新 Skill。
-  扫描所有 skills，生成终末地官网 Editorial × 精工细节风格的单一 HTML 文件。
-  白底大字排版、// 双斜杠装饰、黄色实色块、深色页脚，明亮通透精工感。
-  采用纯原生技术栈（无框架依赖），完全离线可用。
-  支持锚点导航、Scroll Reveal 动画、微交互、键盘/触摸交互。
-  输出可直接打开、无需网络的 AI_PM_教程中心.html。
+  AI_PM 教程中心自动化更新 Skill。扫描所有 skills，增量更新单一 HTML 文件，完全离线可用。
+  当用户说「更新教程中心」「刷新教程」「教程中心过期了」「新增了技能需要更新文档」
+  「同步技能列表到教程」时，立即使用此技能。注意：必须增量编辑，禁止整体重写。
 argument-hint: "[update|preview|sync|validate]"
 allowed-tools: Read Write Edit Bash(ls) Bash(find) Bash(cat) Bash(grep) Bash(sed) Agent
 ---
@@ -158,88 +155,12 @@ allowed-tools: Read Write Edit Bash(ls) Bash(find) Bash(cat) Bash(grep) Bash(sed
 
 ## 交互特性
 
-### 1. Scroll Reveal 双层动画
+实现细节（Scroll Reveal 双层动画、ScrollSpy、实时时钟）见 → [`references/interactions.md`](./references/interactions.md)
 
-页面使用**两套独立 Observer**，阈值不同，产生层次感：
-
-```javascript
-/* 层一：Section 标题（threshold 0.25，较高，标题完整进入后触发） */
-const shObs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('sh-in'); shObs.unobserve(e.target); }
-  });
-}, { threshold: 0.25 });
-document.querySelectorAll('.sec-header').forEach(el => shObs.observe(el));
-
-/* 层二：Section 内容（threshold 0.1，较低，刚进入视口即触发） */
-const srObs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('sr-in'); srObs.unobserve(e.target); }
-  });
-}, { threshold: 0.1 });
-document.querySelectorAll('.sec-reveal').forEach(el => srObs.observe(el));
-```
-
-标题动画由 `.sh-in` 触发（label-block 滑入 + sec-cn 淡入），内容动画由 `.sr-in` 触发：
-
-```css
-.sec-reveal { opacity: 0; transform: translateY(24px);
-  transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1) 0.1s, transform 0.7s cubic-bezier(0.16,1,0.3,1) 0.1s; }
-.sec-reveal.sr-in { opacity: 1; transform: translateY(0); }
-```
-
-### 2. 导航滚动定位（ScrollSpy）
-
-MAP 按页面从上到下排列，`forEach` 最后一个满足条件的 section 胜出（最深）：
-
-```javascript
-let _navLock = false;
-
-function scrollToSec(id) {
-  const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: 'smooth' });
-  /* 立即高亮 + 锁定 900ms，防止 scroll 事件覆盖（尤其最后一个 section） */
-  document.querySelectorAll('.hud-tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.sec === id));
-  _navLock = true;
-  setTimeout(() => { _navLock = false; }, 900);
-}
-
-(function() {
-  const MAP = [
-    { id: 'quickstart', tabSec: 'quickstart' },
-    { id: 'skills',     tabSec: 'skills' },
-    { id: 'workflow',   tabSec: 'workflow' }   /* 必须保持从上到下顺序 */
-  ];
-  function onScroll() {
-    if (_navLock) return;
-    const y = window.scrollY + 80; let active = 'quickstart';
-    MAP.forEach(({ id, tabSec }) => {
-      const el = document.getElementById(id);
-      if (el && el.offsetTop <= y) active = tabSec;
-    });
-    document.querySelectorAll('.hud-tab').forEach(t =>
-      t.classList.toggle('active', t.dataset.sec === active));
-  }
-  window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
-})();
-```
-
-> **注意**：最后一个 section（workflow）因页面可能滚不到底，直接滚动时 offsetTop 条件可能永远不满足。`_navLock` 机制确保点击后高亮不被覆盖。
-
-### 3. 实时时钟
-
-```javascript
-(function clock() {
-  const el = document.getElementById('hud-clock');
-  if (!el) return;
-  function tick() {
-    const now = new Date();
-    el.textContent = now.toTimeString().slice(0,8);
-  }
-  tick(); setInterval(tick, 1000);
-})();
-```
+**关键要点**：
+- Scroll Reveal 用两套 Observer（threshold 0.25 标题 / 0.1 内容），产生层次感
+- ScrollSpy 需要 `_navLock` 机制，防止点击导航后 scroll 事件覆盖高亮
+- 实时时钟挂 `hud-clock` 元素，每秒更新
 
 ## 使用方式
 
@@ -436,6 +357,8 @@ find .claude/skills -name "SKILL.md" -type f
 
 - [generator.md](./generator.md) - HTML 生成器规范
 - [validator.md](./validator.md) - 验证流程和自检机制
+- [references/design-system.md](./references/design-system.md) - 字体/排版/关键组件 CSS 规范（需要调试样式时读取）
+- [references/interactions.md](./references/interactions.md) - Scroll Reveal / ScrollSpy / 时钟 JS 实现（需要调试交互时读取）
 - [agent-review.md](./agent-review.md) - Agent Team 调优流程（可选）
 
 ## 故障排查
@@ -539,129 +462,13 @@ find .claude/skills -name "SKILL.md" -type f
 
 ### Editorial Endfield 排版原则
 
-#### 布局原则
+详细排版规范、字体表、关键组件 CSS 见 → [`references/design-system.md`](./references/design-system.md)
 
-- 内容区最大宽度：1200px
-- 导航高度：54px，白色背景，`border-bottom: 1px solid var(--border)`
-- 技能卡片网格：`repeat(auto-fill, minmax(280px, 1fr))`，gap 20px
-- 步骤卡片网格：`repeat(auto-fit, minmax(280px, 1fr))`，gap 36px（**必须用 `auto-fit`，不能用 `auto-fill`**，否则宽屏出现空列留白）
-- 响应式断点：900px（中）、480px（小）
-
-#### 字体规范
-
-最低可读字号：**10px**（装饰性全大写标签）；正文内容最低 **11px**；实际文字内容最低 **12px**。
-
-| 样式 | 大小 | 字重 | 字体 | 用途 |
-|------|------|------|------|------|
-| Hero Display | `clamp(76px, 12.5vw, 164px)` | 900 | sans | Hero 主标题 |
-| Section CN | `3rem`（响应式最小 2rem） | 900 | sans | 各 section 中文大标题（.sec-cn） |
-| Section EN | `10px` + `letter-spacing: 4px` | bold | mono | 全大写装饰标签（.sec-en），视觉等效更大 |
-| Card 标题 | 13-16px | 700 | sans/mono | 技能卡片命令（13px）、步骤标题（14px） |
-| Body | 14-15px | 400 | sans | 正文说明（step-desc 15px，card-desc 14px） |
-| 工作流节点名 | 13px | 600 | sans | .tl-name |
-| 命令/Tag/Cmd | 10-12px | bold | mono | .tl-cmd 11px，.skill-tab 12px，badge 10px |
-| 辅助标签 | 10px | bold | mono | 全大写装饰性标签（.card-type-tag 等），最低下限 |
-
-**禁止**：任何可读内容使用 9px 或以下。装饰性全大写标签最低 10px。
-
-**字体栈**：
-```css
---font-sans: -apple-system, 'PingFang SC', sans-serif;  /* 标题、正文、section */
---font-mono: 'Courier New', 'Consolas', monospace;       /* 命令、代码、标签 */
-```
-
-#### 关键组件规范
-
-**导航栏**：
-```css
-#hud-nav {
-  height: 54px;
-  background: var(--white);
-  border-bottom: 1px solid var(--border);
-  /* nav tabs 用 font-mono + uppercase + letter-spacing: 1.5px */
-}
-.hud-tab.active::after {
-  background: var(--yellow);  /* 2px 下划线，非整个 tab 高亮背景 */
-  bottom: 0; height: 2px;
-}
-```
-
-**技能卡片**（hover 黄色底 + 上移）：
-```css
-.skill-card:hover {
-  background: var(--yellow-dim);  /* rgba(255,215,0,0.08) */
-  transform: translateY(-3px);
-  border-color: rgba(255,215,0,0.3);
-}
-```
-
-**黄色标签块**（实色，非描边）：
-```css
-.step-tag, .tag-block, .skill-tag {
-  background: var(--yellow);      /* 实色黄底 */
-  color: #000;
-  font-family: var(--font-mono);
-  font-size: 9px; letter-spacing: 2px; font-weight: bold;
-  padding: 3px 10px;
-  /* 无 border-radius，直角感 */
-}
-```
-
-**双语 Section 标题**（仿终末地 SectionTitle 组件）：
-
-每个 section 标题由三层构成，按滚动进入先后顺序动画：
-
-```html
-<div class="sec-header" id="sh-xx">
-  <!-- 1. // + EN 标签：从左 -28px 滑入 -->
-  <div class="sec-label-block">
-    <span class="sec-sl">//</span>
-    <span class="sec-en">SECTION ENGLISH NAME</span>
-  </div>
-  <!-- 2. 中文大标题：从下 14px 淡入 -->
-  <h2 class="sec-cn">章节名称</h2>
-</div>
-```
-
-```css
-/* 标签行：从左滑入 */
-.sec-label-block {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 2rem; margin-bottom: 10px;
-  transform: translateX(-28px); opacity: 0;
-  transition: transform 0.5s ease-out, opacity 0.35s ease;
-}
-.sec-header.sh-in .sec-label-block { transform: translateX(0); opacity: 1; }
-
-.sec-sl { font-weight: 900; font-size: 18px; color: var(--yellow); letter-spacing: -2px; }
-.sec-en { font-family: var(--font-mono); font-size: 10px; letter-spacing: 4px; text-transform: uppercase; }
-
-/* 中文标题：从下淡入，0.18s 延迟 */
-.sec-cn {
-  display: block; font-size: 3rem; font-weight: 900;
-  line-height: 1; letter-spacing: -0.03em;
-  opacity: 0; transform: translateY(14px);
-  transition: opacity 0.55s ease 0.18s, transform 0.55s ease 0.18s;
-}
-.sec-header.sh-in .sec-cn { opacity: 1; transform: translateY(0); }
-
-/* 响应式 */
-@media (max-width: 480px) { .sec-cn { font-size: 2.4rem; } }
-@media (max-width: 380px) { .sec-cn { font-size: 2rem; letter-spacing: -0.02em; } }
-```
-
-各 section 对应英文标签：
-- `#quickstart` → `GETTING STARTED`
-- `#skills` → `SKILL MANIFEST`
-- `#workflow` → `OPERATION FLOW`
-
-**HUD 精工框**（四角 L 装饰）：
-```css
-.hud-box { border: 1px solid var(--border); padding: 44px; position: relative; }
-.hud-corner { position:absolute; width:12px; height:12px; border-color: var(--yellow); border-style: solid; }
-.hud-corner.tl { top:8px; left:8px; border-width:1.5px 0 0 1.5px; }
-/* 无填充背景，边框 + 角标即可 */
-```
+**关键约束速查**：
+- 步骤卡片网格必须用 `auto-fit`（不能用 `auto-fill`，否则宽屏留白）
+- 最低可读字号 **10px**（装饰性全大写标签）；正文最低 **12px**
+- 字体栈：正文/标题用 `--font-sans`，命令/代码用 `--font-mono`
+- Section 英文标签：quickstart→`GETTING STARTED`，skills→`SKILL MANIFEST`，workflow→`OPERATION FLOW`
 
 ## 更新日志
 
