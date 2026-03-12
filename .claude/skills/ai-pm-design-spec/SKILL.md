@@ -1,6 +1,9 @@
 ---
 name: ai-pm-design-spec
-description: 设计规范技能。上传公司或团队的 UI 规范，让所有 HTML 输出（原型、仪表盘）自动遵守你们的设计标准，优先级高于 AI 情境定制。
+description: >-
+  设计规范技能。上传公司或团队的 UI 规范，让所有 HTML 输出（原型、仪表盘）自动遵守你们的设计标准，优先级高于 AI 情境定制。
+  当用户说「上传设计规范」「加载UI规范」「用公司规范」「Figma规范」「设计Token」
+  「统一原型风格」「公司色彩规范」「设计系统」时，立即使用此技能。
 argument-hint: "[命令: upload/list/apply/show/reset] [规范名]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ---

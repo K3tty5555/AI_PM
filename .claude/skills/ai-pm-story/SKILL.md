@@ -1,6 +1,9 @@
 ---
 name: ai-pm-story
-description: 用户故事编写技能。基于需求分析和竞品研究，编写详细的用户故事和验收标准。
+description: >-
+  用户故事编写技能。基于需求分析和竞品研究，编写详细的用户故事和验收标准。
+  当用户说「写用户故事」「用户故事拆解」「验收标准」「功能场景拆解」「需求拆解」
+  「用例编写」「As a user」「Given When Then」「故事点」时，立即使用此技能。
 argument-hint: "[分析报告路径 | 功能描述]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ---

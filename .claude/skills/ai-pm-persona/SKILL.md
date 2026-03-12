@@ -1,6 +1,9 @@
 ---
 name: ai-pm-persona
-description: 产品分身技能。分析你的历史需求文档，学习你的写作风格、措辞习惯和结构偏好。让 AI 生成的 PRD 越来越像你写的。
+description: >-
+  产品分身技能。分析你的历史需求文档，学习你的写作风格、措辞习惯和结构偏好。让 AI 生成的 PRD 越来越像你写的。
+  当用户说「学习我的风格」「让PRD像我写的」「分析我的文档」「风格设置」「个性化PRD」
+  「我想让输出更像我的语气」「训练分身」「风格模仿」时，立即使用此技能。
 argument-hint: "[命令: analyze/list/apply/reset] [PRD文件路径 | 风格名]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep)
 ---

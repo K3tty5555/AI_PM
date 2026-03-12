@@ -1,6 +1,10 @@
 ---
 name: ai-pm-prototype
-description: 原型生成技能。基于 PRD 生成可交互的单页网页原型，支持移动端和 Web 端。首次生成时询问设计规范（公司规范 / AI 情境定制 / 主流组件库），项目内记住偏好。
+description: >-
+  原型生成技能。基于 PRD 生成可交互的单页网页原型，支持移动端和 Web 端。
+  首次生成时询问设计规范（公司规范 / AI 情境定制 / 主流组件库），项目内记住偏好。
+  当用户说「生成原型」「做原型」「可交互原型」「HTML原型」「页面原型」「低保真」「高保真原型」
+  「画个界面」「把PRD做成原型」时，立即使用此技能。
 argument-hint: "[PRD路径 | --mobile | --web]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 ---
