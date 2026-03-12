@@ -1,6 +1,9 @@
 ---
 name: ai-pm-knowledge
-description: 产品知识库管理技能。沉淀方法论、决策记录、踩坑经验，下次遇到类似问题时自动推荐。
+description: >-
+  产品知识库管理技能。沉淀方法论、决策记录、踩坑经验，下次遇到类似问题时自动推荐。
+  当用户说「保存经验」「记录决策」「沉淀知识」「踩坑记录」「搜索知识库」
+  「之前有没有遇过类似问题」「知识管理」「经验总结」「记下来」时，立即使用此技能。
 argument-hint: "[命令: add/search/list/sync/suggest] [关键词]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep)
 ---
