@@ -1,6 +1,9 @@
 ---
 name: ai-pm-interview
-description: 现场调研技能。适用于线下与客户面对面沟通场景，支持结构化访谈、实时记录和快速生成 PRD。
+description: >-
+  现场调研技能。适用于线下与客户面对面沟通场景，支持结构化访谈、实时记录和快速生成 PRD。
+  当用户说「现场调研」「客户访谈」「用户访谈」「拜访客户」「面对面沟通」「帮我设计访谈问题」
+  「用户研究」「访谈提纲」「带客户调研」时，立即使用此技能。
 argument-hint: "[功能名或调研主题]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ---

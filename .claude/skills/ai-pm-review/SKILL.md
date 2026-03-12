@@ -1,6 +1,9 @@
 ---
 name: ai-pm-review
-description: 需求评审技能。模拟真实评审会议，六大角色从专业角度评审 PRD 和原型，输出评审意见和修改建议。支持多轮迭代。
+description: >-
+  需求评审技能。模拟真实评审会议，六大角色从专业角度评审 PRD 和原型，输出评审意见和修改建议。支持多轮迭代。
+  当用户说「评审PRD」「需求评审」「PRD有没有问题」「帮我挑毛病」「技术评审」「开评审会」
+  「检查需求文档」「PRD走查」「需求质量检查」时，立即使用此技能。
 argument-hint: "[项目目录路径 | --round=N]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 ---

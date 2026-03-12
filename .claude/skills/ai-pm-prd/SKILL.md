@@ -1,6 +1,9 @@
 ---
 name: ai-pm-prd
-description: PRD 生成技能。整合需求分析、竞品研究、用户故事，输出完整的产品需求文档。支持产品分身写作风格和设计规范。
+description: >-
+  PRD 生成技能。整合需求分析、竞品研究、用户故事，输出完整的产品需求文档。支持产品分身写作风格和设计规范。
+  当用户说「生成PRD」「写PRD」「产品需求文档」「需求文档」「功能规格书」「输出PRD」
+  「帮我写需求」「把需求整理成文档」时，立即使用此技能。
 argument-hint: "[项目目录路径 | --style=风格名]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm) Bash(python3)
 ---

@@ -1,6 +1,9 @@
 ---
 name: ai-pm-research
-description: 竞品研究技能。分析市场同类产品，输出功能对比、差异化机会和市场定位建议。
+description: >-
+  竞品研究技能。分析市场同类产品，输出功能对比、差异化机会和市场定位建议。
+  当用户说「研究竞品」「分析竞争对手」「市场调研」「同类产品对比」「友商分析」「看看别人怎么做的」
+  「有哪些竞品」「竞争格局」「行业分析」时，立即使用此技能。
 argument-hint: "[需求分析报告路径 | 产品方向描述]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) WebSearch WebFetch
 ---
