@@ -192,7 +192,58 @@ Phase 8（可选）: 需求评审（六角色并行）
 
 ---
 
+## _status.json 规范
+
+每个项目目录下维护 `_status.json`，记录阶段完成状态。这是项目状态的唯一来源，启动时读此文件，不遍历 phase 文件。
+
+```json
+{
+  "project": "项目名",
+  "updated": "YYYY-MM-DD",
+  "phases": {
+    "requirement": false,
+    "analysis": false,
+    "competitor": false,
+    "stories": false,
+    "prd": false,
+    "prototype": false,
+    "review": false
+  },
+  "last_phase": "init"
+}
+```
+
+### phase 写入规则
+
+**每个阶段完成、文件落盘后，立即更新 `_status.json`：**
+
+```
+phases.requirement = true  → 写完 01-requirement-draft.md 后
+phases.analysis    = true  → 写完 02-analysis-report.md 后
+phases.competitor  = true  → 写完 03-competitor-report.md 后
+phases.stories     = true  → 写完 04-user-stories.md 后
+phases.prd         = true  → 写完 05-prd/05-PRD-v1.0.md 后
+phases.prototype   = true  → 写完 06-prototype/index.html 后
+phases.review      = true  → 写完 08-review-report-v1.md 后
+```
+
+新项目创建时，在项目目录下生成初始 `_status.json`（所有 phases 为 false，last_phase 为 "init"）。
+
+---
+
 ## 启动界面逻辑
+
+### 启动读取方式（性能优化）
+
+**`/ai-pm` 无参数启动时：**
+1. `ls -t output/projects/` 一次拿到项目列表和顺序
+2. 只读最近项目的 `_status.json`（1 次文件读取）
+3. 从 ls 结果统计总数
+4. **不遍历其他项目**
+
+**`/ai-pm list` 时：**
+1. 遍历所有项目，逐个读 `_status.json`
+2. 如某项目无 `_status.json`，降级为文件存在性检查
 
 ### 无项目时（欢迎界面）
 
@@ -201,9 +252,6 @@ Phase 8（可选）: 需求评审（六角色并行）
 
 说需求就能出 PRD + 原型，也做竞品分析和需求评审。
 
-N 个项目  最近：{项目名}
-输入「继续」恢复，list 看全部，状态 看详情
-
 怎么开始：
   直接描述需求       → 例：做一个帮用户决定吃什么的 App
   加急 [需求]        → 跳过追问，自动跑完到原型，只停两次确认
@@ -211,16 +259,15 @@ N 个项目  最近：{项目名}
   data [文件]        → 从数据里找需求，支持 CSV/Excel/JSON
 ```
 
-### 有进行中项目时
+### 有项目时（只展示最近一个）
 
 ```
-── 项目：{项目名} ──
+── AI 产品经理 ──  N 个项目
 
-阶段进度：
-  [✅] 需求澄清  [✅] 需求分析  [✅] 竞品研究
-  [✅] 用户故事  [⏳] PRD生成   [ ] 原型生成
+最近：{项目名}
+阶段：需求✅ 分析✅ 竞品✅ 故事✅ PRD✅ 原型⬜ 评审⬜
 
-  看PRD / 继续 / 跳过 / 状态
+继续 / 看PRD / list 看全部 / 直接描述新需求
 ```
 
 ---
