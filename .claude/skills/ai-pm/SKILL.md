@@ -244,6 +244,67 @@ Phase 8（可选）: 需求评审（六角色并行）
 
 ---
 
+## 记忆迁移与备份（α + β）
+
+Claude 记忆存储路径由安装目录决定（`~/.claude/projects/{路径哈希}/memory/`），换路径后记忆会丢失。以下两个机制解决此问题。
+
+### 方案 α：启动时自动扫描旧记忆（历史债务修复）
+
+**触发时机**：`projects_dir` 解析完成后，检测到当前 claude 记忆目录为空时执行。
+
+```
+当前记忆目录 = ~/.claude/projects/{当前路径哈希}/memory/
+
+检测：当前记忆目录为空或不存在
+  → 扫描 ~/.claude/projects/*/memory/MEMORY.md
+  → 过滤：内容包含 "AI_PM" 或 "ai-pm" 关键词
+  → 找到候选项：
+      ├── 唯一匹配 → 静默复制到当前记忆目录，用户无感知
+      ├── 多个匹配 → 展示列表，让用户选择（显示目录名 + 最近修改时间）
+      └── 无匹配   → 跳过，按新用户处理
+```
+
+扫描命令：
+```bash
+ls ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
+```
+
+内容特征检测：
+```bash
+grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
+```
+
+### 方案 β：记忆实时备份到 projects_dir（防止将来再丢）
+
+**触发时机**：每次记忆文件写入后（Write 工具写入 memory/ 目录时）。
+
+备份目标：`{projects_dir}/.ai-pm-memory/`（随项目数据走，受方案 L 保护）
+
+```
+写入记忆后，立即同步：
+  cp -r ~/.claude/projects/{当前路径哈希}/memory/ {projects_dir}/.ai-pm-memory/
+```
+
+**启动时恢复逻辑**（配合 α）：
+
+```
+当前记忆目录为空
+  → 先检查 {projects_dir}/.ai-pm-memory/ 是否存在
+      ├── 存在 → 优先从此恢复（比 α 扫描更精准）
+      └── 不存在 → 执行 α 扫描
+```
+
+### 执行优先级
+
+```
+启动时记忆恢复顺序：
+  1. {projects_dir}/.ai-pm-memory/（β 备份，最新最准）
+  2. α 扫描 ~/.claude/projects/（历史兜底）
+  3. 全部找不到 → 新用户，无记忆
+```
+
+---
+
 ## _status.json 规范
 
 每个项目目录下维护 `_status.json`，记录阶段完成状态。这是项目状态的唯一来源，启动时读此文件，不遍历 phase 文件。
