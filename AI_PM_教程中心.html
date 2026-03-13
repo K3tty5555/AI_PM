@@ -688,6 +688,22 @@ body {
   .ref-grid { grid-template-columns: 1fr; gap: 0; }
   .ref-section-full { grid-column: 1; }
 }
+
+/* ─── 笔记本屏幕响应式（保留 100vh 铺满首屏，缩小字号防内容溢出） ─── */
+@media (max-height: 960px) {
+  #hero { padding-top: 88px; padding-bottom: 56px; }
+  .hero-title { font-size: clamp(64px, 9.2vw, 138px); letter-spacing: -3px; }
+}
+@media (max-height: 840px) {
+  #hero { padding-top: 72px; padding-bottom: 44px; }
+  .hero-title { font-size: clamp(52px, 7.8vw, 112px); letter-spacing: -3px; }
+  .hero-subtitle { font-size: 11px; }
+  .hero-cta { padding: 10px 22px; font-size: 11px; }
+  .hero-features { gap: 6px; }
+  .hero-stats { gap: 24px; }
+  .stat-num { font-size: 32px; }
+  .stat-lbl { font-size: 9px; }
+}
 </style>
 </head>
 <body>
