@@ -89,6 +89,16 @@ export function listProjectFiles(projectName: string): string[] {
 }
 
 /**
+ * 删除项目目录及其所有文件
+ */
+export function deleteProjectDir(projectName: string): void {
+  const dir = path.join(PROJECTS_DIR, projectName);
+  if (fs.existsSync(dir)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
  * 写入 _status.json（与 Claude Code 版兼容格式）
  */
 export function writeStatusJson(
