@@ -70,7 +70,7 @@ export default function DashboardPage() {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    if (!confirm("确认删除该项目？此操作不可撤销。")) return
+    if (!confirm("确认删除该项目？\n\n项目数据库记录和本地所有输出文件将被永久删除，此操作不可撤销。")) return
     try {
       await fetch(`/api/projects/${id}`, { method: "DELETE" })
       setProjects((prev) => prev.filter((p) => p.id !== id))

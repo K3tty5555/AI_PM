@@ -10,7 +10,7 @@ import {
 } from "./db/schema";
 import * as schema from "./db/schema";
 import { db as defaultDb } from "./db";
-import { ensureProjectDir, writeStatusJson } from "./file-manager";
+import { ensureProjectDir, writeStatusJson, deleteProjectDir } from "./file-manager";
 import crypto from "crypto";
 
 // ── 类型 ─────────────────────────────────────────────────────
@@ -143,10 +143,14 @@ export function createProjectService(db: Db) {
   }
 
   /**
-   * 删除项目（cascade 会自动删除 phases）
+   * 删除项目（cascade 会自动删除 phases，同时删除本地输出目录）
    */
   function deleteProject(id: string): void {
+    const project = getProject(id);
     db.delete(projects).where(eq(projects.id, id)).run();
+    if (project) {
+      deleteProjectDir(project.name);
+    }
   }
 
   /**
