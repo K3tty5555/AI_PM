@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Plus } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
@@ -48,6 +48,7 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<DashboardProject[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -66,6 +67,19 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    if (!confirm("确认删除该项目？此操作不可撤销。")) return
+    try {
+      await fetch(`/api/projects/${id}`, { method: "DELETE" })
+      setProjects((prev) => prev.filter((p) => p.id !== id))
+    } catch (err) {
+      console.error("Failed to delete project:", err)
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const handleCreated = (project: { id: string; name: string }) => {
     setDialogOpen(false)
@@ -211,7 +225,7 @@ export default function DashboardPage() {
                     )
                   }
                 >
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="group/card flex items-center justify-between gap-4">
                     {/* Left: name + meta */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-3">
@@ -227,12 +241,21 @@ export default function DashboardPage() {
                       </p>
                     </div>
 
-                    {/* Right: progress */}
-                    <div className="flex w-[140px] shrink-0 items-center gap-3">
-                      <ProgressBar value={progress} animated className="h-2 flex-1" />
-                      <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs tabular-nums text-[var(--text-muted)]">
-                        {project.completedCount}/{project.totalPhases}
-                      </span>
+                    {/* Right: progress + delete */}
+                    <div className="flex shrink-0 items-center gap-3">
+                      <div className="flex w-[140px] items-center gap-3">
+                        <ProgressBar value={progress} animated className="h-2 flex-1" />
+                        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs tabular-nums text-[var(--text-muted)]">
+                          {project.completedCount}/{project.totalPhases}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => { setDeletingId(project.id); handleDelete(e, project.id) }}
+                        className="invisible flex size-7 items-center justify-center text-[var(--text-muted)] transition-all hover:text-red-500 group-hover/card:visible"
+                        title="删除项目"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
                     </div>
                   </div>
                 </RarityStripeCard>
