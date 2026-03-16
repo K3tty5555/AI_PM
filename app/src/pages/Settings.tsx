@@ -36,6 +36,9 @@ export function SettingsPage() {
   const [model, setModel] = useState("claude-sonnet-4-6")
   const [showKey, setShowKey] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [backend, setBackend] = useState<"api" | "claude_cli">("api")
+  const [cliChecking, setCliChecking] = useState(false)
+  const [cliStatus, setCliStatus] = useState<{ ok: boolean; message: string } | null>(null)
 
   // Test state
   const [testing, setTesting] = useState(false)
@@ -65,6 +68,7 @@ export function SettingsPage() {
       ])
       setConfig(data as ConfigState)
       setModel(data.model)
+      setBackend((data.backend as "api" | "claude_cli") || "api")
       if (data.baseUrl) setBaseUrl(data.baseUrl)
       setProjectsDir(dir)
     } catch (err) {
@@ -126,6 +130,26 @@ export function SettingsPage() {
     }
   }
 
+  const handleTestCli = async () => {
+    setCliChecking(true)
+    setCliStatus(null)
+    try {
+      const data = await api.testCliConfig()
+      if (data.ok) {
+        setCliStatus({ ok: true, message: `已检测到：${data.version}` })
+      } else {
+        setCliStatus({ ok: false, message: data.error || "检测失败" })
+      }
+    } catch (err) {
+      setCliStatus({
+        ok: false,
+        message: typeof err === "string" ? err : "检测失败",
+      })
+    } finally {
+      setCliChecking(false)
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     setSaveResult(null)
@@ -134,6 +158,7 @@ export function SettingsPage() {
         ...(apiKey ? { apiKey } : {}),
         ...(baseUrl !== undefined ? { baseUrl } : {}),
         ...(model ? { model } : {}),
+        backend,
       })
       setSaveResult({ ok: true, message: "配置已保存" })
       setDirty(false)
@@ -193,8 +218,8 @@ export function SettingsPage() {
         <CardHeader>
           <div className="flex items-center gap-3">
             <CardTitle>API_CONFIG</CardTitle>
-            <Badge variant={config?.hasConfig ? "default" : "outline"}>
-              {config?.hasConfig ? "ACTIVE" : "INACTIVE"}
+            <Badge variant={config?.hasConfig || backend === "claude_cli" ? "default" : "outline"}>
+              {backend === "claude_cli" ? "CLI" : config?.hasConfig ? "ACTIVE" : "INACTIVE"}
             </Badge>
           </div>
 
@@ -220,76 +245,138 @@ export function SettingsPage() {
 
         <CardContent>
           <div className="flex flex-col gap-5">
-            {/* API Key */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[var(--dark)]">
-                认证密钥
-              </label>
-              <div className="relative">
-                <input
-                  type={showKey ? "text" : "password"}
-                  value={apiKey}
-                  onChange={(e) => {
-                    setApiKey(e.target.value)
-                    setDirty(true)
-                  }}
-                  placeholder={config?.apiKey || "输入 API Key"}
-                  className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 pr-10 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--dark)]"
-                  aria-label={showKey ? "隐藏密钥" : "显示密钥"}
-                >
-                  {showKey ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </button>
+            {/* Backend Selector */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-[var(--dark)]">AI 后端</label>
+              <div className="flex flex-col gap-2">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="radio"
+                    name="backend"
+                    value="api"
+                    checked={backend === "api"}
+                    onChange={() => { setBackend("api"); setDirty(true); setCliStatus(null) }}
+                    className="mt-0.5 accent-[var(--yellow)]"
+                  />
+                  <div>
+                    <span className="text-sm text-[var(--dark)]">API Key 模式</span>
+                    <p className="text-xs text-[var(--text-muted)]">自行配置 API Key，支持 Anthropic 及 OpenAI 兼容接口</p>
+                  </div>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="radio"
+                    name="backend"
+                    value="claude_cli"
+                    checked={backend === "claude_cli"}
+                    onChange={() => { setBackend("claude_cli"); setDirty(true); setCliStatus(null) }}
+                    className="mt-0.5 accent-[var(--yellow)]"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm text-[var(--dark)]">Claude Code CLI</span>
+                    <p className="text-xs text-[var(--text-muted)]">复用本机已登录的 Claude Code，无需单独配置 Key</p>
+                    {backend === "claude_cli" && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleTestCli}
+                          disabled={cliChecking}
+                          className="h-7 gap-1.5 px-2 text-xs"
+                        >
+                          {cliChecking && <Loader2 className="size-3 animate-spin" />}
+                          检测 claude 命令
+                        </Button>
+                        {cliStatus && (
+                          <span className={`flex items-center gap-1 text-xs ${cliStatus.ok ? "text-[var(--green)]" : "text-[var(--destructive)]"}`}>
+                            {cliStatus.ok
+                              ? <CheckCircle2 className="size-3" />
+                              : <XCircle className="size-3" />
+                            }
+                            {cliStatus.message}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </label>
               </div>
-              <span className="text-xs text-[var(--text-muted)]">
-                不限格式，支持 API Key、代理凭证等
-              </span>
             </div>
 
-            {/* Base URL */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[var(--dark)]">
-                API 地址（可选）
-              </label>
-              <input
-                type="text"
-                value={baseUrl}
-                onChange={(e) => {
-                  setBaseUrl(e.target.value)
-                  setDirty(true)
-                }}
-                placeholder="https://api.anthropic.com"
-                className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
-              />
-              <span className="text-xs text-[var(--text-muted)]">
-                留空则使用官方地址，代理用户填写代理地址
-              </span>
-            </div>
+            {backend === "api" && (
+              <>
+                {/* API Key */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-[var(--dark)]">
+                    认证密钥
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showKey ? "text" : "password"}
+                      value={apiKey}
+                      onChange={(e) => {
+                        setApiKey(e.target.value)
+                        setDirty(true)
+                      }}
+                      placeholder={config?.apiKey || "输入 API Key"}
+                      className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 pr-10 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--dark)]"
+                      aria-label={showKey ? "隐藏密钥" : "显示密钥"}
+                    >
+                      {showKey ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    不限格式，支持 API Key、代理凭证等
+                  </span>
+                </div>
 
-            {/* Model */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[var(--dark)]">
-                模型
-              </label>
-              <input
-                type="text"
-                value={model}
-                onChange={(e) => {
-                  setModel(e.target.value)
-                  setDirty(true)
-                }}
-                placeholder="claude-sonnet-4-6"
-                className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
-              />
-            </div>
+                {/* Base URL */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-[var(--dark)]">
+                    API 地址（可选）
+                  </label>
+                  <input
+                    type="text"
+                    value={baseUrl}
+                    onChange={(e) => {
+                      setBaseUrl(e.target.value)
+                      setDirty(true)
+                    }}
+                    placeholder="https://api.anthropic.com"
+                    className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                  />
+                  <span className="text-xs text-[var(--text-muted)]">
+                    留空则使用官方地址，代理用户填写代理地址
+                  </span>
+                </div>
+
+                {/* Model */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-[var(--dark)]">
+                    模型
+                  </label>
+                  <input
+                    type="text"
+                    value={model}
+                    onChange={(e) => {
+                      setModel(e.target.value)
+                      setDirty(true)
+                    }}
+                    placeholder="claude-sonnet-4-6"
+                    className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                  />
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
 
@@ -299,8 +386,8 @@ export function SettingsPage() {
             <Button
               variant="outline"
               size="default"
-              onClick={handleTest}
-              disabled={testing}
+              onClick={backend === "claude_cli" ? handleTestCli : handleTest}
+              disabled={testing || cliChecking}
               className="gap-2"
             >
               {testing && <Loader2 className="size-4 animate-spin" />}
