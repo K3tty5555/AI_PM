@@ -116,16 +116,29 @@ function extractAcceptance(block: string): string[] {
 }
 
 /**
+ * Normalize multi-line story text so single-line regexes can match.
+ * Joins "作为...,\n我想要..." style line breaks.
+ */
+function normalizeStoryText(text: string): string {
+  return text
+    .replace(/[，,]\s*\n\s*/g, "，")
+    .replace(/\n\s+/g, " ")
+}
+
+/**
+ * Extract priority from a "**优先级**：P0" style line.
+ */
+function extractInlinePriority(block: string): "P0" | "P1" | "P2" | null {
+  const m = block.match(/优先级[：:]\s*(P[012])/i)
+  return m ? (m[1] as "P0" | "P1" | "P2") : null
+}
+
+/**
  * Parse AI-generated markdown into a structured array of stories.
  *
- * Expected markdown structure:
- * ```
- * ## P0 高优先级
- * ### 故事 1
- * **作为**教师，**我想要**查看班级考试报告，**以便**了解学生学情。
- * **验收标准：**
- * - [ ] ...
- * ```
+ * Supports two formats:
+ *   1. Priority-group: ## P0/P1/P2 > ### 故事 N > 作为...我想要...以便...
+ *   2. Epic-group: ### Epic N > #### US-XXX-NNN > **用户故事**：作为...（multiline ok）
  */
 export function parseStories(markdown: string): Story[] {
   if (!markdown.trim()) return []
@@ -133,7 +146,7 @@ export function parseStories(markdown: string): Story[] {
   const stories: Story[] = []
   let currentPriority: "P0" | "P1" | "P2" = "P1" // default if no group heading
 
-  // Split by ## headings
+  // ── Strategy 1: Priority-group format (## P0/P1/P2 > ### story) ──────────
   const topSections = markdown.split(/^(?=## )/m)
 
   for (const section of topSections) {
@@ -159,22 +172,42 @@ export function parseStories(markdown: string): Story[] {
         if (!blockTrimmed.includes("作为")) continue
       }
 
-      const fields = extractStoryFields(blockTrimmed)
+      const fields = extractStoryFields(normalizeStoryText(blockTrimmed))
       if (!fields) continue
 
       const acceptance = extractAcceptance(blockTrimmed)
+      const inlinePrio = extractInlinePriority(blockTrimmed)
 
       stories.push({
         id: nextId(),
         role: fields.role,
         want: fields.want,
         benefit: fields.benefit,
-        priority: currentPriority,
+        priority: inlinePrio ?? currentPriority,
         acceptance,
       })
     }
   }
 
+  if (stories.length > 0) return stories
+
+  // ── Strategy 2: Epic format (#### US-XXX-NNN: heading per story) ─────────
+  const epicBlocks = markdown.split(/^(?=#### )/m)
+  for (const block of epicBlocks) {
+    if (!block.startsWith("####")) continue
+
+    const normalized = normalizeStoryText(block)
+    const fields = extractStoryFields(normalized)
+    if (!fields) continue
+
+    const priority = extractInlinePriority(block) ?? "P1"
+    const acceptance = extractAcceptance(block)
+    stories.push({ id: nextId(), ...fields, priority, acceptance })
+  }
+
+  if (stories.length > 0) return stories
+
+  // ── Strategy 3: Line-by-line fallback ────────────────────────────────────
   // If no stories were found with the structured approach, try a simpler line-by-line scan
   if (stories.length === 0) {
     const lines = markdown.split("\n")
