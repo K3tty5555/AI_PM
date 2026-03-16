@@ -19,11 +19,22 @@ fn copy_dir(src: &Path, dst: &Path) {
 }
 
 fn main() {
-    // Copy skills from AI_PM monorepo into bundled resources
     let skills_src = Path::new("../../.claude/skills");
-    let skills_dst = Path::new("resources/skills");
 
-    copy_dir(skills_src, skills_dst);
+    // 1. 复制到 resources/skills/ — 用于打包安装包
+    copy_dir(skills_src, Path::new("resources/skills"));
+
+    // 2. 复制到 target/{profile}/skills/ — 用于 dev 模式运行时读取
+    //    OUT_DIR 形如 target/debug/build/ai-pm-xxx/out/，上溯 3 级得到 target/debug/
+    if let Ok(out_dir) = std::env::var("OUT_DIR") {
+        let profile_dir = std::path::Path::new(&out_dir)
+            .ancestors()
+            .nth(3)
+            .map(|p| p.to_path_buf());
+        if let Some(dir) = profile_dir {
+            copy_dir(skills_src, &dir.join("skills"));
+        }
+    }
 
     // Re-run if skills change
     println!("cargo:rerun-if-changed=../../.claude/skills");
