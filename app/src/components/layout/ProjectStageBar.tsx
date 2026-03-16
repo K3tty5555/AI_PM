@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { StageNav, type Stage } from "@/components/stage-nav"
 import { api } from "@/lib/tauri-api"
+import { getCachedProject, setCachedProject } from "@/lib/project-cache"
 
 const STAGES: Stage[] = [
   { id: "requirement", label: "需求收集" },
@@ -13,21 +14,12 @@ const STAGES: Stage[] = [
   { id: "review", label: "评审" },
 ]
 
-interface ProjectPhaseData {
-  phase: string
-  status: string
-}
-
-interface ProjectData {
-  id: string
-  currentPhase: string
-  phases: ProjectPhaseData[]
-}
-
 function ProjectStageBar() {
   const { id: projectId } = useParams()
   const navigate = useNavigate()
-  const [project, setProject] = useState<ProjectData | null>(null)
+  const [project, setProject] = useState(() =>
+    projectId ? getCachedProject(projectId) ?? null : null
+  )
 
   useEffect(() => {
     if (!projectId) return
@@ -35,6 +27,7 @@ function ProjectStageBar() {
     api.getProject(projectId)
       .then((data) => {
         if (data && data.id) {
+          setCachedProject(projectId, data)
           setProject(data)
         }
       })
