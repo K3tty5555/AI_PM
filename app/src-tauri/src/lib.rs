@@ -68,7 +68,11 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(state)
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![
+            commands::config::get_config,
+            commands::config::save_config,
+            commands::config::test_config,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
