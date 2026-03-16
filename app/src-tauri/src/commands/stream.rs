@@ -115,6 +115,18 @@ fn build_system_prompt(
         ctx.push(input.to_string());
     }
 
+    // Non-interactive mode hint — must come last so it overrides skill instructions
+    ctx.push(String::new());
+    ctx.push("---".to_string());
+    ctx.push(String::new());
+    ctx.push("### ⚠️ 重要：运行模式（优先级最高）".to_string());
+    ctx.push(String::new());
+    ctx.push("你正在 **AI PM 桌面应用**（非交互模式）中运行，规则如下：".to_string());
+    ctx.push("1. **跳过所有交互式步骤**：不询问用户、不等待回复、不让用户选择 A/B 选项".to_string());
+    ctx.push("2. **无任何工具可用**：AskUserQuestion、Write、Edit、Bash 均不可调用".to_string());
+    ctx.push("3. **默认选择**：导出格式默认选「仅 Markdown」，用户故事按标准编写".to_string());
+    ctx.push("4. **直接输出**：立即生成完整的 Markdown 产出物，不输出任何问答或确认文字".to_string());
+
     parts.push(ctx.join("\n"));
 
     Ok(parts.join("\n"))
