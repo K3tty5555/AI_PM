@@ -210,7 +210,11 @@ pub async fn start_stream(
     let mut full_text = String::new();
     let mut buffer = String::new();
 
-    while let Some(chunk) = resp.chunk().await.map_err(|e| e.to_string())? {
+    while let Some(chunk) = resp.chunk().await.map_err(|e| {
+        let msg = format!("Stream read error: {}", e);
+        let _ = app.emit("stream_error", &msg);
+        msg
+    })? {
         buffer.push_str(&String::from_utf8_lossy(&chunk));
 
         // Process complete SSE messages (separated by \n\n)
