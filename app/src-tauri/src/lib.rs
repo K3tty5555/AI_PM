@@ -6,9 +6,8 @@ mod state;
 use db::init_db;
 use state::AppState;
 use std::fs;
-use std::path::Path;
 
-fn resolve_app_paths() -> (String, String, String) {
+fn resolve_app_paths() -> (String, String) {
     let home = dirs::home_dir().unwrap_or_default();
     let config_dir = home
         .join(".config")
@@ -36,50 +35,15 @@ fn resolve_app_paths() -> (String, String, String) {
             default_projects_dir.clone()
         }
     } else {
-        // Priority 2: legacy ~/.ai-pm-config (Claude Code integration)
-        let legacy_path = home.join(".ai-pm-config");
-        if let Ok(raw) = fs::read_to_string(&legacy_path) {
-            if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
-                cfg["projects_dir"]
-                    .as_str()
-                    .filter(|s| !s.is_empty())
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| default_projects_dir.clone())
-            } else {
-                default_projects_dir.clone()
-            }
-        } else {
-            default_projects_dir.clone()
-        }
+        default_projects_dir.clone()
     };
 
-    // ai_pm_root: for skills loading (Claude Code integration)
-    let ai_pm_root = home
-        .join(".ai-pm-config")
-        .parent()
-        .map(|_| {
-            let legacy = home.join(".ai-pm-config");
-            if let Ok(raw) = fs::read_to_string(&legacy) {
-                if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
-                    if let Some(pd) = cfg["projects_dir"].as_str() {
-                        return Path::new(pd)
-                            .parent()
-                            .and_then(|p| p.parent())
-                            .map(|p| p.to_string_lossy().to_string())
-                            .unwrap_or_else(|| format!("{}/AI_PM", home.display()));
-                    }
-                }
-            }
-            format!("{}/AI_PM", home.display())
-        })
-        .unwrap_or_else(|| format!("{}/AI_PM", home.display()));
-
-    (projects_dir, ai_pm_root, config_dir)
+    (projects_dir, config_dir)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let (projects_dir, ai_pm_root, config_dir) = resolve_app_paths();
+    let (projects_dir, config_dir) = resolve_app_paths();
 
     // Ensure data directories exist
     fs::create_dir_all(&projects_dir).ok();
@@ -92,7 +56,6 @@ pub fn run() {
     let state = AppState {
         db: std::sync::Mutex::new(conn),
         projects_dir,
-        ai_pm_root,
         config_dir,
     };
 
