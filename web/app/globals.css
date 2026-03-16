@@ -236,3 +236,8 @@
     @apply font-sans;
   }
 }
+
+/* 隐藏 Next.js DevTools 悬浮按钮（开发环境注入，不属于产品 UI） */
+nextjs-portal {
+  display: none !important;
+}
