@@ -143,7 +143,9 @@ pub fn save_config(
         }
     }
     if let Some(url) = args.base_url {
-        existing["baseUrl"] = serde_json::Value::String(url);
+        if !url.is_empty() {
+            existing["baseUrl"] = serde_json::Value::String(url);
+        }
     }
     if let Some(model) = args.model {
         if !model.is_empty() {
