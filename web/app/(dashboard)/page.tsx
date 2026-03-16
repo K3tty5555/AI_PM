@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { RarityStripeCard } from "@/components/rarity-stripe-card"
 import { NewProjectDialog } from "@/components/new-project-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface DashboardProject {
   id: string
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -68,9 +70,16 @@ export default function DashboardPage() {
     fetchProjects()
   }, [fetchProjects])
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    if (!confirm("确认删除该项目？\n\n项目数据库记录和本地所有输出文件将被永久删除，此操作不可撤销。")) return
+    setConfirmId(id)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!confirmId) return
+    const id = confirmId
+    setConfirmId(null)
+    setDeletingId(id)
     try {
       await fetch(`/api/projects/${id}`, { method: "DELETE" })
       setProjects((prev) => prev.filter((p) => p.id !== id))
@@ -167,6 +176,16 @@ export default function DashboardPage() {
           onClose={() => setDialogOpen(false)}
           onCreated={handleCreated}
         />
+        <ConfirmDialog
+          open={confirmId !== null}
+          title="// DELETE_PROJECT"
+          description="确认删除该项目？项目数据库记录和本地所有输出文件将被永久删除，此操作不可撤销。"
+          confirmLabel="删除"
+          cancelLabel="取消"
+          variant="danger"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmId(null)}
+        />
       </>
     )
   }
@@ -250,7 +269,7 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <button
-                        onClick={(e) => { setDeletingId(project.id); handleDelete(e, project.id) }}
+                        onClick={(e) => handleDelete(e, project.id)}
                         className="invisible flex size-7 items-center justify-center text-[var(--text-muted)] transition-all hover:text-red-500 group-hover/card:visible"
                         title="删除项目"
                       >
@@ -269,6 +288,16 @@ export default function DashboardPage() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onCreated={handleCreated}
+      />
+      <ConfirmDialog
+        open={confirmId !== null}
+        title="// DELETE_PROJECT"
+        description="确认删除该项目？项目数据库记录和本地所有输出文件将被永久删除，此操作不可撤销。"
+        confirmLabel="删除"
+        cancelLabel="取消"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmId(null)}
       />
     </>
   )
