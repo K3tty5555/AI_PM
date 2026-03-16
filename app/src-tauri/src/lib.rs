@@ -115,6 +115,7 @@ pub fn run() {
             commands::stream::start_stream,
             commands::config::get_projects_dir,
             commands::config::save_projects_dir,
+            commands::config::test_cli_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
