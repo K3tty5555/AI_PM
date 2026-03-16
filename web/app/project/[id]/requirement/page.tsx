@@ -56,12 +56,13 @@ export default function RequirementPage() {
           if (!cancelled && draftText) {
             setInitialContent(draftText)
             setContent(draftText)
-          }
-        } else if (projectData.description) {
-          if (!cancelled) {
+          } else if (!cancelled && projectData.description) {
             setInitialContent(projectData.description)
             setContent(projectData.description)
           }
+        } else if (!cancelled && projectData.description) {
+          setInitialContent(projectData.description)
+          setContent(projectData.description)
         }
       } catch (err) {
         console.error("Failed to load requirement page:", err)
