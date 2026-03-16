@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tauri::{AppHandle, Emitter};
-use crate::providers::AiProvider;
+use crate::providers::{AiProvider, StreamResult};
 use crate::commands::stream::ChatMessage;
 
 pub struct OpenAIProvider {
@@ -16,7 +16,7 @@ impl AiProvider for OpenAIProvider {
         system_prompt: &str,
         messages: &[ChatMessage],
         app: &AppHandle,
-    ) -> Result<String, String> {
+    ) -> Result<StreamResult, String> {
         let url = format!("{}/v1/chat/completions", self.base_url.trim_end_matches('/'));
         let mut messages_json: Vec<serde_json::Value> = vec![
             serde_json::json!({"role": "system", "content": system_prompt})
@@ -49,6 +49,8 @@ impl AiProvider for OpenAIProvider {
 
         let mut full_text = String::new();
         let mut buffer = String::new();
+        let mut input_tokens: Option<u32> = None;
+        let mut output_tokens: Option<u32> = None;
 
         while let Some(chunk) = resp.chunk().await.map_err(|e| format!("Stream read error: {}", e))? {
             buffer.push_str(&String::from_utf8_lossy(&chunk));
@@ -68,6 +70,14 @@ impl AiProvider for OpenAIProvider {
                                                 let _ = app.emit("stream_chunk", text);
                                             }
                                         }
+                                    }
+                                }
+                                if let Some(usage) = event.get("usage") {
+                                    if let Some(n) = usage["prompt_tokens"].as_u64() {
+                                        input_tokens = Some(n as u32);
+                                    }
+                                    if let Some(n) = usage["completion_tokens"].as_u64() {
+                                        output_tokens = Some(n as u32);
                                     }
                                 }
                             }
@@ -93,6 +103,6 @@ impl AiProvider for OpenAIProvider {
             return Err(error_msg);
         }
 
-        Ok(full_text)
+        Ok(StreamResult { full_text, input_tokens, output_tokens })
     }
 }
