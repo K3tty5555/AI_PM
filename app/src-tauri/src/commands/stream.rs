@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 use tauri::{AppHandle, Emitter, State};
 use crate::state::AppState;
-use crate::commands::config::read_config_internal;
+use crate::commands::config::{read_config_internal, Backend};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ChatMessage {
@@ -164,157 +164,52 @@ pub async fn start_stream(
 
     let config = read_config_internal(&state.config_dir)
         .ok_or_else(|| {
-            let msg = "API 未配置 — 请前往「设置」页面填写 API Key 后重试。".to_string();
+            let msg = "未配置 AI 后端 — 请前往「设置」页面完成配置后重试。".to_string();
             let _ = app.emit("stream_error", &msg);
             msg
         })?;
 
-    let base_url = config.base_url
-        .unwrap_or_else(|| "https://api.anthropic.com".to_string());
-    let api_key = config.api_key.unwrap_or_default();
-
-    let client = reqwest::Client::new();
-
-    // 判断 API 类型
-    let anthropic = base_url.contains("anthropic.com")
-        || config.model.starts_with("claude-")
-        || base_url == "https://api.anthropic.com";
-
-    let mut resp = if anthropic {
-        let url = format!("{}/v1/messages", base_url.trim_end_matches('/'));
-        let messages_json: Vec<serde_json::Value> = args.messages.iter().map(|m| {
-            serde_json::json!({"role": m.role, "content": m.content})
-        }).collect();
-        let body = serde_json::json!({
-            "model": config.model,
-            "max_tokens": 8192,
-            "stream": true,
-            "system": system_prompt,
-            "messages": messages_json,
-        });
-        client
-            .post(&url)
-            .header("x-api-key", &api_key)
-            .header("anthropic-version", "2023-06-01")
-            .header("content-type", "application/json")
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| {
-                let msg = format!("HTTP error: {}", e);
-                let _ = app.emit("stream_error", &msg);
-                msg
-            })?
-    } else {
-        // OpenAI 兼容格式（Kimi、OpenAI 等）
-        let url = format!("{}/v1/chat/completions", base_url.trim_end_matches('/'));
-        // system prompt 作为第一条 system message
-        let mut messages_json: Vec<serde_json::Value> = vec![
-            serde_json::json!({"role": "system", "content": system_prompt})
-        ];
-        for m in &args.messages {
-            messages_json.push(serde_json::json!({"role": m.role, "content": m.content}));
+    // 选择 provider
+    let provider: Box<dyn crate::providers::AiProvider> = match config.backend {
+        Backend::ClaudeCli => {
+            Box::new(crate::providers::claude_cli::ClaudeCliProvider)
         }
-        let body = serde_json::json!({
-            "model": config.model,
-            "max_tokens": 8192,
-            "stream": true,
-            "messages": messages_json,
-        });
-        client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", &api_key))
-            .header("content-type", "application/json")
-            .header("User-Agent", "claude-code/1.0.0")
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| {
-                let msg = format!("HTTP error: {}", e);
-                let _ = app.emit("stream_error", &msg);
-                msg
-            })?
-    };
+        Backend::Api => {
+            let base_url = config.base_url
+                .unwrap_or_else(|| "https://api.anthropic.com".to_string());
+            let api_key = config.api_key.unwrap_or_default();
+            let model = config.model.clone();
 
-    if !resp.status().is_success() {
-        let err_body = resp.text().await.unwrap_or_default();
-        let msg = format!("API error: {}", err_body);
-        let _ = app.emit("stream_error", &msg);
-        return Ok(());
-    }
-
-    let mut full_text = String::new();
-    let mut buffer = String::new();
-
-    while let Some(chunk) = resp.chunk().await.map_err(|e| {
-        let msg = format!("Stream read error: {}", e);
-        let _ = app.emit("stream_error", &msg);
-        msg
-    })? {
-        buffer.push_str(&String::from_utf8_lossy(&chunk));
-
-        // Process complete SSE messages (separated by \n\n)
-        loop {
-            if let Some(pos) = buffer.find("\n\n") {
-                let event_str = buffer[..pos].to_string();
-                buffer = buffer[pos + 2..].to_string();
-
-                for line in event_str.lines() {
-                    if let Some(data) = line.strip_prefix("data: ") {
-                        if data == "[DONE]" { continue; }
-                        if let Ok(event) = serde_json::from_str::<serde_json::Value>(data) {
-                            // Anthropic 格式
-                            if event["type"] == "content_block_delta" {
-                                if let Some(text) = event["delta"]["text"].as_str() {
-                                    full_text.push_str(text);
-                                    let _ = app.emit("stream_chunk", text);
-                                }
-                            }
-                            // OpenAI 兼容格式
-                            if let Some(choices) = event["choices"].as_array() {
-                                if let Some(choice) = choices.first() {
-                                    if let Some(text) = choice["delta"]["content"].as_str() {
-                                        if !text.is_empty() {
-                                            full_text.push_str(text);
-                                            let _ = app.emit("stream_chunk", text);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            if crate::commands::config::is_anthropic(&base_url, &model) {
+                Box::new(crate::providers::anthropic::AnthropicProvider {
+                    api_key,
+                    base_url,
+                    model,
+                })
             } else {
-                break;
+                Box::new(crate::providers::openai::OpenAIProvider {
+                    api_key,
+                    base_url,
+                    model,
+                })
             }
         }
-    }
+    };
 
-    // If nothing was received, the API likely returned an error body as HTTP 200
-    // (e.g. Kimi For Coding access_terminated_error). Detect it from the buffer.
-    if full_text.is_empty() {
-        let error_msg = if let Ok(json) = serde_json::from_str::<serde_json::Value>(&buffer) {
-            json["error"]["message"]
-                .as_str()
-                .unwrap_or("API 返回了空响应，请检查 API 配置")
-                .to_string()
-        } else if !buffer.trim().is_empty() {
-            format!("API 返回了空响应：{}", buffer.trim().chars().take(200).collect::<String>())
-        } else {
-            "API 返回了空响应，请检查 API 配置".to_string()
-        };
-        let _ = app.emit("stream_error", &error_msg);
-        return Ok(());
+    // 调用 provider，处理结果
+    match provider.stream(&system_prompt, &args.messages, &app).await {
+        Ok(full_text) => {
+            let file_path = Path::new(&output_dir).join(output_file);
+            if let Some(parent) = file_path.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let _ = fs::write(&file_path, &full_text);
+            let _ = app.emit("stream_done", output_file);
+        }
+        Err(e) => {
+            let _ = app.emit("stream_error", &e);
+        }
     }
-
-    // Save output file
-    let file_path = Path::new(&output_dir).join(output_file);
-    if let Some(parent) = file_path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    let _ = fs::write(&file_path, &full_text);
-
-    let _ = app.emit("stream_done", output_file);
 
     Ok(())
 }
