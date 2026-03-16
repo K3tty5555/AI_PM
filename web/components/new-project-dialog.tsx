@@ -11,7 +11,6 @@ interface NewProjectDialogProps {
 
 function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
   const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -21,7 +20,6 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
   useEffect(() => {
     if (open) {
       setName("")
-      setDescription("")
       setError("")
       setSubmitting(false)
       // Delay to let the DOM render
@@ -59,10 +57,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: trimmedName,
-          description: description.trim(),
-        }),
+        body: JSON.stringify({ name: trimmedName }),
       })
 
       if (!res.ok) {
@@ -128,27 +123,6 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
                 {error}
               </p>
             )}
-          </div>
-
-          {/* Description */}
-          <div className="mb-8">
-            <label
-              htmlFor="project-description"
-              className="mb-2 block text-sm font-medium text-[var(--dark)]"
-            >
-              需求描述
-              <span className="ml-1 text-xs font-normal text-[var(--text-muted)]">
-                (可选)
-              </span>
-            </label>
-            <textarea
-              id="project-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="简要描述你的产品需求"
-              rows={3}
-              className="w-full resize-none border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm text-[var(--dark)] outline-none transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)] placeholder:text-[var(--text-muted)]/50 focus:border-[var(--yellow)]"
-            />
           </div>
 
           {/* Actions */}
