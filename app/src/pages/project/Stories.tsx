@@ -8,6 +8,7 @@ import { useAiStream } from "@/hooks/use-ai-stream"
 import { parseStories, storiesToMarkdown, type Story } from "@/lib/story-parser"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
+import { invalidateProject } from "@/lib/project-cache"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -153,6 +154,7 @@ export function StoriesPage() {
 
       // Advance to next phase
       await api.advancePhase(projectId)
+      invalidateProject(projectId)
 
       navigate(`/project/${projectId}/prd`)
     } catch (err) {
@@ -286,8 +288,8 @@ export function StoriesPage() {
         {!isStreaming && streamMeta !== null && (
           <p className="text-xs text-[var(--text-muted)] font-mono mt-2">
             {streamMeta.inputTokens !== undefined && streamMeta.outputTokens !== undefined
-              ? `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
-              : `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
+              ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
+              : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
           </p>
         )}
       </div>
