@@ -28,6 +28,7 @@ impl AiProvider for OpenAIProvider {
             "model": self.model,
             "max_tokens": 8192,
             "stream": true,
+            "stream_options": {"include_usage": true},
             "messages": messages_json,
         });
 
