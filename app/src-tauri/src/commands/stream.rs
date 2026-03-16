@@ -225,6 +225,7 @@ pub async fn start_stream(
             .post(&url)
             .header("Authorization", format!("Bearer {}", &api_key))
             .header("content-type", "application/json")
+            .header("User-Agent", "claude-code/1.0.0")
             .json(&body)
             .send()
             .await
