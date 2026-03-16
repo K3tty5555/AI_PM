@@ -41,10 +41,7 @@ const buttonVariants = cva(
           "bg-[var(--secondary)] text-[var(--secondary-foreground)] border-transparent",
           "hover:bg-[#ebebeb]",
         ].join(" "),
-        destructive: [
-          "bg-[var(--destructive)]/10 text-[var(--destructive)] border-transparent",
-          "hover:bg-[var(--destructive)]/20",
-        ].join(" "),
+        destructive: "bg-[var(--destructive)] text-white border-transparent hover:bg-[var(--destructive)]/90",
         link: "text-[var(--dark)] underline-offset-4 hover:underline border-transparent",
       },
       size: {
