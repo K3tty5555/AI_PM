@@ -174,33 +174,66 @@ pub async fn start_stream(
     let api_key = config.api_key.unwrap_or_default();
 
     let client = reqwest::Client::new();
-    let url = format!("{}/v1/messages", base_url.trim_end_matches('/'));
 
-    let messages_json: Vec<serde_json::Value> = args.messages.iter().map(|m| {
-        serde_json::json!({"role": m.role, "content": m.content})
-    }).collect();
+    // 判断 API 类型
+    let anthropic = base_url.contains("anthropic.com")
+        || config.model.starts_with("claude-")
+        || base_url == "https://api.anthropic.com";
 
-    let body = serde_json::json!({
-        "model": config.model,
-        "max_tokens": 8192,
-        "stream": true,
-        "system": system_prompt,
-        "messages": messages_json,
-    });
-
-    let mut resp = client
-        .post(&url)
-        .header("x-api-key", &api_key)
-        .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| {
-            let msg = format!("HTTP error: {}", e);
-            let _ = app.emit("stream_error", &msg);
-            msg
-        })?;
+    let mut resp = if anthropic {
+        let url = format!("{}/v1/messages", base_url.trim_end_matches('/'));
+        let messages_json: Vec<serde_json::Value> = args.messages.iter().map(|m| {
+            serde_json::json!({"role": m.role, "content": m.content})
+        }).collect();
+        let body = serde_json::json!({
+            "model": config.model,
+            "max_tokens": 8192,
+            "stream": true,
+            "system": system_prompt,
+            "messages": messages_json,
+        });
+        client
+            .post(&url)
+            .header("x-api-key", &api_key)
+            .header("anthropic-version", "2023-06-01")
+            .header("content-type", "application/json")
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| {
+                let msg = format!("HTTP error: {}", e);
+                let _ = app.emit("stream_error", &msg);
+                msg
+            })?
+    } else {
+        // OpenAI 兼容格式（Kimi、OpenAI 等）
+        let url = format!("{}/v1/chat/completions", base_url.trim_end_matches('/'));
+        // system prompt 作为第一条 system message
+        let mut messages_json: Vec<serde_json::Value> = vec![
+            serde_json::json!({"role": "system", "content": system_prompt})
+        ];
+        for m in &args.messages {
+            messages_json.push(serde_json::json!({"role": m.role, "content": m.content}));
+        }
+        let body = serde_json::json!({
+            "model": config.model,
+            "max_tokens": 8192,
+            "stream": true,
+            "messages": messages_json,
+        });
+        client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", &api_key))
+            .header("content-type", "application/json")
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| {
+                let msg = format!("HTTP error: {}", e);
+                let _ = app.emit("stream_error", &msg);
+                msg
+            })?
+    };
 
     if !resp.status().is_success() {
         let err_body = resp.text().await.unwrap_or_default();
@@ -229,10 +262,22 @@ pub async fn start_stream(
                     if let Some(data) = line.strip_prefix("data: ") {
                         if data == "[DONE]" { continue; }
                         if let Ok(event) = serde_json::from_str::<serde_json::Value>(data) {
+                            // Anthropic 格式
                             if event["type"] == "content_block_delta" {
                                 if let Some(text) = event["delta"]["text"].as_str() {
                                     full_text.push_str(text);
                                     let _ = app.emit("stream_chunk", text);
+                                }
+                            }
+                            // OpenAI 兼容格式
+                            if let Some(choices) = event["choices"].as_array() {
+                                if let Some(choice) = choices.first() {
+                                    if let Some(text) = choice["delta"]["content"].as_str() {
+                                        if !text.is_empty() {
+                                            full_text.push_str(text);
+                                            let _ = app.emit("stream_chunk", text);
+                                        }
+                                    }
                                 }
                             }
                         }
