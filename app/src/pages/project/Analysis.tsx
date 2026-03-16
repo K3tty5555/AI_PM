@@ -111,7 +111,7 @@ export function AnalysisPage() {
   const startedRef = useRef(false)
 
   // AI stream hook
-  const { text, isStreaming, error, outputFile, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, error, outputFile, streamMeta, start, reset } = useAiStream({
     projectId,
     phase: "analysis",
   })
@@ -144,6 +144,18 @@ export function AnalysisPage() {
         if (!cancelled) {
           if (content) {
             setExistingContent(content)
+
+            // Load persisted chat history (if it exists)
+            try {
+              const saved = await api.readProjectFile(projectId, "02-analysis-messages.json")
+              if (saved) {
+                const parsed = JSON.parse(saved)
+                if (parsed.chatHistory) setChatHistory(parsed.chatHistory)
+                if (parsed.messages) setMessages(parsed.messages)
+              }
+            } catch {
+              // file doesn't exist yet, that's fine
+            }
           } else {
             // No existing file — trigger AI analysis
             if (!startedRef.current) {
@@ -185,26 +197,36 @@ export function AnalysisPage() {
   /** Handle user answer to AI follow-up question */
   const handleAnswer = useCallback(
     (answer: string) => {
-      // Record the chat round
-      setChatHistory((prev) => [
-        ...prev,
+      const newChatHistory: ChatRound[] = [
+        ...chatHistory,
         { question: questionInfo.question, answer },
-      ])
-
-      // Build new messages array with the conversation so far
+      ]
       const newMessages: Message[] = [
         ...messages,
         { role: "assistant", content: text },
         { role: "user", content: answer },
       ]
+
+      setChatHistory(newChatHistory)
       setMessages(newMessages)
+
+      // Persist chat history so it survives navigation
+      api.saveProjectFile({
+        projectId,
+        fileName: "02-analysis-messages.json",
+        content: JSON.stringify(
+          { chatHistory: newChatHistory, messages: newMessages },
+          null,
+          2
+        ),
+      })
 
       // Clear existing content so we show fresh AI output
       setExistingContent(null)
       startedRef.current = true
       start(newMessages)
     },
-    [messages, text, questionInfo.question, start]
+    [chatHistory, messages, text, questionInfo.question, projectId, start]
   )
 
   /** Restart analysis from scratch */
@@ -303,6 +325,11 @@ export function AnalysisPage() {
       {isStreaming && (
         <div className="mt-4">
           <ProgressBar value={progressValue} animated />
+          {isThinking && (
+            <p className="mt-2 text-sm text-[var(--text-muted)] animate-pulse">
+              正在思考...
+            </p>
+          )}
         </div>
       )}
 
@@ -339,6 +366,15 @@ export function AnalysisPage() {
           markdown={displayContent || ""}
           isStreaming={isStreaming}
         />
+
+        {/* Stream metadata bar — shown after streaming completes */}
+        {!isStreaming && streamMeta && (
+          <p className="mt-2 text-xs text-[var(--text-muted)] font-mono">
+            {streamMeta.inputTokens != null && streamMeta.outputTokens != null
+              ? `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
+              : `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
+          </p>
+        )}
       </div>
 
       {/* Chat history (collapsed previous rounds) */}
