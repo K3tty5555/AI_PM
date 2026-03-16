@@ -290,6 +290,23 @@ pub async fn start_stream(
         }
     }
 
+    // If nothing was received, the API likely returned an error body as HTTP 200
+    // (e.g. Kimi For Coding access_terminated_error). Detect it from the buffer.
+    if full_text.is_empty() {
+        let error_msg = if let Ok(json) = serde_json::from_str::<serde_json::Value>(&buffer) {
+            json["error"]["message"]
+                .as_str()
+                .unwrap_or("API 返回了空响应，请检查 API 配置")
+                .to_string()
+        } else if !buffer.trim().is_empty() {
+            format!("API 返回了空响应：{}", buffer.trim().chars().take(200).collect::<String>())
+        } else {
+            "API 返回了空响应，请检查 API 配置".to_string()
+        };
+        let _ = app.emit("stream_error", &error_msg);
+        return Ok(());
+    }
+
     // Save output file
     let file_path = Path::new(&output_dir).join(output_file);
     if let Some(parent) = file_path.parent() {
