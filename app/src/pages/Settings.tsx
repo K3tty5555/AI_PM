@@ -14,11 +14,6 @@ interface ConfigState {
   model: string
 }
 
-const MODEL_OPTIONS = [
-  { value: "claude-sonnet-4-6", label: "claude-sonnet-4-6" },
-  { value: "claude-opus-4-6", label: "claude-opus-4-6" },
-  { value: "claude-haiku-4-5-20251001", label: "claude-haiku-4-5-20251001" },
-]
 
 const SOURCE_LABELS: Record<string, string> = {
   env: "环境变量",
@@ -253,39 +248,16 @@ export function SettingsPage() {
               <label className="text-sm font-medium text-[var(--dark)]">
                 模型
               </label>
-              <div className="relative">
-                <select
-                  value={model}
-                  onChange={(e) => {
-                    setModel(e.target.value)
-                    setDirty(true)
-                  }}
-                  className="h-9 w-full appearance-none border border-[var(--border)] bg-[var(--background)] px-3 pr-8 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
-                >
-                  {MODEL_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                {/* Custom dropdown arrow */}
-                <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 12 12"
-                    fill="none"
-                    className="text-[var(--text-muted)]"
-                  >
-                    <path
-                      d="M3 4.5L6 7.5L9 4.5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="square"
-                    />
-                  </svg>
-                </div>
-              </div>
+              <input
+                type="text"
+                value={model}
+                onChange={(e) => {
+                  setModel(e.target.value)
+                  setDirty(true)
+                }}
+                placeholder="claude-sonnet-4-6"
+                className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+              />
             </div>
           </div>
         </CardContent>
