@@ -55,52 +55,34 @@ pub struct ProjectDetail {
 pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
+    // Fix 3: Replace N+1 queries with a single JOIN query
     let mut stmt = db
         .prepare(
-            "SELECT id, name, description, current_phase, output_dir, created_at, updated_at
-             FROM projects ORDER BY updated_at DESC",
+            "SELECT p.id, p.name, p.description, p.current_phase, p.output_dir, p.created_at, p.updated_at,
+                    COUNT(CASE WHEN pp.status = 'completed' THEN 1 END) as completed_count
+             FROM projects p
+             LEFT JOIN project_phases pp ON pp.project_id = p.id
+             GROUP BY p.id
+             ORDER BY p.updated_at DESC",
         )
         .map_err(|e| e.to_string())?;
 
-    let rows: Vec<(String, String, Option<String>, String, String, String, String)> = stmt
+    let projects: Vec<ProjectSummary> = stmt
         .query_map([], |row| {
-            Ok((
-                row.get(0)?,
-                row.get(1)?,
-                row.get(2)?,
-                row.get(3)?,
-                row.get(4)?,
-                row.get(5)?,
-                row.get(6)?,
-            ))
+            Ok(ProjectSummary {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                current_phase: row.get(3)?,
+                output_dir: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+                completed_count: row.get(7)?,
+                total_phases: PHASES.len() as i64,
+            })
         })
         .map_err(|e| e.to_string())?
         .filter_map(|r| r.ok())
-        .collect();
-
-    let projects = rows
-        .into_iter()
-        .map(|(id, name, description, current_phase, output_dir, created_at, updated_at)| {
-            let completed_count: i64 = db
-                .query_row(
-                    "SELECT COUNT(*) FROM project_phases WHERE project_id = ?1 AND status = 'completed'",
-                    params![&id],
-                    |row| row.get(0),
-                )
-                .unwrap_or(0);
-
-            ProjectSummary {
-                id,
-                name,
-                description,
-                current_phase,
-                output_dir,
-                created_at,
-                updated_at,
-                completed_count,
-                total_phases: PHASES.len() as i64,
-            }
-        })
         .collect();
 
     Ok(projects)
@@ -293,94 +275,102 @@ pub fn update_phase(state: State<AppState>, args: UpdatePhaseArgs) -> Result<(),
 #[tauri::command]
 pub fn advance_phase(state: State<AppState>, id: String) -> Result<Option<String>, String> {
     let now = Utc::now().to_rfc3339();
-    let db = state.db.lock().map_err(|e| e.to_string())?;
 
-    let current_phase: String = db
-        .query_row(
-            "SELECT current_phase FROM projects WHERE id = ?1",
-            params![&id],
-            |row| row.get(0),
+    // Fix 1: Wrap all DB operations in a block so the mutex guard drops before file I/O
+    let (next_phase_owned, output_dir, fake_phases) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+
+        let current_phase: String = db
+            .query_row(
+                "SELECT current_phase FROM projects WHERE id = ?1",
+                params![&id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+
+        let Some(idx) = PHASES.iter().position(|&p| p == current_phase.as_str()) else {
+            return Ok(None);
+        };
+
+        if idx >= PHASES.len() - 1 {
+            return Ok(None);
+        }
+
+        let next_phase = PHASES[idx + 1];
+
+        // Mark current phase completed
+        db.execute(
+            "UPDATE project_phases SET status = 'completed', completed_at = ?1
+             WHERE project_id = ?2 AND phase = ?3",
+            params![&now, &id, &current_phase],
         )
         .map_err(|e| e.to_string())?;
 
-    let Some(idx) = PHASES.iter().position(|&p| p == current_phase.as_str()) else {
-        return Ok(None);
+        // Mark next phase in_progress
+        db.execute(
+            "UPDATE project_phases SET status = 'in_progress', started_at = ?1
+             WHERE project_id = ?2 AND phase = ?3",
+            params![&now, &id, next_phase],
+        )
+        .map_err(|e| e.to_string())?;
+
+        // Update project's current_phase
+        db.execute(
+            "UPDATE projects SET current_phase = ?1, updated_at = ?2 WHERE id = ?3",
+            params![next_phase, &now, &id],
+        )
+        .map_err(|e| e.to_string())?;
+
+        // Fetch output_dir for _status.json update
+        let output_dir: String = db
+            .query_row(
+                "SELECT output_dir FROM projects WHERE id = ?1",
+                params![&id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+
+        // Build phase status map for _status.json
+        let mut phase_statuses: HashMap<String, String> = HashMap::new();
+        let mut stmt = db
+            .prepare("SELECT phase, status FROM project_phases WHERE project_id = ?1")
+            .map_err(|e| e.to_string())?;
+        let _ = stmt.query_map(params![&id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .for_each(|(phase, status)| {
+            phase_statuses.insert(phase, status);
+        });
+
+        let fake_phases: Vec<ProjectPhase> = PHASES
+            .iter()
+            .map(|&p| {
+                let status = phase_statuses
+                    .get(p)
+                    .cloned()
+                    .unwrap_or_else(|| "pending".to_string());
+                ProjectPhase {
+                    id: String::new(),
+                    project_id: id.clone(),
+                    phase: p.to_string(),
+                    status,
+                    output_file: None,
+                    started_at: None,
+                    completed_at: None,
+                }
+            })
+            .collect();
+
+        (next_phase.to_string(), output_dir, fake_phases)
+        // db guard drops here, before file I/O below
     };
 
-    if idx >= PHASES.len() - 1 {
-        return Ok(None);
-    }
+    // Fix 1: write_status_json (fs::write) now happens outside the mutex lock
+    write_status_json(&output_dir, &fake_phases, &next_phase_owned);
 
-    let next_phase = PHASES[idx + 1];
-
-    // Mark current phase completed
-    db.execute(
-        "UPDATE project_phases SET status = 'completed', completed_at = ?1
-         WHERE project_id = ?2 AND phase = ?3",
-        params![&now, &id, &current_phase],
-    )
-    .map_err(|e| e.to_string())?;
-
-    // Mark next phase in_progress
-    db.execute(
-        "UPDATE project_phases SET status = 'in_progress', started_at = ?1
-         WHERE project_id = ?2 AND phase = ?3",
-        params![&now, &id, next_phase],
-    )
-    .map_err(|e| e.to_string())?;
-
-    // Update project's current_phase
-    db.execute(
-        "UPDATE projects SET current_phase = ?1, updated_at = ?2 WHERE id = ?3",
-        params![next_phase, &now, &id],
-    )
-    .map_err(|e| e.to_string())?;
-
-    // Update _status.json for CLI skill compatibility
-    let output_dir: String = db
-        .query_row(
-            "SELECT output_dir FROM projects WHERE id = ?1",
-            params![&id],
-            |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?;
-
-    // Build phase status map for _status.json
-    let mut phase_statuses: HashMap<String, String> = HashMap::new();
-    let mut stmt = db
-        .prepare("SELECT phase, status FROM project_phases WHERE project_id = ?1")
-        .map_err(|e| e.to_string())?;
-    let _ = stmt.query_map(params![&id], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-    })
-    .map_err(|e| e.to_string())?
-    .filter_map(|r| r.ok())
-    .for_each(|(phase, status)| {
-        phase_statuses.insert(phase, status);
-    });
-
-    let fake_phases: Vec<ProjectPhase> = PHASES
-        .iter()
-        .map(|&p| {
-            let status = phase_statuses
-                .get(p)
-                .cloned()
-                .unwrap_or_else(|| "pending".to_string());
-            ProjectPhase {
-                id: String::new(),
-                project_id: id.clone(),
-                phase: p.to_string(),
-                status,
-                output_file: None,
-                started_at: None,
-                completed_at: None,
-            }
-        })
-        .collect();
-
-    write_status_json(&output_dir, &fake_phases, next_phase);
-
-    Ok(Some(next_phase.to_string()))
+    Ok(Some(next_phase_owned))
 }
 
 fn write_status_json(output_dir: &str, phases: &[ProjectPhase], last_phase: &str) {
@@ -401,5 +391,8 @@ fn write_status_json(output_dir: &str, phases: &[ProjectPhase], last_phase: &str
     });
 
     let path = Path::new(output_dir).join("_status.json");
-    let _ = fs::write(path, serde_json::to_string_pretty(&status).unwrap());
+    // Fix 2: avoid unwrap(), use if let to handle serialization errors gracefully
+    if let Ok(json) = serde_json::to_string_pretty(&status) {
+        let _ = fs::write(path, json);
+    }
 }
