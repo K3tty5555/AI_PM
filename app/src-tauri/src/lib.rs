@@ -9,40 +9,69 @@ use std::path::Path;
 
 fn resolve_app_paths() -> (String, String, String) {
     let home = dirs::home_dir().unwrap_or_default();
-    let config_path = home.join(".ai-pm-config");
-
-    let projects_dir: String;
-    let ai_pm_root: String;
-
-    if let Ok(raw) = fs::read_to_string(&config_path) {
-        if let Ok(config) = serde_json::from_str::<serde_json::Value>(&raw) {
-            if let Some(pd) = config["projects_dir"].as_str() {
-                projects_dir = pd.to_string();
-                // Derive ai_pm_root by going up 2 levels from output/projects
-                let p = Path::new(pd);
-                ai_pm_root = p
-                    .parent() // output/
-                    .and_then(|p| p.parent()) // AI_PM/
-                    .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_else(|| pd.to_string());
-            } else {
-                projects_dir = format!("{}/output/projects", home.display());
-                ai_pm_root = format!("{}/AI_PM", home.display());
-            }
-        } else {
-            projects_dir = format!("{}/output/projects", home.display());
-            ai_pm_root = format!("{}/AI_PM", home.display());
-        }
-    } else {
-        projects_dir = format!("{}/output/projects", home.display());
-        ai_pm_root = format!("{}/AI_PM", home.display());
-    }
-
     let config_dir = home
         .join(".config")
         .join("ai-pm")
         .to_string_lossy()
         .to_string();
+
+    // Default projects dir: ~/Documents/AI PM
+    let default_projects_dir = home
+        .join("Documents")
+        .join("AI PM")
+        .to_string_lossy()
+        .to_string();
+
+    // Priority 1: app config.json (projectsDir key)
+    let app_config_path = format!("{}/config.json", config_dir);
+    let projects_dir: String = if let Ok(raw) = fs::read_to_string(&app_config_path) {
+        if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
+            cfg["projectsDir"]
+                .as_str()
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| default_projects_dir.clone())
+        } else {
+            default_projects_dir.clone()
+        }
+    } else {
+        // Priority 2: legacy ~/.ai-pm-config (Claude Code integration)
+        let legacy_path = home.join(".ai-pm-config");
+        if let Ok(raw) = fs::read_to_string(&legacy_path) {
+            if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
+                cfg["projects_dir"]
+                    .as_str()
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| default_projects_dir.clone())
+            } else {
+                default_projects_dir.clone()
+            }
+        } else {
+            default_projects_dir.clone()
+        }
+    };
+
+    // ai_pm_root: for skills loading (Claude Code integration)
+    let ai_pm_root = home
+        .join(".ai-pm-config")
+        .parent()
+        .map(|_| {
+            let legacy = home.join(".ai-pm-config");
+            if let Ok(raw) = fs::read_to_string(&legacy) {
+                if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
+                    if let Some(pd) = cfg["projects_dir"].as_str() {
+                        return Path::new(pd)
+                            .parent()
+                            .and_then(|p| p.parent())
+                            .map(|p| p.to_string_lossy().to_string())
+                            .unwrap_or_else(|| format!("{}/AI_PM", home.display()));
+                    }
+                }
+            }
+            format!("{}/AI_PM", home.display())
+        })
+        .unwrap_or_else(|| format!("{}/AI_PM", home.display()));
 
     (projects_dir, ai_pm_root, config_dir)
 }
@@ -68,6 +97,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             commands::config::get_config,
@@ -82,6 +112,8 @@ pub fn run() {
             commands::files::read_project_file,
             commands::files::save_project_file,
             commands::stream::start_stream,
+            commands::config::get_projects_dir,
+            commands::config::save_projects_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

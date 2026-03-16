@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info, ChevronLeft } from "lucide-react"
+import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info, ChevronLeft, FolderOpen } from "lucide-react"
+import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
@@ -43,6 +44,12 @@ export function SettingsPage() {
     message: string
   } | null>(null)
 
+  // Projects dir state
+  const [projectsDir, setProjectsDir] = useState("")
+  const [projectsDirDirty, setProjectsDirDirty] = useState(false)
+  const [savingDir, setSavingDir] = useState(false)
+  const [dirSaveResult, setDirSaveResult] = useState<{ ok: boolean; message: string } | null>(null)
+
   // Save state
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState<{
@@ -52,14 +59,14 @@ export function SettingsPage() {
 
   const fetchConfig = useCallback(async () => {
     try {
-      const data = await api.getConfig()
+      const [data, dir] = await Promise.all([
+        api.getConfig(),
+        api.getProjectsDir(),
+      ])
       setConfig(data as ConfigState)
-      // Pre-fill model from server
       setModel(data.model)
-      // Pre-fill baseUrl if available
-      if (data.baseUrl) {
-        setBaseUrl(data.baseUrl)
-      }
+      if (data.baseUrl) setBaseUrl(data.baseUrl)
+      setProjectsDir(dir)
     } catch (err) {
       console.error("Failed to fetch config:", err)
     } finally {
@@ -70,6 +77,30 @@ export function SettingsPage() {
   useEffect(() => {
     fetchConfig()
   }, [fetchConfig])
+
+  const handlePickDir = async () => {
+    const selected = await dialogOpen({ directory: true, multiple: false })
+    if (selected && typeof selected === "string") {
+      setProjectsDir(selected)
+      setProjectsDirDirty(true)
+      setDirSaveResult(null)
+    }
+  }
+
+  const handleSaveDir = async () => {
+    if (!projectsDir) return
+    setSavingDir(true)
+    setDirSaveResult(null)
+    try {
+      await api.saveProjectsDir(projectsDir)
+      setDirSaveResult({ ok: true, message: "已保存，重启后新项目将存入此目录" })
+      setProjectsDirDirty(false)
+    } catch (err) {
+      setDirSaveResult({ ok: false, message: typeof err === "string" ? err : "保存失败" })
+    } finally {
+      setSavingDir(false)
+    }
+  }
 
   const handleTest = async () => {
     setTesting(true)
@@ -329,6 +360,64 @@ export function SettingsPage() {
                 }
               >
                 {saveResult.message}
+              </span>
+            </div>
+          )}
+        </CardFooter>
+      </Card>
+
+      {/* Data Directory Card */}
+      <Card className="hover:shadow-none">
+        <CardHeader>
+          <CardTitle>DATA_DIR</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-[var(--dark)]">
+              项目文件存储目录
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={projectsDir}
+                onChange={(e) => {
+                  setProjectsDir(e.target.value)
+                  setProjectsDirDirty(true)
+                  setDirSaveResult(null)
+                }}
+                placeholder="~/Documents/AI PM"
+                className="h-9 flex-1 border border-[var(--border)] bg-[var(--background)] px-3 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+              />
+              <Button variant="ghost" size="sm" onClick={handlePickDir} className="gap-1.5 shrink-0">
+                <FolderOpen className="size-4" />
+                选择
+              </Button>
+            </div>
+            <span className="text-xs text-[var(--text-muted)]">
+              所有项目的 PRD、报告等输出文件存放位置
+            </span>
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col items-start gap-3">
+          <Button
+            variant="primary"
+            size="default"
+            onClick={handleSaveDir}
+            disabled={savingDir || !projectsDirDirty}
+            className="gap-2"
+          >
+            {savingDir && <Loader2 className="size-4 animate-spin" />}
+            保存目录
+          </Button>
+          {dirSaveResult && (
+            <div className="flex items-center gap-2 text-sm">
+              {dirSaveResult.ok ? (
+                <CheckCircle2 className="size-4 shrink-0 text-[var(--green)]" />
+              ) : (
+                <XCircle className="size-4 shrink-0 text-[var(--destructive)]" />
+              )}
+              <span className={dirSaveResult.ok ? "text-[var(--green)]" : "text-[var(--destructive)]"}>
+                {dirSaveResult.message}
               </span>
             </div>
           )}
