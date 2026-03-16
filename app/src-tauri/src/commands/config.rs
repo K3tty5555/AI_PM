@@ -247,3 +247,37 @@ pub async fn test_config(
         Ok(serde_json::json!({ "ok": false, "error": err_body }))
     }
 }
+
+#[tauri::command]
+pub fn get_projects_dir(state: State<AppState>) -> String {
+    state.projects_dir.clone()
+}
+
+#[tauri::command]
+pub fn save_projects_dir(
+    state: State<AppState>,
+    path: String,
+) -> Result<serde_json::Value, String> {
+    let config_path = get_config_path(&state.config_dir);
+
+    let mut existing = if let Ok(raw) = fs::read_to_string(&config_path) {
+        serde_json::from_str::<serde_json::Value>(&raw).unwrap_or(serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    existing["projectsDir"] = serde_json::Value::String(path.clone());
+
+    fs::create_dir_all(Path::new(&config_path).parent().unwrap())
+        .map_err(|e| e.to_string())?;
+    fs::write(
+        &config_path,
+        serde_json::to_string_pretty(&existing).unwrap(),
+    )
+    .map_err(|e| e.to_string())?;
+
+    // Also create the directory if it doesn't exist
+    fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+
+    Ok(serde_json::json!({ "ok": true }))
+}
