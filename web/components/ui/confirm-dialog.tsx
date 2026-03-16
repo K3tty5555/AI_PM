@@ -46,12 +46,18 @@ function ConfirmDialog({
       style={{ animation: "fadeInUp 0.15s ease-out" }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
         className="w-full max-w-[400px] border border-[var(--border)] bg-[var(--background)] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
         style={{ animation: "fadeInUp 0.2s cubic-bezier(0.16,1,0.3,1)" }}
       >
         {/* HUD 标题 */}
         <div className="mb-4">
-          <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
+          <span
+            id="confirm-dialog-title"
+            className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]"
+          >
             {title}
           </span>
         </div>
