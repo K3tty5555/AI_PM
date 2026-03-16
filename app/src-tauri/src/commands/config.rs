@@ -6,8 +6,21 @@ use crate::state::AppState;
 
 const DEFAULT_MODEL: &str = "claude-sonnet-4-6";
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Backend {
+    Api,
+    ClaudeCli,
+}
+
+impl Default for Backend {
+    fn default() -> Self {
+        Backend::Api
+    }
+}
+
 /// 判断是否为 Anthropic 原生 API（否则走 OpenAI 兼容格式）
-fn is_anthropic(base_url: &str, model: &str) -> bool {
+pub fn is_anthropic(base_url: &str, model: &str) -> bool {
     base_url.contains("anthropic.com")
         || model.starts_with("claude-")
         || base_url.is_empty()
@@ -20,6 +33,8 @@ pub struct ClaudeConfig {
     #[serde(rename = "baseUrl")]
     pub base_url: Option<String>,
     pub model: String,
+    #[serde(default)]
+    pub backend: Backend,
 }
 
 #[derive(Debug, Serialize)]
@@ -30,6 +45,7 @@ pub struct ConfigState {
     pub api_key: Option<String>,
     pub base_url: Option<String>,
     pub model: String,
+    pub backend: String,
 }
 
 fn get_config_path(config_dir: &str) -> String {
@@ -37,7 +53,7 @@ fn get_config_path(config_dir: &str) -> String {
 }
 
 pub fn read_config_internal(config_dir: &str) -> Option<ClaudeConfig> {
-    // Tier 1: process environment variable
+    // Tier 1: process environment variable (only for API mode)
     if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
         if !key.is_empty() {
             return Some(ClaudeConfig {
@@ -49,6 +65,7 @@ pub fn read_config_internal(config_dir: &str) -> Option<ClaudeConfig> {
                     .ok()
                     .filter(|s| !s.is_empty())
                     .unwrap_or_else(|| DEFAULT_MODEL.to_string()),
+                backend: Backend::Api,
             });
         }
     }
@@ -57,6 +74,11 @@ pub fn read_config_internal(config_dir: &str) -> Option<ClaudeConfig> {
     let config_path = get_config_path(config_dir);
     if let Ok(raw) = fs::read_to_string(&config_path) {
         if let Ok(config) = serde_json::from_str::<ClaudeConfig>(&raw) {
+            // CLI mode: no api_key needed
+            if config.backend == Backend::ClaudeCli {
+                return Some(config);
+            }
+            // API mode: requires api_key
             if config.api_key.as_ref().map(|k| !k.is_empty()).unwrap_or(false) {
                 return Some(config);
             }
@@ -90,6 +112,7 @@ pub fn get_config(state: State<AppState>) -> ConfigState {
                     .ok()
                     .filter(|s| !s.is_empty())
                     .unwrap_or_else(|| DEFAULT_MODEL.to_string()),
+                backend: "api".to_string(),
             };
         }
     }
@@ -98,6 +121,25 @@ pub fn get_config(state: State<AppState>) -> ConfigState {
     let config_path = get_config_path(&state.config_dir);
     if let Ok(raw) = fs::read_to_string(&config_path) {
         if let Ok(config) = serde_json::from_str::<ClaudeConfig>(&raw) {
+            let backend_str = if config.backend == Backend::ClaudeCli {
+                "claude_cli".to_string()
+            } else {
+                "api".to_string()
+            };
+
+            // CLI mode: always has_config
+            if config.backend == Backend::ClaudeCli {
+                return ConfigState {
+                    has_config: true,
+                    config_source: "local".to_string(),
+                    api_key: config.api_key.as_deref().map(mask_key),
+                    base_url: config.base_url,
+                    model: config.model,
+                    backend: backend_str,
+                };
+            }
+
+            // API mode: need api_key
             if let Some(key) = &config.api_key {
                 if !key.is_empty() {
                     return ConfigState {
@@ -106,6 +148,7 @@ pub fn get_config(state: State<AppState>) -> ConfigState {
                         api_key: Some(mask_key(key)),
                         base_url: config.base_url,
                         model: config.model,
+                        backend: backend_str,
                     };
                 }
             }
@@ -118,6 +161,7 @@ pub fn get_config(state: State<AppState>) -> ConfigState {
         api_key: None,
         base_url: None,
         model: DEFAULT_MODEL.to_string(),
+        backend: "api".to_string(),
     }
 }
 
@@ -127,6 +171,7 @@ pub struct SaveConfigArgs {
     pub api_key: Option<String>,
     pub base_url: Option<String>,
     pub model: Option<String>,
+    pub backend: Option<String>,
 }
 
 #[tauri::command]
@@ -157,6 +202,11 @@ pub fn save_config(
     if let Some(model) = args.model {
         if !model.is_empty() {
             existing["model"] = serde_json::Value::String(model);
+        }
+    }
+    if let Some(backend) = args.backend {
+        if !backend.is_empty() {
+            existing["backend"] = serde_json::Value::String(backend);
         }
     }
 
@@ -280,4 +330,12 @@ pub fn save_projects_dir(
     fs::create_dir_all(&path).map_err(|e| e.to_string())?;
 
     Ok(serde_json::json!({ "ok": true }))
+}
+
+#[tauri::command]
+pub async fn test_cli_config() -> Result<serde_json::Value, String> {
+    match crate::providers::claude_cli::ClaudeCliProvider::check_available().await {
+        Ok(version) => Ok(serde_json::json!({ "ok": true, "version": version })),
+        Err(msg) => Ok(serde_json::json!({ "ok": false, "error": msg })),
+    }
 }
