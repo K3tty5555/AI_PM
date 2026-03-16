@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react"
-import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info, ChevronLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
@@ -27,6 +28,8 @@ const SOURCE_LABELS: Record<string, string> = {
 }
 
 export function SettingsPage() {
+  const navigate = useNavigate()
+
   // Remote config state
   const [config, setConfig] = useState<ConfigState | null>(null)
   const [loading, setLoading] = useState(true)
@@ -145,9 +148,18 @@ export function SettingsPage() {
       style={{ animation: "fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1)" }}
     >
       {/* Page header */}
-      <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
-        {"// SETTINGS"}
-      </span>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--dark)]"
+        >
+          <ChevronLeft className="size-3.5" />
+          返回
+        </button>
+        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
+          {"// SETTINGS"}
+        </span>
+      </div>
       <div className="h-px bg-[var(--border)]" />
 
       {/* API Config Card */}

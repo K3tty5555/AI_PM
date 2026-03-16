@@ -27,8 +27,9 @@ export function TitleBar() {
       {/* Brand — center */}
       <button
         onClick={() => navigate("/")}
+        title="返回主页"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-base font-bold tracking-[2px] text-[var(--dark)] transition-opacity hover:opacity-70"
+        className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-base font-bold tracking-[2px] text-[var(--dark)] transition-opacity hover:opacity-70 hover:underline"
       >
         // AI PM
       </button>
