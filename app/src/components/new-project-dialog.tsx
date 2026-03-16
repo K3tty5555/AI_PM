@@ -56,7 +56,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
       const project = await invoke<{ id: string; name: string }>("create_project", { name: trimmedName })
       onCreated(project)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "创建项目失败")
+      setError(typeof err === "string" ? err : err instanceof Error ? err.message : "创建项目失败")
       setSubmitting(false)
     }
   }
