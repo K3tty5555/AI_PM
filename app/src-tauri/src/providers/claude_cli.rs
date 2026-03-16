@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use crate::providers::AiProvider;
+use crate::providers::{AiProvider, StreamResult};
 use crate::commands::stream::ChatMessage;
 
 pub struct ClaudeCliProvider;
@@ -11,6 +11,7 @@ impl ClaudeCliProvider {
     pub async fn check_available() -> Result<String, String> {
         let output = tokio::process::Command::new("claude")
             .arg("--version")
+            .env_remove("CLAUDECODE")
             .output()
             .await
             .map_err(|_| "未找到 claude 命令，请先安装 Claude Code：https://claude.ai/code".to_string())?;
@@ -31,7 +32,7 @@ impl AiProvider for ClaudeCliProvider {
         system_prompt: &str,
         messages: &[ChatMessage],
         app: &AppHandle,
-    ) -> Result<String, String> {
+    ) -> Result<StreamResult, String> {
         let last_user = messages.iter().rev()
             .find(|m| m.role == "user")
             .map(|m| m.content.as_str())
@@ -42,6 +43,7 @@ impl AiProvider for ClaudeCliProvider {
 
         let mut child = tokio::process::Command::new("claude")
             .arg("--print")
+            .env_remove("CLAUDECODE")
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
@@ -101,6 +103,6 @@ impl AiProvider for ClaudeCliProvider {
             return Err("claude 返回了空响应，请检查登录状态（运行 `claude` 确认可用）".to_string());
         }
 
-        Ok(full_text)
+        Ok(StreamResult { full_text, input_tokens: None, output_tokens: None })
     }
 }
