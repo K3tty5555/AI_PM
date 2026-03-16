@@ -18,19 +18,19 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "settings", element: <SettingsPage /> },
-      {
-        path: "project/:id",
-        element: <ProjectLayout />,
-        children: [
-          { path: "requirement", element: <RequirementPage /> },
-          { path: "analysis", element: <AnalysisPage /> },
-          { path: "research", element: <ResearchPage /> },
-          { path: "stories", element: <StoriesPage /> },
-          { path: "prd", element: <PrdPage /> },
-          { path: "prototype", element: <PrototypePage /> },
-          { path: "review", element: <ReviewPage /> },
-        ],
-      },
+    ],
+  },
+  {
+    path: "/project/:id",
+    element: <ProjectLayout />,
+    children: [
+      { path: "requirement", element: <RequirementPage /> },
+      { path: "analysis", element: <AnalysisPage /> },
+      { path: "research", element: <ResearchPage /> },
+      { path: "stories", element: <StoriesPage /> },
+      { path: "prd", element: <PrdPage /> },
+      { path: "prototype", element: <PrototypePage /> },
+      { path: "review", element: <ReviewPage /> },
     ],
   },
 ])
