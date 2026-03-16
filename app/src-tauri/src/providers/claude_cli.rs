@@ -45,6 +45,7 @@ impl AiProvider for ClaudeCliProvider {
 
         let mut child = tokio::process::Command::new("claude")
             .arg("--print")
+            .arg("--dangerously-skip-permissions")
             .current_dir(&self.work_dir)
             .env_remove("CLAUDECODE")
             .stdin(std::process::Stdio::piped())
