@@ -191,8 +191,6 @@ export function SettingsPage() {
     )
   }
 
-  const isAutoDetected = config?.hasConfig && config.configSource !== "local"
-
   return (
     <div
       className="flex flex-col gap-6"
@@ -524,11 +522,6 @@ export function SettingsPage() {
             <p className="text-sm text-[var(--text-muted)]">
               基于 Claude API 的产品经理工作台
             </p>
-            {isAutoDetected && (
-              <p className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
-                技能来源：<USER_HOME>/workplace/AI_PM
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>
