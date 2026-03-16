@@ -4,7 +4,9 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::providers::{AiProvider, StreamResult};
 use crate::commands::stream::ChatMessage;
 
-pub struct ClaudeCliProvider;
+pub struct ClaudeCliProvider {
+    pub work_dir: String,
+}
 
 impl ClaudeCliProvider {
     /// 检测 `claude` 是否在 PATH 中，返回版本行或错误信息
@@ -43,6 +45,7 @@ impl AiProvider for ClaudeCliProvider {
 
         let mut child = tokio::process::Command::new("claude")
             .arg("--print")
+            .current_dir(&self.work_dir)
             .env_remove("CLAUDECODE")
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
