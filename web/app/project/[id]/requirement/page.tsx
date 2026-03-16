@@ -57,6 +57,11 @@ export default function RequirementPage() {
             setInitialContent(draftText)
             setContent(draftText)
           }
+        } else if (projectData.description) {
+          if (!cancelled) {
+            setInitialContent(projectData.description)
+            setContent(projectData.description)
+          }
         }
       } catch (err) {
         console.error("Failed to load requirement page:", err)
@@ -151,44 +156,16 @@ export default function RequirementPage() {
   const canSubmit = content.trim().length > 0
 
   return (
-    <div className="mx-auto w-full max-w-[720px]">
+    <div className="relative mx-auto w-full max-w-[720px] pb-24">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8">
         <Badge variant="outline">REQUIREMENT_INPUT</Badge>
-        <div className="flex items-center gap-3">
-          {saveHint && (
-            <span
-              className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]"
-              style={{ animation: "fadeInUp 0.2s ease-out" }}
-            >
-              {saveHint}
-            </span>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={saveDraft}
-            disabled={saving || !canSubmit}
-          >
-            {saving ? "保存中..." : "暂存草稿"}
-          </Button>
-        </div>
       </div>
 
       <div className="h-px bg-[var(--border)]" />
 
-      {/* Project name — readonly */}
-      <div className="mt-8 mb-6">
-        <label className="mb-2 block text-sm font-medium text-[var(--dark)]">
-          项目名称
-        </label>
-        <div className="flex h-10 items-center border border-[var(--border)] bg-[var(--secondary)] px-3">
-          <span className="text-sm text-[var(--dark)]">{project.name}</span>
-        </div>
-      </div>
-
       {/* Requirement description — Rich Editor */}
-      <div className="mb-6">
+      <div className="mt-8 mb-6">
         <label className="mb-2 block text-sm font-medium text-[var(--dark)]">
           需求描述
         </label>
@@ -219,15 +196,39 @@ export default function RequirementPage() {
         <FileUpload files={files} onChange={setFiles} />
       </div>
 
-      {/* Submit */}
-      <div className="flex justify-end">
-        <Button
-          variant="primary"
-          onClick={handleStart}
-          disabled={!canSubmit || advancing}
-        >
-          {advancing ? "正在启动分析..." : "开始分析 \u2192"}
-        </Button>
+      {/* Sticky bottom action bar */}
+      <div className="sticky bottom-0 -mx-8 border-t border-[var(--border)] bg-[var(--background)] px-8 py-4">
+        <div className="flex items-center justify-between">
+          <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+            {!canSubmit ? "请填写需求描述后继续" : ""}
+          </span>
+          <div className="flex items-center gap-3">
+            {saveHint && (
+              <span
+                className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]"
+                style={{ animation: "fadeInUp 0.2s ease-out" }}
+              >
+                {saveHint}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={saveDraft}
+              disabled={saving || !canSubmit}
+              title={!canSubmit ? "请先填写需求描述" : undefined}
+            >
+              {saving ? "保存中..." : "暂存草稿"}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleStart}
+              disabled={!canSubmit || advancing}
+            >
+              {advancing ? "正在启动分析..." : "开始分析 →"}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )
