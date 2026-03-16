@@ -2,6 +2,7 @@ use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use std::time::Instant;
 use tauri::{AppHandle, Emitter, State};
 use crate::state::AppState;
 use crate::commands::config::{read_config_internal, Backend};
@@ -169,6 +170,8 @@ pub async fn start_stream(
             msg
         })?;
 
+    let stream_start = Instant::now();
+
     // 选择 provider
     let provider: Box<dyn crate::providers::AiProvider> = match config.backend {
         Backend::ClaudeCli => {
@@ -198,13 +201,20 @@ pub async fn start_stream(
 
     // 调用 provider，处理结果
     match provider.stream(&system_prompt, &args.messages, &app).await {
-        Ok(full_text) => {
+        Ok(result) => {
+            let duration_ms = stream_start.elapsed().as_millis() as u64;
             let file_path = Path::new(&output_dir).join(output_file);
             if let Some(parent) = file_path.parent() {
                 let _ = fs::create_dir_all(parent);
             }
-            let _ = fs::write(&file_path, &full_text);
-            let _ = app.emit("stream_done", output_file);
+            let _ = fs::write(&file_path, &result.full_text);
+            let done_payload = serde_json::json!({
+                "outputFile": output_file,
+                "durationMs": duration_ms,
+                "inputTokens": result.input_tokens,
+                "outputTokens": result.output_tokens,
+            });
+            let _ = app.emit("stream_done", done_payload);
         }
         Err(e) => {
             let _ = app.emit("stream_error", &e);
