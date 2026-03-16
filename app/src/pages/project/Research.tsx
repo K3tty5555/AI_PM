@@ -96,7 +96,7 @@ export function ResearchPage() {
 
   const startedRef = useRef(false)
 
-  const { text, isStreaming, isThinking, streamMeta, error, outputFile, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, outputFile, start, reset } = useAiStream({
     projectId,
     phase: "research",
   })
@@ -259,6 +259,11 @@ export function ResearchPage() {
           <ProgressBar value={progressValue} animated />
           {isThinking && (
             <p className="mt-2 text-sm text-[var(--text-muted)] animate-pulse">正在思考...</p>
+          )}
+          {!isThinking && (
+            <p className="mt-2 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+              {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
+            </p>
           )}
         </div>
       )}
