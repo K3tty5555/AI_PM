@@ -34,6 +34,7 @@ export interface ConfigState {
   apiKey: string | null
   baseUrl: string | null
   model: string
+  backend: "api" | "claude_cli"
 }
 
 export interface ChatMessage {
@@ -61,10 +62,12 @@ export const api = {
 
   // Config
   getConfig: () => invoke<ConfigState>("get_config"),
-  saveConfig: (args: { apiKey?: string; baseUrl?: string; model?: string }) =>
+  saveConfig: (args: { apiKey?: string; baseUrl?: string; model?: string; backend?: string }) =>
     invoke<{ ok: boolean }>("save_config", { args }),
   testConfig: (args: { apiKey?: string; baseUrl?: string; model?: string }) =>
     invoke<{ ok: boolean; model?: string; error?: string }>("test_config", { args }),
+  testCliConfig: () =>
+    invoke<{ ok: boolean; version?: string; error?: string }>("test_cli_config"),
 
   // Stream (fire-and-forget — results come via events)
   startStream: (args: { projectId: string; phase: string; messages: ChatMessage[] }) =>
