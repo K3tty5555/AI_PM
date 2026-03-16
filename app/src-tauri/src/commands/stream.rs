@@ -175,7 +175,9 @@ pub async fn start_stream(
     // 选择 provider
     let provider: Box<dyn crate::providers::AiProvider> = match config.backend {
         Backend::ClaudeCli => {
-            Box::new(crate::providers::claude_cli::ClaudeCliProvider)
+            Box::new(crate::providers::claude_cli::ClaudeCliProvider {
+                work_dir: state.ai_pm_root.clone(),
+            })
         }
         Backend::Api => {
             let base_url = config.base_url
