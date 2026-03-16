@@ -98,6 +98,11 @@ node_modules/
 package-lock.json
 yarn.lock
 
+# Tauri app
+app/node_modules/
+app/dist/
+app/src-tauri/target/
+
 # Python
 __pycache__/
 *.pyc
