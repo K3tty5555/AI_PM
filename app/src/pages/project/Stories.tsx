@@ -36,7 +36,7 @@ export function StoriesPage() {
   const startedRef = useRef(false)
 
   // AI stream hook
-  const { text, isStreaming, error, outputFile, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, streamMeta, error, outputFile, start, reset } = useAiStream({
     projectId,
     phase: "stories",
   })
@@ -216,6 +216,9 @@ export function StoriesPage() {
       {isStreaming && (
         <div className="mt-4">
           <ProgressBar value={progressValue} animated />
+          {isThinking && (
+            <p className="mt-2 text-sm text-[var(--text-muted)] animate-pulse">正在思考...</p>
+          )}
         </div>
       )}
 
@@ -280,6 +283,13 @@ export function StoriesPage() {
           onStoriesChange={setStories}
           isStreaming={isStreaming}
         />
+        {!isStreaming && streamMeta !== null && (
+          <p className="text-xs text-[var(--text-muted)] font-mono mt-2">
+            {streamMeta.inputTokens !== undefined && streamMeta.outputTokens !== undefined
+              ? `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
+              : `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
+          </p>
+        )}
       </div>
 
       {/* Bottom action bar */}
