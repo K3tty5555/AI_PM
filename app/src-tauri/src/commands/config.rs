@@ -6,6 +6,13 @@ use crate::state::AppState;
 
 const DEFAULT_MODEL: &str = "claude-sonnet-4-6";
 
+/// 判断是否为 Anthropic 原生 API（否则走 OpenAI 兼容格式）
+fn is_anthropic(base_url: &str, model: &str) -> bool {
+    base_url.contains("anthropic.com")
+        || model.starts_with("claude-")
+        || base_url.is_empty()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ClaudeConfig {
     #[serde(rename = "apiKey")]
@@ -199,21 +206,39 @@ pub async fn test_config(
         .unwrap_or_else(|| DEFAULT_MODEL.to_string());
 
     let client = reqwest::Client::new();
-    let url = format!("{}/v1/messages", base_url.trim_end_matches('/'));
+    let anthropic = is_anthropic(&base_url, &model);
 
-    let resp = client
-        .post(&url)
-        .header("x-api-key", &api_key)
-        .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
-        .json(&serde_json::json!({
-            "model": &model,
-            "max_tokens": 10,
-            "messages": [{"role": "user", "content": "Hi"}]
-        }))
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
+    let resp = if anthropic {
+        let url = format!("{}/v1/messages", base_url.trim_end_matches('/'));
+        client
+            .post(&url)
+            .header("x-api-key", &api_key)
+            .header("anthropic-version", "2023-06-01")
+            .header("content-type", "application/json")
+            .json(&serde_json::json!({
+                "model": &model,
+                "max_tokens": 10,
+                "messages": [{"role": "user", "content": "Hi"}]
+            }))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?
+    } else {
+        // OpenAI 兼容格式（Kimi、OpenAI 等）
+        let url = format!("{}/v1/chat/completions", base_url.trim_end_matches('/'));
+        client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", &api_key))
+            .header("content-type", "application/json")
+            .json(&serde_json::json!({
+                "model": &model,
+                "max_tokens": 10,
+                "messages": [{"role": "user", "content": "Hi"}]
+            }))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?
+    };
 
     if resp.status().is_success() {
         Ok(serde_json::json!({ "ok": true, "model": model }))
