@@ -49,7 +49,6 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<DashboardProject[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
   const fetchProjects = useCallback(async () => {
@@ -79,14 +78,11 @@ export default function DashboardPage() {
     if (!confirmId) return
     const id = confirmId
     setConfirmId(null)
-    setDeletingId(id)
     try {
       await fetch(`/api/projects/${id}`, { method: "DELETE" })
       setProjects((prev) => prev.filter((p) => p.id !== id))
     } catch (err) {
       console.error("Failed to delete project:", err)
-    } finally {
-      setDeletingId(null)
     }
   }
 
