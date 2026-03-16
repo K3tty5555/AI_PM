@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tauri::{AppHandle, Emitter};
-use crate::providers::AiProvider;
+use crate::providers::{AiProvider, StreamResult};
 use crate::commands::stream::ChatMessage;
 
 pub struct AnthropicProvider {
@@ -16,7 +16,7 @@ impl AiProvider for AnthropicProvider {
         system_prompt: &str,
         messages: &[ChatMessage],
         app: &AppHandle,
-    ) -> Result<String, String> {
+    ) -> Result<StreamResult, String> {
         let url = format!("{}/v1/messages", self.base_url.trim_end_matches('/'));
         let messages_json: Vec<serde_json::Value> = messages.iter().map(|m| {
             serde_json::json!({"role": m.role, "content": m.content})
@@ -47,6 +47,8 @@ impl AiProvider for AnthropicProvider {
 
         let mut full_text = String::new();
         let mut buffer = String::new();
+        let mut input_tokens: Option<u32> = None;
+        let mut output_tokens: Option<u32> = None;
 
         while let Some(chunk) = resp.chunk().await.map_err(|e| format!("Stream read error: {}", e))? {
             buffer.push_str(&String::from_utf8_lossy(&chunk));
@@ -58,6 +60,16 @@ impl AiProvider for AnthropicProvider {
                         if let Some(data) = line.strip_prefix("data: ") {
                             if data == "[DONE]" { continue; }
                             if let Ok(event) = serde_json::from_str::<serde_json::Value>(data) {
+                                if event["type"] == "message_start" {
+                                    if let Some(n) = event["message"]["usage"]["input_tokens"].as_u64() {
+                                        input_tokens = Some(n as u32);
+                                    }
+                                }
+                                if event["type"] == "message_delta" {
+                                    if let Some(n) = event["usage"]["output_tokens"].as_u64() {
+                                        output_tokens = Some(n as u32);
+                                    }
+                                }
                                 if event["type"] == "content_block_delta" {
                                     if let Some(text) = event["delta"]["text"].as_str() {
                                         full_text.push_str(text);
@@ -87,6 +99,6 @@ impl AiProvider for AnthropicProvider {
             return Err(error_msg);
         }
 
-        Ok(full_text)
+        Ok(StreamResult { full_text, input_tokens, output_tokens })
     }
 }
