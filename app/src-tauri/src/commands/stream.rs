@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use crate::state::AppState;
 use crate::commands::config::{read_config_internal, Backend};
 
@@ -27,8 +27,8 @@ fn phase_config(phase: &str) -> Option<(&'static str, &'static [&'static str], &
     }
 }
 
-fn load_skill(ai_pm_root: &str, skill_name: &str) -> Result<String, String> {
-    let skill_dir = Path::new(ai_pm_root).join(".claude").join("skills").join(skill_name);
+fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String> {
+    let skill_dir = Path::new(skills_root).join(skill_name);
     let entry = skill_dir.join("SKILL.md");
 
     if !entry.exists() {
@@ -65,14 +65,14 @@ fn load_skill(ai_pm_root: &str, skill_name: &str) -> Result<String, String> {
 }
 
 fn build_system_prompt(
-    ai_pm_root: &str,
+    skills_root: &str,
     output_dir: &str,
     project_name: &str,
     skill_name: &str,
     input_files: &[&str],
     user_input: Option<&str>,
 ) -> Result<String, String> {
-    let skill_content = load_skill(ai_pm_root, skill_name)?;
+    let skill_content = load_skill(skills_root, skill_name)?;
 
     let mut parts = vec![skill_content];
 
@@ -151,8 +151,19 @@ pub async fn start_stream(
         .find(|m| m.role == "user")
         .map(|m| m.content.as_str());
 
+    // Resolve bundled skills directory from app resources
+    let skills_root = app.path().resource_dir()
+        .map_err(|e| {
+            let msg = format!("无法获取资源目录：{}", e);
+            let _ = app.emit("stream_error", &msg);
+            msg
+        })?
+        .join("skills")
+        .to_string_lossy()
+        .to_string();
+
     let system_prompt = build_system_prompt(
-        &state.ai_pm_root,
+        &skills_root,
         &output_dir,
         &project_name,
         skill_name,
@@ -176,7 +187,7 @@ pub async fn start_stream(
     let provider: Box<dyn crate::providers::AiProvider> = match config.backend {
         Backend::ClaudeCli => {
             Box::new(crate::providers::claude_cli::ClaudeCliProvider {
-                work_dir: state.ai_pm_root.clone(),
+                work_dir: output_dir.clone(),
             })
         }
         Backend::Api => {
