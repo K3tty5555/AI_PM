@@ -1,3 +1,4 @@
+mod providers;
 mod commands;
 mod db;
 mod state;
