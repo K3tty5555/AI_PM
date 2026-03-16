@@ -1,0 +1,72 @@
+import { invoke } from "@tauri-apps/api/core"
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+export interface ProjectPhase {
+  id: string
+  projectId: string
+  phase: string
+  status: string
+  outputFile: string | null
+  startedAt: string | null
+  completedAt: string | null
+}
+
+export interface ProjectSummary {
+  id: string
+  name: string
+  description: string | null
+  currentPhase: string
+  outputDir: string
+  createdAt: string
+  updatedAt: string
+  completedCount: number
+  totalPhases: number
+}
+
+export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases'> {
+  phases: ProjectPhase[]
+}
+
+export interface ConfigState {
+  hasConfig: boolean
+  configSource: string
+  apiKey: string | null
+  baseUrl: string | null
+  model: string
+}
+
+export interface ChatMessage {
+  role: string
+  content: string
+}
+
+// ─── API functions ─────────────────────────────────────────────────────────
+
+export const api = {
+  // Projects
+  listProjects: () => invoke<ProjectSummary[]>("list_projects"),
+  createProject: (name: string) => invoke<ProjectDetail>("create_project", { name }),
+  getProject: (id: string) => invoke<ProjectDetail | null>("get_project", { id }),
+  deleteProject: (id: string) => invoke<void>("delete_project", { id }),
+  advancePhase: (id: string) => invoke<string | null>("advance_phase", { id }),
+  updatePhase: (args: { projectId: string; phase: string; status: string; outputFile?: string }) =>
+    invoke<void>("update_phase", { args }),
+
+  // Files
+  readProjectFile: (projectId: string, fileName: string) =>
+    invoke<string | null>("read_project_file", { projectId, fileName }),
+  saveProjectFile: (args: { projectId: string; fileName: string; content: string }) =>
+    invoke<void>("save_project_file", { args }),
+
+  // Config
+  getConfig: () => invoke<ConfigState>("get_config"),
+  saveConfig: (args: { apiKey?: string; baseUrl?: string; model?: string }) =>
+    invoke<{ ok: boolean }>("save_config", { args }),
+  testConfig: (args: { apiKey?: string; baseUrl?: string; model?: string }) =>
+    invoke<{ ok: boolean; model?: string; error?: string }>("test_config", { args }),
+
+  // Stream (fire-and-forget — results come via events)
+  startStream: (args: { projectId: string; phase: string; messages: ChatMessage[] }) =>
+    invoke<void>("start_stream", { args }),
+}
