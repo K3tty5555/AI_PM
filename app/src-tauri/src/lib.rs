@@ -80,6 +80,7 @@ pub fn run() {
             commands::projects::update_phase,
             commands::files::read_project_file,
             commands::files::save_project_file,
+            commands::stream::start_stream,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
