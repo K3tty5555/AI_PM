@@ -8,6 +8,7 @@ import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
+import { invalidateProject } from "@/lib/project-cache"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -203,7 +204,7 @@ export function AnalysisPage() {
       ]
       const newMessages: Message[] = [
         ...messages,
-        { role: "assistant", content: text },
+        { role: "assistant", content: text || existingContent || "" },
         { role: "user", content: answer },
       ]
 
@@ -274,6 +275,7 @@ export function AnalysisPage() {
 
       // Advance to next phase
       await api.advancePhase(projectId)
+      invalidateProject(projectId)
 
       navigate(`/project/${projectId}/stories`)
     } catch (err) {
@@ -371,8 +373,8 @@ export function AnalysisPage() {
         {!isStreaming && streamMeta && (
           <p className="mt-2 text-xs text-[var(--text-muted)] font-mono">
             {streamMeta.inputTokens != null && streamMeta.outputTokens != null
-              ? `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
-              : `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
+              ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
+              : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
           </p>
         )}
       </div>
