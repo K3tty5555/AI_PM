@@ -299,7 +299,7 @@ export function ResearchPage() {
         />
         {!isStreaming && streamMeta !== null && (
           <p className="text-xs text-[var(--text-muted)] font-mono mt-2">
-            {streamMeta.inputTokens !== undefined && streamMeta.outputTokens !== undefined
+            {streamMeta.inputTokens != null && streamMeta.outputTokens != null
               ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
               : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
           </p>
