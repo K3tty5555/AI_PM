@@ -22,6 +22,7 @@ export interface ProjectSummary {
   updatedAt: string
   completedCount: number
   totalPhases: number
+  completedPhases: string[]
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases'> {
