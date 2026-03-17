@@ -8,6 +8,7 @@ import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { open } from "@tauri-apps/plugin-shell"
 import { cn, extractStreamStatus } from "@/lib/utils"
+import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 
@@ -277,11 +278,18 @@ export function PrototypePage() {
           onClick={() => navigate(`/project/${projectId}/prd`)}
           disabled={isStreaming || advancing}
         >
-          &larr; 返回 PRD
+          {PHASE_META.prototype.backLabel}
         </Button>
-        <Button variant="primary" onClick={handleAdvance} disabled={!canAdvance}>
-          {advancing ? "正在推进..." : "确认，进入评审 →"}
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button variant="primary" onClick={handleAdvance} disabled={!canAdvance}>
+            {advancing ? "正在推进..." : PHASE_META.prototype.nextLabel + " →"}
+          </Button>
+          {!advancing && (
+            <p className="font-terminal text-[10px] text-[var(--text-muted)] tracking-[0.5px]">
+              {PHASE_META.prototype.nextDescription}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
