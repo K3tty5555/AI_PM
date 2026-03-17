@@ -196,11 +196,22 @@ export function StoriesPage() {
 
   if (!loading && !existingMarkdown && !text && !isStreaming && !error) {
     return (
-      <PhaseEmptyState
-        phaseLabel="STORIES"
-        description="用户故事"
-        onGenerate={handleGenerate}
-      />
+      <div className="mx-auto w-full max-w-[720px]">
+        <div className="mb-6 flex items-center justify-between">
+          <Badge variant="outline">USER_STORIES</Badge>
+        </div>
+        <div className="h-px bg-[var(--border)]" />
+        <ContextPills
+          projectId={projectId!}
+          onExcludeChange={setExcludedContext}
+          className="border-b border-[var(--border)]"
+        />
+        <PhaseEmptyState
+          phaseLabel="STORIES"
+          description="用户故事"
+          onGenerate={handleGenerate}
+        />
+      </div>
     )
   }
 
