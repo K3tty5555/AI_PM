@@ -28,6 +28,15 @@ const PHASE_LABELS: Record<string, string> = {
   review: "评审",
 }
 
+const TOOLS = [
+  { path: "/tools/priority",  label: "需求优先级", icon: "⚡" },
+  { path: "/tools/weekly",    label: "工作周报",   icon: "📋" },
+  { path: "/tools/knowledge", label: "知识库",     icon: "🧠" },
+  { path: "/tools/persona",   label: "产品分身",   icon: "🪞" },
+  { path: "/tools/data",      label: "数据洞察",   icon: "📊" },
+  { path: "/tools/interview", label: "调研访谈",   icon: "🎯" },
+]
+
 function Sidebar({ projects, activeProjectId, onNewProject }: SidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -117,6 +126,36 @@ function Sidebar({ projects, activeProjectId, onNewProject }: SidebarProps) {
               </li>
             )
           })}
+        </ul>
+      </nav>
+
+      {/* ── TOOLS 分区 ─────────────── */}
+      <div className="px-5 pt-4 pb-2">
+        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-[11px] font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
+          TOOLS
+        </span>
+      </div>
+      <div className="mx-5 mb-1 h-px bg-[var(--border)]" />
+      <nav className="px-3 pb-2">
+        <ul className="flex flex-col gap-0.5">
+          {TOOLS.map((tool) => (
+            <li key={tool.path}>
+              <button
+                type="button"
+                onClick={() => navigate(tool.path)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-left",
+                  "transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)]",
+                  location.pathname === tool.path
+                    ? "bg-[var(--background)] text-[var(--dark)]"
+                    : "text-[var(--text-muted)] hover:bg-[var(--background)]/60 hover:text-[var(--dark)]"
+                )}
+              >
+                <span className="text-[11px]">{tool.icon}</span>
+                <span className="text-xs">{tool.label}</span>
+              </button>
+            </li>
+          ))}
         </ul>
       </nav>
 
