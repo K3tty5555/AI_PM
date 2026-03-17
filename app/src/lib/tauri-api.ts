@@ -25,7 +25,7 @@ export interface ProjectSummary {
   completedPhases: string[]
 }
 
-export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases'> {
+export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases' | 'completedPhases'> {
   phases: ProjectPhase[]
 }
 
