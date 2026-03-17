@@ -42,11 +42,13 @@ function detectQuestion(text: string): { hasQuestion: boolean; question: string;
   for (let i = lines.length - 1; i >= start; i--) {
     const line = lines[i].trim()
     if (line.length < 4) continue
+    // Strip markdown bold/italic markers before matching (e.g. **请选择…：**)
+    const stripped = line.replace(/^\*+|^\*\*|^\*\*\*|\*+$|\*\*$|\*\*\*$/g, "").trim()
     // Question line: ends with ？/? or ends with ：/: containing interrogative keywords
     const isQuestion =
-      line.endsWith("？") || line.endsWith("?") ||
-      ((line.endsWith("：") || line.endsWith(":")) &&
-        /请选择|请告诉|请回复|请说明|请输入/.test(line))
+      stripped.endsWith("？") || stripped.endsWith("?") ||
+      ((stripped.endsWith("：") || stripped.endsWith(":")) &&
+        /请选择|请告诉|请回复|请说明|请输入/.test(stripped))
     if (!isQuestion) continue
 
     // Collect bullet items that follow this question line
