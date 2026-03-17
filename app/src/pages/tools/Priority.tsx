@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -26,15 +25,15 @@ export function ToolPriorityPage() {
   return (
     <div className="mx-auto w-full max-w-[860px]">
       <div className="mb-6 flex items-center gap-3">
-        <Badge variant="outline">PRIORITY</Badge>
-        <span className="text-sm text-[var(--text-muted)]">需求优先级评估 — 四维评分模型</span>
+        <h1 className="text-base font-semibold text-[var(--text-primary)]">需求优先级</h1>
+        <span className="text-sm text-[var(--text-secondary)]">需求优先级评估 — 四维评分模型</span>
       </div>
       <div className="h-px bg-[var(--border)]" />
 
       {/* 输入区（仅在未开始时显示） */}
       {!isStreaming && !text && (
         <div className="mt-6">
-          <p className="mb-3 text-sm text-[var(--text-muted)]">
+          <p className="mb-3 text-sm text-[var(--text-secondary)]">
             粘贴需求列表（每行一条，可包含提报方、影响用户数等背景信息）
           </p>
           <textarea
@@ -43,11 +42,11 @@ export function ToolPriorityPage() {
             placeholder={"1. 登录页加载慢（运营提报，影响全量用户）\n2. 数据导出 Excel\n3. 搜索结果排序优化\n..."}
             rows={8}
             className={cn(
-              "w-full px-4 py-3 text-sm",
+              "w-full rounded-lg px-4 py-3 text-sm",
               "bg-transparent border border-[var(--border)]",
               "placeholder:text-[var(--text-muted)]",
               "outline-none resize-none",
-              "focus:border-[var(--yellow)] transition-[border-color]"
+              "focus:border-[var(--accent-color)] transition-[border-color]"
             )}
           />
           <div className="mt-3 flex justify-end">
@@ -63,9 +62,9 @@ export function ToolPriorityPage() {
         <div className="mt-6">
           <ProgressBar value={progressValue} animated />
           {isThinking && (
-            <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+            <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
           )}
-          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
+          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
         </div>
@@ -73,7 +72,7 @@ export function ToolPriorityPage() {
 
       {/* 错误 */}
       {error && (
-        <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">{error}</p>
           <Button variant="ghost" size="sm" onClick={handleReset} className="mt-2">重置</Button>
         </div>
@@ -83,8 +82,8 @@ export function ToolPriorityPage() {
       {text && (
         <div className="mt-6">
           <div className="mb-3 flex items-center justify-between">
-            <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
-              RESULT
+            <span className="text-[13px] text-[var(--text-secondary)]">
+              结果
             </span>
             {!isStreaming && (
               <div className="flex gap-2">
@@ -95,7 +94,7 @@ export function ToolPriorityPage() {
           </div>
           <PrdViewer markdown={text} isStreaming={isStreaming} />
           {!isStreaming && streamMeta && (
-            <p className="mt-2 text-xs text-[var(--text-muted)] font-terminal">
+            <p className="mt-2 text-xs text-[var(--text-tertiary)]">
               {streamMeta.inputTokens != null
                 ? `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens?.toLocaleString()} tokens`
                 : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
