@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { ExternalLink } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { useAiStream } from "@/hooks/use-ai-stream"
@@ -153,9 +152,7 @@ export function PrototypePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
-          LOADING...
-        </span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
       </div>
     )
   }
@@ -164,7 +161,7 @@ export function PrototypePage() {
     return (
       <div className="mx-auto w-full max-w-[900px]">
         <div className="mb-6 flex items-center justify-between">
-          <Badge variant="outline">PROTOTYPE</Badge>
+          <h1 className="text-base font-semibold text-[var(--text-primary)]">原型设计</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
         <ContextPills
@@ -188,7 +185,7 @@ export function PrototypePage() {
     <div className="mx-auto w-full max-w-[900px]">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <Badge variant="outline">PROTOTYPE</Badge>
+        <h1 className="text-base font-semibold text-[var(--text-primary)]">原型设计</h1>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={handleRegenerate} disabled={isStreaming}>
             &#x21bb; 重新生成
@@ -209,12 +206,12 @@ export function PrototypePage() {
         <div className="mt-4">
           <ProgressBar value={progressValue} animated />
           {isThinking
-            ? <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+            ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
             : extractStreamStatus(text)
-              ? <p className="mt-2 font-terminal text-xs tracking-[1px] text-[var(--text-muted)]">{extractStreamStatus(text)}</p>
+              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{extractStreamStatus(text)}</p>
               : null
           }
-          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
+          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
             正在生成原型...{text.length > 0 && ` (${text.length} 字节)`}
           </p>
         </div>
@@ -222,7 +219,7 @@ export function PrototypePage() {
 
       {/* Error display */}
       {error && (
-        <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">{error}</p>
           <Button variant="ghost" size="sm" onClick={handleRegenerate} className="mt-2">重试</Button>
         </div>
@@ -285,7 +282,7 @@ export function PrototypePage() {
             {advancing ? "正在推进..." : PHASE_META.prototype.nextLabel + " →"}
           </Button>
           {!advancing && (
-            <p className="font-terminal text-[10px] text-[var(--text-muted)] tracking-[0.5px]">
+            <p className="text-[11px] text-[var(--text-tertiary)]">
               {PHASE_META.prototype.nextDescription}
             </p>
           )}
