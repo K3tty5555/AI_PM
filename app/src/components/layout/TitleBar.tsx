@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { Settings } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/tauri-api"
 
@@ -18,54 +16,45 @@ export function TitleBar() {
   return (
     <header
       data-tauri-drag-region
-      className="flex h-[52px] shrink-0 select-none items-center justify-between border-b border-[var(--border)] bg-[var(--background)] px-6"
+      className="flex h-11 shrink-0 select-none items-center justify-between border-b border-[var(--border)] bg-[rgba(250,250,250,0.9)] backdrop-blur-sm px-5"
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
-      {/* macOS traffic lights sit in the left 72px — leave space */}
+      {/* macOS traffic lights space */}
       <div className="w-[72px]" data-tauri-drag-region />
 
-      {/* Brand — center */}
+      {/* Brand */}
       <button
         onClick={() => navigate("/")}
         title="返回主页"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        className="font-terminal text-base font-bold tracking-[2px] text-[var(--dark)] transition-opacity hover:opacity-70 hover:underline"
+        className="text-sm font-semibold text-[var(--text-primary)] tracking-tight hover:opacity-60 transition-opacity"
       >
-        // AI PM
+        AI PM
       </button>
 
-      {/* Right: API status + settings */}
+      {/* API status indicator */}
       <div
-        className="flex items-center gap-4"
+        className="flex w-[72px] items-center justify-end"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         {apiReady !== null && (
           <button
             onClick={() => navigate("/settings")}
-            className="flex items-center gap-2 transition-opacity hover:opacity-70"
+            className="flex items-center gap-1.5 transition-opacity hover:opacity-70"
             title={apiReady ? "API 已配置" : "点击配置 API"}
           >
             <span
               className={cn(
-                "inline-block h-2 w-2",
-                apiReady ? "bg-[var(--green)]" : "bg-[var(--yellow)]"
+                "inline-block size-1.5 rounded-full",
+                apiReady ? "bg-[var(--success)]" : "bg-[var(--accent-color)]"
               )}
               style={apiReady ? { animation: "dotPulse 2s ease-in-out infinite" } : undefined}
             />
-            <span className="font-terminal text-xs text-[var(--text-muted)]">
-              {apiReady ? "API_OK" : "API_UNSET"}
+            <span className="text-[11px] text-[var(--text-tertiary)]">
+              {apiReady ? "已配置" : "未配置"}
             </span>
           </button>
         )}
-
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => navigate("/settings")}
-          aria-label="Settings"
-        >
-          <Settings className="size-4" />
-        </Button>
       </div>
     </header>
   )
