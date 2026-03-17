@@ -46,7 +46,7 @@ export function ToolWeeklyPage() {
             className={cn(
               "w-full rounded-lg px-4 py-3 text-sm",
               "bg-transparent border border-[var(--border)]",
-              "placeholder:text-[var(--text-muted)]",
+              "placeholder:text-[var(--text-secondary)]",
               "outline-none resize-none",
               "focus:border-[var(--accent-color)] transition-[border-color]"
             )}

@@ -78,7 +78,7 @@ export function ToolPersonaPage() {
                   className={cn(
                     "flex-1 h-9 px-3 text-sm",
                     "bg-transparent border border-[var(--border)]",
-                    "placeholder:text-[var(--text-muted)]",
+                    "placeholder:text-[var(--text-secondary)]",
                     "outline-none"
                   )}
                 />

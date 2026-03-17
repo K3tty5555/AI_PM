@@ -281,7 +281,7 @@ export function DashboardPage() {
                       </div>
                       <button
                         onClick={(e) => handleDelete(e, project.id)}
-                        className="invisible flex size-7 items-center justify-center text-[var(--text-muted)] transition-all hover:text-red-500 group-hover/card:visible"
+                        className="invisible flex size-7 items-center justify-center text-[var(--text-secondary)] transition-all hover:text-red-500 group-hover/card:visible"
                         title="删除项目"
                       >
                         <Trash2 className="size-3.5" />

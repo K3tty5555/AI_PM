@@ -58,7 +58,7 @@ function InlineChat({
           onClick={() => setInternalCollapsed(false)}
           className={cn(
             "flex items-center gap-2 w-full text-left",
-            "text-sm text-[var(--text-muted)]",
+            "text-sm text-[var(--text-secondary)]",
             "hover:text-[var(--dark)] transition-colors duration-[0.28s]",
             "cursor-pointer",
           )}
@@ -123,7 +123,7 @@ function InlineChat({
               "flex-1 h-8 px-3 rounded-lg",
               "text-sm text-[var(--dark)]",
               "bg-transparent border border-[var(--border)]",
-              "placeholder:text-[var(--text-muted)]",
+              "placeholder:text-[var(--text-secondary)]",
               "outline-none",
               "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
               "focus:border-[var(--accent-color)]",

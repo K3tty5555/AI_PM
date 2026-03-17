@@ -120,7 +120,7 @@ function PrdToc({ markdown, activeSection, onSectionClick }: PrdTocProps) {
                     "tracking-[0.5px]",
                     isActive
                       ? "text-[var(--dark)] font-semibold"
-                      : "text-[var(--text-muted)]",
+                      : "text-[var(--text-secondary)]",
                   )}
                 >
                   {item.index}
@@ -129,7 +129,7 @@ function PrdToc({ markdown, activeSection, onSectionClick }: PrdTocProps) {
                   className={cn(
                     isActive
                       ? "text-[var(--dark)] font-medium"
-                      : "text-[var(--text-muted)]",
+                      : "text-[var(--text-secondary)]",
                   )}
                 >
                   {item.text}

@@ -7,53 +7,56 @@
 
 ## 一、设计原则
 
-参考 Apple Music、Notion 的气质：**高级感来自减法，不来自装饰。**
+参考包豪斯主义 + Apple HIG：**理性、克制、功能即美学。**
 
-- 视觉克制：用字重区分层级，不用颜色堆砌
-- 微交互精细：每个可点击元素都有有意义的反馈
-- 系统字体优先：只在代码/文件名场景使用等宽字体
-- 单一 Accent：全局只有琥珀金一个强调色
+- 单一 Accent：全局只有钴蓝一个强调色
+- 高对比文字：主文字接近纯黑，清晰优先
+- 微交互精细：每个可交互元素都有有意义的反馈
+- 系统字体优先：等宽字体仅限代码/终端输出场景
+- 禁止装饰性设计：`uppercase tracking-[2px]`、`font-terminal` 不用于 UI 元素
 
 ---
 
 ## 二、色彩体系
 
-所有颜色通过 CSS 变量使用，禁止在组件中硬编码色值。
+所有颜色通过 CSS 变量使用，禁止硬编码色值。
+
+### Accent 色阶（钴蓝）
+
+| 变量 | 值 | 用途 |
+|------|----|------|
+| `--accent-color` | `#1D4ED8` | 主操作、当前态、高亮 |
+| `--accent-hover` | `#1E40AF` | 按钮 hover、加深态 |
+| `--accent-light` | `rgba(29,78,216,0.08)` | Badge 背景、选中底色 |
+| `--accent-ring` | `rgba(29,78,216,0.25)` | focus-visible ring |
 
 ### 背景层级
 
 | 变量 | 值 | 用途 |
 |------|----|------|
-| `--background` | `#FAFAFA` | 主背景（暖白） |
-| `--card` / `var(--card)` | `#FFFFFF` | 内容区、卡片 |
-| `--sidebar` | `rgba(240,240,240,0.85)` | 侧边栏（毛玻璃底色） |
-| `--secondary` | `#F2F2F2` | 次要背景、输入框填充 |
+| `--background` | `#FFFFFF` | 主背景（纯白） |
+| `--bg-sidebar` | `rgba(248,248,248,0.90)` | 侧边栏毛玻璃底色 |
+| `--secondary` | `#F4F4F5` | 次要背景、输入框填充 |
+| `--card` | `#FFFFFF` | 卡片 |
 
 ### 文字层级
 
 | 变量 | 值 | 用途 |
 |------|----|------|
-| `--text-primary` / `--dark` | `#1A1A1A` | 主标题、正文 |
-| `--text-secondary` / `--text-muted` | `#6E6E73` | 次要说明、占位文字 |
-| `--text-tertiary` | `#AEAEB2` | 禁用状态、辅助标签 |
+| `--text-primary` / `--dark` | `#0F172A` | 主标题、正文 |
+| `--text-secondary` / `--text-muted` | `#64748B` | 次要说明 |
+| `--text-tertiary` | `#94A3B8` | 禁用、辅助标签 |
 
-### Accent & 功能色
-
-| 变量 | 值 | 用途 |
-|------|----|------|
-| `--accent-color` / `--yellow` | `#F0A500` | 主操作、当前态、高亮 |
-| `--accent-light` / `--yellow-bg` | `rgba(240,165,0,0.12)` | Accent 浅色背景 |
-| `--success` / `--green` | `#2D9E6B` | 完成态、成功状态 |
-| `--success-light` | `rgba(45,158,107,0.12)` | 成功浅色背景 |
-| `--destructive` | `#E5484D` | 错误、删除操作 |
-
-### 交互状态
+### 功能色
 
 | 变量 | 值 | 用途 |
 |------|----|------|
-| `--hover-bg` | `rgba(0,0,0,0.04)` | 元素 hover 背景 |
-| `--active-bg` | `rgba(0,0,0,0.07)` | 元素 active/selected 背景 |
+| `--success` / `--green` | `#16A34A` | 完成态、成功 |
+| `--success-light` | `rgba(22,163,74,0.08)` | 成功浅色背景 |
+| `--destructive` | `#DC2626` | 错误、删除 |
 | `--border` | `rgba(0,0,0,0.08)` | 分割线、描边 |
+| `--hover-bg` | `rgba(0,0,0,0.04)` | hover 背景 |
+| `--active-bg` | `rgba(0,0,0,0.07)` | active/selected 背景 |
 
 ---
 
@@ -61,15 +64,12 @@
 
 ### 字体栈
 
-```css
-/* UI 文字（绝大多数场景） */
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
-/* 通过 Tailwind 类使用：font-sans 或直接不写（默认） */
-
-/* 代码、文件名、终端输出 */
-font-family: 'GeistMono', 'JetBrains Mono', Menlo, monospace;
-/* 通过 Tailwind 类使用：font-mono */
 ```
+UI 文字：GeistSans → -apple-system → BlinkMacSystemFont → "Segoe UI" → "PingFang SC"
+代码/终端：GeistMono → 'JetBrains Mono' → Menlo → monospace
+```
+
+Tailwind 使用：`font-sans`（默认）、`font-mono`（仅代码场景）
 
 ### 字号层级
 
@@ -82,25 +82,30 @@ font-family: 'GeistMono', 'JetBrains Mono', Menlo, monospace;
 | 标签、Badge | 12px | 500 | — |
 | 极小辅助标签 | 11px | 500 | `--text-tertiary` |
 
+### 行高
+
+- 正文内容：`leading-[1.7]`
+- UI 标签：默认（`leading-normal`）
+
 ### 禁止事项
 
-- ❌ 不在 UI 元素上使用 `font-mono` / `font-terminal`
-- ❌ 不在导航、按钮、标签上使用 `uppercase tracking-[2px]` 等终末地风格
-- ✅ `font-mono` 仅限：代码块、文件路径、流式输出内容、终端命令
+- ❌ `font-mono` / `font-terminal` 用于 UI 元素
+- ❌ `uppercase tracking-[2px]` 等终末地风格用于导航、按钮、标签
 
 ---
 
 ## 四、圆角规范
 
-全局 `--radius: 0.5rem`（8px），通过 Tailwind 的 `rounded-*` 系列使用：
+全局 `--radius: 0.5rem`（8px）
 
 | 场景 | 类名 | 大小 |
 |------|------|------|
 | 按钮、输入框 | `rounded-lg` | 8px |
-| 卡片、面板 | `rounded-xl` | 12px |
-| 图标容器、小徽章 | `rounded-md` | 6px |
+| 卡片、面板、Dialog | `rounded-xl` | 12px |
+| 图标容器 | `rounded-md` | 6px |
 | Pill Badge | `rounded-full` | 完整圆角 |
 | 侧边栏导航项 | `rounded-md` | 6px |
+| 代码块 | `rounded-lg` | 8px |
 
 ---
 
@@ -108,71 +113,105 @@ font-family: 'GeistMono', 'JetBrains Mono', Menlo, monospace;
 
 ### Button
 
-```
-variant="primary"  → 琥珀金背景，白色文字，hover: brightness-105
-variant="ghost"    → 透明背景，hover: --hover-bg，border: --accent-color/40
-variant="outline"  → 同 ghost
-variant="secondary"→ --secondary 背景
-variant="destructive" → 红色背景
-```
+| variant | 样式 |
+|---------|------|
+| `primary` | `#1D4ED8` 背景，白字，hover: `#1E40AF` |
+| `ghost` | 透明背景，`--text-primary` 文字，hover: `--hover-bg` + 蓝色描边 |
+| `outline` | 同 ghost |
+| `secondary` | `--secondary` 背景 |
+| `destructive` | `#DC2626` 背景，白字 |
 
-**微交互（必须）：**
-- `active:scale-[0.97]` — 按压下沉感
-- `hover: brightness-105` — 轻微提亮（primary）
-- 过渡：`duration-[200ms] ease-[cubic-bezier(0.4,0,0.2,1)]`
+微交互：`active:scale-[0.97]` 按压，200ms 标准过渡
 
 ### Badge
 
-- 样式：`rounded-full`，软背景色，sans-serif，12px
-- `variant="default"` → amber 浅色系
-- `variant="outline"` → 描边，secondary 文字
-- `variant="success"` → green 浅色系
-- ❌ 禁止使用 `uppercase tracking-[*]`
+- `rounded-full`，sans-serif，12px，无 uppercase/tracking
+- `default` → `--accent-light` 底 + `--accent-color` 文字
+- `outline` → 描边 + `--text-secondary`
+- `success` → `--success-light` 底 + `--success` 文字
 
 ### ProgressBar
 
-- 高度：`h-0.5`（2px 细线）
-- 颜色：`--accent-color`（纯色，不用渐变）
-- 外轨：`--border` 浅色
-- 圆角：`rounded-full`
+- 高度：`h-0.5`（2px）
+- 颜色：`--accent-color`，`rounded-full`
+- 外轨：`--border`
 
-### 侧边栏导航项
+### 表单输入框
 
 ```
-pending  → 空心圆 border-[--text-tertiary]，文字 --text-tertiary
-current  → 实心圆 --accent-color + 左侧 3px accent 竖线 + bg-[--active-bg]
-completed → 绿色勾（Check icon）+ bg-[--success-light]，文字 --text-secondary
+高度：36px，rounded-lg
+边框：1px rgba(0,0,0,0.12)，bg #FFFFFF
+Focus：border → #1D4ED8，ring rgba(29,78,216,0.15) 2px
+Placeholder：#94A3B8，文字：14px --text-primary
+Error：border #DC2626，ring rgba(220,38,38,0.15)
+过渡：border-color 200ms
+```
+
+### 侧边栏导航项状态
+
+| 状态 | 样式 |
+|------|------|
+| `pending` | 空心圆 `--text-tertiary`，文字 `--text-tertiary` |
+| `current` | 实心圆 `--accent-color` + 左侧 3px 蓝色竖线 + `--active-bg` 背景 |
+| `completed` | 绿色 Check icon + `--success-light` 背景，文字 `--text-secondary` |
+
+### Dialog / 弹窗
+
+```
+遮罩：rgba(0,0,0,0.3) + backdrop-blur(4px)
+本体：#FFFFFF，rounded-xl，shadow-xl
+标题：16px 600 --text-primary
+内容：14px --text-secondary
+按钮区：右对齐，primary + ghost
+动画：scale(0.95→1) + fade，200ms ease-decelerate
+```
+
+### InlineChat
+
+```
+容器：rounded-xl，border rgba(0,0,0,0.08)，bg #FFFFFF
+问题文字：14px 500 --text-primary
+选项：rounded-lg，hover bg rgba(29,78,216,0.06)，active border --accent-color
+```
+
+### Markdown / 流式输出区
+
+```
+行高：1.7
+H1：20px 600，H2：17px 600，H3：15px 500
+代码块：--secondary 背景，rounded-lg，GeistMono 13px
+分割线：rgba(0,0,0,0.08)
+链接：--accent-color，hover underline
 ```
 
 ---
 
 ## 六、微交互规范
 
-微交互是 Apple 产品质感的核心，**所有可交互元素必须有反馈**。
-
 ### 过渡参数
 
 ```css
---ease-standard:   cubic-bezier(0.4, 0, 0.2, 1)   /* 200ms，大多数 UI 变化 */
---ease-decelerate: cubic-bezier(0, 0, 0.2, 1)      /* 进入动画 */
---ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1) /* 按钮回弹、完成态 */
+--ease-standard:   cubic-bezier(0.4, 0, 0.2, 1)     /* 200ms，标准 UI 过渡 */
+--ease-decelerate: cubic-bezier(0, 0, 0.2, 1)        /* 进入动画 */
+--ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1) /* 弹性回弹 */
 --dur-fast:  100ms   /* 按压反馈 */
 --dur-base:  200ms   /* 标准过渡 */
 --dur-slow:  300ms   /* 内容进入、进度条 */
---dur-page:  250ms   /* 页面/阶段切换 */
+--dur-page:  250ms   /* 页面切换 */
 ```
 
-### 必须实现的微交互
+### 必须实现的交互
 
-| 元素 | 交互 | 实现方式 |
-|------|------|---------|
+| 元素 | 行为 | 实现 |
+|------|------|------|
 | 所有 Button | 按压 `scale(0.97)` | `active:scale-[0.97] active:duration-[100ms]` |
-| 侧边栏导航项 | hover 背景过渡 | `hover:bg-[--hover-bg] transition-colors duration-[200ms]` |
-| 侧边栏当前项 | 左侧 accent 竖线 animate in | `animation: slideInLeft 200ms` |
-| 新建项目按钮 | Plus 图标 hover 旋转 90° | `group-hover:rotate-90 transition-transform` |
-| 页面/阶段切换 | fade + 上移 8px | `animate-[fadeInUp_250ms_var(--ease-decelerate)]` |
+| 侧边栏导航项 | hover 背景过渡 | `hover:bg-[--hover-bg] transition-colors duration-200` |
+| 侧边栏当前项竖线 | slideInLeft 动画 | `animation: slideInLeft 200ms var(--ease-decelerate)` |
+| 新建项目 `+` | hover 旋转 90° | `group-hover:rotate-90 transition-transform duration-150` |
+| 阶段/页面切换 | fade + 上移 8px | `animate-[fadeInUp_250ms_var(--ease-decelerate)]` |
 | 空状态出现 | fade + 上移 | `animate-[fadeInUp_300ms_var(--ease-decelerate)]` |
-| 阶段完成 ✓ | 勾号绿色出现 | Check icon + `--success-light` 背景 |
+| Dialog 出现 | scale + fade | `animate-[dialogIn_200ms_var(--ease-decelerate)]` |
+| AI 流式光标 | `\|` 闪烁 | 500ms blink interval |
 
 ---
 
@@ -181,55 +220,39 @@ completed → 绿色勾（Check icon）+ bg-[--success-light]，文字 --text-se
 ### 整体框架
 
 ```
-TitleBar (h-11, 44px)
-├── 侧边栏 (220px, 毛玻璃)
-└── 主内容区 (flex-1, overflow-y-auto, p-8)
+TitleBar (h-11, 44px, 半透明毛玻璃)
+└── 侧边栏 (220px, fixed, z-20, 毛玻璃)  ← fixed 定位使毛玻璃生效
+└── 主内容区 (ml-[220px], flex-1, overflow-y-auto, p-8)
     └── 内容容器 (max-w-[720px] mx-auto)
 ```
 
-### 侧边栏结构
-
-```
-App Logo（顶部，可点击回首页）
-──────────────
-项目阶段列表（进入项目时）
-或 项目列表（Dashboard 时）
-──────────────
-工具区（常驻）
-──────────────
-新建项目 + 设置（底部）
-```
-
-### TitleBar
-
-- 高度：`h-11`（44px）
-- 背景：`rgba(250,250,250,0.9) backdrop-blur-sm`
-- 中心：品牌名，`font-semibold text-sm`
-- 左侧：macOS 红绿灯留白 72px
-- 右侧：API 状态指示点（可点击跳转设置）
-
----
-
-## 八、毛玻璃效果
-
-跨平台实现（不依赖 OS 原生 vibrancy）：
+### 毛玻璃实现（CSS，跨平台）
 
 ```css
-background: rgba(240, 240, 240, 0.85);
+background: rgba(248, 248, 248, 0.90);
 backdrop-filter: blur(20px);
 -webkit-backdrop-filter: blur(20px);
+border-right: 1px solid rgba(0,0,0,0.08);
 ```
 
-Tailwind 写法：`bg-[rgba(240,240,240,0.85)] backdrop-blur-xl`
+侧边栏必须 `position: fixed` 才能让主内容从其后方穿过，blur 效果才可见。
 
-适用于：侧边栏、TitleBar、浮层、Dialog 背景。
+### 滚动条
+
+隐藏默认滚动条（Apple 风格），保留滚动功能：
+
+```css
+scrollbar-width: none;        /* Firefox */
+-ms-overflow-style: none;     /* IE/Edge */
+&::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
+```
 
 ---
 
-## 九、两套规范说明
+## 八、两套规范说明
 
 | 场景 | 规范 |
 |------|------|
-| 客户端（Tauri App） | 本文件（Apple HIG 风格） |
-| 教程中心 HTML | 独立规范，Apple HIG 仪表盘风格，不受本文件约束 |
-| AI 生成的 HTML 原型 | 用户选择（公司规范 / AI 情境定制 / 主流组件库） |
+| 客户端（Tauri App） | 本文件 |
+| 教程中心 HTML | 独立规范，不受本文件约束 |
+| AI 生成的 HTML 原型 | 用户三档选择（公司规范 / AI 情境定制 / 组件库） |
