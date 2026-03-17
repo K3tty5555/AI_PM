@@ -7,6 +7,7 @@ import { PrdViewer } from "@/components/prd-viewer"
 import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
+import { ContextPills } from "@/components/context-pills"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
@@ -94,6 +95,7 @@ export function ResearchPage() {
   const [chatHistory, setChatHistory] = useState<ChatRound[]>([])
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [excludedContext, setExcludedContext] = useState<string[]>([])
 
   const startedRef = useRef(false)
 
@@ -183,8 +185,8 @@ export function ResearchPage() {
     const initialMessages: Message[] = [{ role: "user", content: "请开始竞品研究" }]
     setMessages(initialMessages)
     startedRef.current = true
-    start(initialMessages)
-  }, [start])
+    start(initialMessages, { excludedContext })
+  }, [start, excludedContext])
 
   const handleRestart = useCallback(() => {
     reset()
@@ -195,8 +197,8 @@ export function ResearchPage() {
     ]
     setMessages(initialMessages)
     startedRef.current = true
-    start(initialMessages)
-  }, [reset, start])
+    start(initialMessages, { excludedContext })
+  }, [reset, start, excludedContext])
 
   const handleBack = useCallback(() => {
     navigate(`/project/${projectId}/analysis`)
@@ -252,6 +254,11 @@ export function ResearchPage() {
           <Badge variant="outline">RESEARCH</Badge>
         </div>
         <div className="h-px bg-[var(--border)]" />
+        <ContextPills
+          projectId={projectId!}
+          onExcludeChange={setExcludedContext}
+          className="border-b border-[var(--border)]"
+        />
         <PhaseEmptyState
           phaseLabel="RESEARCH"
           description="竞品研究报告"
@@ -280,6 +287,12 @@ export function ResearchPage() {
       </div>
 
       <div className="h-px bg-[var(--border)]" />
+
+      <ContextPills
+        projectId={projectId!}
+        onExcludeChange={setExcludedContext}
+        className="border-b border-[var(--border)]"
+      />
 
       {/* Streaming progress */}
       {isStreaming && (
