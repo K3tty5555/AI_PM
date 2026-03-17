@@ -149,15 +149,16 @@ pub async fn start_stream(
     state: State<'_, AppState>,
     args: StartStreamArgs,
 ) -> Result<(), String> {
-    let (project_name, output_dir) = {
+    let (project_name, output_dir, team_mode) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let result = db.query_row(
-            "SELECT name, output_dir FROM projects WHERE id = ?1",
+            "SELECT name, output_dir, COALESCE(team_mode, 0) FROM projects WHERE id = ?1",
             params![&args.project_id],
-            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)?)),
         ).map_err(|e| format!("Project not found: {}", e))?;
         result
     };
+    let team_mode = team_mode != 0;
 
     let (skill_name, input_files, output_file) = phase_config(&args.phase)
         .ok_or_else(|| format!("Unknown phase: {}", args.phase))?;
@@ -177,7 +178,7 @@ pub async fn start_stream(
         .to_string_lossy()
         .to_string();
 
-    let system_prompt = build_system_prompt(
+    let mut system_prompt = build_system_prompt(
         &skills_root,
         &output_dir,
         &project_name,
@@ -188,6 +189,11 @@ pub async fn start_stream(
         let _ = app.emit("stream_error", &e);
         e
     })?;
+
+    // Team mode: inject --team marker before non-interactive block
+    if team_mode {
+        system_prompt.push_str("\n\n### 多代理协作模式（--team）\n\n本次以 `--team` 模式运行：按技能说明中的多代理协作路径执行，产出更全面深入。");
+    }
 
     let config = read_config_internal(&state.config_dir)
         .ok_or_else(|| {

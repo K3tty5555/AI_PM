@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { invoke } from "@tauri-apps/api/core"
+import { api } from "@/lib/tauri-api"
 import { Button } from "@/components/ui/button"
 
 interface NewProjectDialogProps {
@@ -10,6 +10,7 @@ interface NewProjectDialogProps {
 
 function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
   const [name, setName] = useState("")
+  const [teamMode, setTeamMode] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -19,6 +20,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
   useEffect(() => {
     if (open) {
       setName("")
+      setTeamMode(false)
       setError("")
       setSubmitting(false)
       // Delay to let the DOM render
@@ -53,7 +55,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
     setError("")
 
     try {
-      const project = await invoke<{ id: string; name: string }>("create_project", { name: trimmedName })
+      const project = await api.createProject(trimmedName, teamMode)
       onCreated(project)
     } catch (err) {
       setError(typeof err === "string" ? err : err instanceof Error ? err.message : "创建项目失败")
@@ -111,6 +113,19 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
                 {error}
               </p>
             )}
+          </div>
+
+          {/* Team mode toggle */}
+          <div className="mb-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={teamMode}
+                onChange={(e) => setTeamMode(e.target.checked)}
+                className="accent-[var(--yellow)]"
+              />
+              <span className="text-sm text-[var(--text-muted)]">多代理模式（复杂需求）</span>
+            </label>
           </div>
 
           {/* Actions */}

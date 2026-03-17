@@ -89,10 +89,11 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
 }
 
 #[tauri::command]
-pub fn create_project(state: State<AppState>, name: String) -> Result<ProjectDetail, String> {
+pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result<ProjectDetail, String> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
-    let output_dir = format!("{}/{}", state.projects_dir, name);
+    let output_dir = format!("{}/{}", state.projects_dir, args.name);
+    let team_mode_int: i64 = if args.team_mode.unwrap_or(false) { 1 } else { 0 };
 
     // Create project directory
     fs::create_dir_all(&output_dir).map_err(|e| e.to_string())?;
@@ -101,9 +102,9 @@ pub fn create_project(state: State<AppState>, name: String) -> Result<ProjectDet
 
     // Insert project
     db.execute(
-        "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at)
-         VALUES (?1, ?2, NULL, 'requirement', ?3, ?4, ?4)",
-        params![&id, &name, &output_dir, &now],
+        "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode)
+         VALUES (?1, ?2, NULL, 'requirement', ?3, ?4, ?4, ?5)",
+        params![&id, &args.name, &output_dir, &now, &team_mode_int],
     )
     .map_err(|e| e.to_string())?;
 
@@ -137,7 +138,7 @@ pub fn create_project(state: State<AppState>, name: String) -> Result<ProjectDet
 
     Ok(ProjectDetail {
         id,
-        name,
+        name: args.name,
         description: None,
         current_phase: "requirement".to_string(),
         output_dir,
@@ -224,6 +225,13 @@ pub fn delete_project(state: State<AppState>, id: String) -> Result<(), String> 
     }
 
     Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProjectArgs {
+    pub name: String,
+    pub team_mode: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
