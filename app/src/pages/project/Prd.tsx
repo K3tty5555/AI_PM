@@ -52,6 +52,7 @@ export function PrdPage() {
   const [saving, setSaving] = useState(false)
   const [editedMarkdown, setEditedMarkdown] = useState<string | null>(null)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
+  const [reviewContent, setReviewContent] = useState<string | null>(null)
 
   // AI assist input
   const [assistInput, setAssistInput] = useState("")
@@ -158,6 +159,11 @@ export function PrdPage() {
     let cancelled = false
 
     async function loadExisting() {
+      // Check for review report (non-blocking)
+      api.readProjectFile(projectId, "07-review-report.md").then((r) => {
+        if (!cancelled && r) setReviewContent(r)
+      }).catch(() => {})
+
       try {
         const content = await api.readProjectFile(projectId, PRD_FILE)
         if (!cancelled) {
@@ -218,8 +224,11 @@ export function PrdPage() {
     setExistingMarkdown(null)
     setEditedMarkdown(null)
     startedRef.current = true
-    start([{ role: "user", content: "请重新生成 PRD" }], { excludedContext })
-  }, [reset, assistReset, start, excludedContext])
+    const prompt = reviewContent
+      ? `请根据以下需求评审报告的意见，修订 PRD 文档。更新版本号（如 v1.0→v1.1），在修订日志中注明本次修改原因和涉及模块，并按评审意见完善对应章节内容。\n\n评审报告：\n${reviewContent}`
+      : "请重新生成 PRD"
+    start([{ role: "user", content: prompt }], { excludedContext })
+  }, [reset, assistReset, start, excludedContext, reviewContent])
 
   /** Send AI assist modification request */
   const handleAssistSend = useCallback(() => {
