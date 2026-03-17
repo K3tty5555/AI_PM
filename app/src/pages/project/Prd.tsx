@@ -9,6 +9,7 @@ import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
+import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 
@@ -496,20 +497,27 @@ export function PrdPage() {
           onClick={handleBack}
           disabled={currentStreaming || advancing}
         >
-          &larr; 返回故事
+          {PHASE_META.prd.backLabel}
         </Button>
 
-        <Button
-          variant="primary"
-          onClick={handleComplete}
-          disabled={!canComplete}
-        >
-          {saving
-            ? "保存中..."
-            : advancing
-              ? "正在完成..."
-              : "完成 \u2713"}
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            variant="primary"
+            onClick={handleComplete}
+            disabled={!canComplete}
+          >
+            {saving
+              ? "保存中..."
+              : advancing
+                ? "正在完成..."
+                : PHASE_META.prd.nextLabel + " →"}
+          </Button>
+          {!advancing && !saving && (
+            <p className="font-terminal text-[10px] text-[var(--text-muted)] tracking-[0.5px]">
+              {PHASE_META.prd.nextDescription}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
