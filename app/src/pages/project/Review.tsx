@@ -23,6 +23,7 @@ const REVIEW_FILE = "07-review-report.md"
 // ---------------------------------------------------------------------------
 
 function detectQuestion(text: string): { hasQuestion: boolean; question: string; options: string[] } {
+  // [QUESTION] / [OPTIONS] tag format
   const questionMatch = text.match(/\[QUESTION\]\s*([\s\S]*?)(?:\[\/QUESTION\]|\[OPTIONS\]|$)/)
   if (questionMatch) {
     const question = questionMatch[1].trim()
@@ -33,14 +34,33 @@ function detectQuestion(text: string): { hasQuestion: boolean; question: string;
     }
     return { hasQuestion: true, question, options }
   }
-  const paragraphs = text.split(/\n\n+/)
-  const lastParagraphs = paragraphs.slice(-3)
-  for (let i = lastParagraphs.length - 1; i >= 0; i--) {
-    const p = lastParagraphs[i].trim()
-    if (p.endsWith("？") || p.endsWith("?")) {
-      return { hasQuestion: true, question: p, options: [] }
+
+  const lines = text.split("\n")
+
+  // Scan last 40 lines for a question line followed by bullet options
+  for (let i = Math.max(0, lines.length - 40); i < lines.length; i++) {
+    const line = lines[i].trim()
+    // Question line: ends with ？/? or ends with ：/: with interrogative keywords
+    const isQuestion =
+      line.endsWith("？") || line.endsWith("?") ||
+      ((line.endsWith("：") || line.endsWith(":")) &&
+        /请选择|请告诉|请回复|请说明|请输入/.test(line))
+    if (!isQuestion || line.length < 4) continue
+
+    // Collect bullet items that follow
+    const options: string[] = []
+    for (let j = i + 1; j < lines.length && j < i + 20; j++) {
+      const opt = lines[j].trim()
+      if (!opt) continue
+      if (/^[-•*"「]\s*/.test(opt) || /^[""]/.test(opt)) {
+        options.push(opt.replace(/^[-•*"「]\s*/, ""))
+      } else if (options.length > 0) {
+        break // stop when bullet list ends
+      }
     }
+    return { hasQuestion: true, question: line, options }
   }
+
   return { hasQuestion: false, question: "", options: [] }
 }
 
