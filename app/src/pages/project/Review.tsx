@@ -37,25 +37,27 @@ function detectQuestion(text: string): { hasQuestion: boolean; question: string;
 
   const lines = text.split("\n")
 
-  // Scan last 40 lines for a question line followed by bullet options
-  for (let i = Math.max(0, lines.length - 40); i < lines.length; i++) {
+  // Scan last 60 lines from the END — the strategy question is always at the bottom
+  const start = Math.max(0, lines.length - 60)
+  for (let i = lines.length - 1; i >= start; i--) {
     const line = lines[i].trim()
-    // Question line: ends with ？/? or ends with ：/: with interrogative keywords
+    if (line.length < 4) continue
+    // Question line: ends with ？/? or ends with ：/: containing interrogative keywords
     const isQuestion =
       line.endsWith("？") || line.endsWith("?") ||
       ((line.endsWith("：") || line.endsWith(":")) &&
         /请选择|请告诉|请回复|请说明|请输入/.test(line))
-    if (!isQuestion || line.length < 4) continue
+    if (!isQuestion) continue
 
-    // Collect bullet items that follow
+    // Collect bullet items that follow this question line
     const options: string[] = []
     for (let j = i + 1; j < lines.length && j < i + 20; j++) {
       const opt = lines[j].trim()
       if (!opt) continue
-      if (/^[-•*"「]\s*/.test(opt) || /^[""]/.test(opt)) {
-        options.push(opt.replace(/^[-•*"「]\s*/, ""))
+      if (/^[-•*]\s*/.test(opt) || /^["「]/.test(opt)) {
+        options.push(opt.replace(/^[-•*]\s*/, ""))
       } else if (options.length > 0) {
-        break // stop when bullet list ends
+        break
       }
     }
     return { hasQuestion: true, question: line, options }
