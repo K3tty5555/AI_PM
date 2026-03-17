@@ -143,13 +143,13 @@ function EditableBlock({
             "w-full min-h-[60px] p-3 text-sm",
             "bg-[var(--yellow-bg)] text-[var(--dark)]",
             "border border-[var(--yellow)]",
-            "font-terminal",
+            "font-mono",
             "outline-none resize-none",
             "leading-relaxed",
           )}
         />
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-[10px] text-[var(--text-muted)] font-terminal">
+          <span className="text-[11px] text-[var(--text-tertiary)]">
             ESC 取消 · Cmd+Enter 确认
           </span>
         </div>
@@ -340,7 +340,7 @@ function createMarkdownComponents(
       if (isInline) {
         return (
           <code
-            className="px-1.5 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] font-terminal"
+            className="px-1.5 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] font-mono"
             {...props}
           >
             {children}
@@ -363,7 +363,7 @@ function createMarkdownComponents(
           "overflow-x-auto p-4 my-3 text-xs",
           "bg-[var(--dark)] text-[#e0e0e0]",
           "border-l-3 border-l-[var(--yellow)]",
-          "font-terminal",
+          "font-mono",
         )}
         {...props}
       >
@@ -393,9 +393,8 @@ function createMarkdownComponents(
       <th
         className={cn(
           "border border-[var(--border)] px-3 py-2",
-          "text-left text-[10px] font-semibold uppercase tracking-[1px]",
-          "font-terminal",
-          "text-[var(--dark)]",
+          "text-left text-[11px] font-semibold",
+          "text-[var(--text-primary)]",
         )}
         {...props}
       >
@@ -467,7 +466,7 @@ function PrdViewer({ markdown, isStreaming, onEdit }: PrdViewerProps) {
           )}
           style={{ borderRadius: "50%" }}
         />
-        <span className="text-[10px] font-terminal uppercase tracking-[2px] text-[var(--text-muted)]">
+        <span className="text-[11px] font-medium text-[var(--text-tertiary)]">
           GENERATING PRD...
         </span>
       </div>

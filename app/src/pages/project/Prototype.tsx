@@ -237,7 +237,7 @@ export function PrototypePage() {
                   type="button"
                   onClick={() => setDevice(d)}
                   className={cn(
-                    "px-2.5 py-1 font-terminal text-[10px] uppercase tracking-[1px] transition-colors",
+                    "px-2.5 py-1 text-[12px] font-medium transition-colors",
                     device === d
                       ? "bg-[var(--yellow)] text-[var(--dark)]"
                       : "text-[var(--text-muted)] hover:text-[var(--dark)]"
