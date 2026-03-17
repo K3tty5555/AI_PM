@@ -75,6 +75,7 @@ pub fn run() {
             commands::projects::update_phase,
             commands::files::read_project_file,
             commands::files::save_project_file,
+            commands::files::read_file,
             commands::stream::start_stream,
             commands::tools::run_tool,
             commands::knowledge::list_knowledge,

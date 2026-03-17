@@ -75,3 +75,9 @@ pub fn save_project_file(state: State<AppState>, args: SaveFileArgs) -> Result<(
 
     Ok(())
 }
+
+/// 读取任意本地文件（用于 Persona 分析等场景）
+#[tauri::command]
+pub fn read_file(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path).map_err(|e| format!("读取文件失败：{}", e))
+}

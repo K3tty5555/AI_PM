@@ -66,6 +66,7 @@ export const api = {
     invoke<string | null>("read_project_file", { projectId, fileName }),
   saveProjectFile: (args: { projectId: string; fileName: string; content: string }) =>
     invoke<void>("save_project_file", { args }),
+  readFile: (path: string) => invoke<string>("read_file", { path }),
 
   // Config
   getConfig: () => invoke<ConfigState>("get_config"),
