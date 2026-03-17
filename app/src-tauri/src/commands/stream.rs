@@ -27,7 +27,7 @@ fn phase_config(phase: &str) -> Option<(&'static str, &'static [&'static str], &
     }
 }
 
-fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String> {
+pub fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String> {
     let skill_dir = Path::new(skills_root).join(skill_name);
     let entry = skill_dir.join("SKILL.md");
 
@@ -119,13 +119,16 @@ fn build_system_prompt(
     ctx.push(String::new());
     ctx.push("---".to_string());
     ctx.push(String::new());
-    ctx.push("### ⚠️ 重要：运行模式（优先级最高）".to_string());
+    ctx.push("### ⚠️ 非交互模式（优先级最高，覆盖以上所有指令）".to_string());
     ctx.push(String::new());
-    ctx.push("你正在 **AI PM 桌面应用**（非交互模式）中运行，规则如下：".to_string());
-    ctx.push("1. **跳过所有交互式步骤**：不询问用户、不等待回复、不让用户选择 A/B 选项".to_string());
-    ctx.push("2. **无任何工具可用**：AskUserQuestion、Write、Edit、Bash 均不可调用".to_string());
-    ctx.push("3. **默认选择**：导出格式默认选「仅 Markdown」，用户故事按标准编写".to_string());
-    ctx.push("4. **直接输出**：立即生成完整的 Markdown 产出物，不输出任何问答或确认文字".to_string());
+    ctx.push("你正在 **AI PM 桌面应用的流式输出模式**中运行，你的整个回复内容就是文档本身。".to_string());
+    ctx.push(String::new());
+    ctx.push("**强制规则（逐条执行）：**".to_string());
+    ctx.push("1. **第一行就是文档标题**（如 `# PRD：产品名`），最后一行是文档结尾，不要有任何前言或后记".to_string());
+    ctx.push("2. **禁止输出元信息**：「已生成」「文件已保存」「执行步骤」「操作结果」「PRD 已完成」等一律不输出".to_string());
+    ctx.push("3. **禁止调用任何工具**：Write、Edit、Bash、AskUserQuestion 在此环境中均不存在，调用无效".to_string());
+    ctx.push("4. **禁止提问或确认**：导出格式默认「仅 Markdown」，用户故事按标准编写，直接生成内容".to_string());
+    ctx.push("5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从文档第一行开始".to_string());
 
     parts.push(ctx.join("\n"));
 
@@ -232,12 +235,31 @@ pub async fn start_stream(
             if let Some(parent) = file_path.parent() {
                 let _ = fs::create_dir_all(parent);
             }
-            let _ = fs::write(&file_path, &result.full_text);
+
+            // In CLI mode, the AI may use Write tool to write the document directly to
+            // disk while only outputting a short confirmation message to stdout.
+            // Detect this: if stdout is short but disk already has substantial content,
+            // preserve the disk file and use it as the final text for the frontend.
+            let final_text = if result.full_text.trim().len() < 400 {
+                let disk_content = fs::read_to_string(&file_path).unwrap_or_default();
+                if disk_content.trim().len() > result.full_text.trim().len() + 200 {
+                    // AI wrote real content via Write tool — keep it as-is on disk
+                    disk_content
+                } else {
+                    let _ = fs::write(&file_path, &result.full_text);
+                    result.full_text
+                }
+            } else {
+                let _ = fs::write(&file_path, &result.full_text);
+                result.full_text
+            };
+
             let done_payload = serde_json::json!({
                 "outputFile": output_file,
                 "durationMs": duration_ms,
                 "inputTokens": result.input_tokens,
                 "outputTokens": result.output_tokens,
+                "finalText": final_text,
             });
             let _ = app.emit("stream_done", done_payload);
         }
