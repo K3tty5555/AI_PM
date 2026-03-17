@@ -283,7 +283,7 @@ export function StoriesPage() {
             )}
             style={{ borderRadius: "50%" }}
           />
-          <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
+          <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
             GENERATING STORIES...
           </span>
         </div>
@@ -432,7 +432,7 @@ function AddStoryInline({
       )}
     >
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center">
-        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
+        <label className="text-[12px] font-medium text-[var(--text-tertiary)]">
           角色
         </label>
         <input
@@ -444,7 +444,7 @@ function AddStoryInline({
           autoFocus
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
+        <label className="text-[12px] font-medium text-[var(--text-tertiary)]">
           想要
         </label>
         <input
@@ -455,7 +455,7 @@ function AddStoryInline({
           className={inputClass}
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
+        <label className="text-[12px] font-medium text-[var(--text-tertiary)]">
           以便
         </label>
         <input
@@ -466,7 +466,7 @@ function AddStoryInline({
           className={inputClass}
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
+        <label className="text-[12px] font-medium text-[var(--text-tertiary)]">
           优先级
         </label>
         <div className="flex gap-2">
@@ -478,7 +478,6 @@ function AddStoryInline({
               className={cn(
                 "px-3 py-1 text-xs font-medium border cursor-pointer",
                 "transition-all duration-150",
-                "font-terminal",
                 priority === p
                   ? "border-[var(--yellow)] bg-[var(--yellow)] text-[var(--dark)]"
                   : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--yellow)]",
