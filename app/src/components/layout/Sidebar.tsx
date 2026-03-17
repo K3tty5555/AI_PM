@@ -29,12 +29,12 @@ const PHASE_LABELS: Record<string, string> = {
 }
 
 const TOOLS = [
-  { path: "/tools/priority",  label: "需求优先级", icon: "⚡" },
-  { path: "/tools/weekly",    label: "工作周报",   icon: "📋" },
-  { path: "/tools/knowledge", label: "知识库",     icon: "🧠" },
-  { path: "/tools/persona",   label: "产品分身",   icon: "🪞" },
-  { path: "/tools/data",      label: "数据洞察",   icon: "📊" },
-  { path: "/tools/interview", label: "调研访谈",   icon: "🎯" },
+  { path: "/tools/priority",  label: "需求优先级" },
+  { path: "/tools/weekly",    label: "工作周报"   },
+  { path: "/tools/knowledge", label: "知识库"     },
+  { path: "/tools/persona",   label: "产品分身"   },
+  { path: "/tools/data",      label: "数据洞察"   },
+  { path: "/tools/interview", label: "调研访谈"   },
 ]
 
 function Sidebar({ projects, activeProjectId, onNewProject }: SidebarProps) {
@@ -151,8 +151,9 @@ function Sidebar({ projects, activeProjectId, onNewProject }: SidebarProps) {
                     : "text-[var(--text-muted)] hover:bg-[var(--background)]/60 hover:text-[var(--dark)]"
                 )}
               >
-                <span className="text-[11px]">{tool.icon}</span>
-                <span className="text-xs">{tool.label}</span>
+                <span className="font-terminal text-[11px] uppercase tracking-[1.5px]">
+                  {tool.label}
+                </span>
               </button>
             </li>
           ))}
