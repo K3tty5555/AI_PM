@@ -66,20 +66,19 @@ README.md                  项目介绍
 
 ### 8.1 新页面开发 → `frontend-design` 插件
 
-新建页面或大型组件时，**尝试先通过 `frontend-design` 插件**生成初稿，再在此基础上细化。
-不要凭空徒手写页面布局，避免产出平庸的 AI 默认风格界面。
+在 `app/src/pages/` 或 `app/src/components/` 下新建页面或大型组件时，**先通过 `frontend-design` 插件**生成视觉初稿，再落地到 Tauri + React 代码。本项目有成熟的设计语言（terminal 字体、黄色 accent、暗色主题），生成时注意与现有风格保持一致。
 
 ### 8.2 UI/UX 迭代 → `ui-ux-pro-max` 技能
 
-对现有页面进行交互优化、信息架构调整、设计系统完善时，使用 `ui-ux-pro-max` 技能进行分析和方案输出，再落地到代码。
+对 app 现有页面（Dashboard、各 phase 页、Settings 等）进行交互优化、信息架构调整时，使用 `ui-ux-pro-max` 技能先输出分析和方案，再落地到代码。
 
 ### 8.3 新技能开发 → `skill-creator` 技能
 
-在 `workspace/.claude/commands/` 或 `智学网小龙虾/.claude/commands/` 下**新建 skill 文件时**，通过 `skill-creator` 技能完成起草、测试和 description 优化，确保 skill 能被正确触发且输出质量稳定。
+在 `.claude/skills/` 下新建或修改 AI PM 技能文件时，通过 `skill-creator` 技能完成起草、测试和 description 优化，确保技能能被正确触发且输出质量稳定。
 
 ### 8.4 自我迭代 → `self-improving` 技能
 
-项目开发过程中，遇到流程不顺、规范缺失、反复踩坑等情况时，调用 `self-improving` 技能对当前工作流和规范进行复盘和改进，将经验沉淀回 `CLAUDE.md` 或对应 skill 文件。
+开发过程中遇到流程不顺、规范缺失、反复踩坑时，调用 `self-improving` 技能进行复盘，将经验沉淀回本文件或对应 skill 文件。
 
 ## 禁止事项
 
