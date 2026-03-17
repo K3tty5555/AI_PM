@@ -13,11 +13,8 @@ export function ToolDataPage() {
   const [filePath, setFilePath] = useState("")
   const [analysisGoal, setAnalysisGoal] = useState("")
   const [searchParams] = useSearchParams()
-  const [boundProjectId, setBoundProjectId] = useState<string | null>(() => {
-    const fromUrl = searchParams.get("projectId")
-    if (fromUrl) return fromUrl
-    return localStorage.getItem("tool-binding:data") ?? null
-  })
+  const initialProjectId = searchParams.get("projectId") ?? localStorage.getItem("tool-binding:data") ?? null
+  const [boundProjectId, setBoundProjectId] = useState<string | null>(initialProjectId)
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } =
     useToolStream("ai-pm-data", boundProjectId ?? undefined)
 
