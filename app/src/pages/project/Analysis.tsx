@@ -9,7 +9,7 @@ import { useAiStream } from "@/hooks/use-ai-stream"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { api } from "@/lib/tauri-api"
-import { cn } from "@/lib/utils"
+import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 
 // ---------------------------------------------------------------------------
@@ -369,11 +369,12 @@ export function AnalysisPage() {
       {isStreaming && (
         <div className="mt-4">
           <ProgressBar value={progressValue} animated />
-          {isThinking && (
-            <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">
-              THINKING...
-            </p>
-          )}
+          {isThinking
+            ? <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+            : extractStreamStatus(text)
+              ? <p className="mt-2 font-terminal text-xs tracking-[1px] text-[var(--text-muted)]">{extractStreamStatus(text)}</p>
+              : null
+          }
           <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
