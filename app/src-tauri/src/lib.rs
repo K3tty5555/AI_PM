@@ -76,6 +76,7 @@ pub fn run() {
             commands::files::read_project_file,
             commands::files::save_project_file,
             commands::stream::start_stream,
+            commands::tools::run_tool,
             commands::config::get_projects_dir,
             commands::config::save_projects_dir,
             commands::config::test_cli_config,
