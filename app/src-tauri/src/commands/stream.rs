@@ -121,6 +121,48 @@ fn load_knowledge(config_dir: &str) -> String {
     )
 }
 
+fn load_context_files(output_dir: &str, excluded: &[String]) -> String {
+    let context_dir = Path::new(output_dir).join("context");
+    if !context_dir.exists() {
+        return String::new();
+    }
+
+    let mut file_entries: Vec<_> = fs::read_dir(&context_dir)
+        .map(|rd| rd.filter_map(|e| e.ok()).collect())
+        .unwrap_or_default();
+    file_entries.sort_by_key(|e| e.file_name());
+
+    let mut blocks: Vec<String> = Vec::new();
+    for entry in file_entries {
+        let fp = entry.path();
+        if !fp.is_file() {
+            continue;
+        }
+        if fp.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if excluded.contains(&name) {
+            continue;
+        }
+        if let Ok(content) = fs::read_to_string(&fp) {
+            let trimmed = content.trim().to_string();
+            if !trimmed.is_empty() {
+                blocks.push(format!("#### {}\n\n{}", name, trimmed));
+            }
+        }
+    }
+
+    if blocks.is_empty() {
+        return String::new();
+    }
+
+    format!(
+        "### 工具上下文\n\n{}\n",
+        blocks.join("\n\n---\n\n")
+    )
+}
+
 fn build_system_prompt(
     skills_root: &str,
     output_dir: &str,
@@ -131,6 +173,7 @@ fn build_system_prompt(
     team_mode: bool,
     phase: &str,
     config_dir: &str,
+    excluded_context: &[String],   // <-- new
 ) -> Result<String, String> {
     let skill_content = load_skill(skills_root, skill_name)?;
 
@@ -140,6 +183,13 @@ fn build_system_prompt(
     let knowledge = load_knowledge(config_dir);
     if !knowledge.is_empty() {
         parts[0].push_str(&knowledge);
+    }
+
+    // Context files injection (tool outputs bound to this project)
+    let context_block = load_context_files(output_dir, excluded_context);
+    if !context_block.is_empty() {
+        parts[0].push_str("\n\n---\n\n");
+        parts[0].push_str(&context_block);
     }
 
     // Project context
@@ -229,6 +279,7 @@ pub struct StartStreamArgs {
     pub project_id: String,
     pub phase: String,
     pub messages: Vec<ChatMessage>,
+    pub excluded_context: Option<Vec<String>>,   // <-- new
 }
 
 #[tauri::command]
@@ -248,6 +299,7 @@ pub async fn start_stream(
     };
     let team_mode = team_mode != 0;
     let config_dir = state.config_dir.clone();
+    let excluded_context = args.excluded_context.unwrap_or_default();
 
     let (skill_name, input_files, output_file) = phase_config(&args.phase)
         .ok_or_else(|| format!("Unknown phase: {}", args.phase))?;
@@ -277,6 +329,7 @@ pub async fn start_stream(
         team_mode,
         &args.phase,
         &config_dir,
+        &excluded_context,
     ).map_err(|e| {
         let _ = app.emit("stream_error", &e);
         e

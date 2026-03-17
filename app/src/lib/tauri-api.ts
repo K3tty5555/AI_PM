@@ -84,7 +84,7 @@ export const api = {
     invoke<{ ok: boolean; version?: string; error?: string }>("test_cli_config"),
 
   // Stream (fire-and-forget — results come via events)
-  startStream: (args: { projectId: string; phase: string; messages: ChatMessage[] }) =>
+  startStream: (args: { projectId: string; phase: string; messages: ChatMessage[]; excludedContext?: string[] }) =>
     invoke<void>("start_stream", { args }),
   runTool: (args: { toolName: string; userInput: string; filePath?: string }) =>
     invoke<void>("run_tool", { args }),
