@@ -37,6 +37,8 @@ interface BgStream {
   outputFile: string | null
   streamMeta: StreamMeta | null
   unlisteners: UnlistenFn[]
+  /** Unix ms timestamp when this stream was started — used to restore elapsed timer on remount */
+  startedAt: number
   // Callback set by the currently-mounted component
   notify: ((patch: BgPatch) => void) | null
 }
@@ -89,13 +91,16 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
     if ("streamMeta" in patch) setStreamMeta(patch.streamMeta ?? null)
   }
 
-  // Elapsed timer — resets whenever streaming starts
+  // Elapsed timer — restores actual elapsed time from bgStore.startedAt on remount
   useEffect(() => {
     if (!isStreaming) return
-    setElapsedSeconds(0)
-    const timer = setInterval(() => setElapsedSeconds((s) => s + 1), 1000)
+    const bg = bgStore.get(key)
+    const startedAt = bg?.startedAt ?? Date.now()
+    const tick = () => setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000))
+    tick()
+    const timer = setInterval(tick, 1000)
     return () => clearInterval(timer)
-  }, [isStreaming])
+  }, [isStreaming, key])
 
   // On mount: connect to an existing background stream (if any).
   // On unmount: disconnect but leave listeners running in the background.
@@ -161,6 +166,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
         outputFile: null,
         streamMeta: null,
         unlisteners: [],
+        startedAt: Date.now(),
         notify: (patch) => notifyRef.current?.(patch),
       }
       bgStore.set(key, bg)
