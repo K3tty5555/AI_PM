@@ -84,7 +84,7 @@ export function ToolKnowledgePage() {
       <div className="h-px bg-[var(--border)]" />
 
       {/* 分类标签 */}
-      <div className="mt-4 flex flex-wrap gap-1">
+      <div className="mt-4 border-b border-[var(--border)] flex flex-wrap gap-1">
         {CATEGORIES.map((cat) => {
           const count = entries.filter((e) => e.category === cat.key).length
           return (
@@ -92,10 +92,10 @@ export function ToolKnowledgePage() {
               key={cat.key}
               onClick={() => setActiveCategory(cat.key)}
               className={cn(
-                "px-3 py-1 text-xs transition-colors font-terminal",
+                "px-3 py-1.5 text-xs font-terminal transition-colors",
                 activeCategory === cat.key
-                  ? "bg-[var(--yellow)] text-[var(--dark)]"
-                  : "border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--dark)]"
+                  ? "border-b-2 border-[var(--yellow)] text-[var(--dark)] font-medium"
+                  : "border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--dark)]"
               )}
             >
               {cat.label} {count > 0 && `(${count})`}
