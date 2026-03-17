@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
+import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
@@ -16,6 +17,32 @@ import { ContextPills } from "@/components/context-pills"
 // ---------------------------------------------------------------------------
 
 const REVIEW_FILE = "07-review-report.md"
+
+// ---------------------------------------------------------------------------
+// Question detection (read-only — answers are recorded, not sent to AI)
+// ---------------------------------------------------------------------------
+
+function detectQuestion(text: string): { hasQuestion: boolean; question: string; options: string[] } {
+  const questionMatch = text.match(/\[QUESTION\]\s*([\s\S]*?)(?:\[\/QUESTION\]|\[OPTIONS\]|$)/)
+  if (questionMatch) {
+    const question = questionMatch[1].trim()
+    const optionsMatch = text.match(/\[OPTIONS\]\s*([\s\S]*?)(?:\[\/OPTIONS\]|$)/)
+    const options: string[] = []
+    if (optionsMatch) {
+      optionsMatch[1].split("\n").map((l) => l.replace(/^[-*\d.)\]]+\s*/, "").trim()).filter(Boolean).forEach((o) => options.push(o))
+    }
+    return { hasQuestion: true, question, options }
+  }
+  const paragraphs = text.split(/\n\n+/)
+  const lastParagraphs = paragraphs.slice(-3)
+  for (let i = lastParagraphs.length - 1; i >= 0; i--) {
+    const p = lastParagraphs[i].trim()
+    if (p.endsWith("？") || p.endsWith("?")) {
+      return { hasQuestion: true, question: p, options: [] }
+    }
+  }
+  return { hasQuestion: false, question: "", options: [] }
+}
 
 // ---------------------------------------------------------------------------
 // Page component
@@ -31,6 +58,8 @@ export function ReviewPage() {
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
+  // Stores the user's chosen modification strategy (recorded only, does not re-trigger AI)
+  const [strategyAnswer, setStrategyAnswer] = useState<string | null>(null)
 
   const startedRef = useRef(false)
 
@@ -43,6 +72,11 @@ export function ReviewPage() {
   const autostart = searchParams.get("autostart") === "1"
 
   const displayContent = existingContent ?? text
+
+  // Detect AI question at end of report (e.g. "请选择修改策略")
+  const questionInfo = !isStreaming && displayContent
+    ? detectQuestion(displayContent)
+    : { hasQuestion: false, question: "", options: [] }
 
   const progressValue = isStreaming
     ? Math.min(90, Math.floor(text.length / 20))
@@ -83,6 +117,11 @@ export function ReviewPage() {
     return () => { cancelled = true }
   }, [projectId, start])
 
+  // Record strategy choice — does NOT call start(), navigates to PRD page instead
+  const handleAnswer = useCallback((answer: string) => {
+    setStrategyAnswer(answer)
+  }, [])
+
   // Handlers
   const handleGenerate = useCallback(() => {
     startedRef.current = true
@@ -92,6 +131,7 @@ export function ReviewPage() {
   const handleRestart = useCallback(() => {
     reset()
     setExistingContent(null)
+    setStrategyAnswer(null)
     startedRef.current = true
     start([{ role: "user", content: "请开始需求评审" }], { excludedContext })
   }, [reset, start, excludedContext])
@@ -241,12 +281,48 @@ export function ReviewPage() {
         )}
       </div>
 
-      {/* Post-review guidance: go to PRD page to apply changes */}
-      {!isStreaming && hasContent && (
+      {/* AI question — user picks strategy, answer recorded but does NOT trigger generation */}
+      {!isStreaming && hasContent && questionInfo.hasQuestion && !strategyAnswer && (
+        <div className="mt-6">
+          <InlineChat
+            question={questionInfo.question}
+            options={questionInfo.options.length > 0 ? questionInfo.options : undefined}
+            onAnswer={handleAnswer}
+          />
+        </div>
+      )}
+
+      {/* Post-answer: show chosen strategy + navigate to PRD */}
+      {!isStreaming && hasContent && strategyAnswer && (
         <div
           className={cn(
-            "mt-6 pl-5",
-            "relative",
+            "mt-6 pl-5 relative",
+            "before:absolute before:left-0 before:top-0 before:bottom-0",
+            "before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
+          )}
+        >
+          <p className="font-terminal text-[10px] uppercase tracking-[2px] text-[var(--text-muted)] mb-1">
+            已选择修改策略
+          </p>
+          <p className="text-sm text-[var(--dark)]">{strategyAnswer}</p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            请前往 PRD 页，按此策略重新生成文档。
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(`/project/${projectId}/prd`)}
+            className="mt-2 font-terminal text-[10px] uppercase tracking-[1px] text-[var(--dark)] hover:text-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
+          >
+            ← 前往 PRD 页重新生成
+          </button>
+        </div>
+      )}
+
+      {/* Default guidance when AI has no question */}
+      {!isStreaming && hasContent && !questionInfo.hasQuestion && !strategyAnswer && (
+        <div
+          className={cn(
+            "mt-6 pl-5 relative",
             "before:absolute before:left-0 before:top-0 before:bottom-0",
             "before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
           )}
