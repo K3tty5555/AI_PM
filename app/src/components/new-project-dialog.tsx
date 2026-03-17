@@ -78,7 +78,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
       style={{ animation: "fadeIn 150ms var(--ease-decelerate)" }}
     >
       <div
-        className="w-full max-w-[480px] rounded-xl bg-[var(--background)] p-8 shadow-xl"
+        className="w-full max-w-[480px] rounded-xl bg-[var(--background)] p-6 shadow-xl"
         style={{ animation: "fadeInUp 200ms var(--ease-decelerate)" }}
       >
         {/* 标题 */}
@@ -89,7 +89,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
           <div className="mb-6">
             <label
               htmlFor="project-name"
-              className="mb-2 block text-sm font-medium text-[var(--dark)]"
+              className="mb-2 block text-sm font-medium text-[var(--text-primary)]"
             >
               项目名称
             </label>
@@ -103,7 +103,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
                 if (error) setError("")
               }}
               placeholder="输入项目名称"
-              className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--dark)] outline-none transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)] placeholder:text-[var(--text-muted)]/50 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+              className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)] placeholder:text-[var(--text-muted)]/50 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
             />
             {error && (
               <p className="mt-1.5 text-xs text-[var(--destructive)]">
