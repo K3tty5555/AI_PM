@@ -4,75 +4,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
-import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface Message {
-  role: string
-  content: string
-}
-
-interface ChatRound {
-  question: string
-  answer: string
-}
-
-// ---------------------------------------------------------------------------
-// Question detection
-// ---------------------------------------------------------------------------
-
-function detectQuestion(text: string): {
-  hasQuestion: boolean
-  question: string
-  options: string[]
-} {
-  const questionMatch = text.match(
-    /\[QUESTION\]\s*([\s\S]*?)(?:\[\/QUESTION\]|\[OPTIONS\]|$)/
-  )
-  if (questionMatch) {
-    const question = questionMatch[1].trim()
-    const optionsMatch = text.match(
-      /\[OPTIONS\]\s*([\s\S]*?)(?:\[\/OPTIONS\]|$)/
-    )
-    const options: string[] = []
-    if (optionsMatch) {
-      const optionLines = optionsMatch[1]
-        .split("\n")
-        .map((l) => l.replace(/^[-*\d.)\]]+\s*/, "").trim())
-        .filter(Boolean)
-      options.push(...optionLines)
-    }
-    return { hasQuestion: true, question, options }
-  }
-
-  const paragraphs = text.split(/\n\n+/)
-  const lastParagraphs = paragraphs.slice(-3)
-  for (let i = lastParagraphs.length - 1; i >= 0; i--) {
-    const p = lastParagraphs[i].trim()
-    if (p.endsWith("？") || p.endsWith("?")) {
-      const sentences = p.split(/(?<=[。？?！!；;])\s*/)
-      const lastQuestion = sentences
-        .filter((s) => s.endsWith("？") || s.endsWith("?"))
-        .pop()
-      return {
-        hasQuestion: true,
-        question: lastQuestion || p,
-        options: [],
-      }
-    }
-  }
-
-  return { hasQuestion: false, question: "", options: [] }
-}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -91,8 +28,6 @@ export function ReviewPage() {
 
   const [loading, setLoading] = useState(true)
   const [existingContent, setExistingContent] = useState<string | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [chatHistory, setChatHistory] = useState<ChatRound[]>([])
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
@@ -108,9 +43,6 @@ export function ReviewPage() {
   const autostart = searchParams.get("autostart") === "1"
 
   const displayContent = existingContent ?? text
-
-  const questionInfo =
-    !isStreaming && text ? detectQuestion(text) : { hasQuestion: false, question: "", options: [] }
 
   const progressValue = isStreaming
     ? Math.min(90, Math.floor(text.length / 20))
@@ -132,11 +64,7 @@ export function ReviewPage() {
           } else if (autostart) {
             if (!startedRef.current) {
               startedRef.current = true
-              const initialMessages: Message[] = [
-                { role: "user", content: "请开始需求评审" },
-              ]
-              setMessages(initialMessages)
-              start(initialMessages)
+              start([{ role: "user", content: "请开始需求评审" }])
             }
           }
         }
@@ -144,11 +72,7 @@ export function ReviewPage() {
         console.error("Failed to load review file:", err)
         if (!cancelled && !startedRef.current && autostart) {
           startedRef.current = true
-          const initialMessages: Message[] = [
-            { role: "user", content: "请开始需求评审" },
-          ]
-          setMessages(initialMessages)
-          start(initialMessages)
+          start([{ role: "user", content: "请开始需求评审" }])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -156,50 +80,20 @@ export function ReviewPage() {
     }
 
     loadExisting()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [projectId, start])
 
   // Handlers
-  const handleAnswer = useCallback(
-    (answer: string) => {
-      setChatHistory((prev) => [
-        ...prev,
-        { question: questionInfo.question, answer },
-      ])
-      const newMessages: Message[] = [
-        ...messages,
-        { role: "assistant", content: text || existingContent || "" },
-        { role: "user", content: answer },
-      ]
-      setMessages(newMessages)
-      setExistingContent(null)
-      startedRef.current = true
-      start(newMessages)
-    },
-    [messages, text, questionInfo.question, start]
-  )
-
   const handleGenerate = useCallback(() => {
     startedRef.current = true
-    const initialMessages: Message[] = [
-      { role: "user", content: "请开始需求评审" },
-    ]
-    setMessages(initialMessages)
-    start(initialMessages, { excludedContext })
+    start([{ role: "user", content: "请开始需求评审" }], { excludedContext })
   }, [start, excludedContext])
 
   const handleRestart = useCallback(() => {
     reset()
     setExistingContent(null)
-    setChatHistory([])
-    const initialMessages: Message[] = [
-      { role: "user", content: "请开始需求评审" },
-    ]
-    setMessages(initialMessages)
     startedRef.current = true
-    start(initialMessages, { excludedContext })
+    start([{ role: "user", content: "请开始需求评审" }], { excludedContext })
   }, [reset, start, excludedContext])
 
   const handleBack = useCallback(() => {
@@ -332,7 +226,7 @@ export function ReviewPage() {
         </div>
       )}
 
-      {/* Review report viewer */}
+      {/* Review report */}
       <div className="mt-6">
         <PrdViewer
           markdown={displayContent || ""}
@@ -347,51 +241,26 @@ export function ReviewPage() {
         )}
       </div>
 
-      {/* Chat history */}
-      {chatHistory.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {chatHistory.map((round, i) => (
-            <InlineChat
-              key={`chat-${i}`}
-              question={round.question}
-              isCollapsed
-              collapsedSummary={`已回答：${round.answer}`}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Active AI question */}
-      {!isStreaming && hasContent && questionInfo.hasQuestion && (
-        <div className="mt-6">
-          <InlineChat
-            question={questionInfo.question}
-            options={
-              questionInfo.options.length > 0
-                ? questionInfo.options
-                : undefined
-            }
-            onAnswer={handleAnswer}
-          />
-        </div>
-      )}
-
-      {/* Supplementary input */}
-      {!isStreaming && hasContent && !questionInfo.hasQuestion && (
-        <div className="mt-6 space-y-3">
-          <InlineChat
-            question="评审完成，可以继续追问细节。如需按评审意见修改文档，请返回 PRD 页重新生成。"
-            onAnswer={handleAnswer}
-          />
-          <div className="pl-5">
-            <button
-              type="button"
-              onClick={() => navigate(`/project/${projectId}/prd`)}
-              className="font-terminal text-[10px] uppercase tracking-[1px] text-[var(--text-muted)] hover:text-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
-            >
-              ← 前往 PRD 页重新生成
-            </button>
-          </div>
+      {/* Post-review guidance: go to PRD page to apply changes */}
+      {!isStreaming && hasContent && (
+        <div
+          className={cn(
+            "mt-6 pl-5",
+            "relative",
+            "before:absolute before:left-0 before:top-0 before:bottom-0",
+            "before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
+          )}
+        >
+          <p className="text-sm text-[var(--text-muted)]">
+            如需根据评审意见修改文档，请返回 PRD 页重新生成。
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(`/project/${projectId}/prd`)}
+            className="mt-2 font-terminal text-[10px] uppercase tracking-[1px] text-[var(--dark)] hover:text-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
+          >
+            ← 前往 PRD 页重新生成
+          </button>
         </div>
       )}
 
