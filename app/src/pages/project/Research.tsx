@@ -11,6 +11,7 @@ import { ContextPills } from "@/components/context-pills"
 import { api } from "@/lib/tauri-api"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
+import { PHASE_META } from "@/lib/phase-meta"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -401,20 +402,27 @@ export function ResearchPage() {
           onClick={handleBack}
           disabled={isStreaming || advancing}
         >
-          &larr; 返回分析
+          {PHASE_META.research.backLabel}
         </Button>
 
-        <Button
-          variant="primary"
-          onClick={handleAdvance}
-          disabled={!canAdvance}
-        >
-          {saving
-            ? "保存中..."
-            : advancing
-              ? "正在推进..."
-              : "确认，进入用户故事 \u2192"}
-        </Button>
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            variant="primary"
+            onClick={handleAdvance}
+            disabled={!canAdvance}
+          >
+            {saving
+              ? "保存中..."
+              : advancing
+                ? "正在推进..."
+                : PHASE_META.research.nextLabel + " →"}
+          </Button>
+          {!advancing && !saving && (
+            <p className="font-terminal text-[10px] text-[var(--text-muted)] tracking-[0.5px]">
+              {PHASE_META.research.nextDescription}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
