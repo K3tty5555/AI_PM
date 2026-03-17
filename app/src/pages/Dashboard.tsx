@@ -16,6 +16,7 @@ interface DashboardProject {
   currentPhase: string
   completedCount: number
   totalPhases: number
+  completedPhases: string[]
   updatedAt: string
   createdAt: string
 }
@@ -28,6 +29,29 @@ const PHASE_LABELS: Record<string, string> = {
   prd: "PRD 撰写",
   prototype: "原型设计",
   review: "评审",
+}
+
+const PHASE_ORDER = ["requirement", "analysis", "research", "stories", "prd", "prototype", "review"] as const
+
+function PhaseMiniMap({ completedPhases }: { completedPhases: string[] }) {
+  return (
+    <div className="flex items-center gap-1 mt-2">
+      {PHASE_ORDER.map((phase) => {
+        const done = completedPhases.includes(phase)
+        return (
+          <div
+            key={phase}
+            className="w-2.5 h-2.5"
+            style={{
+              clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+              background: done ? "var(--yellow)" : "var(--border)",
+              opacity: done ? 0.9 : 0.4,
+            }}
+          />
+        )
+      })}
+    </div>
+  )
 }
 
 function formatDate(dateStr: string): string {
@@ -270,6 +294,7 @@ export function DashboardPage() {
                       <p className="mt-1.5 font-terminal text-xs text-[var(--text-muted)]">
                         {formatDate(project.updatedAt)}
                       </p>
+                      <PhaseMiniMap completedPhases={project.completedPhases} />
                     </div>
 
                     {/* Right: progress + delete */}
