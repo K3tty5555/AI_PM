@@ -1,16 +1,25 @@
 import { useState, useCallback } from "react"
+import { useSearchParams } from "react-router-dom"
 import { open as openDialog } from "@tauri-apps/plugin-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
+import { ProjectSelector } from "@/components/project-selector"
 import { useToolStream } from "@/hooks/use-tool-stream"
 import { cn } from "@/lib/utils"
 
 export function ToolDataPage() {
   const [filePath, setFilePath] = useState("")
   const [analysisGoal, setAnalysisGoal] = useState("")
-  const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } = useToolStream("ai-pm-data")
+  const [searchParams] = useSearchParams()
+  const [boundProjectId, setBoundProjectId] = useState<string | null>(() => {
+    const fromUrl = searchParams.get("projectId")
+    if (fromUrl) return fromUrl
+    return localStorage.getItem("tool-binding:data") ?? null
+  })
+  const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } =
+    useToolStream("ai-pm-data", boundProjectId ?? undefined)
 
   const handleSelectFile = useCallback(async () => {
     const selected = await openDialog({
@@ -37,6 +46,12 @@ export function ToolDataPage() {
         <span className="text-sm text-[var(--text-muted)]">数据洞察分析</span>
       </div>
       <div className="h-px bg-[var(--border)]" />
+      <ProjectSelector
+        toolKey="data"
+        value={boundProjectId}
+        onChange={setBoundProjectId}
+        className="mt-4"
+      />
 
       {!isStreaming && !text && (
         <div className="mt-6 space-y-4">
