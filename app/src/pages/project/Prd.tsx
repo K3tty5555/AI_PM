@@ -276,8 +276,7 @@ export function PrdPage() {
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
-      // Stay on page or navigate as needed
-      setAdvancing(false)
+      navigate(`/project/${projectId}/prototype?autostart=1`)
     } catch (err) {
       console.error("Failed to complete PRD:", err)
       setAdvancing(false)
