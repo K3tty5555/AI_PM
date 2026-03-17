@@ -72,6 +72,8 @@ export const api = {
   // Stream (fire-and-forget — results come via events)
   startStream: (args: { projectId: string; phase: string; messages: ChatMessage[] }) =>
     invoke<void>("start_stream", { args }),
+  runTool: (args: { toolName: string; userInput: string; filePath?: string }) =>
+    invoke<void>("run_tool", { args }),
 
   // Projects dir
   getProjectsDir: () => invoke<string>("get_projects_dir"),
