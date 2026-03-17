@@ -79,5 +79,15 @@ pub fn save_project_file(state: State<AppState>, args: SaveFileArgs) -> Result<(
 /// 读取任意本地文件（用于 Persona 分析等场景）
 #[tauri::command]
 pub fn read_file(path: String) -> Result<String, String> {
+    // Reject path traversal attempts
+    if path.contains("..") {
+        return Err("路径包含非法字符".to_string());
+    }
+    // Guard against reading huge files (10 MB limit)
+    let metadata = std::fs::metadata(&path).map_err(|e| format!("读取文件失败：{}", e))?;
+    const MAX_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
+    if metadata.len() > MAX_SIZE {
+        return Err(format!("文件过大（{}MB），最大支持 10MB", metadata.len() / 1024 / 1024));
+    }
     std::fs::read_to_string(&path).map_err(|e| format!("读取文件失败：{}", e))
 }
