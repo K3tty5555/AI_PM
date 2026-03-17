@@ -54,8 +54,12 @@ export function ToolKnowledgePage() {
   }, [activeCategory, newTitle, newContent, loadEntries])
 
   const handleDelete = useCallback(async (category: string, id: string) => {
-    await api.deleteKnowledge(category, id)
-    await loadEntries()
+    try {
+      await api.deleteKnowledge(category, id)
+      await loadEntries()
+    } catch (err) {
+      console.error("Failed to delete entry:", err)
+    }
   }, [loadEntries])
 
   if (loading) {
