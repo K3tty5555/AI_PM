@@ -107,7 +107,7 @@ export function RequirementPage() {
 
       // Advance phase
       await api.advancePhase(projectId)
-      navigate(`/project/${projectId}/analysis`)
+      navigate(`/project/${projectId}/analysis?autostart=1`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)

@@ -289,7 +289,7 @@ export function AnalysisPage() {
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
-      navigate(`/project/${projectId}/stories`)
+      navigate(`/project/${projectId}/stories?autostart=1`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
