@@ -118,7 +118,7 @@ export function RequirementPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
+        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
           LOADING...
         </span>
       </div>
@@ -181,13 +181,13 @@ export function RequirementPage() {
       {/* Sticky bottom action bar */}
       <div className="sticky bottom-0 -mx-8 border-t border-[var(--border)] bg-[var(--background)] px-8 py-4">
         <div className="flex items-center justify-between">
-          <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+          <span className="font-terminal text-xs text-[var(--text-muted)]">
             {!canSubmit ? "请填写需求描述后继续" : ""}
           </span>
           <div className="flex items-center gap-3">
             {saveHint && (
               <span
-                className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]"
+                className="font-terminal text-xs text-[var(--text-muted)]"
                 style={{ animation: "fadeInUp 0.2s ease-out" }}
               >
                 {saveHint}

@@ -39,7 +39,7 @@ function StageNav({
     >
       {stages.map((stage, index) => {
         const status = getStageStatus(stage.id)
-        const clickable = status === "completed"
+        const clickable = status === "completed" || status === "current"
 
         return (
           <div key={stage.id} className="flex items-start">
@@ -62,7 +62,7 @@ function StageNav({
                   ],
                   status === "current" && [
                     "bg-transparent",
-                    "cursor-default",
+                    "cursor-pointer",
                   ],
                   status === "locked" && [
                     "bg-transparent",
@@ -94,7 +94,7 @@ function StageNav({
                 <span
                   className={cn(
                     "relative z-10 text-xs font-bold",
-                    "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+                    "font-terminal",
                     status === "completed" && "text-[var(--dark)]",
                     status === "current" && "text-[var(--dark)]",
                     status === "locked" && "text-[#d0d0d0]",
@@ -117,7 +117,7 @@ function StageNav({
               <span
                 className={cn(
                   "text-[11px] text-center whitespace-nowrap leading-tight",
-                  "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+                  "font-terminal",
                   status === "completed" && "text-[var(--dark)] font-medium",
                   status === "current" && "text-[var(--dark)] font-semibold",
                   status === "locked" && "text-[var(--text-muted)]",

@@ -56,7 +56,7 @@ function Sidebar({ projects, activeProjectId, onNewProject }: SidebarProps) {
     >
       {/* Section label */}
       <div className="px-5 pt-5 pb-3">
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-[11px] font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
+        <span className="font-terminal text-[11px] font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
           PROJECT
         </span>
       </div>
@@ -116,7 +116,7 @@ function Sidebar({ projects, activeProjectId, onNewProject }: SidebarProps) {
                       {project.name}
                     </span>
 
-                    <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-[10px] text-[var(--text-muted)]">
+                    <span className="font-terminal text-[10px] text-[var(--text-muted)]">
                       {PHASE_LABELS[project.currentPhase] ?? project.currentPhase}
                     </span>
 
@@ -131,7 +131,7 @@ function Sidebar({ projects, activeProjectId, onNewProject }: SidebarProps) {
 
       {/* ── TOOLS 分区 ─────────────── */}
       <div className="px-5 pt-4 pb-2">
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-[11px] font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
+        <span className="font-terminal text-[11px] font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
           TOOLS
         </span>
       </div>

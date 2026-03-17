@@ -32,6 +32,19 @@ export function PrototypePage() {
   // Current HTML content — existing file or freshly streamed
   const htmlContent = existingHtml ?? (text && !isStreaming ? text : null)
 
+  // Fallback: when streaming ends with no content, re-read from disk.
+  // Handles CLI mode where the AI writes the file via Write tool and stdout is short.
+  const wasStreamingRef = useRef(false)
+  useEffect(() => {
+    const justFinished = wasStreamingRef.current && !isStreaming
+    wasStreamingRef.current = isStreaming
+    if (justFinished && !existingHtml && !text && projectId) {
+      api.readProjectFile(projectId!, PROTOTYPE_FILE).then((content) => {
+        if (content && content.trim().length > 100) setExistingHtml(content)
+      }).catch(console.error)
+    }
+  }, [isStreaming]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Create blob URL for iframe
   useEffect(() => {
     if (!htmlContent) return
@@ -127,7 +140,7 @@ export function PrototypePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
+        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
           LOADING...
         </span>
       </div>
@@ -155,7 +168,7 @@ export function PrototypePage() {
       {isStreaming && (
         <div className="mt-4">
           <ProgressBar value={progressValue} animated />
-          <p className="mt-2 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
             正在生成原型...{text.length > 0 && ` (${text.length} 字节)`}
           </p>
         </div>
@@ -181,7 +194,7 @@ export function PrototypePage() {
                   type="button"
                   onClick={() => setDevice(d)}
                   className={cn(
-                    "px-2.5 py-1 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-[10px] uppercase tracking-[1px] transition-colors",
+                    "px-2.5 py-1 font-terminal text-[10px] uppercase tracking-[1px] transition-colors",
                     device === d
                       ? "bg-[var(--yellow)] text-[var(--dark)]"
                       : "text-[var(--text-muted)] hover:text-[var(--dark)]"

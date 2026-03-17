@@ -205,7 +205,7 @@ export function SettingsPage() {
           <ChevronLeft className="size-3.5" />
           返回
         </button>
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
+        <span className="font-terminal text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
           {"// SETTINGS"}
         </span>
       </div>
@@ -317,7 +317,7 @@ export function SettingsPage() {
                         setDirty(true)
                       }}
                       placeholder={config?.apiKey || "输入 API Key"}
-                      className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 pr-10 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                      className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 pr-10 font-terminal text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
                     />
                     <button
                       type="button"
@@ -350,7 +350,7 @@ export function SettingsPage() {
                       setDirty(true)
                     }}
                     placeholder="https://api.anthropic.com"
-                    className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                    className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-terminal text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
                   />
                   <span className="text-xs text-[var(--text-muted)]">
                     留空则使用官方地址，代理用户填写代理地址
@@ -370,7 +370,7 @@ export function SettingsPage() {
                       setDirty(true)
                     }}
                     placeholder="claude-sonnet-4-6"
-                    className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                    className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-terminal text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
                   />
                 </div>
               </>
@@ -471,7 +471,7 @@ export function SettingsPage() {
                   setDirSaveResult(null)
                 }}
                 placeholder="~/Documents/AI PM"
-                className="h-9 flex-1 border border-[var(--border)] bg-[var(--background)] px-3 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                className="h-9 flex-1 border border-[var(--border)] bg-[var(--background)] px-3 font-terminal text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
               />
               <Button variant="ghost" size="sm" onClick={handlePickDir} className="gap-1.5 shrink-0">
                 <FolderOpen className="size-4" />
@@ -516,7 +516,7 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-2">
-            <p className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-sm text-[var(--dark)]">
+            <p className="font-terminal text-sm text-[var(--dark)]">
               AI PM Desktop v0.1.0
             </p>
             <p className="text-sm text-[var(--text-muted)]">

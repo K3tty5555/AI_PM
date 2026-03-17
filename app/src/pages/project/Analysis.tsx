@@ -292,7 +292,7 @@ export function AnalysisPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
+        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
           LOADING...
         </span>
       </div>
@@ -332,7 +332,7 @@ export function AnalysisPage() {
               正在思考...
             </p>
           )}
-          <p className="mt-2 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
         </div>
@@ -374,7 +374,7 @@ export function AnalysisPage() {
 
         {/* Stream metadata bar — shown after streaming completes */}
         {!isStreaming && streamMeta && (
-          <p className="mt-2 text-xs text-[var(--text-muted)] font-mono">
+          <p className="mt-2 text-xs text-[var(--text-muted)] font-terminal">
             {streamMeta.inputTokens != null && streamMeta.outputTokens != null
               ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
               : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
