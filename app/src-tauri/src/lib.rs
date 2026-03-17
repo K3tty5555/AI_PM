@@ -88,6 +88,7 @@ pub fn run() {
             commands::config::test_cli_config,
         ])
         .setup(|app| {
+            #[cfg(debug_assertions)]
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_icon(tauri::include_image!("icons/128x128@2x.png"));
             }
