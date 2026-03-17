@@ -251,11 +251,22 @@ export function ReviewPage() {
 
   if (!loading && !existingContent && !text && !isStreaming && !error) {
     return (
-      <PhaseEmptyState
-        phaseLabel="REVIEW"
-        description="需求评审报告"
-        onGenerate={handleGenerate}
-      />
+      <div className="mx-auto w-full max-w-[720px]">
+        <div className="mb-6 flex items-center justify-between">
+          <Badge variant="outline">REVIEW</Badge>
+        </div>
+        <div className="h-px bg-[var(--border)]" />
+        <ContextPills
+          projectId={projectId!}
+          onExcludeChange={setExcludedContext}
+          className="border-b border-[var(--border)]"
+        />
+        <PhaseEmptyState
+          phaseLabel="REVIEW"
+          description="需求评审报告"
+          onGenerate={handleGenerate}
+        />
+      </div>
     )
   }
 

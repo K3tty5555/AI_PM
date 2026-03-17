@@ -161,11 +161,22 @@ export function PrototypePage() {
 
   if (!loading && !existingHtml && !text && !isStreaming && !error) {
     return (
-      <PhaseEmptyState
-        phaseLabel="PROTOTYPE"
-        description="交互原型"
-        onGenerate={handleGenerate}
-      />
+      <div className="mx-auto w-full max-w-[900px]">
+        <div className="mb-6 flex items-center justify-between">
+          <Badge variant="outline">PROTOTYPE</Badge>
+        </div>
+        <div className="h-px bg-[var(--border)]" />
+        <ContextPills
+          projectId={projectId!}
+          onExcludeChange={setExcludedContext}
+          className="border-b border-[var(--border)]"
+        />
+        <PhaseEmptyState
+          phaseLabel="PROTOTYPE"
+          description="交互原型"
+          onGenerate={handleGenerate}
+        />
+      </div>
     )
   }
 

@@ -306,11 +306,22 @@ export function PrdPage() {
 
   if (!loading && !existingMarkdown && !text && !isStreaming && !error) {
     return (
-      <PhaseEmptyState
-        phaseLabel="PRD"
-        description="产品需求文档"
-        onGenerate={handleGenerate}
-      />
+      <div className="mx-auto w-full max-w-[1080px]">
+        <div className="mb-6 flex items-center justify-between">
+          <Badge variant="outline">PRD_V1.0</Badge>
+        </div>
+        <div className="h-px bg-[var(--border)]" />
+        <ContextPills
+          projectId={projectId!}
+          onExcludeChange={setExcludedContext}
+          className="border-b border-[var(--border)]"
+        />
+        <PhaseEmptyState
+          phaseLabel="PRD"
+          description="产品需求文档"
+          onGenerate={handleGenerate}
+        />
+      </div>
     )
   }
 
