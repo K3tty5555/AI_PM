@@ -42,6 +42,13 @@ export interface ChatMessage {
   content: string
 }
 
+export interface KnowledgeEntry {
+  id: string
+  category: string
+  title: string
+  content: string
+}
+
 // ─── API functions ─────────────────────────────────────────────────────────
 
 export const api = {
@@ -78,4 +85,11 @@ export const api = {
   // Projects dir
   getProjectsDir: () => invoke<string>("get_projects_dir"),
   saveProjectsDir: (path: string) => invoke<{ ok: boolean }>("save_projects_dir", { path }),
+
+  // Knowledge base
+  listKnowledge: () => invoke<KnowledgeEntry[]>("list_knowledge"),
+  addKnowledge: (args: { category: string; title: string; content: string }) =>
+    invoke<KnowledgeEntry>("add_knowledge", { args }),
+  deleteKnowledge: (category: string, id: string) =>
+    invoke<void>("delete_knowledge", { category, id }),
 }
