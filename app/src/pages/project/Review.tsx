@@ -10,6 +10,7 @@ import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
+import { ContextPills } from "@/components/context-pills"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -94,6 +95,7 @@ export function ReviewPage() {
   const [chatHistory, setChatHistory] = useState<ChatRound[]>([])
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [excludedContext, setExcludedContext] = useState<string[]>([])
 
   const startedRef = useRef(false)
 
@@ -185,8 +187,8 @@ export function ReviewPage() {
       { role: "user", content: "请开始需求评审" },
     ]
     setMessages(initialMessages)
-    start(initialMessages)
-  }, [start])
+    start(initialMessages, { excludedContext })
+  }, [start, excludedContext])
 
   const handleRestart = useCallback(() => {
     reset()
@@ -197,8 +199,8 @@ export function ReviewPage() {
     ]
     setMessages(initialMessages)
     startedRef.current = true
-    start(initialMessages)
-  }, [reset, start])
+    start(initialMessages, { excludedContext })
+  }, [reset, start, excludedContext])
 
   const handleBack = useCallback(() => {
     navigate(`/project/${projectId}/prototype`)
@@ -276,6 +278,12 @@ export function ReviewPage() {
       </div>
 
       <div className="h-px bg-[var(--border)]" />
+
+      <ContextPills
+        projectId={projectId!}
+        onExcludeChange={setExcludedContext}
+        className="border-b border-[var(--border)]"
+      />
 
       {/* Streaming progress */}
       {isStreaming && (
