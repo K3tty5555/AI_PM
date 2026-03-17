@@ -39,7 +39,6 @@ function StageNav({
     >
       {stages.map((stage, index) => {
         const status = getStageStatus(stage.id)
-        const clickable = true
 
         return (
           <div key={stage.id} className="flex items-start">
