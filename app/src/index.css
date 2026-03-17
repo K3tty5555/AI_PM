@@ -61,7 +61,7 @@
 }
 
 /* ============================================================
-   Apple-style Design System — CSS Variables
+   Bauhaus + Apple HIG Design System — Cobalt Blue
    ============================================================ */
 
 :root {
@@ -69,71 +69,74 @@
                      "PingFang SC", "Helvetica Neue", sans-serif;
   --font-geist-mono: 'GeistMono', 'JetBrains Mono', Menlo, monospace;
 
-  /* --- Radii (Apple uses generous rounding) --- */
-  --radius: 0.5rem;
+  /* --- Radii --- */
+  --radius: 0.5rem; /* 8px */
 
   /* --- shadcn core variables --- */
-  --background: #FAFAFA;
-  --foreground: #1A1A1A;
+  --background: #FFFFFF;
+  --foreground: #0F172A;
 
   --card: #FFFFFF;
-  --card-foreground: #1A1A1A;
+  --card-foreground: #0F172A;
 
   --popover: #FFFFFF;
-  --popover-foreground: #1A1A1A;
+  --popover-foreground: #0F172A;
 
-  --primary: #F0A500;
+  --primary: #1D4ED8;
   --primary-foreground: #FFFFFF;
 
-  --secondary: #F2F2F2;
-  --secondary-foreground: #1A1A1A;
+  --secondary: #F4F4F5;
+  --secondary-foreground: #0F172A;
 
-  --muted: #F2F2F2;
-  --muted-foreground: #6E6E73;
+  --muted: #F4F4F5;
+  --muted-foreground: #64748B;
 
-  --accent: #F0A500;
+  --accent: #1D4ED8;
   --accent-foreground: #FFFFFF;
 
-  --destructive: #E5484D;
+  --destructive: #DC2626;
 
   --border: rgba(0, 0, 0, 0.08);
   --input: rgba(0, 0, 0, 0.10);
-  --ring: #F0A500;
+  --ring: rgba(29, 78, 216, 0.25);
 
-  --chart-1: #F0A500;
+  --chart-1: #1D4ED8;
   --chart-2: #4ECDC4;
-  --chart-3: #2D9E6B;
-  --chart-4: #1A1A1A;
-  --chart-5: #9E9E9E;
+  --chart-3: #16A34A;
+  --chart-4: #0F172A;
+  --chart-5: #94A3B8;
 
   /* Sidebar */
-  --sidebar: rgba(240, 240, 240, 0.85);
-  --sidebar-foreground: #1A1A1A;
-  --sidebar-primary: #F0A500;
+  --sidebar: rgba(248, 248, 248, 0.90);
+  --sidebar-foreground: #0F172A;
+  --sidebar-primary: #1D4ED8;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: rgba(0, 0, 0, 0.04);
-  --sidebar-accent-foreground: #1A1A1A;
+  --sidebar-accent-foreground: #0F172A;
   --sidebar-border: rgba(0, 0, 0, 0.08);
-  --sidebar-ring: #F0A500;
+  --sidebar-ring: #1D4ED8;
 
-  /* --- App-specific tokens --- */
-  --yellow: #F0A500;
-  --green: #2D9E6B;
+  /* --- App-specific tokens (backward-compat remapped to cobalt) --- */
+  --yellow: #1D4ED8;            /* remapped: cobalt blue */
+  --green: #16A34A;
   --teal: #4ECDC4;
-  --dark: #1A1A1A;
-  --dark2: #2A2A2A;
-  --text-muted: #6E6E73;
-  --yellow-glow: 0 0 16px rgba(240, 165, 0, 0.3);
-  --yellow-bg: rgba(240, 165, 0, 0.10);
+  --dark: #0F172A;
+  --dark2: #1E293B;
+  --text-muted: #64748B;
+  --yellow-glow: 0 0 16px rgba(29, 78, 216, 0.25);
+  --yellow-bg: rgba(29, 78, 216, 0.08);
 
-  /* New semantic tokens */
-  --accent-color: #F0A500;
-  --accent-light: rgba(240, 165, 0, 0.12);
-  --success: #2D9E6B;
-  --success-light: rgba(45, 158, 107, 0.12);
-  --text-primary: #1A1A1A;
-  --text-secondary: #6E6E73;
-  --text-tertiary: #AEAEB2;
+  /* --- Semantic design tokens --- */
+  --accent-color: #1D4ED8;
+  --accent-hover: #1E40AF;
+  --accent-light: rgba(29, 78, 216, 0.08);
+  --accent-ring: rgba(29, 78, 216, 0.25);
+  --bg-sidebar: rgba(248, 248, 248, 0.90);
+  --success: #16A34A;
+  --success-light: rgba(22, 163, 74, 0.08);
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-tertiary: #94A3B8;
   --hover-bg: rgba(0, 0, 0, 0.04);
   --active-bg: rgba(0, 0, 0, 0.07);
 
@@ -154,8 +157,8 @@
    ============================================================ */
 
 @keyframes dotPulse {
-  0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(45, 158, 107, 0.4); }
-  50% { transform: scale(1.15); opacity: 0.85; box-shadow: 0 0 0 8px rgba(45, 158, 107, 0); }
+  0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
+  50% { transform: scale(1.15); opacity: 0.85; box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
 }
 
 @keyframes fadeInUp {

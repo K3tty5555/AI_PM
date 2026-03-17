@@ -168,7 +168,7 @@ export function RequirementPage() {
       <div className="mb-8">
         <label className="mb-2 block text-sm font-medium text-[var(--dark)]">
           参考文件
-          <span className="ml-1 text-xs font-normal text-[var(--text-muted)]">
+          <span className="ml-1 text-xs font-normal text-[var(--text-secondary)]">
             (可选)
           </span>
         </label>

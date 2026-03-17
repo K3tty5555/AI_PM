@@ -464,7 +464,7 @@ export function PrdPage() {
                 "flex-1 h-9 px-3",
                 "text-sm text-[var(--dark)]",
                 "bg-transparent border border-[var(--border)]",
-                "placeholder:text-[var(--text-muted)]",
+                "placeholder:text-[var(--text-secondary)]",
                 "outline-none",
                 "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
                 "focus:border-[var(--yellow)]",

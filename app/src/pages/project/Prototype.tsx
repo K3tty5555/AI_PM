@@ -239,8 +239,8 @@ export function PrototypePage() {
                   className={cn(
                     "px-2.5 py-1 text-[12px] font-medium transition-colors",
                     device === d
-                      ? "bg-[var(--yellow)] text-[var(--dark)]"
-                      : "text-[var(--text-muted)] hover:text-[var(--dark)]"
+                      ? "bg-[var(--yellow)] text-[var(--text-primary)]"
+                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
                   {d === "mobile" ? "375" : d === "tablet" ? "768" : "全屏"}

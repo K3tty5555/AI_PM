@@ -103,7 +103,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
                 if (error) setError("")
               }}
               placeholder="输入项目名称"
-              className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)] placeholder:text-[var(--text-muted)]/50 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+              className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)] placeholder:text-[var(--text-secondary)]/50 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
             />
             {error && (
               <p className="mt-1.5 text-xs text-[var(--destructive)]">
@@ -129,7 +129,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
                   <span className="block h-2 w-2 bg-white" />
                 )}
               </span>
-              <span className="text-sm text-[var(--text-muted)]">多代理模式（复杂需求）</span>
+              <span className="text-sm text-[var(--text-secondary)]">多代理模式（复杂需求）</span>
             </button>
           </div>
 

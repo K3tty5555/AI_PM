@@ -61,7 +61,7 @@ export function ToolDataPage() {
                 placeholder="未选择文件..."
                 className={cn(
                   "flex-1 h-9 px-3 text-sm bg-transparent border border-[var(--border)]",
-                  "placeholder:text-[var(--text-muted)] outline-none"
+                  "placeholder:text-[var(--text-secondary)] outline-none"
                 )}
               />
               <Button variant="ghost" size="sm" onClick={handleSelectFile}>选择文件</Button>
@@ -76,7 +76,7 @@ export function ToolDataPage() {
               placeholder="例：找出用户流失的关键节点"
               className={cn(
                 "w-full rounded-lg h-9 px-3 text-sm bg-transparent border border-[var(--border)]",
-                "placeholder:text-[var(--text-muted)] outline-none",
+                "placeholder:text-[var(--text-secondary)] outline-none",
                 "focus:border-[var(--accent-color)] transition-[border-color]"
               )}
             />
