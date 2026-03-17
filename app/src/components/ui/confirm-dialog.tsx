@@ -14,7 +14,7 @@ interface ConfirmDialogProps {
 
 function ConfirmDialog({
   open,
-  title = "// CONFIRM",
+  title = "确认操作",
   description,
   confirmLabel = "确认",
   cancelLabel = "取消",
@@ -40,31 +40,26 @@ function ConfirmDialog({
     <div
       ref={backdropRef}
       onClick={(e) => { if (e.target === backdropRef.current) onCancel() }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      style={{ animation: "fadeInUp 0.15s ease-out" }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[4px]"
+      style={{ animation: "fadeIn 150ms var(--ease-decelerate)" }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
-        className="w-full max-w-[400px] border border-[var(--border)] bg-[var(--background)] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
-        style={{ animation: "fadeInUp 0.2s cubic-bezier(0.16,1,0.3,1)" }}
+        className="w-full max-w-[400px] rounded-xl bg-[var(--background)] p-6 shadow-xl"
+        style={{ animation: "fadeInUp 200ms var(--ease-decelerate)" }}
       >
-        {/* HUD 标题 */}
-        <div className="mb-4">
-          <span
-            id="confirm-dialog-title"
-            className="font-terminal text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]"
-          >
-            {title}
-          </span>
-        </div>
+        {/* 标题 */}
+        <h2 id="confirm-dialog-title" className="mb-2 text-base font-semibold text-[var(--text-primary)]">
+          {title}
+        </h2>
 
         {/* 分隔线 */}
         <div className="mb-4 h-px bg-[var(--border)]" />
 
         {/* 描述文字 */}
-        <p className="mb-6 text-sm leading-relaxed text-[var(--dark)]">
+        <p className="mb-6 text-sm leading-relaxed text-[var(--text-secondary)]">
           {description}
         </p>
 
