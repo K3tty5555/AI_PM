@@ -9,6 +9,7 @@ import { api } from "@/lib/tauri-api"
 import { open } from "@tauri-apps/plugin-shell"
 import { cn } from "@/lib/utils"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
+import { ContextPills } from "@/components/context-pills"
 
 const PROTOTYPE_FILE = "06-prototype.html"
 const DEVICE_WIDTHS = { mobile: 375, tablet: 768, desktop: 0 } as const
@@ -23,6 +24,7 @@ export function PrototypePage() {
   const [outputDir, setOutputDir] = useState<string>("")
   const [advancing, setAdvancing] = useState(false)
   const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">("desktop")
+  const [excludedContext, setExcludedContext] = useState<string[]>([])
   const startedRef = useRef(false)
 
   const { text, isStreaming, error, outputFile, start, reset } = useAiStream({
@@ -102,8 +104,8 @@ export function PrototypePage() {
   // Generate prototype for the first time
   const handleGenerate = useCallback(() => {
     startedRef.current = true
-    start([{ role: "user", content: "请生成产品原型" }])
-  }, [start])
+    start([{ role: "user", content: "请生成产品原型" }], { excludedContext })
+  }, [start, excludedContext])
 
   // Open HTML file in system browser
   const handleOpenInBrowser = useCallback(async () => {
@@ -122,8 +124,8 @@ export function PrototypePage() {
     setExistingHtml(null)
     setBlobUrl(null)
     startedRef.current = true
-    start([{ role: "user", content: "请重新生成产品原型" }])
-  }, [reset, start])
+    start([{ role: "user", content: "请重新生成产品原型" }], { excludedContext })
+  }, [reset, start, excludedContext])
 
   // Confirm and advance to review
   const handleAdvance = useCallback(async () => {
@@ -183,6 +185,12 @@ export function PrototypePage() {
       </div>
 
       <div className="h-px bg-[var(--border)]" />
+
+      <ContextPills
+        projectId={projectId!}
+        onExcludeChange={setExcludedContext}
+        className="border-b border-[var(--border)]"
+      />
 
       {/* Streaming progress */}
       {isStreaming && (

@@ -10,6 +10,7 @@ import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
+import { ContextPills } from "@/components/context-pills"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -50,6 +51,7 @@ export function PrdPage() {
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editedMarkdown, setEditedMarkdown] = useState<string | null>(null)
+  const [excludedContext, setExcludedContext] = useState<string[]>([])
 
   // AI assist input
   const [assistInput, setAssistInput] = useState("")
@@ -206,8 +208,8 @@ export function PrdPage() {
   /** Generate PRD for the first time */
   const handleGenerate = useCallback(() => {
     startedRef.current = true
-    start([{ role: "user", content: "请生成 PRD" }])
-  }, [start])
+    start([{ role: "user", content: "请生成 PRD" }], { excludedContext })
+  }, [start, excludedContext])
 
   /** Regenerate the entire PRD */
   const handleRegenerate = useCallback(() => {
@@ -216,8 +218,8 @@ export function PrdPage() {
     setExistingMarkdown(null)
     setEditedMarkdown(null)
     startedRef.current = true
-    start([{ role: "user", content: "请重新生成 PRD" }])
-  }, [reset, assistReset, start])
+    start([{ role: "user", content: "请重新生成 PRD" }], { excludedContext })
+  }, [reset, assistReset, start, excludedContext])
 
   /** Send AI assist modification request */
   const handleAssistSend = useCallback(() => {
@@ -337,6 +339,12 @@ export function PrdPage() {
       </div>
 
       <div className="h-px bg-[var(--border)]" />
+
+      <ContextPills
+        projectId={projectId!}
+        onExcludeChange={setExcludedContext}
+        className="border-b border-[var(--border)]"
+      />
 
       {/* Streaming progress */}
       {currentStreaming && (
