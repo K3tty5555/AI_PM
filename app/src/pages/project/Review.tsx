@@ -332,7 +332,7 @@ export function ReviewPage() {
             已选择修改策略
           </p>
           <p className="text-sm text-[var(--text-primary)]">{strategyAnswer.replace(/\*\*/g, "")}</p>
-          <p className="mt-2 text-sm text-[var(--text-muted)]">
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
             请前往 PRD 页，按此策略重新生成文档。
           </p>
           <button
@@ -354,7 +354,7 @@ export function ReviewPage() {
             "before:w-[3px] before:bg-[var(--accent-color)] before:content-['']",
           )}
         >
-          <p className="text-sm text-[var(--text-muted)]">
+          <p className="text-sm text-[var(--text-secondary)]">
             如需根据评审意见修改文档，请返回 PRD 页重新生成。
           </p>
           <button
