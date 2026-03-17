@@ -70,11 +70,23 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
             .as_secs())
     } else { slug };
 
+    // Ensure slug is unique — append timestamp if path already exists
+    let mut final_slug = slug.clone();
+    let mut candidate = kb_dir.join(format!("{}.md", &final_slug));
+    if candidate.exists() {
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        final_slug = format!("{}-{}", slug, ts);
+        candidate = kb_dir.join(format!("{}.md", &final_slug));
+    }
+    let path = candidate;
+
     let full_content = format!("# {}\n\n{}", args.title, args.content);
-    let path = kb_dir.join(format!("{}.md", slug));
     fs::write(&path, &full_content).map_err(|e| e.to_string())?;
 
-    Ok(KnowledgeEntry { id: slug, category: args.category, title: args.title, content: full_content })
+    Ok(KnowledgeEntry { id: final_slug, category: args.category, title: args.title, content: full_content })
 }
 
 #[tauri::command]
