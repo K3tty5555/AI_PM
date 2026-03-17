@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
@@ -17,7 +18,7 @@ export function TitleBar() {
     <header
       data-tauri-drag-region
       className="flex h-11 shrink-0 select-none items-center justify-between border-b border-[var(--border)] bg-[rgba(250,250,250,0.9)] backdrop-blur-sm px-5"
-      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      style={{ WebkitAppRegion: "drag" } as CSSProperties}
     >
       {/* macOS traffic lights space */}
       <div className="w-[72px]" data-tauri-drag-region />
@@ -26,7 +27,7 @@ export function TitleBar() {
       <button
         onClick={() => navigate("/")}
         title="返回主页"
-        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
         className="text-sm font-semibold text-[var(--text-primary)] tracking-tight hover:opacity-60 transition-opacity"
       >
         AI PM
@@ -35,7 +36,7 @@ export function TitleBar() {
       {/* API status indicator */}
       <div
         className="flex w-[72px] items-center justify-end"
-        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
       >
         {apiReady !== null && (
           <button
