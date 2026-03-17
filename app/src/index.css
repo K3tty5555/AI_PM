@@ -61,118 +61,92 @@
 }
 
 /* ============================================================
-   终末地 Design System — CSS Variables
+   Apple-style Design System — CSS Variables
    ============================================================ */
 
 :root {
-  --font-geist-sans: 'GeistSans', system-ui, sans-serif;
-  --font-geist-mono: 'GeistMono', 'Courier New', monospace;
+  --font-geist-sans: 'GeistSans', -apple-system, BlinkMacSystemFont, "Segoe UI",
+                     "PingFang SC", "Helvetica Neue", sans-serif;
+  --font-geist-mono: 'GeistMono', 'JetBrains Mono', Menlo, monospace;
 
-  /* --- Core shadcn variables (终末地 palette) --- */
-  --radius: 0;
+  /* --- Radii (Apple uses generous rounding) --- */
+  --radius: 0.5rem;
 
-  --background: #FFFFFF;
-  --foreground: #141414;
+  /* --- shadcn core variables --- */
+  --background: #FAFAFA;
+  --foreground: #1A1A1A;
 
   --card: #FFFFFF;
-  --card-foreground: #141414;
+  --card-foreground: #1A1A1A;
 
   --popover: #FFFFFF;
-  --popover-foreground: #141414;
+  --popover-foreground: #1A1A1A;
 
-  --primary: #fffa00;
-  --primary-foreground: #141414;
+  --primary: #F0A500;
+  --primary-foreground: #FFFFFF;
 
-  --secondary: #F5F5F5;
-  --secondary-foreground: #141414;
+  --secondary: #F2F2F2;
+  --secondary-foreground: #1A1A1A;
 
-  --muted: #F5F5F5;
-  --muted-foreground: #6b6b6b;
+  --muted: #F2F2F2;
+  --muted-foreground: #6E6E73;
 
-  --accent: #F5F5F5;
-  --accent-foreground: #141414;
+  --accent: #F0A500;
+  --accent-foreground: #FFFFFF;
 
-  --destructive: #e53935;
+  --destructive: #E5484D;
 
-  --border: rgba(0, 0, 0, 0.10);
+  --border: rgba(0, 0, 0, 0.08);
   --input: rgba(0, 0, 0, 0.10);
-  --ring: #fffa00;
+  --ring: #F0A500;
 
-  --chart-1: #fffa00;
+  --chart-1: #F0A500;
   --chart-2: #4ECDC4;
-  --chart-3: #00C853;
-  --chart-4: #141414;
+  --chart-3: #2D9E6B;
+  --chart-4: #1A1A1A;
   --chart-5: #9E9E9E;
 
   /* Sidebar */
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #141414;
-  --sidebar-primary: #fffa00;
-  --sidebar-primary-foreground: #141414;
-  --sidebar-accent: #F5F5F5;
-  --sidebar-accent-foreground: #141414;
-  --sidebar-border: rgba(0, 0, 0, 0.10);
-  --sidebar-ring: #fffa00;
+  --sidebar: rgba(240, 240, 240, 0.85);
+  --sidebar-foreground: #1A1A1A;
+  --sidebar-primary: #F0A500;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(0, 0, 0, 0.04);
+  --sidebar-accent-foreground: #1A1A1A;
+  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-ring: #F0A500;
 
-  /* --- 终末地 专用变量 --- */
-  --yellow: #fffa00;
-  --green: #00C853;
+  /* --- App-specific tokens --- */
+  --yellow: #F0A500;
+  --green: #2D9E6B;
   --teal: #4ECDC4;
-  --dark: #141414;
-  --dark2: #1a1a1a;
-  --text-muted: #6b6b6b;
-  --yellow-glow: 0 0 20px rgba(255, 250, 0, 0.35);
-  --yellow-bg: rgba(255, 250, 0, 0.08);
+  --dark: #1A1A1A;
+  --dark2: #2A2A2A;
+  --text-muted: #6E6E73;
+  --yellow-glow: 0 0 16px rgba(240, 165, 0, 0.3);
+  --yellow-bg: rgba(240, 165, 0, 0.10);
 
-  /* --- Transition --- */
-  --ease-terminal: cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-terminal: 0.28s;
-}
+  /* New semantic tokens */
+  --accent-color: #F0A500;
+  --accent-light: rgba(240, 165, 0, 0.12);
+  --success: #2D9E6B;
+  --success-light: rgba(45, 158, 107, 0.12);
+  --text-primary: #1A1A1A;
+  --text-secondary: #6E6E73;
+  --text-tertiary: #AEAEB2;
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --active-bg: rgba(0, 0, 0, 0.07);
 
-.dark {
-  --background: #141414;
-  --foreground: #F5F5F5;
-
-  --card: #1a1a1a;
-  --card-foreground: #F5F5F5;
-
-  --popover: #1a1a1a;
-  --popover-foreground: #F5F5F5;
-
-  --primary: #fffa00;
-  --primary-foreground: #141414;
-
-  --secondary: #1a1a1a;
-  --secondary-foreground: #F5F5F5;
-
-  --muted: #1a1a1a;
-  --muted-foreground: #6b6b6b;
-
-  --accent: #1a1a1a;
-  --accent-foreground: #F5F5F5;
-
-  --destructive: #ef5350;
-
-  --border: rgba(255, 255, 255, 0.10);
-  --input: rgba(255, 255, 255, 0.15);
-  --ring: #fffa00;
-
-  --chart-1: #fffa00;
-  --chart-2: #4ECDC4;
-  --chart-3: #00C853;
-  --chart-4: #F5F5F5;
-  --chart-5: #9E9E9E;
-
-  --sidebar: #1a1a1a;
-  --sidebar-foreground: #F5F5F5;
-  --sidebar-primary: #fffa00;
-  --sidebar-primary-foreground: #141414;
-  --sidebar-accent: #141414;
-  --sidebar-accent-foreground: #F5F5F5;
-  --sidebar-border: rgba(255, 255, 255, 0.10);
-  --sidebar-ring: #fffa00;
-
-  --yellow-bg: rgba(255, 250, 0, 0.12);
+  /* --- Transitions --- */
+  --ease-terminal: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-terminal: 0.2s;
+  --dur-fast: 100ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --dur-page: 250ms;
 }
 
 /* ============================================================
@@ -180,61 +154,48 @@
    ============================================================ */
 
 @keyframes dotPulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-    box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.4);
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 0.85;
-    box-shadow: 0 0 0 8px rgba(0, 200, 83, 0);
-  }
+  0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(45, 158, 107, 0.4); }
+  50% { transform: scale(1.15); opacity: 0.85; box-shadow: 0 0 0 8px rgba(45, 158, 107, 0); }
 }
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes checkDraw {
+  from { stroke-dashoffset: 20; opacity: 0; }
+  to   { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes thinkingPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 @keyframes progressFill {
-  from {
-    width: 0%;
-  }
-  to {
-    width: var(--progress-value, 0%);
-  }
+  from { width: 0%; }
+  to   { width: var(--progress-value); }
 }
 
-@keyframes rippleOut {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(2.5);
-    opacity: 0;
-  }
-}
-
-@keyframes hexPulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(255, 250, 0, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgba(255, 250, 0, 0);
-  }
+@keyframes staggerFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  50%       { opacity: 0; }
 }
 
 /* ============================================================
@@ -261,11 +222,10 @@ body {
 }
 
 /* ============================================================
-   Utility Classes
+   Utility Overrides
    ============================================================ */
 
-@layer utilities {
-  .font-terminal {
-    font-family: var(--font-geist-mono), 'Courier New', monospace;
-  }
+/* Silently switch font-terminal to system sans — avoids touching all page files */
+@utility font-terminal {
+  font-family: var(--font-geist-sans);
 }
