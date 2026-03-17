@@ -142,7 +142,7 @@ function Sidebar({ projects, activeProjectId, onNewProject }: SidebarProps) {
             <li key={tool.path}>
               <button
                 type="button"
-                onClick={() => navigate(tool.path)}
+                onClick={() => navigate(activeProjectId ? `${tool.path}?projectId=${activeProjectId}` : tool.path)}
                 className={cn(
                   "flex w-full items-center gap-2.5 px-3 py-1.5 text-left",
                   "transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)]",
