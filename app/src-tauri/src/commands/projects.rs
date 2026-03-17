@@ -36,6 +36,7 @@ pub struct ProjectSummary {
     pub updated_at: String,
     pub completed_count: i64,
     pub total_phases: i64,
+    pub completed_phases: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -59,7 +60,8 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
     let mut stmt = db
         .prepare(
             "SELECT p.id, p.name, p.description, p.current_phase, p.output_dir, p.created_at, p.updated_at,
-                    COUNT(CASE WHEN pp.status = 'completed' THEN 1 END) as completed_count
+                    COUNT(CASE WHEN pp.status = 'completed' THEN 1 END) as completed_count,
+                    GROUP_CONCAT(CASE WHEN pp.status = 'completed' THEN pp.phase END) as completed_phases
              FROM projects p
              LEFT JOIN project_phases pp ON pp.project_id = p.id
              GROUP BY p.id
@@ -79,6 +81,12 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
                 updated_at: row.get(6)?,
                 completed_count: row.get(7)?,
                 total_phases: PHASES.len() as i64,
+                completed_phases: row.get::<_, Option<String>>(8)?
+                    .unwrap_or_default()
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(String::from)
+                    .collect(),
             })
         })
         .map_err(|e| e.to_string())?
