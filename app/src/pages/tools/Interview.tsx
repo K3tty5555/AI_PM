@@ -29,11 +29,8 @@ export function ToolInterviewPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [chatHistory, setChatHistory] = useState<Array<{ q: string; a: string }>>([])
   const [searchParams] = useSearchParams()
-  const [boundProjectId, setBoundProjectId] = useState<string | null>(() => {
-    const fromUrl = searchParams.get("projectId")
-    if (fromUrl) return fromUrl
-    return localStorage.getItem("tool-binding:interview") ?? null
-  })
+  const initialProjectId = searchParams.get("projectId") ?? localStorage.getItem("tool-binding:interview") ?? null
+  const [boundProjectId, setBoundProjectId] = useState<string | null>(initialProjectId)
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } =
     useToolStream("ai-pm-interview", boundProjectId ?? undefined)
 
