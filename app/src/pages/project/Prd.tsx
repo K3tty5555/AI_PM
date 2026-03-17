@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
@@ -9,6 +9,7 @@ import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
+import { PhaseEmptyState } from "@/components/phase-empty-state"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -59,6 +60,9 @@ export function PrdPage() {
 
   // Ref for the content scroll container
   const contentRef = useRef<HTMLDivElement>(null)
+
+  const [searchParams] = useSearchParams()
+  const autostart = searchParams.get("autostart") === "1"
 
   // AI stream hook for initial generation
   const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, outputFile, start, reset } = useAiStream({
@@ -157,7 +161,7 @@ export function PrdPage() {
         if (!cancelled) {
           if (content) {
             setExistingMarkdown(content)
-          } else {
+          } else if (autostart) {
             // No existing file — trigger AI generation
             if (!startedRef.current) {
               startedRef.current = true
@@ -167,7 +171,7 @@ export function PrdPage() {
         }
       } catch (err) {
         console.error("Failed to load PRD file:", err)
-        if (!cancelled && !startedRef.current) {
+        if (!cancelled && !startedRef.current && autostart) {
           startedRef.current = true
           start([{ role: "user", content: "请生成 PRD" }])
         }
@@ -198,6 +202,12 @@ export function PrdPage() {
   const handleEdit = useCallback((newMarkdown: string) => {
     setEditedMarkdown(newMarkdown)
   }, [])
+
+  /** Generate PRD for the first time */
+  const handleGenerate = useCallback(() => {
+    startedRef.current = true
+    start([{ role: "user", content: "请生成 PRD" }])
+  }, [start])
 
   /** Regenerate the entire PRD */
   const handleRegenerate = useCallback(() => {
@@ -286,6 +296,20 @@ export function PrdPage() {
           LOADING...
         </span>
       </div>
+    )
+  }
+
+  // -------------------------------------------------------------------------
+  // Empty state
+  // -------------------------------------------------------------------------
+
+  if (!loading && !existingMarkdown && !text && !isStreaming && !error) {
+    return (
+      <PhaseEmptyState
+        phaseLabel="PRD"
+        description="产品需求文档"
+        onGenerate={handleGenerate}
+      />
     )
   }
 

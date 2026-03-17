@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
@@ -9,6 +9,7 @@ import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
+import { PhaseEmptyState } from "@/components/phase-empty-state"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -101,6 +102,9 @@ export function ReviewPage() {
     phase: "review",
   })
 
+  const [searchParams] = useSearchParams()
+  const autostart = searchParams.get("autostart") === "1"
+
   const displayContent = existingContent ?? text
 
   const questionInfo =
@@ -123,7 +127,7 @@ export function ReviewPage() {
         if (!cancelled) {
           if (content) {
             setExistingContent(content)
-          } else {
+          } else if (autostart) {
             if (!startedRef.current) {
               startedRef.current = true
               const initialMessages: Message[] = [
@@ -136,7 +140,7 @@ export function ReviewPage() {
         }
       } catch (err) {
         console.error("Failed to load review file:", err)
-        if (!cancelled && !startedRef.current) {
+        if (!cancelled && !startedRef.current && autostart) {
           startedRef.current = true
           const initialMessages: Message[] = [
             { role: "user", content: "请开始需求评审" },
@@ -174,6 +178,15 @@ export function ReviewPage() {
     },
     [messages, text, questionInfo.question, start]
   )
+
+  const handleGenerate = useCallback(() => {
+    startedRef.current = true
+    const initialMessages: Message[] = [
+      { role: "user", content: "请开始需求评审" },
+    ]
+    setMessages(initialMessages)
+    start(initialMessages)
+  }, [start])
 
   const handleRestart = useCallback(() => {
     reset()
@@ -231,6 +244,16 @@ export function ReviewPage() {
           LOADING...
         </span>
       </div>
+    )
+  }
+
+  if (!loading && !existingContent && !text && !isStreaming && !error) {
+    return (
+      <PhaseEmptyState
+        phaseLabel="REVIEW"
+        description="需求评审报告"
+        onGenerate={handleGenerate}
+      />
     )
   }
 

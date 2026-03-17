@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
@@ -9,6 +9,7 @@ import { parseStories, storiesToMarkdown, type Story } from "@/lib/story-parser"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
+import { PhaseEmptyState } from "@/components/phase-empty-state"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -41,6 +42,9 @@ export function StoriesPage() {
     projectId,
     phase: "stories",
   })
+
+  const [searchParams] = useSearchParams()
+  const autostart = searchParams.get("autostart") === "1"
 
   // Parse stories from AI output when streaming completes
   const streamParsedStories = useMemo(() => {
@@ -80,7 +84,7 @@ export function StoriesPage() {
             if (parsed.length > 0) {
               setStories(parsed)
             }
-          } else {
+          } else if (autostart) {
             // No existing file — trigger AI generation
             if (!startedRef.current) {
               startedRef.current = true
@@ -90,7 +94,7 @@ export function StoriesPage() {
         }
       } catch (err) {
         console.error("Failed to load stories file:", err)
-        if (!cancelled && !startedRef.current) {
+        if (!cancelled && !startedRef.current && autostart) {
           startedRef.current = true
           start([{ role: "user", content: "请生成用户故事" }])
         }
@@ -108,6 +112,12 @@ export function StoriesPage() {
   // -------------------------------------------------------------------------
   // Handlers
   // -------------------------------------------------------------------------
+
+  /** Generate stories for the first time */
+  const handleGenerate = useCallback(() => {
+    startedRef.current = true
+    start([{ role: "user", content: "请生成用户故事" }])
+  }, [start])
 
   /** Regenerate stories from AI */
   const handleRegenerate = useCallback(() => {
@@ -175,6 +185,20 @@ export function StoriesPage() {
           LOADING...
         </span>
       </div>
+    )
+  }
+
+  // -------------------------------------------------------------------------
+  // Empty state
+  // -------------------------------------------------------------------------
+
+  if (!loading && !existingMarkdown && !text && !isStreaming && !error) {
+    return (
+      <PhaseEmptyState
+        phaseLabel="STORIES"
+        description="用户故事"
+        onGenerate={handleGenerate}
+      />
     )
   }
 
