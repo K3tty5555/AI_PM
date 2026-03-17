@@ -64,13 +64,22 @@ README.md                  项目介绍
 
 ## 八、开发工具规范
 
+### 8.0 客户端设计规范
+
+客户端（Tauri App）有独立设计规范：**`docs/design-system.md`**，所有新页面、新组件必须遵循。核心要点：
+- 风格：Apple HIG，琥珀金（`#F0A500`）Accent，`#FAFAFA` 背景，8px 圆角
+- 字体：系统字体 `-apple-system`，等宽字体仅限代码场景
+- 侧边栏：220px 毛玻璃（`backdrop-blur-xl`），项目内显示 7 阶段列表
+- 微交互：按钮按压 `scale(0.97)`，导航项 hover 背景过渡，阶段切换 fadeInUp
+- ❌ 禁止：`uppercase tracking-[2px]`、`font-terminal` 用于 UI 元素、终末地风格
+
 ### 8.1 新页面开发 → `frontend-design` 插件
 
-在 `app/src/pages/` 或 `app/src/components/` 下新建页面或大型组件时，**先通过 `frontend-design` 插件**生成视觉初稿，再落地到 Tauri + React 代码。本项目有成熟的设计语言（terminal 字体、黄色 accent、暗色主题），生成时注意与现有风格保持一致。
+在 `app/src/pages/` 或 `app/src/components/` 下新建页面或大型组件时，**先通过 `frontend-design` 插件**生成视觉初稿，再落地到 Tauri + React 代码。生成时告知插件参考 `docs/design-system.md` 规范（Apple HIG 风格，琥珀金 accent）。
 
 ### 8.2 UI/UX 迭代 → `ui-ux-pro-max` 技能
 
-对 app 现有页面（Dashboard、各 phase 页、Settings 等）进行交互优化、信息架构调整时，使用 `ui-ux-pro-max` 技能先输出分析和方案，再落地到代码。
+对 app 现有页面（Dashboard、各 phase 页、Settings 等）进行交互优化、信息架构调整时，使用 `ui-ux-pro-max` 技能先输出分析和方案，再落地到代码。参考基准为 `docs/design-system.md`。
 
 ### 8.3 新技能开发 → `skill-creator` 技能
 
