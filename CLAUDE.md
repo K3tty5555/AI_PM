@@ -62,7 +62,7 @@ README.md                  项目介绍
 - 查看原生 HTML 文件直接用 `file:///绝对路径/文件名.html`，不需要 `python3 -m http.server`
 - 截图/DOM 验证优先用 `browser_run_code` + `page.evaluate()` 而非 `browser_take_screenshot`（后者等待字体加载易超时）
 
-## 八、开发工具规范
+## 开发工具规范
 
 ### 8.0 客户端设计规范
 
