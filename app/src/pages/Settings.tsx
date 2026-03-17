@@ -200,14 +200,12 @@ export function SettingsPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--dark)]"
+          className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]"
         >
           <ChevronLeft className="size-3.5" />
           返回
         </button>
-        <span className="font-terminal text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
-          {"// SETTINGS"}
-        </span>
+        <h1 className="text-base font-semibold text-[var(--text-primary)]">设置</h1>
       </div>
       <div className="h-px bg-[var(--border)]" />
 
@@ -215,9 +213,9 @@ export function SettingsPage() {
       <Card className="hover:shadow-none">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <CardTitle>API_CONFIG</CardTitle>
+            <CardTitle>API 配置</CardTitle>
             <Badge variant={config?.hasConfig || backend === "claude_cli" ? "default" : "outline"}>
-              {backend === "claude_cli" ? "CLI" : config?.hasConfig ? "ACTIVE" : "INACTIVE"}
+              {backend === "claude_cli" ? "CLI" : config?.hasConfig ? "已连接" : "未配置"}
             </Badge>
           </div>
 
@@ -226,14 +224,14 @@ export function SettingsPage() {
             {config?.hasConfig ? (
               <>
                 <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[var(--green)]" />
-                <span className="text-sm text-[var(--dark)]">
+                <span className="text-sm text-[var(--text-primary)]">
                   已自动检测到配置（来源：{SOURCE_LABELS[config.configSource] || config.configSource}）
                 </span>
               </>
             ) : (
               <>
                 <Info className="mt-0.5 size-4 shrink-0 text-[var(--yellow)]" />
-                <span className="text-sm text-[var(--dark)]">
+                <span className="text-sm text-[var(--text-primary)]">
                   未检测到配置，请手动填写
                 </span>
               </>
@@ -245,7 +243,7 @@ export function SettingsPage() {
           <div className="flex flex-col gap-5">
             {/* Backend Selector */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-[var(--dark)]">AI 后端</label>
+              <label className="text-sm font-medium text-[var(--text-primary)]">AI 后端</label>
               <div className="flex flex-col gap-2">
                 <label className="flex cursor-pointer items-start gap-3">
                   <input
@@ -254,10 +252,10 @@ export function SettingsPage() {
                     value="api"
                     checked={backend === "api"}
                     onChange={() => { setBackend("api"); setDirty(true); setCliStatus(null) }}
-                    className="mt-0.5 accent-[var(--yellow)]"
+                    className="mt-0.5 accent-[var(--accent-color)]"
                   />
                   <div>
-                    <span className="text-sm text-[var(--dark)]">API Key 模式</span>
+                    <span className="text-sm text-[var(--text-primary)]">API Key 模式</span>
                     <p className="text-xs text-[var(--text-muted)]">自行配置 API Key，支持 Anthropic 及 OpenAI 兼容接口</p>
                   </div>
                 </label>
@@ -268,10 +266,10 @@ export function SettingsPage() {
                     value="claude_cli"
                     checked={backend === "claude_cli"}
                     onChange={() => { setBackend("claude_cli"); setDirty(true); setCliStatus(null) }}
-                    className="mt-0.5 accent-[var(--yellow)]"
+                    className="mt-0.5 accent-[var(--accent-color)]"
                   />
                   <div className="flex-1">
-                    <span className="text-sm text-[var(--dark)]">Claude Code CLI</span>
+                    <span className="text-sm text-[var(--text-primary)]">Claude Code CLI</span>
                     <p className="text-xs text-[var(--text-muted)]">复用本机已登录的 Claude Code，无需单独配置 Key</p>
                     {backend === "claude_cli" && (
                       <div className="mt-2 flex items-center gap-2">
@@ -305,7 +303,7 @@ export function SettingsPage() {
               <>
                 {/* API Key */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-[var(--dark)]">
+                  <label className="text-sm font-medium text-[var(--text-primary)]">
                     认证密钥
                   </label>
                   <div className="relative">
@@ -317,12 +315,12 @@ export function SettingsPage() {
                         setDirty(true)
                       }}
                       placeholder={config?.apiKey || "输入 API Key"}
-                      className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 pr-10 font-terminal text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                      className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 pr-10 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowKey(!showKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--dark)]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
                       aria-label={showKey ? "隐藏密钥" : "显示密钥"}
                     >
                       {showKey ? (
@@ -339,7 +337,7 @@ export function SettingsPage() {
 
                 {/* Base URL */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-[var(--dark)]">
+                  <label className="text-sm font-medium text-[var(--text-primary)]">
                     API 地址（可选）
                   </label>
                   <input
@@ -350,7 +348,7 @@ export function SettingsPage() {
                       setDirty(true)
                     }}
                     placeholder="https://api.anthropic.com"
-                    className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-terminal text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                    className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
                   />
                   <span className="text-xs text-[var(--text-muted)]">
                     留空则使用官方地址，代理用户填写代理地址
@@ -359,7 +357,7 @@ export function SettingsPage() {
 
                 {/* Model */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-[var(--dark)]">
+                  <label className="text-sm font-medium text-[var(--text-primary)]">
                     模型
                   </label>
                   <input
@@ -370,7 +368,7 @@ export function SettingsPage() {
                       setDirty(true)
                     }}
                     placeholder="claude-sonnet-4-6"
-                    className="h-9 w-full border border-[var(--border)] bg-[var(--background)] px-3 font-terminal text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                    className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
                   />
                 </div>
               </>
@@ -454,11 +452,11 @@ export function SettingsPage() {
       {/* Data Directory Card */}
       <Card className="hover:shadow-none">
         <CardHeader>
-          <CardTitle>DATA_DIR</CardTitle>
+          <CardTitle>项目目录</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-[var(--dark)]">
+            <label className="text-sm font-medium text-[var(--text-primary)]">
               项目文件存储目录
             </label>
             <div className="flex gap-2">
@@ -471,7 +469,7 @@ export function SettingsPage() {
                   setDirSaveResult(null)
                 }}
                 placeholder="~/Documents/AI PM"
-                className="h-9 flex-1 border border-[var(--border)] bg-[var(--background)] px-3 font-terminal text-sm text-[var(--dark)] placeholder:text-[var(--text-muted)] outline-none transition-colors duration-[0.28s] focus:border-[var(--yellow)] focus:ring-2 focus:ring-[var(--yellow)]/50"
+                className="h-9 flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
               />
               <Button variant="ghost" size="sm" onClick={handlePickDir} className="gap-1.5 shrink-0">
                 <FolderOpen className="size-4" />
@@ -512,11 +510,11 @@ export function SettingsPage() {
       {/* About Card */}
       <Card className="hover:shadow-none">
         <CardHeader>
-          <CardTitle>ABOUT</CardTitle>
+          <CardTitle>关于</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-2">
-            <p className="font-terminal text-sm text-[var(--dark)]">
+            <p className="text-sm text-[var(--text-primary)]">
               AI PM Desktop v0.1.0
             </p>
             <p className="text-sm text-[var(--text-muted)]">
