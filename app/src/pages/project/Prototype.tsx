@@ -10,6 +10,7 @@ import { open } from "@tauri-apps/plugin-shell"
 import { cn } from "@/lib/utils"
 
 const PROTOTYPE_FILE = "06-prototype.html"
+const DEVICE_WIDTHS = { mobile: 375, tablet: 768, desktop: 0 } as const
 
 export function PrototypePage() {
   const { id: projectId } = useParams<{ id: string }>()
@@ -21,7 +22,6 @@ export function PrototypePage() {
   const [outputDir, setOutputDir] = useState<string>("")
   const [advancing, setAdvancing] = useState(false)
   const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">("desktop")
-  const DEVICE_WIDTHS = { mobile: 375, tablet: 768, desktop: 0 }
   const startedRef = useRef(false)
 
   const { text, isStreaming, error, outputFile, start, reset } = useAiStream({
@@ -191,7 +191,7 @@ export function PrototypePage() {
                 </button>
               ))}
             </div>
-            <Button variant="ghost" size="sm" onClick={handleOpenInBrowser} className="gap-1.5 text-xs">
+            <Button variant="ghost" size="sm" onClick={handleOpenInBrowser} disabled={!outputDir} className="gap-1.5 text-xs">
               <ExternalLink className="size-3" />
               在浏览器中打开
             </Button>
