@@ -24,6 +24,7 @@ pub struct RunToolArgs {
     pub user_input: String,
     /// Optional: attach a file path (for data analysis)
     pub file_path: Option<String>,
+    pub project_id: Option<String>,
 }
 
 #[tauri::command]
@@ -138,6 +139,29 @@ pub async fn run_tool(
             // I2: tools_dir already computed above; save output there
             let out_path = tools_dir.join("output.md");
             let _ = fs::write(&out_path, &result.full_text);
+
+            // Additionally save to project context dir if project_id was provided
+            if let Some(ref pid) = args.project_id {
+                let project_output_dir: Option<String> = {
+                    let db = state.db.lock().ok();
+                    db.and_then(|db| {
+                        db.query_row(
+                            "SELECT output_dir FROM projects WHERE id = ?1",
+                            rusqlite::params![pid],
+                            |row| row.get(0),
+                        ).ok()
+                    })
+                };
+                if let Some(output_dir) = project_output_dir {
+                    let context_dir = Path::new(&output_dir).join("context");
+                    let _ = fs::create_dir_all(&context_dir);
+                    // Short name: strip "ai-pm-" prefix
+                    let short_name = args.tool_name.strip_prefix("ai-pm-").unwrap_or(&args.tool_name);
+                    let date_str = chrono::Utc::now().format("%Y-%m-%d").to_string();
+                    let context_file = context_dir.join(format!("{}-{}.md", short_name, date_str));
+                    let _ = fs::write(&context_file, &result.full_text);
+                }
+            }
 
             let done_payload = serde_json::json!({
                 "outputFile": out_path.to_string_lossy(),
