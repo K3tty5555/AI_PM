@@ -7,7 +7,7 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { open } from "@tauri-apps/plugin-shell"
-import { cn } from "@/lib/utils"
+import { cn, extractStreamStatus } from "@/lib/utils"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 
@@ -207,6 +207,12 @@ export function PrototypePage() {
       {isStreaming && (
         <div className="mt-4">
           <ProgressBar value={progressValue} animated />
+          {isStreaming && text === ""
+            ? <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+            : extractStreamStatus(text)
+              ? <p className="mt-2 font-terminal text-xs tracking-[1px] text-[var(--text-muted)]">{extractStreamStatus(text)}</p>
+              : null
+          }
           <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
             正在生成原型...{text.length > 0 && ` (${text.length} 字节)`}
           </p>
