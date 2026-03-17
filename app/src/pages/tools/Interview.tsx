@@ -1,9 +1,11 @@
 import { useState, useCallback } from "react"
+import { useSearchParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { InlineChat } from "@/components/inline-chat"
+import { ProjectSelector } from "@/components/project-selector"
 import { useToolStream } from "@/hooks/use-tool-stream"
 import { cn } from "@/lib/utils"
 
@@ -26,7 +28,14 @@ export function ToolInterviewPage() {
   const [context, setContext] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [chatHistory, setChatHistory] = useState<Array<{ q: string; a: string }>>([])
-  const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } = useToolStream("ai-pm-interview")
+  const [searchParams] = useSearchParams()
+  const [boundProjectId, setBoundProjectId] = useState<string | null>(() => {
+    const fromUrl = searchParams.get("projectId")
+    if (fromUrl) return fromUrl
+    return localStorage.getItem("tool-binding:interview") ?? null
+  })
+  const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } =
+    useToolStream("ai-pm-interview", boundProjectId ?? undefined)
 
   const handleStart = useCallback(() => {
     if (!context.trim()) return
@@ -74,6 +83,12 @@ export function ToolInterviewPage() {
         <span className="text-sm text-[var(--text-muted)]">调研访谈</span>
       </div>
       <div className="h-px bg-[var(--border)]" />
+      <ProjectSelector
+        toolKey="interview"
+        value={boundProjectId}
+        onChange={setBoundProjectId}
+        className="mt-4"
+      />
 
       {/* 初始设置 */}
       {phase === "setup" && (
