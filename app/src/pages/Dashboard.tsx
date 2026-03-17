@@ -49,6 +49,13 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+
+  const filteredProjects = search.trim()
+    ? projects.filter((p) =>
+        p.name.toLowerCase().includes(search.trim().toLowerCase())
+      )
+    : projects
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -205,9 +212,22 @@ export function DashboardPage() {
         {/* Divider */}
         <div className="mb-6 h-px bg-[var(--border)]" />
 
+        {/* Search */}
+        {projects.length > 3 && (
+          <div className="mb-4">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="搜索项目..."
+              className="w-full h-9 px-3 text-sm bg-transparent border border-[var(--border)] placeholder:text-[var(--text-muted)] text-[var(--dark)] outline-none focus:border-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
+            />
+          </div>
+        )}
+
         {/* Project cards */}
         <div className="flex flex-col gap-4">
-          {projects.map((project, index) => {
+          {filteredProjects.map((project, index) => {
             const isComplete =
               project.completedCount >= project.totalPhases
             const progress =
@@ -273,6 +293,14 @@ export function DashboardPage() {
               </div>
             )
           })}
+          {filteredProjects.length === 0 && search && (
+            <div className="py-16 text-center">
+              <p className="font-terminal text-xs text-[var(--text-muted)] uppercase tracking-[2px]">
+                NO RESULTS
+              </p>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">没有匹配「{search}」的项目</p>
+            </div>
+          )}
         </div>
       </div>
 
