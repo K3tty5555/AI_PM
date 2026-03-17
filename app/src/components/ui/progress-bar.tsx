@@ -1,9 +1,7 @@
 import { cn } from "@/lib/utils"
 
 interface ProgressBarProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Progress value between 0 and 100 */
   value: number
-  /** Whether to animate the fill on mount */
   animated?: boolean
 }
 
@@ -23,20 +21,21 @@ function ProgressBar({
       aria-valuemin={0}
       aria-valuemax={100}
       className={cn(
-        "relative h-2 w-full overflow-hidden",
-        "bg-[var(--secondary)] border border-[var(--border)]",
+        "relative h-0.5 w-full overflow-hidden rounded-full",
+        "bg-[var(--border)]",
         className
       )}
       {...props}
     >
       <div
         className={cn(
-          "h-full transition-[width] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
-          animated && "animate-[progressFill_0.8s_cubic-bezier(0.16,1,0.3,1)_forwards]"
+          "h-full rounded-full",
+          "transition-[width] duration-[300ms] ease-[var(--ease-standard)]",
+          animated && "animate-[progressFill_0.8s_var(--ease-decelerate)_forwards]"
         )}
         style={{
           width: `${clampedValue}%`,
-          background: "linear-gradient(90deg, #fffa00, rgba(255, 250, 0, 0.3))",
+          background: "var(--accent-color)",
           ["--progress-value" as string]: `${clampedValue}%`,
         }}
       />

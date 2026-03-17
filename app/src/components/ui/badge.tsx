@@ -5,17 +5,18 @@ const badgeVariants = cva(
   [
     "inline-flex items-center",
     "px-2.5 py-0.5",
-    "text-xs font-medium uppercase tracking-[1.5px]",
-    "font-terminal",
-    "border",
-    "transition-colors duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
+    "rounded-full",
+    "text-xs font-medium",
+    "transition-colors duration-[200ms]",
     "select-none",
   ].join(" "),
   {
     variants: {
       variant: {
-        default: "bg-[var(--yellow)] text-[var(--dark)] border-transparent",
-        outline: "bg-transparent text-[var(--text-muted)] border-[var(--border)]",
+        default: "bg-[var(--accent-light)] text-[var(--accent-color)]",
+        outline: "bg-transparent text-[var(--text-secondary)] border border-[var(--border)]",
+        success: "bg-[var(--success-light)] text-[var(--success)]",
+        destructive: "bg-[var(--destructive)]/10 text-[var(--destructive)]",
       },
     },
     defaultVariants: {
