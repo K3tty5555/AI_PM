@@ -35,7 +35,15 @@ function MermaidRenderer({ chart }: MermaidRendererProps) {
         })
 
         const id = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-        const { svg } = await mermaid.render(id, chart.trim())
+        let svg: string
+        try {
+          ;({ svg } = await mermaid.render(id, chart.trim()))
+        } catch (renderErr) {
+          // Mermaid injects a #d{id} error element into document.body before throwing.
+          // Remove it so it doesn't appear floating at the bottom of the page.
+          document.getElementById(`d${id}`)?.remove()
+          throw renderErr
+        }
 
         if (!cancelled && ref.current) {
           ref.current.innerHTML = svg
