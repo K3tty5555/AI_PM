@@ -166,7 +166,7 @@ export function StoriesPage() {
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
-      navigate(`/project/${projectId}/prd`)
+      navigate(`/project/${projectId}/prd?autostart=1`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)

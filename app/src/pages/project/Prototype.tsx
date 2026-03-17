@@ -140,7 +140,7 @@ export function PrototypePage() {
         outputFile: outputFile ?? PROTOTYPE_FILE,
       })
       await api.advancePhase(projectId)
-      navigate(`/project/${projectId}/review`)
+      navigate(`/project/${projectId}/review?autostart=1`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
