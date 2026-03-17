@@ -49,6 +49,11 @@ export interface KnowledgeEntry {
   content: string
 }
 
+export interface ContextFile {
+  name: string
+  preview: string
+}
+
 // ─── API functions ─────────────────────────────────────────────────────────
 
 export const api = {
@@ -94,4 +99,7 @@ export const api = {
     invoke<KnowledgeEntry>("add_knowledge", { args }),
   deleteKnowledge: (category: string, id: string) =>
     invoke<void>("delete_knowledge", { category, id }),
+
+  // Context files
+  listProjectContext: (projectId: string) => invoke<ContextFile[]>("list_project_context", { projectId }),
 }

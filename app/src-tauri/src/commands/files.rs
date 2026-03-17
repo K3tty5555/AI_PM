@@ -1,5 +1,5 @@
 use rusqlite::params;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use tauri::State;
@@ -90,4 +90,57 @@ pub fn read_file(path: String) -> Result<String, String> {
         return Err(format!("文件过大（{}MB），最大支持 10MB", metadata.len() / 1024 / 1024));
     }
     std::fs::read_to_string(&path).map_err(|e| format!("读取文件失败：{}", e))
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextFile {
+    /// Filename only, e.g. "ai-pm-interview-2026-03-17.md"
+    pub name: String,
+    /// First ~200 chars of content for tooltip preview
+    pub preview: String,
+}
+
+#[tauri::command]
+pub fn list_project_context(
+    state: State<AppState>,
+    project_id: String,
+) -> Result<Vec<ContextFile>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        match db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ) {
+            Ok(dir) => dir,
+            Err(_) => return Ok(vec![]),
+        }
+    };
+
+    let context_dir = Path::new(&output_dir).join("context");
+    if !context_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut files: Vec<ContextFile> = fs::read_dir(&context_dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            e.path().extension().and_then(|x| x.to_str()) == Some("md")
+        })
+        .filter_map(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            let content = fs::read_to_string(e.path()).unwrap_or_default();
+            let preview: String = content.chars().take(200).collect();
+            if preview.is_empty() {
+                None
+            } else {
+                Some(ContextFile { name, preview })
+            }
+        })
+        .collect();
+
+    files.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(files)
 }
