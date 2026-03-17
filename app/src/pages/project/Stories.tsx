@@ -10,6 +10,7 @@ import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
+import { ContextPills } from "@/components/context-pills"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -33,6 +34,7 @@ export function StoriesPage() {
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [excludedContext, setExcludedContext] = useState<string[]>([])
 
   // Prevent double-start in StrictMode
   const startedRef = useRef(false)
@@ -116,8 +118,8 @@ export function StoriesPage() {
   /** Generate stories for the first time */
   const handleGenerate = useCallback(() => {
     startedRef.current = true
-    start([{ role: "user", content: "请生成用户故事" }])
-  }, [start])
+    start([{ role: "user", content: "请生成用户故事" }], { excludedContext })
+  }, [start, excludedContext])
 
   /** Regenerate stories from AI */
   const handleRegenerate = useCallback(() => {
@@ -125,8 +127,8 @@ export function StoriesPage() {
     setStories([])
     setExistingMarkdown(null)
     startedRef.current = true
-    start([{ role: "user", content: "请重新生成用户故事" }])
-  }, [reset, start])
+    start([{ role: "user", content: "请重新生成用户故事" }], { excludedContext })
+  }, [reset, start, excludedContext])
 
   /** Go back to analysis */
   const handleBack = useCallback(() => {
@@ -237,6 +239,12 @@ export function StoriesPage() {
       </div>
 
       <div className="h-px bg-[var(--border)]" />
+
+      <ContextPills
+        projectId={projectId!}
+        onExcludeChange={setExcludedContext}
+        className="border-b border-[var(--border)]"
+      />
 
       {/* Streaming progress */}
       {isStreaming && (

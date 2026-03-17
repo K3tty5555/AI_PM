@@ -7,6 +7,7 @@ import { AnalysisCards } from "@/components/analysis-cards"
 import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
+import { ContextPills } from "@/components/context-pills"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
@@ -108,6 +109,7 @@ export function AnalysisPage() {
   const [chatHistory, setChatHistory] = useState<ChatRound[]>([])
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [excludedContext, setExcludedContext] = useState<string[]>([])
 
   // Prevent double-start of AI stream in React StrictMode
   const startedRef = useRef(false)
@@ -239,8 +241,8 @@ export function AnalysisPage() {
     const initialMessages: Message[] = [{ role: "user", content: "请开始分析" }]
     setMessages(initialMessages)
     startedRef.current = true
-    start(initialMessages)
-  }, [start])
+    start(initialMessages, { excludedContext })
+  }, [start, excludedContext])
 
   /** Restart analysis from scratch */
   const handleRestart = useCallback(() => {
@@ -252,8 +254,8 @@ export function AnalysisPage() {
     ]
     setMessages(initialMessages)
     startedRef.current = true
-    start(initialMessages)
-  }, [reset, start])
+    start(initialMessages, { excludedContext })
+  }, [reset, start, excludedContext])
 
   /** Go back to requirement page */
   const handleBack = useCallback(() => {
@@ -319,6 +321,11 @@ export function AnalysisPage() {
           <Badge variant="outline">ANALYSIS</Badge>
         </div>
         <div className="h-px bg-[var(--border)]" />
+        <ContextPills
+          projectId={projectId!}
+          onExcludeChange={setExcludedContext}
+          className="border-b border-[var(--border)]"
+        />
         <PhaseEmptyState
           phaseLabel="ANALYSIS"
           description="需求分析报告"
@@ -351,6 +358,12 @@ export function AnalysisPage() {
       </div>
 
       <div className="h-px bg-[var(--border)]" />
+
+      <ContextPills
+        projectId={projectId!}
+        onExcludeChange={setExcludedContext}
+        className="border-b border-[var(--border)]"
+      />
 
       {/* Streaming progress */}
       {isStreaming && (
