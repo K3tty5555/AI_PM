@@ -85,7 +85,7 @@ function PrdToc({ markdown, activeSection, onSectionClick }: PrdTocProps) {
     >
       {/* Title */}
       <div className="mb-3 pb-2 border-b border-[var(--border)]">
-        <span className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace]">
+        <span className="text-[10px] font-semibold uppercase tracking-[2px] text-[var(--text-muted)] font-terminal">
           TOC_NAV
         </span>
       </div>
@@ -117,7 +117,7 @@ function PrdToc({ markdown, activeSection, onSectionClick }: PrdTocProps) {
                 <span
                   className={cn(
                     "inline-block w-8 mr-1.5 text-[10px]",
-                    "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+                    "font-terminal",
                     "tracking-[0.5px]",
                     isActive
                       ? "text-[var(--dark)] font-semibold"

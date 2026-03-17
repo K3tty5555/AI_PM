@@ -188,7 +188,7 @@ export function DashboardPage() {
       <div className="mx-auto max-w-[800px]">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
-          <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
+          <span className="font-terminal text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
             // PROJECTS
           </span>
           <Button
@@ -247,7 +247,7 @@ export function DashboardPage() {
                           {phaseLabel}
                         </Badge>
                       </div>
-                      <p className="mt-1.5 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+                      <p className="mt-1.5 font-terminal text-xs text-[var(--text-muted)]">
                         {formatDate(project.updatedAt)}
                       </p>
                     </div>
@@ -256,7 +256,7 @@ export function DashboardPage() {
                     <div className="flex shrink-0 items-center gap-3">
                       <div className="flex w-[140px] items-center gap-3">
                         <ProgressBar value={progress} animated className="h-2 flex-1" />
-                        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs tabular-nums text-[var(--text-muted)]">
+                        <span className="font-terminal text-xs tabular-nums text-[var(--text-muted)]">
                           {project.completedCount}/{project.totalPhases}
                         </span>
                       </div>

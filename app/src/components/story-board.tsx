@@ -83,7 +83,7 @@ function AddStoryForm({
       )}
     >
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center">
-        <label className="text-xs text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[1px]">
+        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
           角色
         </label>
         <input
@@ -95,7 +95,7 @@ function AddStoryForm({
           autoFocus
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[1px]">
+        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
           想要
         </label>
         <input
@@ -106,7 +106,7 @@ function AddStoryForm({
           className={inputClass}
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[1px]">
+        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
           以便
         </label>
         <input
@@ -117,7 +117,7 @@ function AddStoryForm({
           className={inputClass}
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[1px]">
+        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
           优先级
         </label>
         <div className="flex gap-2">
@@ -129,7 +129,7 @@ function AddStoryForm({
               className={cn(
                 "px-3 py-1 text-xs font-medium border cursor-pointer",
                 "transition-all duration-150",
-                "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+                "font-terminal",
                 priority === p
                   ? "border-[var(--yellow)] bg-[var(--yellow)] text-[var(--dark)]"
                   : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--yellow)]",
@@ -202,10 +202,10 @@ function PriorityGroup({
         >
           &#x25B6;
         </span>
-        <h3 className="text-xs font-semibold uppercase tracking-[1.5px] text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace]">
+        <h3 className="text-xs font-semibold uppercase tracking-[1.5px] text-[var(--text-muted)] font-terminal">
           {label}
         </h3>
-        <span className="text-xs text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace]">
+        <span className="text-xs text-[var(--text-muted)] font-terminal">
           ({stories.length})
         </span>
       </button>
@@ -414,7 +414,7 @@ function StoryBoard({ stories, onStoriesChange, isStreaming }: StoryBoardProps) 
           className={cn(
             "pt-3 border-t border-[var(--border)]",
             "text-xs text-[var(--text-muted)]",
-            "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+            "font-terminal",
             "tracking-[1px]",
           )}
         >

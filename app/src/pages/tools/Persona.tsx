@@ -52,7 +52,7 @@ export function ToolPersonaPage() {
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              "px-4 py-2 text-xs font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[1px] transition-colors",
+              "px-4 py-2 text-xs font-terminal uppercase tracking-[1px] transition-colors",
               tab === t
                 ? "border-b-2 border-[var(--yellow)] text-[var(--dark)]"
                 : "text-[var(--text-muted)] hover:text-[var(--dark)]"
@@ -100,7 +100,7 @@ export function ToolPersonaPage() {
             <div className="mt-6">
               <ProgressBar value={progressValue} animated />
               {isThinking && <p className="mt-2 text-sm text-[var(--text-muted)] animate-pulse">正在思考...</p>}
-              <p className="mt-2 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+              <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
                 {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
               </p>
             </div>
@@ -116,7 +116,7 @@ export function ToolPersonaPage() {
           {text && (
             <div className="mt-6">
               <div className="mb-3 flex items-center justify-between">
-                <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs uppercase tracking-[2px] text-[var(--text-muted)]">风格分析结果</span>
+                <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">风格分析结果</span>
                 {!isStreaming && (
                   <Button variant="ghost" size="sm" onClick={() => { reset(); setFileContent(""); setFilePath(""); setFileError(null) }}>重新分析</Button>
                 )}
