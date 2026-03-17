@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-import { useSearchParams } from "react-router-dom"
 import { api, type ProjectSummary } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
