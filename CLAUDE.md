@@ -62,6 +62,25 @@ README.md                  项目介绍
 - 查看原生 HTML 文件直接用 `file:///绝对路径/文件名.html`，不需要 `python3 -m http.server`
 - 截图/DOM 验证优先用 `browser_run_code` + `page.evaluate()` 而非 `browser_take_screenshot`（后者等待字体加载易超时）
 
+## 八、开发工具规范
+
+### 8.1 新页面开发 → `frontend-design` 插件
+
+新建页面或大型组件时，**尝试先通过 `frontend-design` 插件**生成初稿，再在此基础上细化。
+不要凭空徒手写页面布局，避免产出平庸的 AI 默认风格界面。
+
+### 8.2 UI/UX 迭代 → `ui-ux-pro-max` 技能
+
+对现有页面进行交互优化、信息架构调整、设计系统完善时，使用 `ui-ux-pro-max` 技能进行分析和方案输出，再落地到代码。
+
+### 8.3 新技能开发 → `skill-creator` 技能
+
+在 `workspace/.claude/commands/` 或 `智学网小龙虾/.claude/commands/` 下**新建 skill 文件时**，通过 `skill-creator` 技能完成起草、测试和 description 优化，确保 skill 能被正确触发且输出质量稳定。
+
+### 8.4 自我迭代 → `self-improving` 技能
+
+项目开发过程中，遇到流程不顺、规范缺失、反复踩坑等情况时，调用 `self-improving` 技能对当前工作流和规范进行复盘和改进，将经验沉淀回 `CLAUDE.md` 或对应 skill 文件。
+
 ## 禁止事项
 
 - 不自动 git commit/push，除非用户明确要求
