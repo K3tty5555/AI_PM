@@ -258,7 +258,7 @@ export function ResearchPage() {
         <div className="mt-4">
           <ProgressBar value={progressValue} animated />
           {isThinking && (
-            <p className="mt-2 text-sm text-[var(--text-muted)] animate-pulse">正在思考...</p>
+            <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
           )}
           <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}

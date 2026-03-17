@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { api } from "@/lib/tauri-api"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface NewProjectDialogProps {
   open: boolean
@@ -117,15 +118,23 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
 
           {/* Team mode toggle */}
           <div className="mb-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={teamMode}
-                onChange={(e) => setTeamMode(e.target.checked)}
-                className="accent-[var(--yellow)]"
-              />
+            <button
+              type="button"
+              onClick={() => setTeamMode(!teamMode)}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
+              <span className={cn(
+                "inline-flex h-4 w-4 shrink-0 items-center justify-center border transition-colors duration-[var(--duration-terminal)]",
+                teamMode
+                  ? "border-[var(--yellow)] bg-[var(--yellow)]"
+                  : "border-[var(--border)] bg-transparent group-hover:border-[var(--yellow)]"
+              )}>
+                {teamMode && (
+                  <span className="block h-2 w-2 bg-[var(--dark)]" />
+                )}
+              </span>
               <span className="text-sm text-[var(--text-muted)]">多代理模式（复杂需求）</span>
-            </label>
+            </button>
           </div>
 
           {/* Actions */}
