@@ -27,7 +27,7 @@ interface UseToolStreamReturn {
   reset: () => void
 }
 
-export function useToolStream(toolName: string): UseToolStreamReturn {
+export function useToolStream(toolName: string, projectId?: string): UseToolStreamReturn {
   const [text, setText] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -87,7 +87,7 @@ export function useToolStream(toolName: string): UseToolStreamReturn {
         }),
       ]).then((unlisteners) => {
         unlistenersRef.current = unlisteners
-        api.runTool({ toolName, userInput, filePath }).catch((err: unknown) => {
+        api.runTool({ toolName, userInput, filePath, projectId }).catch((err: unknown) => {
           unlistenersRef.current.forEach((fn) => fn())
           unlistenersRef.current = []
           setIsStreaming(false)
@@ -95,7 +95,7 @@ export function useToolStream(toolName: string): UseToolStreamReturn {
         })
       })
     },
-    [toolName]
+    [toolName, projectId]
   )
 
   return { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset }
