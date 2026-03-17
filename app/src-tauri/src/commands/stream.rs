@@ -71,6 +71,7 @@ fn build_system_prompt(
     skill_name: &str,
     input_files: &[&str],
     user_input: Option<&str>,
+    team_mode: bool,
 ) -> Result<String, String> {
     let skill_content = load_skill(skills_root, skill_name)?;
 
@@ -113,6 +114,14 @@ fn build_system_prompt(
         ctx.push("### 用户输入".to_string());
         ctx.push(String::new());
         ctx.push(input.to_string());
+    }
+
+    // Team mode: inject --team marker before non-interactive block
+    if team_mode {
+        ctx.push(String::new());
+        ctx.push("### 多代理协作模式（--team）".to_string());
+        ctx.push(String::new());
+        ctx.push("本次以 `--team` 模式运行：按技能说明中的多代理协作路径执行，产出更全面深入。".to_string());
     }
 
     // Non-interactive mode hint — must come last so it overrides skill instructions
@@ -178,22 +187,18 @@ pub async fn start_stream(
         .to_string_lossy()
         .to_string();
 
-    let mut system_prompt = build_system_prompt(
+    let system_prompt = build_system_prompt(
         &skills_root,
         &output_dir,
         &project_name,
         skill_name,
         input_files,
         last_user_msg,
+        team_mode,
     ).map_err(|e| {
         let _ = app.emit("stream_error", &e);
         e
     })?;
-
-    // Team mode: inject --team marker before non-interactive block
-    if team_mode {
-        system_prompt.push_str("\n\n### 多代理协作模式（--team）\n\n本次以 `--team` 模式运行：按技能说明中的多代理协作路径执行，产出更全面深入。");
-    }
 
     let config = read_config_internal(&state.config_dir)
         .ok_or_else(|| {
