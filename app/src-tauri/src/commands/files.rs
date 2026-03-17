@@ -127,7 +127,7 @@ pub fn list_project_context(
         .map_err(|e| e.to_string())?
         .filter_map(|e| e.ok())
         .filter(|e| {
-            e.path().extension().and_then(|x| x.to_str()) == Some("md")
+            e.path().is_file() && e.path().extension().and_then(|x| x.to_str()) == Some("md")
         })
         .filter_map(|e| {
             let name = e.file_name().to_string_lossy().to_string();
