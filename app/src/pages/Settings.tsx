@@ -256,7 +256,7 @@ export function SettingsPage() {
                   />
                   <div>
                     <span className="text-sm text-[var(--text-primary)]">API Key 模式</span>
-                    <p className="text-xs text-[var(--text-muted)]">自行配置 API Key，支持 Anthropic 及 OpenAI 兼容接口</p>
+                    <p className="text-xs text-[var(--text-secondary)]">自行配置 API Key，支持 Anthropic 及 OpenAI 兼容接口</p>
                   </div>
                 </label>
                 <label className="flex cursor-pointer items-start gap-3">
@@ -270,7 +270,7 @@ export function SettingsPage() {
                   />
                   <div className="flex-1">
                     <span className="text-sm text-[var(--text-primary)]">Claude Code CLI</span>
-                    <p className="text-xs text-[var(--text-muted)]">复用本机已登录的 Claude Code，无需单独配置 Key</p>
+                    <p className="text-xs text-[var(--text-secondary)]">复用本机已登录的 Claude Code，无需单独配置 Key</p>
                     {backend === "claude_cli" && (
                       <div className="mt-2 flex items-center gap-2">
                         <Button
@@ -320,7 +320,7 @@ export function SettingsPage() {
                     <button
                       type="button"
                       onClick={() => setShowKey(!showKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                       aria-label={showKey ? "隐藏密钥" : "显示密钥"}
                     >
                       {showKey ? (
@@ -330,7 +330,7 @@ export function SettingsPage() {
                       )}
                     </button>
                   </div>
-                  <span className="text-xs text-[var(--text-muted)]">
+                  <span className="text-xs text-[var(--text-secondary)]">
                     不限格式，支持 API Key、代理凭证等
                   </span>
                 </div>
@@ -350,7 +350,7 @@ export function SettingsPage() {
                     placeholder="https://api.anthropic.com"
                     className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
                   />
-                  <span className="text-xs text-[var(--text-muted)]">
+                  <span className="text-xs text-[var(--text-secondary)]">
                     留空则使用官方地址，代理用户填写代理地址
                   </span>
                 </div>
@@ -476,7 +476,7 @@ export function SettingsPage() {
                 选择
               </Button>
             </div>
-            <span className="text-xs text-[var(--text-muted)]">
+            <span className="text-xs text-[var(--text-secondary)]">
               所有项目的 PRD、报告等输出文件存放位置
             </span>
           </div>
@@ -517,7 +517,7 @@ export function SettingsPage() {
             <p className="text-sm text-[var(--text-primary)]">
               AI PM Desktop v0.1.0
             </p>
-            <p className="text-sm text-[var(--text-muted)]">
+            <p className="text-sm text-[var(--text-secondary)]">
               基于 Claude API 的产品经理工作台
             </p>
           </div>
