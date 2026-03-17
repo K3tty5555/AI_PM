@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
+import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
@@ -101,6 +102,9 @@ export function ResearchPage() {
     phase: "research",
   })
 
+  const [searchParams] = useSearchParams()
+  const autostart = searchParams.get("autostart") === "1"
+
   const displayContent = existingContent ?? text
 
   const questionInfo =
@@ -123,7 +127,7 @@ export function ResearchPage() {
         if (!cancelled) {
           if (content) {
             setExistingContent(content)
-          } else {
+          } else if (autostart) {
             if (!startedRef.current) {
               startedRef.current = true
               const initialMessages: Message[] = [
@@ -136,7 +140,7 @@ export function ResearchPage() {
         }
       } catch (err) {
         console.error("Failed to load research file:", err)
-        if (!cancelled && !startedRef.current) {
+        if (!cancelled && !startedRef.current && autostart) {
           startedRef.current = true
           const initialMessages: Message[] = [
             { role: "user", content: "请开始竞品研究" },
@@ -174,6 +178,13 @@ export function ResearchPage() {
     },
     [messages, text, questionInfo.question, start]
   )
+
+  const handleGenerate = useCallback(() => {
+    const initialMessages: Message[] = [{ role: "user", content: "请开始竞品研究" }]
+    setMessages(initialMessages)
+    startedRef.current = true
+    start(initialMessages)
+  }, [start])
 
   const handleRestart = useCallback(() => {
     reset()
@@ -229,6 +240,23 @@ export function ResearchPage() {
         <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
           LOADING...
         </span>
+      </div>
+    )
+  }
+
+  // Empty state — no file, no autostart, not currently streaming
+  if (!loading && !existingContent && !text && !isStreaming && !error) {
+    return (
+      <div className="mx-auto w-full max-w-[720px]">
+        <div className="mb-6 flex items-center justify-between">
+          <Badge variant="outline">RESEARCH</Badge>
+        </div>
+        <div className="h-px bg-[var(--border)]" />
+        <PhaseEmptyState
+          phaseLabel="RESEARCH"
+          description="竞品研究报告"
+          onGenerate={handleGenerate}
+        />
       </div>
     )
   }
