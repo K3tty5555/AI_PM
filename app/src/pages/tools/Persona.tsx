@@ -12,6 +12,7 @@ export function ToolPersonaPage() {
   const [tab, setTab] = useState<"analyze" | "list">("analyze")
   const [filePath, setFilePath] = useState("")
   const [fileContent, setFileContent] = useState("")
+  const [fileError, setFileError] = useState<string | null>(null)
   const { text, isStreaming, isThinking, elapsedSeconds, error, run, reset } = useToolStream("ai-pm-persona")
 
   const handleSelectFile = useCallback(async () => {
@@ -21,8 +22,9 @@ export function ToolPersonaPage() {
       try {
         const content = await api.readFile(selected)
         setFileContent(content)
+        setFileError(null)
       } catch (err) {
-        console.error(err)
+        setFileError(String(err))
       }
     }
   }, [])
@@ -83,6 +85,9 @@ export function ToolPersonaPage() {
                 />
                 <Button variant="ghost" size="sm" onClick={handleSelectFile}>选择文件</Button>
               </div>
+              {fileError && (
+                <p className="mt-2 text-xs text-[var(--destructive)]">{fileError}</p>
+              )}
               {fileContent && (
                 <div className="mt-3 flex justify-end">
                   <Button variant="primary" onClick={handleAnalyze}>开始分析</Button>
@@ -104,7 +109,7 @@ export function ToolPersonaPage() {
           {error && (
             <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
               <p className="text-sm text-[var(--destructive)]">{error}</p>
-              <Button variant="ghost" size="sm" onClick={() => { reset(); setFileContent(""); setFilePath("") }} className="mt-2">重置</Button>
+              <Button variant="ghost" size="sm" onClick={() => { reset(); setFileContent(""); setFilePath(""); setFileError(null) }} className="mt-2">重置</Button>
             </div>
           )}
 
@@ -113,7 +118,7 @@ export function ToolPersonaPage() {
               <div className="mb-3 flex items-center justify-between">
                 <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs uppercase tracking-[2px] text-[var(--text-muted)]">风格分析结果</span>
                 {!isStreaming && (
-                  <Button variant="ghost" size="sm" onClick={() => { reset(); setFileContent(""); setFilePath("") }}>重新分析</Button>
+                  <Button variant="ghost" size="sm" onClick={() => { reset(); setFileContent(""); setFilePath(""); setFileError(null) }}>重新分析</Button>
                 )}
               </div>
               <PrdViewer markdown={text} isStreaming={isStreaming} />
