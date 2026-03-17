@@ -173,7 +173,7 @@ fn build_system_prompt(
     team_mode: bool,
     phase: &str,
     config_dir: &str,
-    excluded_context: &[String],   // <-- new
+    excluded_context: &[String],
 ) -> Result<String, String> {
     let skill_content = load_skill(skills_root, skill_name)?;
 
@@ -279,7 +279,7 @@ pub struct StartStreamArgs {
     pub project_id: String,
     pub phase: String,
     pub messages: Vec<ChatMessage>,
-    pub excluded_context: Option<Vec<String>>,   // <-- new
+    pub excluded_context: Option<Vec<String>>,
 }
 
 #[tauri::command]
