@@ -244,7 +244,7 @@ export function DashboardPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜索项目..."
-              className="w-full h-9 px-3 text-sm bg-transparent border border-[var(--border)] placeholder:text-[var(--text-muted)] text-[var(--dark)] outline-none focus:border-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
+              className="w-full h-9 px-3 text-sm font-terminal bg-transparent border border-[var(--border)] placeholder:text-[var(--text-muted)] text-[var(--dark)] outline-none focus:border-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
             />
           </div>
         )}
