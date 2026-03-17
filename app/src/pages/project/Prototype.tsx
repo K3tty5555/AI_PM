@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { open } from "@tauri-apps/plugin-shell"
 import { cn } from "@/lib/utils"
+import { PhaseEmptyState } from "@/components/phase-empty-state"
 
 const PROTOTYPE_FILE = "06-prototype.html"
 const DEVICE_WIDTHS = { mobile: 375, tablet: 768, desktop: 0 } as const
@@ -28,6 +29,9 @@ export function PrototypePage() {
     projectId: projectId!,
     phase: "prototype",
   })
+
+  const [searchParams] = useSearchParams()
+  const autostart = searchParams.get("autostart") === "1"
 
   // Current HTML content — existing file or freshly streamed
   const htmlContent = existingHtml ?? (text && !isStreaming ? text : null)
@@ -75,14 +79,14 @@ export function PrototypePage() {
         if (!cancelled) {
           if (content) {
             setExistingHtml(content)
-          } else if (!startedRef.current) {
+          } else if (autostart && !startedRef.current) {
             startedRef.current = true
             start([{ role: "user", content: "请生成产品原型" }])
           }
         }
       } catch (err) {
         console.error("Failed to load prototype:", err)
-        if (!cancelled && !startedRef.current) {
+        if (!cancelled && !startedRef.current && autostart) {
           startedRef.current = true
           start([{ role: "user", content: "请生成产品原型" }])
         }
@@ -94,6 +98,12 @@ export function PrototypePage() {
     load()
     return () => { cancelled = true }
   }, [projectId, start])
+
+  // Generate prototype for the first time
+  const handleGenerate = useCallback(() => {
+    startedRef.current = true
+    start([{ role: "user", content: "请生成产品原型" }])
+  }, [start])
 
   // Open HTML file in system browser
   const handleOpenInBrowser = useCallback(async () => {
@@ -144,6 +154,16 @@ export function PrototypePage() {
           LOADING...
         </span>
       </div>
+    )
+  }
+
+  if (!loading && !existingHtml && !text && !isStreaming && !error) {
+    return (
+      <PhaseEmptyState
+        phaseLabel="PROTOTYPE"
+        description="交互原型"
+        onGenerate={handleGenerate}
+      />
     )
   }
 
