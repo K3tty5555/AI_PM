@@ -259,3 +259,13 @@ body {
   font-family: var(--font-geist-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* ============================================================
+   Utility Classes
+   ============================================================ */
+
+@layer utilities {
+  .font-terminal {
+    font-family: var(--font-geist-mono), 'Courier New', monospace;
+  }
+}

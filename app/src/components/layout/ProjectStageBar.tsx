@@ -37,7 +37,7 @@ function ProjectStageBar() {
   if (!project) {
     return (
       <div className="flex h-20 items-center justify-center border-b border-[var(--border)] bg-[var(--background)]">
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+        <span className="font-terminal text-xs text-[var(--text-muted)]">
           LOADING...
         </span>
       </div>

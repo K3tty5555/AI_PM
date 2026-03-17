@@ -161,7 +161,7 @@ const markdownComponents = {
     if (isInline) {
       return (
         <code
-          className="px-1 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] font-[var(--font-geist-mono),_'Courier_New',_monospace]"
+          className="px-1 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] font-terminal"
           {...props}
         >
           {children}
@@ -221,7 +221,7 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
           )}
           style={{ borderRadius: "50%" }}
         />
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
+        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
           ANALYZING...
         </span>
       </div>
@@ -236,7 +236,7 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
         return (
           <RarityStripeCard key={`${section.title}-${index}`} rarity={section.rarity}>
             {/* Card title */}
-            <h3 className="text-sm font-semibold text-[var(--dark)] mb-3 uppercase tracking-[1px] font-[var(--font-geist-mono),_'Courier_New',_monospace]">
+            <h3 className="text-sm font-semibold text-[var(--dark)] mb-3 uppercase tracking-[1px] font-terminal">
               {section.title}
             </h3>
 

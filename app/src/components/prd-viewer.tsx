@@ -143,13 +143,13 @@ function EditableBlock({
             "w-full min-h-[60px] p-3 text-sm",
             "bg-[var(--yellow-bg)] text-[var(--dark)]",
             "border border-[var(--yellow)]",
-            "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+            "font-terminal",
             "outline-none resize-none",
             "leading-relaxed",
           )}
         />
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-[10px] text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace]">
+          <span className="text-[10px] text-[var(--text-muted)] font-terminal">
             ESC 取消 · Cmd+Enter 确认
           </span>
         </div>
@@ -340,7 +340,7 @@ function createMarkdownComponents(
       if (isInline) {
         return (
           <code
-            className="px-1.5 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] font-[var(--font-geist-mono),_'Courier_New',_monospace]"
+            className="px-1.5 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] font-terminal"
             {...props}
           >
             {children}
@@ -363,7 +363,7 @@ function createMarkdownComponents(
           "overflow-x-auto p-4 my-3 text-xs",
           "bg-[var(--dark)] text-[#e0e0e0]",
           "border-l-3 border-l-[var(--yellow)]",
-          "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+          "font-terminal",
         )}
         {...props}
       >
@@ -394,7 +394,7 @@ function createMarkdownComponents(
         className={cn(
           "border border-[var(--border)] px-3 py-2",
           "text-left text-[10px] font-semibold uppercase tracking-[1px]",
-          "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+          "font-terminal",
           "text-[var(--dark)]",
         )}
         {...props}
@@ -467,7 +467,7 @@ function PrdViewer({ markdown, isStreaming, onEdit }: PrdViewerProps) {
           )}
           style={{ borderRadius: "50%" }}
         />
-        <span className="text-[10px] font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[2px] text-[var(--text-muted)]">
+        <span className="text-[10px] font-terminal uppercase tracking-[2px] text-[var(--text-muted)]">
           GENERATING PRD...
         </span>
       </div>

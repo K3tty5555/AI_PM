@@ -82,7 +82,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
       >
         {/* Title — HUD label style */}
         <div className="mb-8">
-          <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
+          <span className="font-terminal text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
             NEW_PROJECT
           </span>
         </div>

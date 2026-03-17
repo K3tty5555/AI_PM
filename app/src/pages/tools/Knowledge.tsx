@@ -65,7 +65,7 @@ export function ToolKnowledgePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs uppercase tracking-[2px] text-[var(--text-muted)]">LOADING...</span>
+        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">LOADING...</span>
       </div>
     )
   }
@@ -92,7 +92,7 @@ export function ToolKnowledgePage() {
               key={cat.key}
               onClick={() => setActiveCategory(cat.key)}
               className={cn(
-                "px-3 py-1 text-xs transition-colors font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+                "px-3 py-1 text-xs transition-colors font-terminal",
                 activeCategory === cat.key
                   ? "bg-[var(--yellow)] text-[var(--dark)]"
                   : "border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--dark)]"

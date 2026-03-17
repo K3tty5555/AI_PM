@@ -6,7 +6,7 @@ const badgeVariants = cva(
     "inline-flex items-center",
     "px-2.5 py-0.5",
     "text-xs font-medium uppercase tracking-[1.5px]",
-    "font-[var(--font-geist-mono),_'Courier_New',_Courier,_monospace]",
+    "font-terminal",
     "border",
     "transition-colors duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
     "select-none",

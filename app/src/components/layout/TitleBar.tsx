@@ -29,7 +29,7 @@ export function TitleBar() {
         onClick={() => navigate("/")}
         title="返回主页"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-base font-bold tracking-[2px] text-[var(--dark)] transition-opacity hover:opacity-70 hover:underline"
+        className="font-terminal text-base font-bold tracking-[2px] text-[var(--dark)] transition-opacity hover:opacity-70 hover:underline"
       >
         // AI PM
       </button>
@@ -52,7 +52,7 @@ export function TitleBar() {
               )}
               style={apiReady ? { animation: "dotPulse 2s ease-in-out infinite" } : undefined}
             />
-            <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+            <span className="font-terminal text-xs text-[var(--text-muted)]">
               {apiReady ? "API_OK" : "API_UNSET"}
             </span>
           </button>

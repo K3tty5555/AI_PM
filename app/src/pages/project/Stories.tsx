@@ -171,7 +171,7 @@ export function StoriesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
+        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
           LOADING...
         </span>
       </div>
@@ -221,7 +221,7 @@ export function StoriesPage() {
           {isThinking && (
             <p className="mt-2 text-sm text-[var(--text-muted)] animate-pulse">正在思考...</p>
           )}
-          <p className="mt-2 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
+          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
         </div>
@@ -237,7 +237,7 @@ export function StoriesPage() {
             )}
             style={{ borderRadius: "50%" }}
           />
-          <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
+          <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
             GENERATING STORIES...
           </span>
         </div>
@@ -289,7 +289,7 @@ export function StoriesPage() {
           isStreaming={isStreaming}
         />
         {!isStreaming && streamMeta !== null && (
-          <p className="text-xs text-[var(--text-muted)] font-mono mt-2">
+          <p className="text-xs text-[var(--text-muted)] font-terminal mt-2">
             {streamMeta.inputTokens != null && streamMeta.outputTokens != null
               ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
               : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
@@ -379,7 +379,7 @@ function AddStoryInline({
       )}
     >
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center">
-        <label className="text-xs text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[1px]">
+        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
           角色
         </label>
         <input
@@ -391,7 +391,7 @@ function AddStoryInline({
           autoFocus
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[1px]">
+        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
           想要
         </label>
         <input
@@ -402,7 +402,7 @@ function AddStoryInline({
           className={inputClass}
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[1px]">
+        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
           以便
         </label>
         <input
@@ -413,7 +413,7 @@ function AddStoryInline({
           className={inputClass}
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-[var(--font-geist-mono),_'Courier_New',_monospace] uppercase tracking-[1px]">
+        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
           优先级
         </label>
         <div className="flex gap-2">
@@ -425,7 +425,7 @@ function AddStoryInline({
               className={cn(
                 "px-3 py-1 text-xs font-medium border cursor-pointer",
                 "transition-all duration-150",
-                "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+                "font-terminal",
                 priority === p
                   ? "border-[var(--yellow)] bg-[var(--yellow)] text-[var(--dark)]"
                   : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--yellow)]",
