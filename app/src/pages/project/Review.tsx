@@ -328,7 +328,7 @@ export function ReviewPage() {
           <p className="font-terminal text-[10px] uppercase tracking-[2px] text-[var(--text-muted)] mb-1">
             已选择修改策略
           </p>
-          <p className="text-sm text-[var(--dark)]">{strategyAnswer}</p>
+          <p className="text-sm text-[var(--dark)]">{strategyAnswer.replace(/\*\*/g, "")}</p>
           <p className="mt-2 text-sm text-[var(--text-muted)]">
             请前往 PRD 页，按此策略重新生成文档。
           </p>
