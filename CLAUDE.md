@@ -64,7 +64,7 @@ README.md                  项目介绍
 
 ## 开发工具规范
 
-### 8.0 客户端设计规范
+### 客户端设计规范
 
 客户端（Tauri App）有独立设计规范：**`docs/design-system.md`**，所有新页面、新组件必须遵循。核心要点：
 - 风格：Apple HIG，琥珀金（`#F0A500`）Accent，`#FAFAFA` 背景，8px 圆角
@@ -73,21 +73,21 @@ README.md                  项目介绍
 - 微交互：按钮按压 `scale(0.97)`，导航项 hover 背景过渡，阶段切换 fadeInUp
 - ❌ 禁止：`uppercase tracking-[2px]`、`font-terminal` 用于 UI 元素、终末地风格
 
-### 8.1 新页面开发 → `frontend-design` 插件
+### 新页面开发 → `frontend-design` 插件
 
 - **客户端页面**（`app/src/pages/` 或 `app/src/components/`）：先通过 `frontend-design` 插件生成视觉初稿，再落地到 Tauri + React 代码。告知插件参考 `docs/design-system.md`（Apple HIG 风格，琥珀金 accent）。
 - **AI 生成的 HTML 原型**：沿用三档选择机制（首次询问用户偏好并记住），**不受 `docs/design-system.md` 约束**。
 
-### 8.2 UI/UX 迭代 → `ui-ux-pro-max` 技能
+### UI/UX 迭代 → `ui-ux-pro-max` 技能
 
 - **客户端页面**迭代：使用 `ui-ux-pro-max` 技能先输出分析方案，再落地代码，参考基准为 `docs/design-system.md`。
 - **HTML 原型**迭代：同样使用 `ui-ux-pro-max`，但以用户选定的原型设计规范为准，不套用客户端规范。
 
-### 8.3 新技能开发 → `skill-creator` 技能
+### 新技能开发 → `skill-creator` 技能
 
 在 `.claude/skills/` 下新建或修改 AI PM 技能文件时，通过 `skill-creator` 技能完成起草、测试和 description 优化，确保技能能被正确触发且输出质量稳定。
 
-### 8.4 自我迭代 → `self-improving` 技能
+### 自我迭代 → `self-improving` 技能
 
 开发过程中遇到流程不顺、规范缺失、反复踩坑时，调用 `self-improving` 技能进行复盘，将经验沉淀回本文件或对应 skill 文件。
 
