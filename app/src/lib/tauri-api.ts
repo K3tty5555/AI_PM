@@ -54,7 +54,8 @@ export interface KnowledgeEntry {
 export const api = {
   // Projects
   listProjects: () => invoke<ProjectSummary[]>("list_projects"),
-  createProject: (name: string) => invoke<ProjectDetail>("create_project", { name }),
+  createProject: (name: string, teamMode?: boolean) =>
+    invoke<ProjectDetail>("create_project", { args: { name, teamMode: teamMode ?? false } }),
   getProject: (id: string) => invoke<ProjectDetail | null>("get_project", { id }),
   deleteProject: (id: string) => invoke<void>("delete_project", { id }),
   advancePhase: (id: string) => invoke<string | null>("advance_phase", { id }),
