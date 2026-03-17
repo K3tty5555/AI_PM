@@ -104,8 +104,7 @@ function FileUpload({
       >
         <span
           className={cn(
-            "text-xs uppercase tracking-[2px]",
-            "font-terminal",
+            "text-[12px] font-medium",
             isDragOver ? "text-[var(--dark)]" : "text-[var(--text-muted)]"
           )}
         >
@@ -141,9 +140,8 @@ function FileUpload({
               <div className="flex items-center gap-2 overflow-hidden">
                 <span
                   className={cn(
-                    "shrink-0 text-[10px] uppercase tracking-[1px]",
-                    "font-terminal",
-                    "text-[var(--text-muted)]"
+                    "shrink-0 text-[11px] font-medium",
+                    "text-[var(--text-tertiary)]"
                   )}
                 >
                   FILE
@@ -154,8 +152,7 @@ function FileUpload({
                 <span
                   className={cn(
                     "shrink-0 text-xs",
-                    "font-terminal",
-                    "text-[var(--text-muted)]"
+                    "text-[var(--text-tertiary)]"
                   )}
                 >
                   {formatFileSize(file.size)}
@@ -170,7 +167,6 @@ function FileUpload({
                 className={cn(
                   "ml-2 shrink-0 px-1.5 py-0.5",
                   "text-xs text-[var(--text-muted)] hover:text-[var(--destructive)]",
-                  "font-terminal",
                   "transition-colors duration-[var(--duration-terminal)]",
                   "opacity-0 group-hover/file:opacity-100"
                 )}

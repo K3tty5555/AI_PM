@@ -109,7 +109,7 @@ function AcceptanceList({
 
   return (
     <div className="mt-3 space-y-1.5">
-      <p className="text-xs font-medium uppercase tracking-[1px] text-[var(--text-muted)] font-terminal">
+      <p className="text-[12px] font-medium text-[var(--text-secondary)]">
         验收标准
       </p>
       <ul className="space-y-1">
