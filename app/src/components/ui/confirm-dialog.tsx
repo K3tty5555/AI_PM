@@ -54,7 +54,7 @@ function ConfirmDialog({
         <div className="mb-4">
           <span
             id="confirm-dialog-title"
-            className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]"
+            className="font-terminal text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]"
           >
             {title}
           </span>

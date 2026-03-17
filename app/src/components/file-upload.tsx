@@ -105,7 +105,7 @@ function FileUpload({
         <span
           className={cn(
             "text-xs uppercase tracking-[2px]",
-            "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+            "font-terminal",
             isDragOver ? "text-[var(--dark)]" : "text-[var(--text-muted)]"
           )}
         >
@@ -142,7 +142,7 @@ function FileUpload({
                 <span
                   className={cn(
                     "shrink-0 text-[10px] uppercase tracking-[1px]",
-                    "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+                    "font-terminal",
                     "text-[var(--text-muted)]"
                   )}
                 >
@@ -154,7 +154,7 @@ function FileUpload({
                 <span
                   className={cn(
                     "shrink-0 text-xs",
-                    "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+                    "font-terminal",
                     "text-[var(--text-muted)]"
                   )}
                 >
@@ -170,7 +170,7 @@ function FileUpload({
                 className={cn(
                   "ml-2 shrink-0 px-1.5 py-0.5",
                   "text-xs text-[var(--text-muted)] hover:text-[var(--destructive)]",
-                  "font-[var(--font-geist-mono),_'Courier_New',_monospace]",
+                  "font-terminal",
                   "transition-colors duration-[var(--duration-terminal)]",
                   "opacity-0 group-hover/file:opacity-100"
                 )}
