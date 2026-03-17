@@ -7,6 +7,7 @@ interface StreamDonePayload {
   durationMs: number
   inputTokens?: number
   outputTokens?: number
+  finalText?: string
 }
 
 interface StreamMeta {
@@ -22,6 +23,7 @@ interface StreamMeta {
 
 interface BgPatch {
   textChunk?: string
+  textReplace?: string
   isStreaming?: boolean
   error?: string
   outputFile?: string
@@ -56,7 +58,7 @@ interface UseAiStreamReturn {
   error: string | null
   outputFile: string | null
   streamMeta: StreamMeta | null
-  start: (messages: Array<{ role: string; content: string }>) => void
+  start: (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[] }) => void
   reset: () => void
 }
 
@@ -80,6 +82,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
   const notifyRef = useRef<((patch: BgPatch) => void) | null>(null)
   notifyRef.current = (patch: BgPatch) => {
     if (patch.textChunk !== undefined) setText((prev) => prev + patch.textChunk!)
+    if (patch.textReplace !== undefined) setText(patch.textReplace)
     if (patch.isStreaming !== undefined) setIsStreaming(patch.isStreaming)
     if ("error" in patch) setError(patch.error ?? null)
     if ("outputFile" in patch) setOutputFile(patch.outputFile ?? null)
@@ -131,7 +134,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
   }, [key])
 
   const start = useCallback(
-    (messages: Array<{ role: string; content: string }>) => {
+    (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[] }) => {
       // Guard: if this key is already streaming in the background, skip.
       // This prevents duplicate generation when the component remounts
       // (e.g. user navigated away and back while generation was in progress).
@@ -169,17 +172,28 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           bg.notify?.({ textChunk: event.payload })
         }),
         listen<StreamDonePayload>("stream_done", (event) => {
-          const { outputFile: file, durationMs, inputTokens, outputTokens } = event.payload
+          const { outputFile: file, durationMs, inputTokens, outputTokens, finalText } = event.payload
           bg.outputFile = file
           bg.streamMeta = { durationMs, inputTokens, outputTokens }
           bg.isStreaming = false
           bg.unlisteners.forEach((fn) => fn())
           bg.unlisteners = []
-          bg.notify?.({
+
+          const patch: BgPatch = {
             isStreaming: false,
             outputFile: file,
             streamMeta: { durationMs, inputTokens, outputTokens },
-          })
+          }
+
+          // CLI mode: if AI wrote content directly to disk via Write tool, finalText
+          // will be substantially longer than what stdout streamed. Replace the short
+          // confirmation summary with the actual document content.
+          if (finalText && finalText.trim().length > bg.text.trim().length + 100) {
+            bg.text = finalText
+            patch.textReplace = finalText
+          }
+
+          bg.notify?.(patch)
         }),
         listen<string>("stream_error", (event) => {
           bg.error = event.payload
@@ -191,7 +205,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
       ]).then((unlisteners) => {
         bg.unlisteners = unlisteners
 
-        api.startStream({ projectId, phase, messages }).catch((err: unknown) => {
+        api.startStream({ projectId, phase, messages, excludedContext: options?.excludedContext }).catch((err: unknown) => {
           bg.error = String(err)
           bg.isStreaming = false
           bg.unlisteners.forEach((fn) => fn())
