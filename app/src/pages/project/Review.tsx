@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -201,9 +200,7 @@ export function ReviewPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
-          LOADING...
-        </span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
       </div>
     )
   }
@@ -212,7 +209,7 @@ export function ReviewPage() {
     return (
       <div className="mx-auto w-full max-w-[720px]">
         <div className="mb-6 flex items-center justify-between">
-          <Badge variant="outline">REVIEW</Badge>
+          <h1 className="text-base font-semibold text-[var(--text-primary)]">需求评审</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
         <ContextPills
@@ -236,7 +233,7 @@ export function ReviewPage() {
     <div className="mx-auto w-full max-w-[720px]">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <Badge variant="outline">REVIEW</Badge>
+        <h1 className="text-base font-semibold text-[var(--text-primary)]">需求评审</h1>
         <Button
           variant="ghost"
           size="sm"
@@ -262,12 +259,12 @@ export function ReviewPage() {
           {(() => {
             const status = !isThinking ? extractStreamStatus(text) : ""
             return isThinking
-              ? <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
               : status
-                ? <p className="mt-2 font-terminal text-xs tracking-[1px] text-[var(--text-muted)]">{status}</p>
+                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
           })()}
-          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
+          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
         </div>
@@ -275,7 +272,7 @@ export function ReviewPage() {
 
       {/* Error display */}
       {error && (
-        <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">
             {error}
           </p>
@@ -303,7 +300,7 @@ export function ReviewPage() {
           isStreaming={isStreaming}
         />
         {!isStreaming && streamMeta !== null && (
-          <p className="text-xs text-[var(--text-muted)] font-terminal mt-2">
+          <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
             {streamMeta.inputTokens != null && streamMeta.outputTokens != null
               ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
               : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
@@ -328,20 +325,20 @@ export function ReviewPage() {
           className={cn(
             "mt-6 pl-5 relative",
             "before:absolute before:left-0 before:top-0 before:bottom-0",
-            "before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
+            "before:w-[3px] before:bg-[var(--accent-color)] before:content-['']",
           )}
         >
-          <p className="font-terminal text-[10px] uppercase tracking-[2px] text-[var(--text-muted)] mb-1">
+          <p className="text-[11px] font-medium text-[var(--text-tertiary)] mb-1">
             已选择修改策略
           </p>
-          <p className="text-sm text-[var(--dark)]">{strategyAnswer.replace(/\*\*/g, "")}</p>
+          <p className="text-sm text-[var(--text-primary)]">{strategyAnswer.replace(/\*\*/g, "")}</p>
           <p className="mt-2 text-sm text-[var(--text-muted)]">
             请前往 PRD 页，按此策略重新生成文档。
           </p>
           <button
             type="button"
             onClick={() => navigate(`/project/${projectId}/prd`)}
-            className="mt-2 font-terminal text-[10px] uppercase tracking-[1px] text-[var(--dark)] hover:text-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
+            className="mt-2 text-sm text-[var(--accent-color)] hover:underline transition-colors duration-200"
           >
             ← 前往 PRD 页重新生成
           </button>
@@ -354,7 +351,7 @@ export function ReviewPage() {
           className={cn(
             "mt-6 pl-5 relative",
             "before:absolute before:left-0 before:top-0 before:bottom-0",
-            "before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
+            "before:w-[3px] before:bg-[var(--accent-color)] before:content-['']",
           )}
         >
           <p className="text-sm text-[var(--text-muted)]">
@@ -363,7 +360,7 @@ export function ReviewPage() {
           <button
             type="button"
             onClick={() => navigate(`/project/${projectId}/prd`)}
-            className="mt-2 font-terminal text-[10px] uppercase tracking-[1px] text-[var(--dark)] hover:text-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
+            className="mt-2 text-sm text-[var(--accent-color)] hover:underline transition-colors duration-200"
           >
             ← 前往 PRD 页重新生成
           </button>
@@ -398,7 +395,7 @@ export function ReviewPage() {
                 : PHASE_META.review.nextLabel + " ✓"}
           </Button>
           {!advancing && !saving && (
-            <p className="font-terminal text-[10px] text-[var(--text-muted)] tracking-[0.5px]">
+            <p className="text-[11px] text-[var(--text-tertiary)]">
               {PHASE_META.review.nextDescription}
             </p>
           )}
