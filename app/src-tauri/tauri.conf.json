@@ -19,8 +19,7 @@
         "minHeight": 600,
         "decorations": true,
         "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
-        "icon": "icons/128x128@2x.png"
+        "hiddenTitle": true
       }
     ],
     "security": {

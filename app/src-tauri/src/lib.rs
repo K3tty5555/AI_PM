@@ -6,6 +6,7 @@ mod state;
 use db::init_db;
 use state::AppState;
 use std::fs;
+use tauri::Manager;
 
 fn resolve_app_paths() -> (String, String) {
     let home = dirs::home_dir().unwrap_or_default();
@@ -88,9 +89,7 @@ pub fn run() {
         ])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
-                if let Some(icon) = app.default_window_icon() {
-                    let _ = window.set_icon(icon.clone());
-                }
+                let _ = window.set_icon(tauri::include_image!("icons/128x128@2x.png"));
             }
             Ok(())
         })
