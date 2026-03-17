@@ -74,10 +74,14 @@ export function useToolStream(toolName: string, projectId?: string): UseToolStre
           unlistenersRef.current = []
           setIsStreaming(false)
           setStreamMeta({ durationMs, inputTokens, outputTokens })
-          // 如果 finalText 比 stream 累积内容更长（CLI 写文件场景），替换显示
-          if (finalText && finalText.trim().length > 0) {
-            setText(finalText)
-          }
+          // 仅当 finalText 明显长于累积流文本时替换（CLI 写文件模式）
+          // 防止 API 模式下短确认消息覆盖完整流内容
+          setText((current) => {
+            if (finalText && finalText.trim().length > current.trim().length + 100) {
+              return finalText
+            }
+            return current
+          })
         }),
         listen<string>("stream_error", (event) => {
           unlistenersRef.current.forEach((fn) => fn())
