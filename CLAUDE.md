@@ -75,11 +75,13 @@ README.md                  项目介绍
 
 ### 8.1 新页面开发 → `frontend-design` 插件
 
-在 `app/src/pages/` 或 `app/src/components/` 下新建页面或大型组件时，**先通过 `frontend-design` 插件**生成视觉初稿，再落地到 Tauri + React 代码。生成时告知插件参考 `docs/design-system.md` 规范（Apple HIG 风格，琥珀金 accent）。
+- **客户端页面**（`app/src/pages/` 或 `app/src/components/`）：先通过 `frontend-design` 插件生成视觉初稿，再落地到 Tauri + React 代码。告知插件参考 `docs/design-system.md`（Apple HIG 风格，琥珀金 accent）。
+- **AI 生成的 HTML 原型**：沿用三档选择机制（首次询问用户偏好并记住），**不受 `docs/design-system.md` 约束**。
 
 ### 8.2 UI/UX 迭代 → `ui-ux-pro-max` 技能
 
-对 app 现有页面（Dashboard、各 phase 页、Settings 等）进行交互优化、信息架构调整时，使用 `ui-ux-pro-max` 技能先输出分析和方案，再落地到代码。参考基准为 `docs/design-system.md`。
+- **客户端页面**迭代：使用 `ui-ux-pro-max` 技能先输出分析方案，再落地代码，参考基准为 `docs/design-system.md`。
+- **HTML 原型**迭代：同样使用 `ui-ux-pro-max`，但以用户选定的原型设计规范为准，不套用客户端规范。
 
 ### 8.3 新技能开发 → `skill-creator` 技能
 
