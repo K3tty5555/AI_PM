@@ -157,7 +157,7 @@ pub async fn run_tool(
                     let _ = fs::create_dir_all(&context_dir);
                     // Short name: strip "ai-pm-" prefix
                     let short_name = args.tool_name.strip_prefix("ai-pm-").unwrap_or(&args.tool_name);
-                    let date_str = chrono::Utc::now().format("%Y-%m-%d").to_string();
+                    let date_str = chrono::Local::now().format("%Y-%m-%d").to_string();
                     let context_file = context_dir.join(format!("{}-{}.md", short_name, date_str));
                     let _ = fs::write(&context_file, &result.full_text);
                 }
