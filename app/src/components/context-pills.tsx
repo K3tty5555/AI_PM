@@ -27,9 +27,11 @@ export function ContextPills({ projectId, onExcludeChange, className }: ContextP
   const [tooltip, setTooltip] = useState<{ name: string; preview: string } | null>(null)
 
   useEffect(() => {
+    setExcluded([])
+    onExcludeChange([])
     api.listProjectContext(projectId).then(setContextFiles).catch(console.error)
     api.listKnowledge().then((entries) => setKnowledgeCount(entries.length)).catch(console.error)
-  }, [projectId])
+  }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = (name: string) => {
     const next = excluded.includes(name)
@@ -63,7 +65,7 @@ export function ContextPills({ projectId, onExcludeChange, className }: ContextP
             onMouseEnter={() => setTooltip(file)}
             onMouseLeave={() => setTooltip(null)}
           >
-            <span
+            <div
               className={cn(
                 "inline-flex items-center gap-1.5 px-2 py-0.5",
                 "font-terminal text-[10px] uppercase tracking-[1px]",
@@ -82,7 +84,7 @@ export function ContextPills({ projectId, onExcludeChange, className }: ContextP
               >
                 ×
               </button>
-            </span>
+            </div>
 
             {/* Preview tooltip */}
             {tooltip?.name === file.name && (
