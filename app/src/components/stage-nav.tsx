@@ -39,7 +39,7 @@ function StageNav({
     >
       {stages.map((stage, index) => {
         const status = getStageStatus(stage.id)
-        const clickable = status === "completed" || status === "current"
+        const clickable = true
 
         return (
           <div key={stage.id} className="flex items-start">
@@ -47,8 +47,8 @@ function StageNav({
             <div className="flex flex-col items-center gap-2">
               <button
                 type="button"
-                disabled={!clickable}
-                onClick={() => clickable && onStageClick?.(stage.id)}
+                disabled={false}
+                onClick={() => onStageClick?.(stage.id)}
                 className={cn(
                   "relative flex items-center justify-center",
                   "w-12 h-12",
@@ -66,7 +66,8 @@ function StageNav({
                   ],
                   status === "locked" && [
                     "bg-transparent",
-                    "cursor-default opacity-50",
+                    "cursor-pointer opacity-50",
+                    "hover:opacity-75",
                   ]
                 )}
                 aria-label={`${stage.label} - ${status}`}
@@ -78,7 +79,7 @@ function StageNav({
                     "[clip-path:polygon(50%_0%,100%_25%,100%_75%,50%_100%,0%_75%,0%_25%)]",
                     status === "completed" && "bg-[var(--yellow)]",
                     status === "current" && "bg-[var(--yellow)]",
-                    status === "locked" && "bg-[#d0d0d0]",
+                    status === "locked" && "bg-[var(--border)]",
                   )}
                 />
                 <span
@@ -97,7 +98,7 @@ function StageNav({
                     "font-terminal",
                     status === "completed" && "text-[var(--dark)]",
                     status === "current" && "text-[var(--dark)]",
-                    status === "locked" && "text-[#d0d0d0]",
+                    status === "locked" && "text-[var(--text-muted)]",
                   )}
                 >
                   {index + 1}
@@ -136,7 +137,7 @@ function StageNav({
                     "transition-colors duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
                     isLineActive(index)
                       ? "bg-[var(--yellow)]"
-                      : "bg-[#d0d0d0]"
+                      : "bg-[var(--border)]"
                   )}
                 />
               </div>
