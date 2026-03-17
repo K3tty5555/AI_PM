@@ -7,6 +7,7 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
 import { open } from "@tauri-apps/plugin-shell"
+import { cn } from "@/lib/utils"
 
 const PROTOTYPE_FILE = "06-prototype.html"
 
@@ -19,6 +20,8 @@ export function PrototypePage() {
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [outputDir, setOutputDir] = useState<string>("")
   const [advancing, setAdvancing] = useState(false)
+  const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">("desktop")
+  const DEVICE_WIDTHS = { mobile: 375, tablet: 768, desktop: 0 }
   const startedRef = useRef(false)
 
   const { text, isStreaming, error, outputFile, start, reset } = useAiStream({
@@ -140,12 +143,6 @@ export function PrototypePage() {
       <div className="mb-6 flex items-center justify-between">
         <Badge variant="outline">PROTOTYPE</Badge>
         <div className="flex items-center gap-2">
-          {hasContent && outputDir && (
-            <Button variant="ghost" size="sm" onClick={handleOpenInBrowser} className="gap-1.5">
-              <ExternalLink className="size-3.5" />
-              在浏览器中打开
-            </Button>
-          )}
           <Button variant="ghost" size="sm" onClick={handleRegenerate} disabled={isStreaming}>
             &#x21bb; 重新生成
           </Button>
@@ -175,21 +172,43 @@ export function PrototypePage() {
       {/* Prototype preview iframe */}
       {blobUrl && (
         <div className="mt-6 border border-[var(--border)]">
+          {/* Toolbar */}
           <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--secondary)] px-4 py-2">
-            <span className="font-[var(--font-geist-mono),_'Courier_New',_monospace] text-xs text-[var(--text-muted)]">
-              PREVIEW
-            </span>
+            <div className="flex items-center gap-1">
+              {(["mobile", "tablet", "desktop"] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDevice(d)}
+                  className={cn(
+                    "px-2.5 py-1 font-[var(--font-geist-mono),_'Courier_New',_monospace] text-[10px] uppercase tracking-[1px] transition-colors",
+                    device === d
+                      ? "bg-[var(--yellow)] text-[var(--dark)]"
+                      : "text-[var(--text-muted)] hover:text-[var(--dark)]"
+                  )}
+                >
+                  {d === "mobile" ? "375" : d === "tablet" ? "768" : "全屏"}
+                </button>
+              ))}
+            </div>
             <Button variant="ghost" size="sm" onClick={handleOpenInBrowser} className="gap-1.5 text-xs">
               <ExternalLink className="size-3" />
               在浏览器中打开
             </Button>
           </div>
-          <iframe
-            src={blobUrl}
-            className="h-[600px] w-full"
-            sandbox="allow-scripts allow-same-origin"
-            title="原型预览"
-          />
+          {/* iframe container */}
+          <div className="flex justify-center bg-[var(--secondary)]/30 py-4">
+            <iframe
+              src={blobUrl}
+              style={
+                device === "desktop"
+                  ? { width: "100%", height: 680, border: "none" }
+                  : { width: DEVICE_WIDTHS[device], height: 680, border: "none", boxShadow: "0 0 0 1px var(--border)" }
+              }
+              sandbox="allow-scripts allow-same-origin"
+              title="原型预览"
+            />
+          </div>
         </div>
       )}
 
