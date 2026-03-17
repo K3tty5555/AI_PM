@@ -27,7 +27,7 @@ export function PrototypePage() {
   const [excludedContext, setExcludedContext] = useState<string[]>([])
   const startedRef = useRef(false)
 
-  const { text, isStreaming, error, outputFile, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, error, outputFile, start, reset } = useAiStream({
     projectId: projectId!,
     phase: "prototype",
   })
@@ -207,7 +207,7 @@ export function PrototypePage() {
       {isStreaming && (
         <div className="mt-4">
           <ProgressBar value={progressValue} animated />
-          {isStreaming && text === ""
+          {isThinking
             ? <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
             : extractStreamStatus(text)
               ? <p className="mt-2 font-terminal text-xs tracking-[1px] text-[var(--text-muted)]">{extractStreamStatus(text)}</p>
