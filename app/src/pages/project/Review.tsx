@@ -378,11 +378,20 @@ export function ReviewPage() {
 
       {/* Supplementary input */}
       {!isStreaming && hasContent && !questionInfo.hasQuestion && (
-        <div className="mt-6">
+        <div className="mt-6 space-y-3">
           <InlineChat
-            question="需求评审已完成。如需补充或修改评审意见，可以在这里告诉我。"
+            question="评审完成，可以继续追问细节。如需按评审意见修改文档，请返回 PRD 页重新生成。"
             onAnswer={handleAnswer}
           />
+          <div className="pl-5">
+            <button
+              type="button"
+              onClick={() => navigate(`/project/${projectId}/prd`)}
+              className="font-terminal text-[10px] uppercase tracking-[1px] text-[var(--text-muted)] hover:text-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
+            >
+              ← 前往 PRD 页重新生成
+            </button>
+          </div>
         </div>
       )}
 
