@@ -64,6 +64,63 @@ pub fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String>
     Ok(sections.join("\n"))
 }
 
+fn load_knowledge(config_dir: &str) -> String {
+    let kb_dir = Path::new(config_dir).join("knowledge");
+    if !kb_dir.exists() {
+        return String::new();
+    }
+
+    let mut category_blocks: Vec<String> = Vec::new();
+
+    let mut categories: Vec<_> = fs::read_dir(&kb_dir)
+        .map(|rd| rd.filter_map(|e| e.ok()).collect())
+        .unwrap_or_default();
+    categories.sort_by_key(|e| e.file_name());
+
+    for cat_entry in categories {
+        let cat_path = cat_entry.path();
+        if !cat_path.is_dir() {
+            continue;
+        }
+        let cat_name = cat_entry.file_name().to_string_lossy().to_string();
+
+        let mut entries: Vec<String> = Vec::new();
+        if let Ok(files) = fs::read_dir(&cat_path) {
+            let mut file_entries: Vec<_> = files.filter_map(|e| e.ok()).collect();
+            file_entries.sort_by_key(|e| e.file_name());
+            for file_entry in file_entries {
+                let fp = file_entry.path();
+                if fp.extension().and_then(|e| e.to_str()) != Some("md") {
+                    continue;
+                }
+                if let Ok(content) = fs::read_to_string(&fp) {
+                    let trimmed = content.trim().to_string();
+                    if !trimmed.is_empty() {
+                        entries.push(trimmed);
+                    }
+                }
+            }
+        }
+
+        if !entries.is_empty() {
+            category_blocks.push(format!(
+                "#### {}\n\n{}",
+                cat_name,
+                entries.join("\n\n---\n\n")
+            ));
+        }
+    }
+
+    if category_blocks.is_empty() {
+        return String::new();
+    }
+
+    format!(
+        "\n\n---\n\n### 产品知识库\n\n{}\n",
+        category_blocks.join("\n\n")
+    )
+}
+
 fn build_system_prompt(
     skills_root: &str,
     output_dir: &str,
@@ -72,10 +129,18 @@ fn build_system_prompt(
     input_files: &[&str],
     user_input: Option<&str>,
     team_mode: bool,
+    phase: &str,
+    config_dir: &str,
 ) -> Result<String, String> {
     let skill_content = load_skill(skills_root, skill_name)?;
 
     let mut parts = vec![skill_content];
+
+    // Inject knowledge base entries (if any)
+    let knowledge = load_knowledge(config_dir);
+    if !knowledge.is_empty() {
+        parts[0].push_str(&knowledge);
+    }
 
     // Project context
     let mut ctx = vec![
@@ -133,11 +198,25 @@ fn build_system_prompt(
     ctx.push("你正在 **AI PM 桌面应用的流式输出模式**中运行，你的整个回复内容就是文档本身。".to_string());
     ctx.push(String::new());
     ctx.push("**强制规则（逐条执行）：**".to_string());
-    ctx.push("1. **第一行就是文档标题**（如 `# PRD：产品名`），最后一行是文档结尾，不要有任何前言或后记".to_string());
-    ctx.push("2. **禁止输出元信息**：「已生成」「文件已保存」「执行步骤」「操作结果」「PRD 已完成」等一律不输出".to_string());
-    ctx.push("3. **禁止调用任何工具**：Write、Edit、Bash、AskUserQuestion 在此环境中均不存在，调用无效".to_string());
-    ctx.push("4. **禁止提问或确认**：导出格式默认「仅 Markdown」，用户故事按标准编写，直接生成内容".to_string());
-    ctx.push("5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从文档第一行开始".to_string());
+
+    if phase == "prototype" {
+        ctx.push("1. **你的整个输出就是 HTML 文件本身**：第一行必须是 `<!DOCTYPE html>`，最后一行必须是 `</html>`，中间是完整的单文件 HTML+CSS+JS，不要任何前言或后记".to_string());
+        ctx.push("2. **禁止输出元信息**：「已生成」「文件已保存」「截图」「manifest」「步骤」等一律不输出".to_string());
+        ctx.push("3. **严禁调用任何工具**：Write、Edit、Bash、AskUserQuestion、Read 在此环境中不存在且无法执行。\
+            你不需要用 Write 保存文件——后端会自动把你的输出流保存为 HTML 文件。\
+            **如果你想调用工具，请直接跳过，把文件内容输出到 stdout 即可。**\
+            绝对不要输出「需要您批准」「请批准 Write 工具」「等待权限」等字样。".to_string());
+        ctx.push("4. **禁止提问或确认**：设计规范默认 AI 情境定制，直接生成完整 HTML 原型。".to_string());
+        ctx.push("5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从 `<!DOCTYPE html>` 开始。".to_string());
+    } else {
+        ctx.push("1. **第一行就是文档标题**（如 `# PRD：产品名`），最后一行是文档结尾，不要有任何前言或后记".to_string());
+        ctx.push("2. **禁止输出元信息**：「已生成」「文件已保存」「执行步骤」「操作结果」「PRD 已完成」等一律不输出".to_string());
+        ctx.push("3. **禁止调用任何工具**：Write、Edit、Bash、AskUserQuestion 在此环境中均不存在，调用无效。\
+            你不需要用 Write 保存文件——后端会自动把你的输出流保存为文件。\
+            **绝对不要输出「需要您批准」「请批准 Write 工具」「等待权限」等字样。**".to_string());
+        ctx.push("4. **禁止提问或确认**：导出格式默认「仅 Markdown」，用户故事按标准编写，直接生成内容".to_string());
+        ctx.push("5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从文档第一行开始".to_string());
+    }
 
     parts.push(ctx.join("\n"));
 
@@ -168,6 +247,7 @@ pub async fn start_stream(
         result
     };
     let team_mode = team_mode != 0;
+    let config_dir = state.config_dir.clone();
 
     let (skill_name, input_files, output_file) = phase_config(&args.phase)
         .ok_or_else(|| format!("Unknown phase: {}", args.phase))?;
@@ -195,6 +275,8 @@ pub async fn start_stream(
         input_files,
         last_user_msg,
         team_mode,
+        &args.phase,
+        &config_dir,
     ).map_err(|e| {
         let _ = app.emit("stream_error", &e);
         e
