@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { Plus, Settings, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -92,10 +93,12 @@ function Sidebar({
     <aside
       data-slot="sidebar"
       className={cn(
-        "flex h-full w-[220px] shrink-0 flex-col",
+        "fixed top-[44px] left-0 bottom-0 z-20",
+        "flex w-[220px] flex-col",
         "border-r border-[var(--border)]",
-        "bg-[rgba(240,240,240,0.85)] backdrop-blur-xl",
+        "bg-[var(--bg-sidebar)] backdrop-blur-[20px]",
       )}
+      style={{ WebkitBackdropFilter: "blur(20px)" } as CSSProperties}
     >
       {/* App logo */}
       <button
