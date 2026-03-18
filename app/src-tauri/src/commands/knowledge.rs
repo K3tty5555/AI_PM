@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
 use tauri::State;
 use crate::state::AppState;
 
@@ -16,7 +15,7 @@ pub struct KnowledgeEntry {
 
 #[tauri::command]
 pub fn list_knowledge(state: State<'_, AppState>) -> Vec<KnowledgeEntry> {
-    let kb_root = Path::new(&state.projects_dir).join("knowledge-base");
+    let kb_root = state.templates_base().join("knowledge-base");
     let mut entries = Vec::new();
 
     for category in CATEGORIES {
@@ -51,7 +50,7 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
     if !CATEGORIES.contains(&args.category.as_str()) {
         return Err(format!("Invalid category: {}", args.category));
     }
-    let kb_dir = Path::new(&state.projects_dir).join("knowledge-base").join(&args.category);
+    let kb_dir = state.templates_base().join("knowledge-base").join(&args.category);
     fs::create_dir_all(&kb_dir).map_err(|e| e.to_string())?;
 
     // 用标题生成 slug
@@ -95,7 +94,7 @@ pub fn search_knowledge(state: State<'_, AppState>, query: String) -> Vec<Knowle
     if q.trim().is_empty() {
         return Vec::new();
     }
-    let kb_root = Path::new(&state.projects_dir).join("knowledge-base");
+    let kb_root = state.templates_base().join("knowledge-base");
     let mut entries = Vec::new();
 
     for category in CATEGORIES {
@@ -130,7 +129,7 @@ pub fn delete_knowledge(state: State<'_, AppState>, category: String, id: String
     if id.contains('/') || id.contains('\\') || id.contains("..") {
         return Err("Invalid id".to_string());
     }
-    let path = Path::new(&state.projects_dir)
+    let path = state.templates_base()
         .join("knowledge-base").join(&category).join(format!("{}.md", id));
     if path.exists() { fs::remove_file(&path).map_err(|e| e.to_string())?; }
     Ok(())

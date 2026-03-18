@@ -144,7 +144,7 @@ pub async fn run_tool(
 
     // Inject active PRD style for weekly and priority tools (persona carries over to tool outputs)
     if args.tool_name == "ai-pm-weekly" || args.tool_name == "ai-pm-priority" {
-        if let Some(style) = crate::commands::templates::load_active_prd_style(&state.projects_dir, None) {
+        if let Some(style) = crate::commands::templates::load_active_prd_style(&state.templates_base(), None) {
             system_prompt.push_str(&format!("\n\n---\n\n{}", style));
         }
     }
