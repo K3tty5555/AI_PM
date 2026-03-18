@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
 import { api } from "@/lib/tauri-api"
-import type { LegacyProjectScan } from "@/lib/tauri-api"
+import type { LegacyProjectScan, KnowledgeCategoryScan, DesignSpecScan } from "@/lib/tauri-api"
 
 interface ConfigState {
   hasConfig: boolean
@@ -60,6 +60,19 @@ export function SettingsPage() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null)
 
+  // Template migration state
+  const [kbScanning, setKbScanning] = useState(false)
+  const [kbScanResults, setKbScanResults] = useState<KnowledgeCategoryScan[] | null>(null)
+  const [kbImporting, setKbImporting] = useState(false)
+  const [kbImportResult, setKbImportResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [kbImportDir, setKbImportDir] = useState<string | null>(null)
+
+  const [specScanning, setSpecScanning] = useState(false)
+  const [specScanResults, setSpecScanResults] = useState<DesignSpecScan[] | null>(null)
+  const [specImporting, setSpecImporting] = useState(false)
+  const [specImportResult, setSpecImportResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [specImportDir, setSpecImportDir] = useState<string | null>(null)
+
   // Save state
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState<{
@@ -88,6 +101,70 @@ export function SettingsPage() {
   useEffect(() => {
     fetchConfig()
   }, [fetchConfig])
+
+  const handleScanKnowledge = async () => {
+    const selected = await dialogOpen({ directory: true, multiple: false })
+    if (!selected || typeof selected !== "string") return
+    setKbScanning(true)
+    setKbScanResults(null)
+    setKbImportResult(null)
+    setKbImportDir(selected)
+    try {
+      const results = await api.scanLegacyKnowledge(selected)
+      setKbScanResults(results)
+    } catch {
+      setKbScanResults([])
+    } finally {
+      setKbScanning(false)
+    }
+  }
+
+  const handleImportKnowledge = async () => {
+    if (!kbImportDir) return
+    setKbImporting(true)
+    try {
+      const result = await api.importLegacyKnowledge(kbImportDir)
+      setKbImportResult(result)
+      setKbScanResults(null)
+    } catch {
+      setKbImportResult({ imported: 0, skipped: 0 })
+      setKbScanResults(null)
+    } finally {
+      setKbImporting(false)
+    }
+  }
+
+  const handleScanDesignSpecs = async () => {
+    const selected = await dialogOpen({ directory: true, multiple: false })
+    if (!selected || typeof selected !== "string") return
+    setSpecScanning(true)
+    setSpecScanResults(null)
+    setSpecImportResult(null)
+    setSpecImportDir(selected)
+    try {
+      const results = await api.scanLegacyDesignSpecs(selected)
+      setSpecScanResults(results)
+    } catch {
+      setSpecScanResults([])
+    } finally {
+      setSpecScanning(false)
+    }
+  }
+
+  const handleImportDesignSpecs = async () => {
+    if (!specImportDir) return
+    setSpecImporting(true)
+    try {
+      const result = await api.importLegacyDesignSpecs(specImportDir)
+      setSpecImportResult(result)
+      setSpecScanResults(null)
+    } catch {
+      setSpecImportResult({ imported: 0, skipped: 0 })
+      setSpecScanResults(null)
+    } finally {
+      setSpecImporting(false)
+    }
+  }
 
   const handleScanLegacy = async () => {
     const selected = await dialogOpen({ directory: true, multiple: false })
@@ -639,6 +716,152 @@ export function SettingsPage() {
                 </div>
               )
             )}
+          </CardContent>
+        </Card>
+
+        {/* 模板迁移 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>模板迁移</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* 知识库 */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-[var(--text-primary)]">知识库</p>
+              <p className="text-xs text-[var(--text-secondary)]">
+                从旧版 AI PM 的{" "}
+                <code className="bg-[var(--hover-bg)] px-1 py-0.5 rounded">templates/knowledge-base/</code>{" "}
+                目录导入已沉淀的经验条目。
+              </p>
+
+              {!kbScanResults && !kbImportResult && (
+                <Button variant="ghost" onClick={handleScanKnowledge} disabled={kbScanning} className="flex items-center gap-2">
+                  <FolderOpen className="size-3.5" />
+                  {kbScanning ? "扫描中..." : "选择知识库目录"}
+                </Button>
+              )}
+
+              {kbScanResults !== null && kbScanResults.length === 0 && (
+                <p className="text-sm text-[var(--text-tertiary)]">未发现知识库条目，请确认目录正确。</p>
+              )}
+
+              {kbScanResults && kbScanResults.length > 0 && (
+                <div className="space-y-2">
+                  <ul className="space-y-0.5">
+                    {kbScanResults.map((cat) => (
+                      <li key={cat.category} className="text-sm">
+                        <span className="text-[var(--text-secondary)]">{cat.category}</span>
+                        <span className="ml-2 text-[var(--text-tertiary)] text-xs">
+                          {cat.total} 条（{cat.newCount > 0 ? `${cat.newCount} 条新` : "已全部导入"}）
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      variant="primary"
+                      onClick={handleImportKnowledge}
+                      disabled={kbImporting || kbScanResults.every((c) => c.newCount === 0)}
+                    >
+                      {kbImporting
+                        ? "导入中..."
+                        : `确认导入 ${kbScanResults.reduce((s, c) => s + c.newCount, 0)} 条`}
+                    </Button>
+                    <Button variant="ghost" onClick={() => { setKbScanResults(null); setKbImportDir(null) }}>
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {kbImportResult && (
+                kbImportResult.imported > 0 ? (
+                  <p className="text-sm text-[var(--success)]">
+                    ✓ 已导入 {kbImportResult.imported} 条
+                    {kbImportResult.skipped > 0 ? `，跳过 ${kbImportResult.skipped} 条（已存在）` : ""}
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-sm text-[var(--destructive)]">导入失败，请重试。</p>
+                    <Button variant="ghost" size="sm" onClick={() => setKbImportResult(null)}>重试</Button>
+                  </div>
+                )
+              )}
+            </div>
+
+            <div className="h-px bg-[var(--border)]" />
+
+            {/* 设计规范 & 分身 */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-[var(--text-primary)]">设计规范 & 产品分身</p>
+              <p className="text-xs text-[var(--text-secondary)]">
+                从旧版 AI PM 的{" "}
+                <code className="bg-[var(--hover-bg)] px-1 py-0.5 rounded">templates/prd-styles/</code>{" "}
+                目录导入 PRD 风格配置和分身档案。
+              </p>
+
+              {!specScanResults && !specImportResult && (
+                <Button variant="ghost" onClick={handleScanDesignSpecs} disabled={specScanning} className="flex items-center gap-2">
+                  <FolderOpen className="size-3.5" />
+                  {specScanning ? "扫描中..." : "选择 PRD 样式目录"}
+                </Button>
+              )}
+
+              {specScanResults !== null && specScanResults.length === 0 && (
+                <p className="text-sm text-[var(--text-tertiary)]">未发现样式配置，请确认目录正确。</p>
+              )}
+
+              {specScanResults && specScanResults.length > 0 && (
+                <div className="space-y-2">
+                  <ul className="space-y-0.5">
+                    {specScanResults.map((spec) => (
+                      <li key={spec.name} className="text-sm">
+                        {spec.alreadyExists ? (
+                          <span className="text-[var(--text-tertiary)]">
+                            — {spec.name} <span className="text-xs">（已存在，跳过）</span>
+                          </span>
+                        ) : (
+                          <span className="text-[var(--text-primary)]">
+                            ✓ {spec.name}
+                            {spec.hasPersona && (
+                              <span className="ml-1 text-xs text-[var(--text-tertiary)]">（含分身档案）</span>
+                            )}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      variant="primary"
+                      onClick={handleImportDesignSpecs}
+                      disabled={specImporting || specScanResults.every((s) => s.alreadyExists)}
+                    >
+                      {specImporting
+                        ? "导入中..."
+                        : `确认导入 ${specScanResults.filter((s) => !s.alreadyExists).length} 个`}
+                    </Button>
+                    <Button variant="ghost" onClick={() => { setSpecScanResults(null); setSpecImportDir(null) }}>
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {specImportResult && (
+                specImportResult.imported > 0 ? (
+                  <p className="text-sm text-[var(--success)]">
+                    ✓ 已导入 {specImportResult.imported} 个
+                    {specImportResult.skipped > 0 ? `，跳过 ${specImportResult.skipped} 个（已存在）` : ""}
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-sm text-[var(--destructive)]">导入失败，请重试。</p>
+                    <Button variant="ghost" size="sm" onClick={() => setSpecImportResult(null)}>重试</Button>
+                  </div>
+                )
+              )}
+            </div>
           </CardContent>
         </Card>
 
