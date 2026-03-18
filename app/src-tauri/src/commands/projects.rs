@@ -584,93 +584,132 @@ pub fn import_legacy_projects(
     state: State<AppState>,
     projects: Vec<LegacyProjectImport>,
 ) -> Result<ImportResult, String> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let projects_dir = state.projects_dir.clone();
     let now = Utc::now().to_rfc3339();
 
-    let mut imported = 0usize;
-    let mut skipped = 0usize;
+    // ── Phase 1: check duplicates and assign IDs under the lock ───────────
+    struct PendingImport {
+        id: String,
+        project: LegacyProjectImport,
+    }
 
-    for p in projects {
-        let exists: i64 = db
-            .query_row(
-                "SELECT COUNT(*) FROM projects WHERE name = ?1",
-                params![&p.name],
-                |row| row.get(0),
-            )
-            .unwrap_or(1); // treat DB error as "exists" to avoid duplicate
+    let (pending, skipped) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let mut pending: Vec<PendingImport> = Vec::new();
+        let mut skipped = 0usize;
 
-        if exists > 0 {
-            skipped += 1;
-            continue;
+        for p in projects {
+            let exists: i64 = db
+                .query_row(
+                    "SELECT COUNT(*) FROM projects WHERE name = ?1",
+                    params![&p.name],
+                    |row| row.get(0),
+                )
+                .unwrap_or(1);
+
+            if exists > 0 {
+                skipped += 1;
+                continue;
+            }
+
+            pending.push(PendingImport {
+                id: Uuid::new_v4().to_string(),
+                project: p,
+            });
         }
+        (pending, skipped)
+        // db guard drops here
+    };
 
-        let id = Uuid::new_v4().to_string();
+    // ── Phase 2: file copy (no lock held) ─────────────────────────────────
+    struct ReadyImport {
+        id: String,
+        project: LegacyProjectImport,
+        output_dir: String,
+    }
 
-        // Attempt to copy files into app-managed directory
-        let target_base = std::path::Path::new(&state.projects_dir);
-        let preferred = target_base.join(&p.name);
+    let mut ready: Vec<ReadyImport> = Vec::new();
+    let target_base = std::path::Path::new(&projects_dir);
+
+    for pi in pending {
+        let preferred = target_base.join(&pi.project.name);
         let target_dir_opt: Option<std::path::PathBuf> = if !preferred.exists() {
             Some(preferred)
         } else {
-            let fallback = target_base.join(format!("{}-imported", &p.name));
+            let fallback = target_base.join(format!("{}-imported", &pi.project.name));
             if fallback.exists() {
-                None // both names taken, fall back to original path
+                None
             } else {
                 Some(fallback)
             }
         };
 
         let output_dir = match target_dir_opt {
-            Some(target_dir) => match copy_dir_recursive(std::path::Path::new(&p.dir), &target_dir) {
+            Some(target_dir) => match copy_dir_recursive(std::path::Path::new(&pi.project.dir), &target_dir) {
                 Ok(()) => target_dir.to_string_lossy().to_string(),
                 Err(e) => {
-                    eprintln!("[import] Failed to copy '{}': {}", p.name, e);
-                    // Clean up partial copy
+                    eprintln!("[import] Failed to copy '{}': {}", pi.project.name, e);
                     let _ = std::fs::remove_dir_all(&target_dir);
-                    p.dir.clone()
+                    pi.project.dir.clone()
                 }
             },
             None => {
-                eprintln!("[import] Target dirs for '{}' already exist, using original path", p.name);
-                p.dir.clone()
+                eprintln!("[import] Target dirs for '{}' already exist, using original path", pi.project.name);
+                pi.project.dir.clone()
             }
         };
 
-        db.execute(
-            "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode)
-             VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?5, 0)",
-            params![&id, &p.name, &p.last_phase, &output_dir, &now],
-        )
-        .map_err(|e| e.to_string())?;
+        ready.push(ReadyImport {
+            id: pi.id,
+            project: pi.project,
+            output_dir,
+        });
+    }
 
-        let completed_set: std::collections::HashSet<String> =
-            p.completed_phases.iter().cloned().collect();
+    // ── Phase 3: DB inserts under the lock ────────────────────────────────
+    let mut imported = 0usize;
 
-        for &phase in PHASES {
-            let phase_id = Uuid::new_v4().to_string();
-            let status = if completed_set.contains(phase) {
-                "completed"
-            } else if phase == p.last_phase {
-                "in_progress"
-            } else {
-                "pending"
-            };
-            let output_file = if status == "completed" {
-                phase_output_file(phase)
-            } else {
-                None
-            };
-            let completed_at: Option<&str> = if status == "completed" { Some(&now) } else { None };
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
 
+        for ri in ready {
             db.execute(
-                "INSERT INTO project_phases (id, project_id, phase, status, output_file, completed_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![&phase_id, &id, phase, status, output_file, completed_at],
+                "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode)
+                 VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?5, 0)",
+                params![&ri.id, &ri.project.name, &ri.project.last_phase, &ri.output_dir, &now],
             )
             .map_err(|e| e.to_string())?;
-        }
 
-        imported += 1;
+            let completed_set: std::collections::HashSet<String> =
+                ri.project.completed_phases.iter().cloned().collect();
+
+            for &phase in PHASES {
+                let phase_id = Uuid::new_v4().to_string();
+                let status = if completed_set.contains(phase) {
+                    "completed"
+                } else if phase == ri.project.last_phase {
+                    "in_progress"
+                } else {
+                    "pending"
+                };
+                let output_file = if status == "completed" {
+                    phase_output_file(phase)
+                } else {
+                    None
+                };
+                let completed_at: Option<&str> = if status == "completed" { Some(&now) } else { None };
+
+                db.execute(
+                    "INSERT INTO project_phases (id, project_id, phase, status, output_file, completed_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![&phase_id, &ri.id, phase, status, output_file, completed_at],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+
+            imported += 1;
+        }
+        // db guard drops here
     }
 
     Ok(ImportResult { imported, skipped })
@@ -718,7 +757,7 @@ pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResu
             })
             .map_err(|e| e.to_string())?
             .filter_map(|r| r.ok())
-            .filter(|r| !r.output_dir.starts_with(projects_dir.as_str()))
+            .filter(|r| !std::path::Path::new(&r.output_dir).starts_with(std::path::Path::new(&projects_dir)))
             .collect::<Vec<_>>();
         collected
         // db guard drops here
