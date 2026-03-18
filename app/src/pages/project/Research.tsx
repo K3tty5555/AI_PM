@@ -96,6 +96,18 @@ export function ResearchPage() {
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
+  const [isApiMode, setIsApiMode] = useState(false)
+  const [hasPlaywrightMcp, setHasPlaywrightMcp] = useState(false)
+
+  useEffect(() => {
+    api.getConfig().then(cfg => {
+      const apiMode = cfg.backend === "api"
+      setIsApiMode(apiMode)
+      if (!apiMode) {
+        api.checkPlaywrightMcp().then(setHasPlaywrightMcp).catch(() => {})
+      }
+    }).catch(() => {})
+  }, [])
 
   const startedRef = useRef(false)
 
@@ -106,6 +118,7 @@ export function ResearchPage() {
 
   const [searchParams] = useSearchParams()
   const autostart = searchParams.get("autostart") === "1"
+  const isYolo = searchParams.get("yolo") === "1"
 
   const displayContent = existingContent ?? text
 
@@ -228,13 +241,13 @@ export function ResearchPage() {
 
       await api.advancePhase(projectId)
       invalidateProject(projectId)
-      navigate(`/project/${projectId}/stories?autostart=1`)
+      navigate(`/project/${projectId}/stories?autostart=1${isYolo ? "&yolo=1" : ""}`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate])
+  }, [projectId, existingContent, text, outputFile, navigate, isYolo])
 
   if (loading) {
     return (
@@ -252,6 +265,32 @@ export function ResearchPage() {
           <h1 className="text-base font-semibold text-[var(--text-primary)]">竞品研究</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
+        {isApiMode ? (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
+            <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[var(--text-tertiary)]" />
+            <p className="min-w-0 flex-1 text-[13px] text-[var(--text-secondary)]">
+              API 模式下竞品分析依赖模型知识，无法获取实时数据。切换到 Claude CLI 后端可启用联网搜索和深度分析。
+            </p>
+            <button
+              onClick={() => navigate("/settings")}
+              className="shrink-0 text-[13px] text-[var(--accent-color)] hover:opacity-70 transition-opacity"
+            >
+              去设置
+            </button>
+          </div>
+        ) : !hasPlaywrightMcp ? (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
+            <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[var(--yellow)]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] text-[var(--text-secondary)]">
+                未检测到 Playwright MCP，深度分析（自动登录截图）不可用。普通竞品分析仍可正常运行。
+              </p>
+              <p className="mt-1 font-mono text-[11px] text-[var(--text-tertiary)] select-all">
+                claude mcp add playwright -s user -- npx @playwright/mcp@latest
+              </p>
+            </div>
+          </div>
+        ) : null}
         <ContextPills
           projectId={projectId!}
           onExcludeChange={setExcludedContext}

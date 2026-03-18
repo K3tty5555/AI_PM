@@ -113,6 +113,20 @@ export function RequirementPage() {
     }
   }, [projectId, content, saveDraft, navigate])
 
+  const handleYolo = useCallback(async () => {
+    if (!projectId || !content.trim()) return
+    setAdvancing(true)
+    try {
+      const saved = await saveDraft()
+      if (!saved) { setAdvancing(false); return }
+      await api.advancePhase(projectId)
+      navigate(`/project/${projectId}/analysis?autostart=1&yolo=1`)
+    } catch (err) {
+      console.error("Failed to start yolo:", err)
+      setAdvancing(false)
+    }
+  }, [projectId, content, saveDraft, navigate])
+
   // Loading state
   if (loading) {
     return (
@@ -190,6 +204,15 @@ export function RequirementPage() {
                 {saveHint}
               </span>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleYolo}
+              disabled={!canSubmit || advancing}
+              title="自动执行需求分析→竞品研究→用户故事，在PRD前停下"
+            >
+              ⚡ 加急
+            </Button>
             <Button
               variant="ghost"
               size="sm"
