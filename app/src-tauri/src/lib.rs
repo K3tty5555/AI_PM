@@ -80,6 +80,8 @@ pub fn run() {
             commands::files::list_project_context,
             commands::files::export_prd_docx,
             commands::files::reveal_file,
+            commands::files::open_file,
+            commands::files::write_file,
             commands::env::check_env,
             commands::env::install_dep,
             commands::env::check_playwright_mcp,
