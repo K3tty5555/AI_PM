@@ -25,6 +25,8 @@ export function RequirementPage() {
     undefined
   )
   const [files, setFiles] = useState<File[]>([])
+  const [urlInput, setUrlInput] = useState("")
+  const [urls, setUrls] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [advancing, setAdvancing] = useState(false)
   const [saveHint, setSaveHint] = useState("")
@@ -74,10 +76,13 @@ export function RequirementPage() {
     setSaving(true)
     setSaveHint("")
     try {
+      const contentWithUrls = urls.length > 0
+        ? `${content.trim()}\n\n---\n参考网址：\n${urls.map(u => `- ${u}`).join("\n")}`
+        : content.trim()
       await api.saveProjectFile({
         projectId,
         fileName: DRAFT_FILE,
-        content: content.trim(),
+        content: contentWithUrls,
       })
       setSaveHint("已暂存")
       setTimeout(() => setSaveHint(""), 2000)
@@ -90,7 +95,7 @@ export function RequirementPage() {
     } finally {
       setSaving(false)
     }
-  }, [projectId, content])
+  }, [projectId, content, urls])
 
   // Advance to analysis
   const handleStart = useCallback(async () => {
@@ -187,6 +192,52 @@ export function RequirementPage() {
           </span>
         </label>
         <FileUpload files={files} onChange={setFiles} />
+      </div>
+
+      {/* Optional URL context (collapsible) */}
+      <div className="mt-4">
+        <details className="group">
+          <summary className="cursor-pointer text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] list-none flex items-center gap-1 select-none">
+            <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span>
+            <span className="ml-1">添加参考网址（可选）</span>
+          </summary>
+          <div className="mt-2 flex gap-2">
+            <input
+              type="url"
+              placeholder="https://..."
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && urlInput.trim()) {
+                  setUrls((prev) => [...prev, urlInput.trim()])
+                  setUrlInput("")
+                }
+              }}
+              className="flex-1 h-8 px-3 rounded text-[13px] bg-[var(--secondary)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-color)] transition-colors"
+            />
+            <Button variant="ghost" size="sm" onClick={() => {
+              if (urlInput.trim()) {
+                setUrls((prev) => [...prev, urlInput.trim()])
+                setUrlInput("")
+              }
+            }}>
+              添加
+            </Button>
+          </div>
+          {urls.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {urls.map((u, i) => (
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-[var(--secondary)] border border-[var(--border)] text-[var(--text-secondary)]">
+                  {(() => { try { return new URL(u).hostname } catch { return u.slice(0, 30) } })()}
+                  <button
+                    onClick={() => setUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                  >×</button>
+                </span>
+              ))}
+            </div>
+          )}
+        </details>
       </div>
 
       {/* Sticky bottom action bar */}
