@@ -25,6 +25,7 @@ fn phase_config(phase: &str) -> Option<(&'static str, &'static [&'static str], &
         "prototype"   => Some(("ai-pm-prototype",  &["05-prd/05-PRD-v1.0.md"],                                                    "06-prototype.html",            &["ui-ux-pro-max", "frontend-design"])),
         "review"      => Some(("ai-pm-review",        &["05-prd/05-PRD-v1.0.md"],                                                    "07-review-report.md",          &[])),
         "review-modify" => Some(("ai-pm-review-modify", &["07-review-report.md", "05-prd/05-PRD-v1.0.md"],                           "05-prd/05-PRD-v1.0.md",        &["Humanizer-zh"])),
+        "retrospective" => Some(("ai-pm-retrospective", &["01-requirement-draft.md", "02-analysis-report.md", "05-prd/05-PRD-v1.0.md", "07-review-report.md"], "10-retrospective.md",          &[])),
         _ => None,
     }
 }

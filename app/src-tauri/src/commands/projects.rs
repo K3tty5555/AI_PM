@@ -10,7 +10,7 @@ use crate::state::AppState;
 
 const PHASES: &[&str] = &[
     "requirement", "analysis", "research", "stories", "prd", "prototype", "review",
-    "analytics", "review-modify",
+    "analytics", "review-modify", "retrospective",
 ];
 
 #[derive(Debug, Serialize, Clone)]
