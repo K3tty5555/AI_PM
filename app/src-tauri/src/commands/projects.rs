@@ -102,7 +102,7 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
 pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result<ProjectDetail, String> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
-    let output_dir = format!("{}/{}", state.projects_dir, args.name);
+    let output_dir = state.projects_base().join(&args.name).to_string_lossy().to_string();
     let team_mode_int: i64 = if args.team_mode.unwrap_or(false) { 1 } else { 0 };
 
     // Create project directory
@@ -629,7 +629,8 @@ pub fn import_legacy_projects(
     }
 
     let mut ready: Vec<ReadyImport> = Vec::new();
-    let target_base = std::path::Path::new(&projects_dir);
+    let projects_base = state.projects_base();
+    let target_base = projects_base.as_path();
 
     for pi in pending {
         let preferred = target_base.join(&pi.project.name);
@@ -733,6 +734,7 @@ pub struct MigrateResult {
 #[tauri::command]
 pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResult, String> {
     let projects_dir = state.projects_dir.clone();
+    let projects_base = state.projects_base();
 
     // ── Phase 1: collect rows under the lock, then release it ──────────────
     let rows = {
@@ -757,7 +759,7 @@ pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResu
             })
             .map_err(|e| e.to_string())?
             .filter_map(|r| r.ok())
-            .filter(|r| !std::path::Path::new(&r.output_dir).starts_with(std::path::Path::new(&projects_dir)))
+            .filter(|r| !std::path::Path::new(&r.output_dir).starts_with(&projects_base))
             .collect::<Vec<_>>();
         collected
         // db guard drops here
@@ -770,7 +772,7 @@ pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResu
     // Collect (id, new_path) pairs for successful copies
     let mut updates: Vec<(String, String)> = Vec::new();
 
-    let target_base = std::path::Path::new(&projects_dir);
+    let target_base = projects_base.as_path();
 
     for row in &rows {
         let src = std::path::Path::new(&row.output_dir);
