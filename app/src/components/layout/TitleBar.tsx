@@ -1,10 +1,16 @@
 import type { CSSProperties } from "react"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { PanelLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/tauri-api"
 
-export function TitleBar() {
+interface TitleBarProps {
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
+}
+
+export function TitleBar({ sidebarOpen, onToggleSidebar }: TitleBarProps) {
   const navigate = useNavigate()
   const [apiReady, setApiReady] = useState<boolean | null>(null)
 
@@ -17,11 +23,27 @@ export function TitleBar() {
   return (
     <header
       data-tauri-drag-region
-      className="flex h-11 shrink-0 select-none items-center justify-between border-b border-[var(--border)] bg-[rgba(250,250,250,0.9)] backdrop-blur-sm px-5"
+      className="flex h-11 shrink-0 select-none items-center justify-between border-b border-[var(--border)] bg-[rgba(250,250,250,0.9)] backdrop-blur-sm px-3"
       style={{ WebkitAppRegion: "drag" } as CSSProperties}
     >
-      {/* macOS traffic lights space */}
-      <div className="w-[72px]" data-tauri-drag-region />
+      {/* Left: macOS traffic lights space + sidebar toggle */}
+      <div
+        className="flex items-center gap-1"
+        style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
+      >
+        {/* macOS traffic lights take ~72px */}
+        <div className="w-[72px]" data-tauri-drag-region />
+        <button
+          onClick={onToggleSidebar}
+          title={sidebarOpen ? "收起侧边栏" : "展开侧边栏"}
+          className={cn(
+            "flex items-center justify-center size-6 rounded-md transition-colors duration-150",
+            "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)]"
+          )}
+        >
+          <PanelLeft className="size-4" />
+        </button>
+      </div>
 
       {/* Brand */}
       <button
@@ -35,7 +57,7 @@ export function TitleBar() {
 
       {/* API status indicator */}
       <div
-        className="flex w-[72px] items-center justify-end"
+        className="flex w-[120px] items-center justify-end"
         style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
       >
         {apiReady !== null && (
