@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
 import { api } from "@/lib/tauri-api"
+import type { LegacyProjectScan } from "@/lib/tauri-api"
 
 interface ConfigState {
   hasConfig: boolean
@@ -53,6 +54,12 @@ export function SettingsPage() {
   const [savingDir, setSavingDir] = useState(false)
   const [dirSaveResult, setDirSaveResult] = useState<{ ok: boolean; message: string } | null>(null)
 
+  // Migration state
+  const [scanning, setScanning] = useState(false)
+  const [scanResults, setScanResults] = useState<LegacyProjectScan[] | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null)
+
   // Save state
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState<{
@@ -81,6 +88,41 @@ export function SettingsPage() {
   useEffect(() => {
     fetchConfig()
   }, [fetchConfig])
+
+  const handleScanLegacy = async () => {
+    const selected = await dialogOpen({ directory: true, multiple: false })
+    if (!selected || typeof selected !== "string") return
+    setScanning(true)
+    setScanResults(null)
+    setImportResult(null)
+    try {
+      const results = await api.scanLegacyProjects(selected)
+      setScanResults(results)
+    } catch (err) {
+      setScanResults([])
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  const handleImportLegacy = async () => {
+    if (!scanResults) return
+    const toImport = scanResults.filter((p) => !p.alreadyExists)
+    if (toImport.length === 0) return
+    setImporting(true)
+    try {
+      const result = await api.importLegacyProjects(toImport)
+      setImportResult(result)
+      setScanResults(null)
+      if (result.imported > 0) {
+        setTimeout(() => navigate("/"), 1500)
+      }
+    } catch (err) {
+      setImportResult({ imported: 0, skipped: 0 })
+    } finally {
+      setImporting(false)
+    }
+  }
 
   const handlePickDir = async () => {
     const selected = await dialogOpen({ directory: true, multiple: false })
@@ -506,6 +548,87 @@ export function SettingsPage() {
           )}
         </CardFooter>
       </Card>
+
+        {/* 数据迁移 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>数据迁移</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-[var(--text-secondary)]">
+              将旧版 AI PM（Claude Code skill 版）的历史项目导入到客户端。选择旧版的{" "}
+              <code className="text-xs bg-[var(--hover-bg)] px-1 py-0.5 rounded">output/projects/</code>{" "}
+              目录即可。
+            </p>
+
+            {!scanResults && !importResult && (
+              <Button
+                variant="ghost"
+                onClick={handleScanLegacy}
+                disabled={scanning}
+                className="flex items-center gap-2"
+              >
+                <FolderOpen className="size-3.5" />
+                {scanning ? "扫描中..." : "选择旧版项目目录"}
+              </Button>
+            )}
+
+            {scanResults !== null && scanResults.length === 0 && (
+              <p className="text-sm text-[var(--text-tertiary)]">未找到旧版项目，请确认目录正确。</p>
+            )}
+
+            {scanResults && scanResults.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  发现 {scanResults.length} 个项目：
+                </p>
+                <ul className="space-y-1">
+                  {scanResults.map((p) => (
+                    <li key={p.dir} className="flex items-center gap-2 text-sm">
+                      {p.alreadyExists ? (
+                        <span className="text-[var(--text-tertiary)]">
+                          — {p.name}{" "}
+                          <span className="text-xs">（已存在，跳过）</span>
+                        </span>
+                      ) : (
+                        <span className="text-[var(--text-primary)]">
+                          ✓ {p.name}{" "}
+                          <span className="text-xs text-[var(--text-tertiary)]">
+                            （{p.completedPhases.length}/7 阶段已完成）
+                          </span>
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    variant="primary"
+                    onClick={handleImportLegacy}
+                    disabled={importing || scanResults.every((p) => p.alreadyExists)}
+                  >
+                    {importing
+                      ? "导入中..."
+                      : `确认导入 ${scanResults.filter((p) => !p.alreadyExists).length} 个项目`}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setScanResults(null)}>
+                    取消
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {importResult && (
+              <p className="text-sm text-[var(--success)]">
+                ✓ 已导入 {importResult.imported} 个项目
+                {importResult.skipped > 0
+                  ? `，跳过 ${importResult.skipped} 个（已存在）`
+                  : ""}
+                ，正在跳转…
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
       {/* About Card */}
       <Card className="hover:shadow-none">
