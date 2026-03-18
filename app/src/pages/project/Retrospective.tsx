@@ -123,12 +123,10 @@ export function RetrospectivePage() {
         status: "completed",
         outputFile: outputFile ?? RETRO_FILE,
       })
-
-      await api.advancePhase(projectId)
       invalidateProject(projectId)
       navigate("/")
     } catch (err) {
-      console.error("Failed to advance:", err)
+      console.error("Failed to complete:", err)
       setAdvancing(false)
       setSaving(false)
     }
