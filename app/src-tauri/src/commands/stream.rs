@@ -13,18 +13,58 @@ pub struct ChatMessage {
     pub content: String,
 }
 
-// Phase → (skill_name, input_files[], output_file)
-fn phase_config(phase: &str) -> Option<(&'static str, &'static [&'static str], &'static str)> {
+// Phase → (skill_name, input_files[], output_file, companion_skills[])
+fn phase_config(phase: &str) -> Option<(&'static str, &'static [&'static str], &'static str, &'static [&'static str])> {
     match phase {
-        "requirement" => Some(("ai-pm", &[], "01-requirement-draft.md")),
-        "analysis" => Some(("ai-pm-analyze", &["01-requirement-draft.md"], "02-analysis-report.md")),
-        "research" => Some(("ai-pm-research", &["01-requirement-draft.md", "02-analysis-report.md"], "03-competitor-report.md")),
-        "stories" => Some(("ai-pm-story", &["02-analysis-report.md", "03-competitor-report.md"], "04-user-stories.md")),
-        "prd" => Some(("ai-pm-prd", &["02-analysis-report.md", "03-competitor-report.md", "04-user-stories.md"], "05-prd/05-PRD-v1.0.md")),
-        "prototype" => Some(("ai-pm-prototype", &["05-prd/05-PRD-v1.0.md"], "06-prototype.html")),
-        "review" => Some(("ai-pm-review", &["05-prd/05-PRD-v1.0.md"], "07-review-report.md")),
+        "requirement" => Some(("ai-pm",           &[],                                                                           "01-requirement-draft.md",      &[])),
+        "analysis"    => Some(("ai-pm-analyze",    &["01-requirement-draft.md"],                                                  "02-analysis-report.md",        &[])),
+        "research"    => Some(("ai-pm-research",   &["01-requirement-draft.md", "02-analysis-report.md"],                         "03-competitor-report.md",      &[])),
+        "stories"     => Some(("ai-pm-story",      &["02-analysis-report.md",   "03-competitor-report.md"],                       "04-user-stories.md",           &[])),
+        "prd"         => Some(("ai-pm-prd",        &["02-analysis-report.md",   "03-competitor-report.md", "04-user-stories.md"], "05-prd/05-PRD-v1.0.md",        &["Humanizer-zh"])),
+        "prototype"   => Some(("ai-pm-prototype",  &["05-prd/05-PRD-v1.0.md"],                                                    "06-prototype.html",            &["ui-ux-pro-max", "frontend-design"])),
+        "review"      => Some(("ai-pm-review",     &["05-prd/05-PRD-v1.0.md"],                                                    "07-review-report.md",          &[])),
         _ => None,
     }
+}
+
+/// Try to load a companion skill from user's ~/.claude environment.
+/// Search order:
+///   1. ~/.claude/skills/<name>/SKILL.md  (user-installed skills)
+///   2. installPath from ~/.claude/plugins/installed_plugins.json  (plugins)
+/// Returns None silently if not found — phases degrade gracefully.
+fn load_user_companion(skill_name: &str) -> Option<String> {
+    let home = dirs::home_dir()?;
+
+    // 1. User skills dir
+    let skill_path = home.join(".claude/skills").join(skill_name).join("SKILL.md");
+    if skill_path.exists() {
+        return fs::read_to_string(&skill_path).ok();
+    }
+
+    // 2. Plugin cache via installed_plugins.json
+    let plugins_json = home.join(".claude/plugins/installed_plugins.json");
+    if let Ok(raw) = fs::read_to_string(&plugins_json) {
+        if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
+            if let Some(plugins) = cfg.get("plugins").and_then(|v| v.as_object()) {
+                for (key, entries) in plugins {
+                    // key format: "frontend-design@claude-plugins-official"
+                    let plugin_short = key.split('@').next().unwrap_or("");
+                    if plugin_short.eq_ignore_ascii_case(skill_name) {
+                        if let Some(first) = entries.as_array().and_then(|a| a.first()) {
+                            if let Some(install_path) = first.get("installPath").and_then(|v| v.as_str()) {
+                                let md = Path::new(install_path).join("SKILL.md");
+                                if let Ok(content) = fs::read_to_string(&md) {
+                                    return Some(content);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
 }
 
 pub fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String> {
@@ -168,14 +208,27 @@ fn build_system_prompt(
     output_dir: &str,
     project_name: &str,
     skill_name: &str,
+    companion_skills: &[&str],
     input_files: &[&str],
     user_input: Option<&str>,
     team_mode: bool,
     phase: &str,
     config_dir: &str,
     excluded_context: &[String],
+    projects_dir: &str,
+    style_id: Option<&str>,
 ) -> Result<String, String> {
-    let skill_content = load_skill(skills_root, skill_name)?;
+    let mut skill_content = load_skill(skills_root, skill_name)?;
+
+    // Append companion skills (Humanizer-zh, ui-ux-pro-max, frontend-design…)
+    // Priority: user's ~/.claude install → bundled resources fallback
+    for &companion in companion_skills {
+        let content = load_user_companion(companion)
+            .or_else(|| load_skill(skills_root, companion).ok());
+        if let Some(c) = content {
+            skill_content.push_str(&format!("\n\n---\n\n<!-- companion: {} -->\n\n{}", companion, c));
+        }
+    }
 
     let mut parts = vec![skill_content];
 
@@ -190,6 +243,13 @@ fn build_system_prompt(
     if !context_block.is_empty() {
         parts[0].push_str("\n\n---\n\n");
         parts[0].push_str(&context_block);
+    }
+
+    // Inject active PRD style for prd and weekly phases
+    if phase == "prd" || phase == "weekly" {
+        if let Some(style) = crate::commands::templates::load_active_prd_style(projects_dir, style_id) {
+            parts[0].push_str(&format!("\n\n---\n\n{}", style));
+        }
     }
 
     // Project context
@@ -280,6 +340,7 @@ pub struct StartStreamArgs {
     pub phase: String,
     pub messages: Vec<ChatMessage>,
     pub excluded_context: Option<Vec<String>>,
+    pub style_id: Option<String>,
 }
 
 #[tauri::command]
@@ -301,7 +362,7 @@ pub async fn start_stream(
     let config_dir = state.config_dir.clone();
     let excluded_context = args.excluded_context.unwrap_or_default();
 
-    let (skill_name, input_files, output_file) = phase_config(&args.phase)
+    let (skill_name, input_files, output_file, companion_skills) = phase_config(&args.phase)
         .ok_or_else(|| format!("Unknown phase: {}", args.phase))?;
 
     let last_user_msg = args.messages.iter().rev()
@@ -319,17 +380,21 @@ pub async fn start_stream(
         .to_string_lossy()
         .to_string();
 
+    let projects_dir = state.projects_dir.clone();
     let system_prompt = build_system_prompt(
         &skills_root,
         &output_dir,
         &project_name,
         skill_name,
+        companion_skills,
         input_files,
         last_user_msg,
         team_mode,
         &args.phase,
         &config_dir,
         &excluded_context,
+        &projects_dir,
+        args.style_id.as_deref(),
     ).map_err(|e| {
         let _ = app.emit("stream_error", &e);
         e
