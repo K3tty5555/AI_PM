@@ -23,7 +23,7 @@ interface UseToolStreamReturn {
   elapsedSeconds: number
   error: string | null
   streamMeta: StreamMeta | null
-  run: (userInput: string, filePath?: string) => void
+  run: (userInput: string, filePath?: string, mode?: string) => void
   reset: () => void
 }
 
@@ -54,7 +54,7 @@ export function useToolStream(toolName: string, projectId?: string): UseToolStre
   }, [])
 
   const run = useCallback(
-    (userInput: string, filePath?: string) => {
+    (userInput: string, filePath?: string, mode?: string) => {
       // 清理上次的 listeners
       unlistenersRef.current.forEach((fn) => fn())
       unlistenersRef.current = []
@@ -91,7 +91,7 @@ export function useToolStream(toolName: string, projectId?: string): UseToolStre
         }),
       ]).then((unlisteners) => {
         unlistenersRef.current = unlisteners
-        api.runTool({ toolName, userInput, filePath, projectId }).catch((err: unknown) => {
+        api.runTool({ toolName, userInput, filePath, projectId, mode }).catch((err: unknown) => {
           unlistenersRef.current.forEach((fn) => fn())
           unlistenersRef.current = []
           setIsStreaming(false)

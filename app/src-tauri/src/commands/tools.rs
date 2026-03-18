@@ -25,6 +25,8 @@ pub struct RunToolArgs {
     /// Optional: attach a file path (for data analysis)
     pub file_path: Option<String>,
     pub project_id: Option<String>,
+    /// Optional mode for data tool: "dashboard" | "metrics"
+    pub mode: Option<String>,
 }
 
 #[tauri::command]
@@ -126,6 +128,19 @@ pub async fn run_tool(
         "{}\n\n---\n\n### ⚠️ 非交互模式（优先级最高，覆盖以上所有指令）\n\n你正在 **AI PM 桌面应用的流式输出模式**中运行，你的整个回复内容就是文档本身。\n\n**强制规则（逐条执行）：**\n1. **第一行就是文档标题**（如 `# PRD：产品名`），最后一行是文档结尾，不要有任何前言或后记\n2. **禁止输出元信息**：「已生成」「文件已保存」「执行步骤」「操作结果」「PRD 已完成」等一律不输出\n3. **禁止调用任何工具**：Write、Edit、Bash、AskUserQuestion 在此环境中均不存在，调用无效\n4. **禁止提问或确认**：导出格式默认「仅 Markdown」，用户故事按标准编写，直接生成内容\n5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从文档第一行开始",
         skill_content
     );
+
+    // Inject mode-specific instructions for data tool
+    if args.tool_name == "ai-pm-data" {
+        match args.mode.as_deref() {
+            Some("dashboard") => {
+                system_prompt.push_str("\n\n---\n\n你的整个输出就是一个完整的 HTML 仪表盘文件，第一行必须是 <!DOCTYPE html>，遵循 Apple HIG 风格，数据驱动，支持筛选联动，无需任何说明文字，直接输出 HTML。");
+            }
+            Some("metrics") => {
+                system_prompt.push_str("\n\n---\n\n你是一位数据分析专家，输出结构化指标体系文档，包含：北极星指标、一级分解指标、过程指标、数据口径定义、埋点建议。用 Markdown 表格输出，清晰易读。");
+            }
+            _ => {}
+        }
+    }
 
     // Inject active PRD style for weekly and priority tools (persona carries over to tool outputs)
     if args.tool_name == "ai-pm-weekly" || args.tool_name == "ai-pm-priority" {
