@@ -1,14 +1,47 @@
-import { useState, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { open as openDialog } from "@tauri-apps/plugin-dialog"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useToolStream } from "@/hooks/use-tool-stream"
-import { api } from "@/lib/tauri-api"
+import { api, type PrdStyleEntry } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
 export function ToolPersonaPage() {
   const [tab, setTab] = useState<"analyze" | "list">("analyze")
+  const [styles, setStyles] = useState<PrdStyleEntry[]>([])
+  const [stylesLoading, setStylesLoading] = useState(false)
+  const [activeStyle, setActiveStyle] = useState<string | null>(null)
+  const [settingActive, setSettingActive] = useState<string | null>(null)
+
+  const loadStyles = useCallback(async () => {
+    setStylesLoading(true)
+    try {
+      const [data, active] = await Promise.all([api.listPrdStyles(), api.getActivePrdStyle()])
+      setStyles(data)
+      setActiveStyle(active)
+    } catch {
+      setStyles([])
+    } finally {
+      setStylesLoading(false)
+    }
+  }, [])
+
+  const handleSetActive = useCallback(async (name: string) => {
+    setSettingActive(name)
+    try {
+      await api.setActivePrdStyle(name)
+      setActiveStyle(name)
+    } catch {
+      // silently ignore
+    } finally {
+      setSettingActive(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tab === "list") loadStyles()
+  }, [tab, loadStyles])
   const [filePath, setFilePath] = useState("")
   const [fileContent, setFileContent] = useState("")
   const [fileError, setFileError] = useState<string | null>(null)
@@ -128,11 +161,51 @@ export function ToolPersonaPage() {
 
       {tab === "list" && (
         <div className="mt-6">
-          <p className="text-sm text-[var(--text-secondary)]">
-            已保存的风格档案将在这里显示。分析 PRD 文档后可保存为风格档案。
-          </p>
-          {/* TODO: 列出 {projectsDir}/templates/prd-styles/ 下各目录 */}
-          <p className="mt-4 text-xs text-[var(--text-secondary)]">（功能完善中）</p>
+          {stylesLoading ? (
+            <p className="text-sm text-[var(--text-secondary)]">加载中···</p>
+          ) : styles.length === 0 ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-[var(--text-secondary)]">暂无已保存的风格档案</p>
+              <p className="text-xs text-[var(--text-tertiary)]">
+                在「分析文档」tab 上传 PRD 后可生成风格档案，或在「设置 → 模板迁移」从旧版 AI PM 导入
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {styles.map((s) => (
+                <div
+                  key={s.name}
+                  className="rounded-lg border border-[var(--border)] px-4 py-3 hover:border-[var(--accent-color)]/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[var(--text-primary)]">{s.name}</span>
+                      {s.hasPersona && (
+                        <span className="rounded-full bg-[var(--accent-color)]/10 px-2 py-0.5 text-[10px] text-[var(--accent-color)]">
+                          含分身档案
+                        </span>
+                      )}
+                      {activeStyle === s.name && (
+                        <span className="rounded-full bg-[var(--accent-color)]/15 px-2 py-0.5 text-[10px] text-[var(--accent-color)] font-medium">
+                          当前默认
+                        </span>
+                      )}
+                    </div>
+                    {activeStyle !== s.name && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSetActive(s.name)}
+                        disabled={settingActive === s.name}
+                      >
+                        {settingActive === s.name ? "设置中..." : "设为默认"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
