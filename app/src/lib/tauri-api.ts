@@ -68,6 +68,18 @@ export interface ImportResult {
   skipped: number
 }
 
+export interface KnowledgeCategoryScan {
+  category: string
+  total: number
+  newCount: number
+}
+
+export interface DesignSpecScan {
+  name: string
+  hasPersona: boolean
+  alreadyExists: boolean
+}
+
 // ─── API functions ─────────────────────────────────────────────────────────
 
 export const api = {
@@ -122,4 +134,14 @@ export const api = {
     invoke<LegacyProjectScan[]>("scan_legacy_projects", { dir }),
   importLegacyProjects: (projects: LegacyProjectScan[]) =>
     invoke<ImportResult>("import_legacy_projects", { projects }),
+
+  // Template migration
+  scanLegacyKnowledge: (dir: string) =>
+    invoke<KnowledgeCategoryScan[]>("scan_legacy_knowledge", { dir }),
+  importLegacyKnowledge: (dir: string) =>
+    invoke<ImportResult>("import_legacy_knowledge", { dir }),
+  scanLegacyDesignSpecs: (dir: string) =>
+    invoke<DesignSpecScan[]>("scan_legacy_design_specs", { dir }),
+  importLegacyDesignSpecs: (dir: string) =>
+    invoke<ImportResult>("import_legacy_design_specs", { dir }),
 }
