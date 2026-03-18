@@ -6,6 +6,17 @@ use crate::state::AppState;
 
 // ─── PRD Style helpers ──────────────────────────────────────────────────────
 
+/// Validate that a style name is safe to use as a path component.
+/// Rejects empty strings, names starting with `.`, and any path-separator
+/// or null characters that could be used for directory-traversal attacks.
+fn is_safe_style_name(name: &str) -> bool {
+    !name.is_empty()
+        && !name.starts_with('.')
+        && !name.contains('/')
+        && !name.contains('\\')
+        && !name.contains('\0')
+}
+
 /// Load the content of the active (or named) PRD style to inject into the system prompt.
 /// Returns None silently if the style directory or files are missing.
 pub(crate) fn load_active_prd_style(projects_dir: &str, style_id: Option<&str>) -> Option<String> {
@@ -34,7 +45,7 @@ pub(crate) fn load_active_prd_style(projects_dir: &str, style_id: Option<&str>) 
         }
     };
 
-    if style_name.is_empty() {
+    if !is_safe_style_name(&style_name) {
         return None;
     }
 
@@ -58,8 +69,15 @@ pub(crate) fn load_active_prd_style(projects_dir: &str, style_id: Option<&str>) 
 
 #[tauri::command]
 pub fn set_active_prd_style(state: State<'_, AppState>, name: String) -> Result<(), String> {
+    if !is_safe_style_name(&name) {
+        return Err(format!("无效的风格名称: {}", name));
+    }
     let styles_dir = Path::new(&state.projects_dir).join("prd-styles");
     fs::create_dir_all(&styles_dir).map_err(|e| e.to_string())?;
+    let style_dir = styles_dir.join(&name);
+    if !style_dir.join("style-config.json").exists() {
+        return Err(format!("风格「{}」不存在", name));
+    }
     fs::write(styles_dir.join("_active"), &name).map_err(|e| e.to_string())
 }
 
