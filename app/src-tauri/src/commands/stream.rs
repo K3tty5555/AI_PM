@@ -23,7 +23,8 @@ fn phase_config(phase: &str) -> Option<(&'static str, &'static [&'static str], &
         "prd"         => Some(("ai-pm-prd",        &["02-analysis-report.md",   "03-competitor-report.md", "04-user-stories.md"], "05-prd/05-PRD-v1.0.md",        &["Humanizer-zh"])),
         "analytics"   => Some(("ai-pm-data",       &["05-prd/05-PRD-v1.0.md"],                                                    "09-analytics-requirement.md",  &[])),
         "prototype"   => Some(("ai-pm-prototype",  &["05-prd/05-PRD-v1.0.md"],                                                    "06-prototype.html",            &["ui-ux-pro-max", "frontend-design"])),
-        "review"      => Some(("ai-pm-review",     &["05-prd/05-PRD-v1.0.md"],                                                    "07-review-report.md",          &[])),
+        "review"      => Some(("ai-pm-review",        &["05-prd/05-PRD-v1.0.md"],                                                    "07-review-report.md",          &[])),
+        "review-modify" => Some(("ai-pm-review-modify", &["07-review-report.md", "05-prd/05-PRD-v1.0.md"],                           "05-prd/05-PRD-v1.0.md",        &["Humanizer-zh"])),
         _ => None,
     }
 }
