@@ -247,7 +247,7 @@ export function RequirementPage() {
       <div className="mt-3 flex items-center justify-between py-2 px-3 rounded border border-[var(--border)] bg-[var(--secondary)]">
         <div>
           <p className="text-[13px] font-medium text-[var(--text-primary)]">团队模式</p>
-          <p className="text-[11px] text-[var(--text-tertiary)]">需求分析和竞品研究将自动连续执行</p>
+          <p className="text-[11px] text-[var(--text-tertiary)]">开启后，AI 将使用团队协作提示词进行更深入分析</p>
         </div>
         <button
           type="button"
