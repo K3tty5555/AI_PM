@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
 import { api } from "@/lib/tauri-api"
-import type { LegacyProjectScan, KnowledgeCategoryScan, DesignSpecScan } from "@/lib/tauri-api"
+import type { LegacyProjectScan, KnowledgeCategoryScan, PrdStyleScan, UiSpecScan, MigrateResult } from "@/lib/tauri-api"
+import { EnvChecker } from "@/components/env-checker"
 
 interface ConfigState {
   hasConfig: boolean
@@ -67,11 +68,21 @@ export function SettingsPage() {
   const [kbImportResult, setKbImportResult] = useState<{ imported: number; skipped: number } | null>(null)
   const [kbImportDir, setKbImportDir] = useState<string | null>(null)
 
-  const [specScanning, setSpecScanning] = useState(false)
-  const [specScanResults, setSpecScanResults] = useState<DesignSpecScan[] | null>(null)
-  const [specImporting, setSpecImporting] = useState(false)
-  const [specImportResult, setSpecImportResult] = useState<{ imported: number; skipped: number } | null>(null)
-  const [specImportDir, setSpecImportDir] = useState<string | null>(null)
+  const [prdStyleScanning, setPrdStyleScanning] = useState(false)
+  const [prdStyleScanResults, setPrdStyleScanResults] = useState<PrdStyleScan[] | null>(null)
+  const [prdStyleImporting, setPrdStyleImporting] = useState(false)
+  const [prdStyleImportResult, setPrdStyleImportResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [prdStyleImportDir, setPrdStyleImportDir] = useState<string | null>(null)
+
+  const [uiSpecScanning, setUiSpecScanning] = useState(false)
+  const [uiSpecScanResults, setUiSpecScanResults] = useState<UiSpecScan[] | null>(null)
+  const [uiSpecImporting, setUiSpecImporting] = useState(false)
+  const [uiSpecImportResult, setUiSpecImportResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [uiSpecImportDir, setUiSpecImportDir] = useState<string | null>(null)
+
+  // File consolidation state
+  const [migrating, setMigrating] = useState(false)
+  const [migrateResult, setMigrateResult] = useState<MigrateResult | null>(null)
 
   // Save state
   const [saving, setSaving] = useState(false)
@@ -136,37 +147,71 @@ export function SettingsPage() {
     }
   }
 
-  const handleScanDesignSpecs = async () => {
+  const handleScanPrdStyles = async () => {
     const selected = await dialogOpen({ directory: true, multiple: false })
     if (!selected || typeof selected !== "string") return
-    setSpecScanning(true)
-    setSpecScanResults(null)
-    setSpecImportResult(null)
-    setSpecImportDir(selected)
+    setPrdStyleScanning(true)
+    setPrdStyleScanResults(null)
+    setPrdStyleImportResult(null)
+    setPrdStyleImportDir(selected)
     try {
-      const results = await api.scanLegacyDesignSpecs(selected)
-      setSpecScanResults(results)
+      const results = await api.scanLegacyPrdStyles(selected)
+      setPrdStyleScanResults(results)
     } catch {
-      setSpecScanResults([])
+      setPrdStyleScanResults([])
     } finally {
-      setSpecScanning(false)
+      setPrdStyleScanning(false)
     }
   }
 
-  const handleImportDesignSpecs = async () => {
-    if (!specImportDir) return
-    setSpecImporting(true)
+  const handleImportPrdStyles = async () => {
+    if (!prdStyleImportDir) return
+    setPrdStyleImporting(true)
     try {
-      const result = await api.importLegacyDesignSpecs(specImportDir)
-      setSpecImportResult(result)
-      setSpecScanResults(null)
-      setSpecImportDir(null)
+      const result = await api.importLegacyPrdStyles(prdStyleImportDir)
+      setPrdStyleImportResult(result)
+      setPrdStyleScanResults(null)
+      setPrdStyleImportDir(null)
     } catch {
-      setSpecImportResult({ imported: 0, skipped: 0 })
-      setSpecScanResults(null)
-      setSpecImportDir(null)
+      setPrdStyleImportResult({ imported: 0, skipped: 0 })
+      setPrdStyleScanResults(null)
+      setPrdStyleImportDir(null)
     } finally {
-      setSpecImporting(false)
+      setPrdStyleImporting(false)
+    }
+  }
+
+  const handleScanUiSpecs = async () => {
+    const selected = await dialogOpen({ directory: true, multiple: false })
+    if (!selected || typeof selected !== "string") return
+    setUiSpecScanning(true)
+    setUiSpecScanResults(null)
+    setUiSpecImportResult(null)
+    setUiSpecImportDir(selected)
+    try {
+      const results = await api.scanLegacyUiSpecs(selected)
+      setUiSpecScanResults(results)
+    } catch {
+      setUiSpecScanResults([])
+    } finally {
+      setUiSpecScanning(false)
+    }
+  }
+
+  const handleImportUiSpecs = async () => {
+    if (!uiSpecImportDir) return
+    setUiSpecImporting(true)
+    try {
+      const result = await api.importLegacyUiSpecs(uiSpecImportDir)
+      setUiSpecImportResult(result)
+      setUiSpecScanResults(null)
+      setUiSpecImportDir(null)
+    } catch {
+      setUiSpecImportResult({ imported: 0, skipped: 0 })
+      setUiSpecScanResults(null)
+      setUiSpecImportDir(null)
+    } finally {
+      setUiSpecImporting(false)
     }
   }
 
@@ -271,6 +316,19 @@ export function SettingsPage() {
       })
     } finally {
       setCliChecking(false)
+    }
+  }
+
+  const handleMigrateToAppDir = async () => {
+    setMigrating(true)
+    setMigrateResult(null)
+    try {
+      const result = await api.migrateProjectsToAppDir()
+      setMigrateResult(result)
+    } catch (err) {
+      setMigrateResult({ migrated: 0, skipped: 0, failed: [{ name: "迁移失败", error: typeof err === "string" ? err : "未知错误" }] })
+    } finally {
+      setMigrating(false)
     }
   }
 
@@ -573,6 +631,16 @@ export function SettingsPage() {
         </CardFooter>
       </Card>
 
+      {/* Runtime Environment Card */}
+      <Card className="hover:shadow-none">
+        <CardHeader>
+          <CardTitle>运行环境</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EnvChecker />
+        </CardContent>
+      </Card>
+
       {/* Data Directory Card */}
       <Card className="hover:shadow-none">
         <CardHeader>
@@ -795,30 +863,30 @@ export function SettingsPage() {
 
             <div className="h-px bg-[var(--border)]" />
 
-            {/* 设计规范 & 分身 */}
+            {/* PRD 写作风格 & 分身 */}
             <div className="space-y-2">
-              <p className="text-sm font-medium text-[var(--text-primary)]">设计规范 & 产品分身</p>
+              <p className="text-sm font-medium text-[var(--text-primary)]">PRD 写作风格 & 产品分身</p>
               <p className="text-xs text-[var(--text-secondary)]">
                 从旧版 AI PM 的{" "}
                 <code className="bg-[var(--hover-bg)] px-1 py-0.5 rounded">templates/prd-styles/</code>{" "}
                 目录导入 PRD 风格配置和分身档案。
               </p>
 
-              {!specScanResults && !specImportResult && (
-                <Button variant="ghost" onClick={handleScanDesignSpecs} disabled={specScanning} className="flex items-center gap-2">
+              {!prdStyleScanResults && !prdStyleImportResult && (
+                <Button variant="ghost" onClick={handleScanPrdStyles} disabled={prdStyleScanning} className="flex items-center gap-2">
                   <FolderOpen className="size-3.5" />
-                  {specScanning ? "扫描中..." : "选择 PRD 样式目录"}
+                  {prdStyleScanning ? "扫描中..." : "选择 PRD 样式目录"}
                 </Button>
               )}
 
-              {specScanResults !== null && specScanResults.length === 0 && (
+              {prdStyleScanResults !== null && prdStyleScanResults.length === 0 && (
                 <p className="text-sm text-[var(--text-tertiary)]">未发现样式配置，请确认目录正确。</p>
               )}
 
-              {specScanResults && specScanResults.length > 0 && (
+              {prdStyleScanResults && prdStyleScanResults.length > 0 && (
                 <div className="space-y-2">
                   <ul className="space-y-0.5">
-                    {specScanResults.map((spec) => (
+                    {prdStyleScanResults.map((spec) => (
                       <li key={spec.name} className="text-sm">
                         {spec.alreadyExists ? (
                           <span className="text-[var(--text-tertiary)]">
@@ -838,30 +906,99 @@ export function SettingsPage() {
                   <div className="flex items-center gap-2 pt-1">
                     <Button
                       variant="primary"
-                      onClick={handleImportDesignSpecs}
-                      disabled={specImporting || specScanResults.every((s) => s.alreadyExists)}
+                      onClick={handleImportPrdStyles}
+                      disabled={prdStyleImporting || prdStyleScanResults.every((s) => s.alreadyExists)}
                     >
-                      {specImporting
+                      {prdStyleImporting
                         ? "导入中..."
-                        : `确认导入 ${specScanResults.filter((s) => !s.alreadyExists).length} 个`}
+                        : `确认导入 ${prdStyleScanResults.filter((s) => !s.alreadyExists).length} 个`}
                     </Button>
-                    <Button variant="ghost" onClick={() => { setSpecScanResults(null); setSpecImportDir(null) }}>
+                    <Button variant="ghost" onClick={() => { setPrdStyleScanResults(null); setPrdStyleImportDir(null) }}>
                       取消
                     </Button>
                   </div>
                 </div>
               )}
 
-              {specImportResult && (
-                specImportResult.imported > 0 ? (
+              {prdStyleImportResult && (
+                prdStyleImportResult.imported > 0 ? (
                   <p className="text-sm text-[var(--success)]">
-                    ✓ 已导入 {specImportResult.imported} 个
-                    {specImportResult.skipped > 0 ? `，跳过 ${specImportResult.skipped} 个（已存在）` : ""}
+                    ✓ 已导入 {prdStyleImportResult.imported} 个
+                    {prdStyleImportResult.skipped > 0 ? `，跳过 ${prdStyleImportResult.skipped} 个（已存在）` : ""}
                   </p>
                 ) : (
                   <div className="space-y-1">
                     <p className="text-sm text-[var(--destructive)]">导入失败，请重试。</p>
-                    <Button variant="ghost" size="sm" onClick={() => setSpecImportResult(null)}>重试</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setPrdStyleImportResult(null)}>重试</Button>
+                  </div>
+                )
+              )}
+            </div>
+
+            <div className="h-px bg-[var(--border)]" />
+
+            {/* UI 视觉规范 */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-[var(--text-primary)]">UI 视觉规范</p>
+              <p className="text-xs text-[var(--text-secondary)]">
+                从旧版 AI PM 的{" "}
+                <code className="bg-[var(--hover-bg)] px-1 py-0.5 rounded">templates/ui-specs/</code>{" "}
+                目录导入 UI 设计规范（设计 Token、组件规范等）。
+              </p>
+
+              {!uiSpecScanResults && !uiSpecImportResult && (
+                <Button variant="ghost" onClick={handleScanUiSpecs} disabled={uiSpecScanning} className="flex items-center gap-2">
+                  <FolderOpen className="size-3.5" />
+                  {uiSpecScanning ? "扫描中..." : "选择 UI 规范目录"}
+                </Button>
+              )}
+
+              {uiSpecScanResults !== null && uiSpecScanResults.length === 0 && (
+                <p className="text-sm text-[var(--text-tertiary)]">未发现 UI 规范，请确认目录正确。</p>
+              )}
+
+              {uiSpecScanResults && uiSpecScanResults.length > 0 && (
+                <div className="space-y-2">
+                  <ul className="space-y-0.5">
+                    {uiSpecScanResults.map((spec) => (
+                      <li key={spec.name} className="text-sm">
+                        {spec.alreadyExists ? (
+                          <span className="text-[var(--text-tertiary)]">
+                            — {spec.name} <span className="text-xs">（已存在，跳过）</span>
+                          </span>
+                        ) : (
+                          <span className="text-[var(--text-primary)]">✓ {spec.name}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      variant="primary"
+                      onClick={handleImportUiSpecs}
+                      disabled={uiSpecImporting || uiSpecScanResults.every((s) => s.alreadyExists)}
+                    >
+                      {uiSpecImporting
+                        ? "导入中..."
+                        : `确认导入 ${uiSpecScanResults.filter((s) => !s.alreadyExists).length} 个`}
+                    </Button>
+                    <Button variant="ghost" onClick={() => { setUiSpecScanResults(null); setUiSpecImportDir(null) }}>
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {uiSpecImportResult && (
+                uiSpecImportResult.imported > 0 ? (
+                  <p className="text-sm text-[var(--success)]">
+                    ✓ 已导入 {uiSpecImportResult.imported} 个
+                    {uiSpecImportResult.skipped > 0 ? `，跳过 ${uiSpecImportResult.skipped} 个（已存在）` : ""}
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-sm text-[var(--destructive)]">导入失败，请重试。</p>
+                    <Button variant="ghost" size="sm" onClick={() => setUiSpecImportResult(null)}>重试</Button>
                   </div>
                 )
               )}
@@ -883,6 +1020,58 @@ export function SettingsPage() {
               基于 Claude API 的产品经理工作台
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* File Consolidation Card */}
+      <Card className="hover:shadow-none">
+        <CardHeader>
+          <CardTitle>项目文件整理</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-[var(--text-secondary)]">
+            将所有不在应用目录中的历史项目文件复制到统一位置。原目录文件不会被删除。
+          </p>
+
+          {!migrateResult && (
+            <Button
+              variant="ghost"
+              onClick={handleMigrateToAppDir}
+              disabled={migrating}
+              className="flex items-center gap-2"
+            >
+              {migrating && <Loader2 className="size-3.5 animate-spin" />}
+              {migrating ? "迁移中..." : "迁移到应用目录"}
+            </Button>
+          )}
+
+          {migrateResult && (
+            <div className="space-y-2">
+              <p className="text-sm text-[var(--text-secondary)]">
+                已迁移 {migrateResult.migrated} 个项目 · 跳过 {migrateResult.skipped} 个（已在应用目录）
+              </p>
+              {migrateResult.failed.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-[var(--destructive)]">迁移失败：</p>
+                  <ul className="space-y-0.5">
+                    {migrateResult.failed.map((f, i) => (
+                      <li key={i} className="text-xs text-[var(--destructive)]">
+                        {f.name}：{f.error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMigrateResult(null)}
+                className="text-xs"
+              >
+                重置
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
