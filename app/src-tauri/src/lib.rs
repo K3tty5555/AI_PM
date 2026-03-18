@@ -88,6 +88,10 @@ pub fn run() {
             commands::config::test_cli_config,
             commands::projects::scan_legacy_projects,
             commands::projects::import_legacy_projects,
+            commands::templates::scan_legacy_knowledge,
+            commands::templates::import_legacy_knowledge,
+            commands::templates::scan_legacy_design_specs,
+            commands::templates::import_legacy_design_specs,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]
