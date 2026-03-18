@@ -77,6 +77,7 @@ export function PrdPage() {
 
   const [searchParams] = useSearchParams()
   const autostart = searchParams.get("autostart") === "1"
+  const fromYolo = searchParams.get("yolo") === "1"
 
   // AI stream hook for initial generation
   const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, outputFile, start, reset } = useAiStream({
@@ -376,6 +377,14 @@ export function PrdPage() {
           <h1 className="text-base font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
+        {fromYolo && (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
+            <span className="mt-0.5 shrink-0 text-[var(--accent-color)]">⚡</span>
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              加急模式已完成前 4 阶段（需求分析、竞品研究、用户故事）。确认内容无误后点击生成 PRD。
+            </p>
+          </div>
+        )}
         <ContextPills
           projectId={projectId!}
           onExcludeChange={setExcludedContext}
