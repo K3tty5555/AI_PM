@@ -97,14 +97,20 @@ fn migrate_dir_structure_v2(projects_dir: &str, config_dir: &str, db: &rusqlite:
 
         // Move files on disk
         let old_path = std::path::Path::new(&row.output_dir);
-        if old_path.exists() && !new_dir.exists() {
-            if let Err(e) = fs::rename(old_path, &new_dir) {
+        if old_path.exists() {
+            if new_dir.exists() {
+                // destination already exists (partial migration?), skip disk move but update DB
+            } else if let Err(e) = fs::rename(old_path, &new_dir) {
                 eprintln!("[migrate_v2] Failed to move project '{}': {}", row.name, e);
                 continue; // don't update DB if move failed
             }
+        } else {
+            // Source doesn't exist on disk — skip both disk move and DB update
+            eprintln!("[migrate_v2] Skipping '{}': source dir not found on disk", row.name);
+            continue;
         }
 
-        // Update DB
+        // Update DB (only reached if move succeeded or destination already existed)
         let _ = db.execute(
             "UPDATE projects SET output_dir = ?1 WHERE id = ?2",
             rusqlite::params![&new_path, &row.id],
