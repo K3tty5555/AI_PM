@@ -126,9 +126,11 @@ export function SettingsPage() {
       const result = await api.importLegacyKnowledge(kbImportDir)
       setKbImportResult(result)
       setKbScanResults(null)
+      setKbImportDir(null)
     } catch {
       setKbImportResult({ imported: 0, skipped: 0 })
       setKbScanResults(null)
+      setKbImportDir(null)
     } finally {
       setKbImporting(false)
     }
@@ -158,9 +160,11 @@ export function SettingsPage() {
       const result = await api.importLegacyDesignSpecs(specImportDir)
       setSpecImportResult(result)
       setSpecScanResults(null)
+      setSpecImportDir(null)
     } catch {
       setSpecImportResult({ imported: 0, skipped: 0 })
       setSpecScanResults(null)
+      setSpecImportDir(null)
     } finally {
       setSpecImporting(false)
     }
