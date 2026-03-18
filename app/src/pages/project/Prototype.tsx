@@ -272,7 +272,7 @@ export function PrototypePage() {
       <div className="mt-8 flex items-center justify-between border-t border-[var(--border)] pt-6">
         <Button
           variant="ghost"
-          onClick={() => navigate(`/project/${projectId}/prd`)}
+          onClick={() => navigate(`/project/${projectId}/analytics`)}
           disabled={isStreaming || advancing}
         >
           {PHASE_META.prototype.backLabel}
