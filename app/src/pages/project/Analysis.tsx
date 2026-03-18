@@ -122,6 +122,7 @@ export function AnalysisPage() {
 
   const [searchParams] = useSearchParams()
   const autostart = searchParams.get("autostart") === "1"
+  const isYolo = searchParams.get("yolo") === "1"
 
   // The content to render — either from existing file or from AI stream
   const displayContent = existingContent ?? text
@@ -291,13 +292,13 @@ export function AnalysisPage() {
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
-      navigate(`/project/${projectId}/stories?autostart=1`)
+      navigate(`/project/${projectId}/stories?autostart=1${isYolo ? "&yolo=1" : ""}`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate])
+  }, [projectId, existingContent, text, outputFile, navigate, isYolo])
 
   // -------------------------------------------------------------------------
   // Loading state
