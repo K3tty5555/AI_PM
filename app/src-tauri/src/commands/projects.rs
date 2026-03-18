@@ -510,3 +510,99 @@ pub fn scan_legacy_projects(
 
     Ok(results)
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LegacyProjectImport {
+    pub name: String,
+    pub dir: String,
+    pub completed_phases: Vec<String>,
+    pub last_phase: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportResult {
+    pub imported: usize,
+    pub skipped: usize,
+}
+
+fn phase_output_file(phase: &str) -> Option<&'static str> {
+    match phase {
+        "requirement" => Some("01-requirement-draft.md"),
+        "analysis"    => Some("02-analysis-report.md"),
+        "research"    => Some("03-competitor-report.md"),
+        "stories"     => Some("04-user-stories.md"),
+        "prd"         => Some("05-prd"),
+        "prototype"   => Some("06-prototype"),
+        "review"      => Some("07-review-report.md"),
+        _ => None,
+    }
+}
+
+#[tauri::command]
+pub fn import_legacy_projects(
+    state: State<AppState>,
+    projects: Vec<LegacyProjectImport>,
+) -> Result<ImportResult, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let now = Utc::now().to_rfc3339();
+
+    let mut imported = 0usize;
+    let mut skipped = 0usize;
+
+    for p in projects {
+        let exists: i64 = db
+            .query_row(
+                "SELECT COUNT(*) FROM projects WHERE name = ?1",
+                params![&p.name],
+                |row| row.get(0),
+            )
+            .unwrap_or(1); // treat DB error as "exists" to avoid duplicate
+
+        if exists > 0 {
+            skipped += 1;
+            continue;
+        }
+
+        let id = Uuid::new_v4().to_string();
+
+        db.execute(
+            "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode)
+             VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?5, 0)",
+            params![&id, &p.name, &p.last_phase, &p.dir, &now],
+        )
+        .map_err(|e| e.to_string())?;
+
+        let completed_set: std::collections::HashSet<String> =
+            p.completed_phases.iter().cloned().collect();
+
+        for &phase in PHASES {
+            let phase_id = Uuid::new_v4().to_string();
+            let status = if completed_set.contains(phase) {
+                "completed"
+            } else if phase == p.last_phase {
+                "in_progress"
+            } else {
+                "pending"
+            };
+            let output_file = if status == "completed" {
+                phase_output_file(phase)
+            } else {
+                None
+            };
+            let completed_at: Option<&str> = if status == "completed" { Some(&now) } else { None };
+
+            db.execute(
+                "INSERT INTO project_phases (id, project_id, phase, status, output_file, completed_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![&phase_id, &id, phase, status, output_file, completed_at],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+
+        imported += 1;
+    }
+
+    Ok(ImportResult { imported, skipped })
+}
