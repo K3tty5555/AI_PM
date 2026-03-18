@@ -421,6 +421,15 @@ export function PrdPage() {
           description="产品需求文档"
           onGenerate={handleGenerate}
         />
+        {/* Direct generation shortcut */}
+        <div className="mt-3 text-center">
+          <button
+            onClick={handleGenerate}
+            className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] underline underline-offset-2 transition-colors"
+          >
+            ⚡ 跳过分析，直接生成 PRD
+          </button>
+        </div>
         {relevantKnowledge.length > 0 && (
           <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--secondary)]">
             <button
