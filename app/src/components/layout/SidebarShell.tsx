@@ -5,7 +5,7 @@ import { NewProjectDialog } from "@/components/new-project-dialog"
 import { api } from "@/lib/tauri-api"
 
 const PHASE_ORDER = [
-  "requirement", "analysis", "research", "stories", "prd", "analytics", "prototype", "review",
+  "requirement", "analysis", "research", "stories", "prd", "analytics", "prototype", "review", "retrospective",
 ]
 
 const PHASE_LABELS: Record<string, string> = {
@@ -17,6 +17,7 @@ const PHASE_LABELS: Record<string, string> = {
   analytics: "埋点设计",
   prototype: "原型设计",
   review: "需求评审",
+  retrospective: "项目复盘（可选）",
 }
 
 function SidebarShell({ open, onToggle }: { open: boolean; onToggle: () => void }) {
@@ -95,7 +96,7 @@ function SidebarShell({ open, onToggle }: { open: boolean; onToggle: () => void 
         name: project.name,
         currentPhase: "requirement",
         completedCount: 0,
-        totalPhases: 8,
+        totalPhases: 9,
       },
       ...prev,
     ])

@@ -10,6 +10,7 @@ import { PrdPage } from "./pages/project/Prd"
 import { AnalyticsPage } from "./pages/project/Analytics"
 import { PrototypePage } from "./pages/project/Prototype"
 import { ReviewPage } from "./pages/project/Review"
+import { RetrospectivePage } from "./pages/project/Retrospective"
 import { ToolPriorityPage }  from "./pages/tools/Priority"
 import { ToolWeeklyPage }    from "./pages/tools/Weekly"
 import { ToolKnowledgePage } from "./pages/tools/Knowledge"
@@ -31,7 +32,8 @@ export const router = createBrowserRouter([
       { path: "/project/:id/prd",         element: <PrdPage /> },
       { path: "/project/:id/analytics",   element: <AnalyticsPage /> },
       { path: "/project/:id/prototype",   element: <PrototypePage /> },
-      { path: "/project/:id/review",      element: <ReviewPage /> },
+      { path: "/project/:id/review",         element: <ReviewPage /> },
+      { path: "/project/:id/retrospective", element: <RetrospectivePage /> },
       { path: "/tools/priority",          element: <ToolPriorityPage /> },
       { path: "/tools/weekly",            element: <ToolWeeklyPage /> },
       { path: "/tools/knowledge",         element: <ToolKnowledgePage /> },
