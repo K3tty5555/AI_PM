@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { Sidebar, type SidebarProject, type SidebarPhase } from "./Sidebar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { api } from "@/lib/tauri-api"
 
 const PHASE_ORDER = [
-  "requirement", "research", "analysis", "stories", "prd", "prototype", "review",
+  "requirement", "analysis", "research", "stories", "prd", "prototype", "review",
 ]
 
 const PHASE_LABELS: Record<string, string> = {
@@ -27,6 +27,10 @@ function SidebarShell({ open }: { open: boolean }) {
   const location = useLocation()
   const navigate = useNavigate()
 
+  const activePhase = activeProjectId
+    ? location.pathname.split("/").pop()
+    : undefined
+
   // Load project list
   useEffect(() => {
     api.listProjects()
@@ -35,14 +39,8 @@ function SidebarShell({ open }: { open: boolean }) {
   }, [])
 
   // Load current project phases when inside a project
-  useEffect(() => {
-    if (!activeProjectId) {
-      setProjectName(undefined)
-      setProjectPhases(undefined)
-      return
-    }
-
-    api.getProject(activeProjectId)
+  const loadProjectPhases = useCallback((projectId: string, currentPhase: string | undefined) => {
+    api.getProject(projectId)
       .then((project) => {
         if (!project?.id) return
         setProjectName(project.name)
@@ -56,14 +54,35 @@ function SidebarShell({ open }: { open: boolean }) {
         const phases: SidebarPhase[] = PHASE_ORDER.map((id) => {
           let status: SidebarPhase["status"] = "pending"
           if (completedPhases.has(id)) status = "completed"
-          else if (id === project.currentPhase) status = "current"
+          else if (id === currentPhase) status = "current"  // URL wins only if not completed
           return { id, label: PHASE_LABELS[id] ?? id, status }
         })
 
         setProjectPhases(phases)
       })
       .catch((err) => console.error("Failed to load project:", err))
-  }, [activeProjectId, location.pathname])
+  }, [])
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setProjectName(undefined)
+      setProjectPhases(undefined)
+      return
+    }
+    loadProjectPhases(activeProjectId, activePhase)
+  }, [activeProjectId, location.pathname, loadProjectPhases])
+
+  // Listen for phase completion events dispatched by use-ai-stream
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { projectId } = (e as CustomEvent).detail
+      if (projectId === activeProjectId && activeProjectId) {
+        loadProjectPhases(activeProjectId, activePhase)
+      }
+    }
+    window.addEventListener("project-phase-updated", handler)
+    return () => window.removeEventListener("project-phase-updated", handler)
+  }, [activeProjectId, activePhase, loadProjectPhases])
 
   const handleNewProject = () => setDialogOpen(true)
 
@@ -85,10 +104,6 @@ function SidebarShell({ open }: { open: boolean }) {
   const handlePhaseClick = (phaseId: string) => {
     if (activeProjectId) navigate(`/project/${activeProjectId}/${phaseId}`)
   }
-
-  const activePhase = activeProjectId
-    ? location.pathname.split("/").pop()
-    : undefined
 
   return (
     <>

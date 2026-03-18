@@ -111,26 +111,26 @@ function Sidebar({
       <button
         type="button"
         onClick={() => navigate("/")}
-        className="flex items-center gap-2.5 px-5 pt-5 pb-4 hover:opacity-70 transition-opacity text-left"
+        className="flex items-center gap-2 px-4 py-3 hover:opacity-70 transition-opacity text-left"
       >
-        <span className="flex size-6 items-center justify-center rounded-md bg-[var(--accent-color)]">
-          <span className="text-[10px] font-bold text-white">AI</span>
+        <span className="flex size-5 items-center justify-center rounded bg-[var(--accent-color)] shrink-0">
+          <span className="text-[9px] font-bold text-white">AI</span>
         </span>
-        <span className="text-sm font-semibold text-[var(--text-primary)] tracking-tight">
+        <span className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight">
           AI PM
         </span>
       </button>
 
-      <div className="mx-4 h-px bg-[var(--border)]" />
+      <div className="mx-3 h-px bg-[var(--border)]" />
 
       {/* Main nav area */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3">
+      <nav className="flex-1 overflow-y-auto px-2 py-2">
 
         {/* PROJECT context: phase list */}
         {isInProjectContext && (
           <div className="mb-3">
             {projectName && (
-              <p className="px-3 pb-2 text-[11px] font-medium text-[var(--text-tertiary)] truncate">
+              <p className="px-3 pt-1 pb-2 text-[11px] font-medium text-[var(--text-tertiary)] truncate">
                 {projectName}
               </p>
             )}
