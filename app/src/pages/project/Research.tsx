@@ -98,6 +98,8 @@ export function ResearchPage() {
   const [excludedContext, setExcludedContext] = useState<string[]>([])
   const [isApiMode, setIsApiMode] = useState(false)
   const [hasPlaywrightMcp, setHasPlaywrightMcp] = useState(false)
+  const [urlInput, setUrlInput] = useState("")
+  const [urls, setUrls] = useState<string[]>([])
 
   useEffect(() => {
     api.getConfig().then(cfg => {
@@ -195,23 +197,29 @@ export function ResearchPage() {
   )
 
   const handleGenerate = useCallback(() => {
-    const initialMessages: Message[] = [{ role: "user", content: "请开始竞品研究" }]
+    const urlContext = urls.length > 0
+      ? `\n\n参考网址：\n${urls.map(u => `- ${u}`).join("\n")}`
+      : ""
+    const initialMessages: Message[] = [{ role: "user", content: `请开始竞品研究${urlContext}` }]
     setMessages(initialMessages)
     startedRef.current = true
     start(initialMessages, { excludedContext })
-  }, [start, excludedContext])
+  }, [start, excludedContext, urls])
 
   const handleRestart = useCallback(() => {
     reset()
     setExistingContent(null)
     setChatHistory([])
+    const urlContext = urls.length > 0
+      ? `\n\n参考网址：\n${urls.map(u => `- ${u}`).join("\n")}`
+      : ""
     const initialMessages: Message[] = [
-      { role: "user", content: "请开始竞品研究" },
+      { role: "user", content: `请开始竞品研究${urlContext}` },
     ]
     setMessages(initialMessages)
     startedRef.current = true
     start(initialMessages, { excludedContext })
-  }, [reset, start, excludedContext])
+  }, [reset, start, excludedContext, urls])
 
   const handleBack = useCallback(() => {
     navigate(`/project/${projectId}/analysis`)
@@ -301,6 +309,50 @@ export function ResearchPage() {
           description="竞品研究报告"
           onGenerate={handleGenerate}
         />
+        {/* URL reference input */}
+        <div className="mt-4">
+          <p className="text-[12px] text-[var(--text-tertiary)] mb-2">添加参考网址（可选）</p>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              placeholder="https://..."
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && urlInput.trim()) {
+                  setUrls((prev) => [...prev, urlInput.trim()])
+                  setUrlInput("")
+                }
+              }}
+              className="flex-1 h-8 px-3 rounded text-[13px] bg-[var(--secondary)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-color)] transition-colors"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (urlInput.trim()) {
+                  setUrls((prev) => [...prev, urlInput.trim()])
+                  setUrlInput("")
+                }
+              }}
+            >
+              添加
+            </Button>
+          </div>
+          {urls.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {urls.map((u, i) => (
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-[var(--secondary)] border border-[var(--border)] text-[var(--text-secondary)]">
+                  {(() => { try { return new URL(u).hostname } catch { return u.slice(0, 30) } })()}
+                  <button
+                    onClick={() => setUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                  >×</button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     )
   }
