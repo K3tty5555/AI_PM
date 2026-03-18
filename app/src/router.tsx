@@ -1,7 +1,5 @@
 import { createBrowserRouter } from "react-router-dom"
 import { AppLayout } from "./layouts/AppLayout"
-import { ProjectLayout } from "./layouts/ProjectLayout"
-import { ToolsLayout } from "./layouts/ToolsLayout"
 import { DashboardPage } from "./pages/Dashboard"
 import { SettingsPage } from "./pages/Settings"
 import { RequirementPage } from "./pages/project/Requirement"
@@ -20,42 +18,23 @@ import { ToolInterviewPage } from "./pages/tools/Interview"
 
 export const router = createBrowserRouter([
   {
-    path: "/",
     element: <AppLayout />,
     children: [
-      { index: true, element: <DashboardPage /> },
-    ],
-  },
-  {
-    path: "/settings",
-    element: <ToolsLayout />,
-    children: [
-      { index: true, element: <SettingsPage /> },
-    ],
-  },
-  {
-    path: "/project/:id",
-    element: <ProjectLayout />,
-    children: [
-      { path: "requirement", element: <RequirementPage /> },
-      { path: "analysis", element: <AnalysisPage /> },
-      { path: "research", element: <ResearchPage /> },
-      { path: "stories", element: <StoriesPage /> },
-      { path: "prd", element: <PrdPage /> },
-      { path: "prototype", element: <PrototypePage /> },
-      { path: "review", element: <ReviewPage /> },
-    ],
-  },
-  {
-    path: "/tools",
-    element: <ToolsLayout />,
-    children: [
-      { path: "priority",  element: <ToolPriorityPage /> },
-      { path: "weekly",    element: <ToolWeeklyPage /> },
-      { path: "knowledge", element: <ToolKnowledgePage /> },
-      { path: "persona",   element: <ToolPersonaPage /> },
-      { path: "data",      element: <ToolDataPage /> },
-      { path: "interview", element: <ToolInterviewPage /> },
+      { path: "/",         element: <DashboardPage /> },
+      { path: "/settings", element: <SettingsPage /> },
+      { path: "/project/:id/requirement", element: <RequirementPage /> },
+      { path: "/project/:id/analysis",    element: <AnalysisPage /> },
+      { path: "/project/:id/research",    element: <ResearchPage /> },
+      { path: "/project/:id/stories",     element: <StoriesPage /> },
+      { path: "/project/:id/prd",         element: <PrdPage /> },
+      { path: "/project/:id/prototype",   element: <PrototypePage /> },
+      { path: "/project/:id/review",      element: <ReviewPage /> },
+      { path: "/tools/priority",          element: <ToolPriorityPage /> },
+      { path: "/tools/weekly",            element: <ToolWeeklyPage /> },
+      { path: "/tools/knowledge",         element: <ToolKnowledgePage /> },
+      { path: "/tools/persona",           element: <ToolPersonaPage /> },
+      { path: "/tools/data",              element: <ToolDataPage /> },
+      { path: "/tools/interview",         element: <ToolInterviewPage /> },
     ],
   },
 ])

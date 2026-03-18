@@ -18,6 +18,7 @@ export interface SidebarPhase {
 }
 
 interface SidebarProps {
+  open: boolean
   // Dashboard context
   projects: SidebarProject[]
   activeProjectId?: string
@@ -71,6 +72,7 @@ function PhaseStatusIcon({ status }: { status: SidebarPhase["status"] }) {
 }
 
 function Sidebar({
+  open,
   projects,
   activeProjectId,
   onNewProject,
@@ -98,7 +100,12 @@ function Sidebar({
         "border-r border-[var(--border)]",
         "bg-[var(--bg-sidebar)] backdrop-blur-[20px]",
       )}
-      style={{ WebkitBackdropFilter: "blur(20px)" } as CSSProperties}
+      style={{
+        WebkitBackdropFilter: "blur(20px)",
+        transform: open ? "translateX(0)" : "translateX(-100%)",
+        transition: "transform 250ms cubic-bezier(0.4, 0, 0.2, 1)",
+        visibility: open ? "visible" : "hidden",
+      } as CSSProperties}
     >
       {/* App logo */}
       <button
