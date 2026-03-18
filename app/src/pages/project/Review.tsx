@@ -49,6 +49,7 @@ export function ReviewPage() {
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
+  const [completed, setCompleted] = useState(false)
 
   // Dual-panel tab state
   const [activeTab, setActiveTab] = useState<"all" | "tech" | "product">("all")
@@ -206,13 +207,13 @@ export function ReviewPage() {
 
       await api.advancePhase(projectId)
       invalidateProject(projectId)
-      navigate("/")
+      setCompleted(true)
     } catch (err) {
       console.error("Failed to complete:", err)
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate])
+  }, [projectId, existingContent, text, outputFile])
 
   if (loading) {
     return (
@@ -454,39 +455,64 @@ export function ReviewPage() {
       </div>
 
       {/* Bottom action bar */}
-      <div
-        className={cn(
-          "mt-8 flex items-center justify-between",
-          "border-t border-[var(--border)] pt-6",
-        )}
-      >
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          disabled={isStreaming || advancing}
-        >
-          {PHASE_META.review.backLabel}
-        </Button>
-
-        <div className="flex flex-col items-end gap-1">
-          <Button
-            variant="primary"
-            onClick={handleComplete}
-            disabled={!canComplete}
-          >
-            {saving
-              ? "保存中..."
-              : advancing
-                ? "正在完成..."
-                : PHASE_META.review.nextLabel + " ✓"}
-          </Button>
-          {!advancing && !saving && (
-            <p className="text-[11px] text-[var(--text-tertiary)]">
-              {PHASE_META.review.nextDescription}
-            </p>
-          )}
+      {completed ? (
+        <div className="mt-8 p-5 rounded-lg border border-[var(--accent-color)]/20 bg-[var(--accent-color)]/5">
+          <p className="text-sm font-medium text-[var(--text-primary)] mb-1">项目已完成</p>
+          <p className="text-[13px] text-[var(--text-secondary)] mb-4">
+            建议将本次项目经验存入知识库，方便下次参考。
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate("/tools/knowledge")}
+            >
+              前往知识库
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/")}
+            >
+              返回首页
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div
+          className={cn(
+            "mt-8 flex items-center justify-between",
+            "border-t border-[var(--border)] pt-6",
+          )}
+        >
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            disabled={isStreaming || advancing}
+          >
+            {PHASE_META.review.backLabel}
+          </Button>
+
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="primary"
+              onClick={handleComplete}
+              disabled={!canComplete}
+            >
+              {saving
+                ? "保存中..."
+                : advancing
+                  ? "正在完成..."
+                  : PHASE_META.review.nextLabel + " ✓"}
+            </Button>
+            {!advancing && !saving && (
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                {PHASE_META.review.nextDescription}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
