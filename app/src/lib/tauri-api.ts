@@ -27,7 +27,7 @@ export interface ProjectSummary {
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases' | 'completedPhases'> {
   phases: ProjectPhase[]
-  teamMode?: boolean
+  teamMode: boolean
 }
 
 export interface ConfigState {
