@@ -1,11 +1,12 @@
 import { useState, useCallback } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useSearchParams, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { InlineChat } from "@/components/inline-chat"
 import { ProjectSelector } from "@/components/project-selector"
 import { useToolStream } from "@/hooks/use-tool-stream"
+import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
 interface Message { role: string; content: string }
@@ -23,10 +24,12 @@ function detectQuestion(text: string): { hasQuestion: boolean; question: string 
 }
 
 export function ToolInterviewPage() {
+  const navigate = useNavigate()
   const [phase, setPhase] = useState<"setup" | "interview" | "done">("setup")
   const [context, setContext] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [chatHistory, setChatHistory] = useState<Array<{ q: string; a: string }>>([])
+  const [saving, setSaving] = useState(false)
   const [searchParams] = useSearchParams()
   const initialProjectId = searchParams.get("projectId") ?? localStorage.getItem("tool-binding:interview") ?? null
   const [boundProjectId, setBoundProjectId] = useState<string | null>(initialProjectId)
@@ -69,6 +72,22 @@ export function ToolInterviewPage() {
     setPhase("done")
     run(fullInput)
   }, [messages, text, run, reset])
+
+  const handleSaveToPrd = useCallback(async () => {
+    if (!text || !boundProjectId) return
+    setSaving(true)
+    try {
+      await api.saveProjectFile({
+        projectId: boundProjectId,
+        fileName: "01-requirement-draft.md",
+        content: text,
+      })
+      navigate(`/project/${boundProjectId}/prd?autostart=1`)
+    } catch (err) {
+      console.error("Failed to save requirement:", err)
+      setSaving(false)
+    }
+  }, [text, boundProjectId, navigate])
 
   const progressValue = isStreaming ? Math.min(90, Math.floor(text.length / 20)) : text ? 100 : 0
 
@@ -166,6 +185,29 @@ export function ToolInterviewPage() {
                 ? `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens`
                 : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
             </p>
+          )}
+
+          {/* Save to project requirement */}
+          {!isStreaming && phase === "done" && text && (
+            <div className="mt-6 p-4 rounded-lg border border-[var(--border)] bg-[var(--secondary)]">
+              <p className="text-[13px] text-[var(--text-secondary)] mb-3">
+                将访谈报告保存为项目需求，直接进入 PRD 生成
+              </p>
+              {boundProjectId ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSaveToPrd}
+                  disabled={saving}
+                >
+                  {saving ? "保存中..." : "保存为项目需求 + 生成 PRD"}
+                </Button>
+              ) : (
+                <p className="text-[12px] text-[var(--text-tertiary)]">
+                  请先在上方选择或绑定一个项目
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
