@@ -137,7 +137,7 @@ export const api = {
   // Stream (fire-and-forget — results come via events)
   startStream: (args: { projectId: string; phase: string; messages: ChatMessage[]; excludedContext?: string[]; styleId?: string }) =>
     invoke<void>("start_stream", { args }),
-  runTool: (args: { toolName: string; userInput: string; filePath?: string; projectId?: string }) =>
+  runTool: (args: { toolName: string; userInput: string; filePath?: string; projectId?: string; mode?: string }) =>
     invoke<void>("run_tool", { args }),
 
   // Projects dir
@@ -158,6 +158,8 @@ export const api = {
   // Export
   exportPrdDocx: (projectId: string) => invoke<string>("export_prd_docx", { projectId }),
   revealFile: (path: string) => invoke<void>("reveal_file", { path }),
+  openFile: (path: string) => invoke<void>("open_file", { path }),
+  writeFile: (path: string, content: string) => invoke<void>("write_file", { path, content }),
 
   // Environment
   checkEnv: () => invoke<DepStatus[]>("check_env"),
