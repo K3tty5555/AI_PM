@@ -218,7 +218,7 @@ fn build_system_prompt(
     phase: &str,
     config_dir: &str,
     excluded_context: &[String],
-    projects_dir: &str,
+    templates_base: std::path::PathBuf,
     style_id: Option<&str>,
 ) -> Result<String, String> {
     let mut skill_content = load_skill(skills_root, skill_name)?;
@@ -250,7 +250,7 @@ fn build_system_prompt(
 
     // Inject active PRD style for prd and weekly phases
     if phase == "prd" || phase == "weekly" {
-        if let Some(style) = crate::commands::templates::load_active_prd_style(projects_dir, style_id) {
+        if let Some(style) = crate::commands::templates::load_active_prd_style(&templates_base, style_id) {
             parts[0].push_str(&format!("\n\n---\n\n{}", style));
         }
     }
@@ -383,7 +383,7 @@ pub async fn start_stream(
         .to_string_lossy()
         .to_string();
 
-    let projects_dir = state.projects_dir.clone();
+    let templates_base = state.templates_base();
     let system_prompt = build_system_prompt(
         &skills_root,
         &output_dir,
@@ -396,7 +396,7 @@ pub async fn start_stream(
         &args.phase,
         &config_dir,
         &excluded_context,
-        &projects_dir,
+        templates_base,
         args.style_id.as_deref(),
     ).map_err(|e| {
         let _ = app.emit("stream_error", &e);

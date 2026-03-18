@@ -19,8 +19,8 @@ fn is_safe_style_name(name: &str) -> bool {
 
 /// Load the content of the active (or named) PRD style to inject into the system prompt.
 /// Returns None silently if the style directory or files are missing.
-pub(crate) fn load_active_prd_style(projects_dir: &str, style_id: Option<&str>) -> Option<String> {
-    let styles_dir = Path::new(projects_dir).join("prd-styles");
+pub(crate) fn load_active_prd_style(templates_base: &std::path::Path, style_id: Option<&str>) -> Option<String> {
+    let styles_dir = templates_base.join("prd-styles");
     if !styles_dir.exists() {
         return None;
     }
@@ -72,7 +72,7 @@ pub fn set_active_prd_style(state: State<'_, AppState>, name: String) -> Result<
     if !is_safe_style_name(&name) {
         return Err(format!("无效的风格名称: {}", name));
     }
-    let styles_dir = Path::new(&state.projects_dir).join("prd-styles");
+    let styles_dir = state.templates_base().join("prd-styles");
     fs::create_dir_all(&styles_dir).map_err(|e| e.to_string())?;
     let style_dir = styles_dir.join(&name);
     if !style_dir.join("style-config.json").exists() {
@@ -83,7 +83,7 @@ pub fn set_active_prd_style(state: State<'_, AppState>, name: String) -> Result<
 
 #[tauri::command]
 pub fn get_active_prd_style(state: State<'_, AppState>) -> Option<String> {
-    let styles_dir = Path::new(&state.projects_dir).join("prd-styles");
+    let styles_dir = state.templates_base().join("prd-styles");
     let active_file = styles_dir.join("_active");
     fs::read_to_string(active_file)
         .ok()
@@ -100,7 +100,7 @@ pub struct PrdStyleEntry {
 
 #[tauri::command]
 pub fn list_prd_styles(state: State<'_, AppState>) -> Vec<PrdStyleEntry> {
-    let dir = Path::new(&state.projects_dir).join("prd-styles");
+    let dir = state.templates_base().join("prd-styles");
     let Ok(entries) = fs::read_dir(&dir) else { return vec![] };
     let mut result: Vec<PrdStyleEntry> = entries
         .flatten()
@@ -134,7 +134,7 @@ pub fn add_ui_spec(
         .ok_or("无法读取目录名")?
         .to_string_lossy()
         .to_string();
-    let dest = Path::new(&state.projects_dir).join("ui-specs").join(&name);
+    let dest = state.templates_base().join("ui-specs").join(&name);
     if dest.exists() {
         return Err(format!("「{}」已存在", name));
     }
@@ -150,7 +150,7 @@ pub struct UiSpecEntry {
 
 #[tauri::command]
 pub fn list_ui_specs(state: State<'_, AppState>) -> Vec<UiSpecEntry> {
-    let dir = Path::new(&state.projects_dir).join("ui-specs");
+    let dir = state.templates_base().join("ui-specs");
     let Ok(entries) = fs::read_dir(&dir) else { return vec![] };
     let mut result: Vec<UiSpecEntry> = entries
         .flatten()
@@ -193,7 +193,7 @@ pub fn scan_legacy_knowledge(
         return Err(format!("目录不存在: {}", dir));
     }
 
-    let dest_root = Path::new(&state.projects_dir).join("knowledge-base");
+    let dest_root = state.templates_base().join("knowledge-base");
     let mut results = Vec::new();
 
     for category in KB_CATEGORIES {
@@ -243,7 +243,7 @@ pub fn import_legacy_knowledge(
         return Err(format!("目录不存在: {}", dir));
     }
 
-    let dest_root = Path::new(&state.projects_dir).join("knowledge-base");
+    let dest_root = state.templates_base().join("knowledge-base");
     let mut imported = 0usize;
     let mut skipped = 0usize;
 
@@ -322,7 +322,7 @@ pub fn scan_legacy_prd_styles(
         return Err(format!("目录不存在: {}", dir));
     }
 
-    let dest_root = Path::new(&state.projects_dir).join("prd-styles");
+    let dest_root = state.templates_base().join("prd-styles");
     let mut results = Vec::new();
 
     let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
@@ -358,7 +358,7 @@ pub fn import_legacy_prd_styles(
         return Err(format!("目录不存在: {}", dir));
     }
 
-    let dest_root = Path::new(&state.projects_dir).join("prd-styles");
+    let dest_root = state.templates_base().join("prd-styles");
     fs::create_dir_all(&dest_root).map_err(|e| e.to_string())?;
 
     let mut imported = 0usize;
@@ -399,7 +399,7 @@ pub fn scan_legacy_ui_specs(
         return Err(format!("目录不存在: {}", dir));
     }
 
-    let dest_root = Path::new(&state.projects_dir).join("ui-specs");
+    let dest_root = state.templates_base().join("ui-specs");
     let mut results = Vec::new();
 
     let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
@@ -435,7 +435,7 @@ pub fn import_legacy_ui_specs(
         return Err(format!("目录不存在: {}", dir));
     }
 
-    let dest_root = Path::new(&state.projects_dir).join("ui-specs");
+    let dest_root = state.templates_base().join("ui-specs");
     fs::create_dir_all(&dest_root).map_err(|e| e.to_string())?;
 
     let mut imported = 0usize;
