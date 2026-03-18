@@ -94,6 +94,7 @@ pub fn run() {
             commands::config::get_projects_dir,
             commands::config::save_projects_dir,
             commands::config::test_cli_config,
+            commands::projects::set_team_mode,
             commands::projects::scan_legacy_projects,
             commands::projects::import_legacy_projects,
             commands::templates::scan_legacy_knowledge,
