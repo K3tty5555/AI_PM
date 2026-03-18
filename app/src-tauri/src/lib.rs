@@ -87,6 +87,7 @@ pub fn run() {
             commands::config::save_projects_dir,
             commands::config::test_cli_config,
             commands::projects::scan_legacy_projects,
+            commands::projects::import_legacy_projects,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]
