@@ -39,13 +39,14 @@ export function ToolPersonaPage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (tab === "list") loadStyles()
-  }, [tab, loadStyles])
   const [filePath, setFilePath] = useState("")
   const [fileContent, setFileContent] = useState("")
   const [fileError, setFileError] = useState<string | null>(null)
   const { text, isStreaming, isThinking, elapsedSeconds, error, run, reset } = useToolStream("ai-pm-persona")
+
+  useEffect(() => {
+    if (tab === "list") loadStyles()
+  }, [tab, loadStyles])
 
   const handleSelectFile = useCallback(async () => {
     const selected = await openDialog({ filters: [{ name: "Markdown", extensions: ["md"] }] })
