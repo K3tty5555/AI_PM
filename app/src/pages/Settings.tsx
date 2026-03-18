@@ -119,6 +119,7 @@ export function SettingsPage() {
       }
     } catch (err) {
       setImportResult({ imported: 0, skipped: 0 })
+      setScanResults(null)
     } finally {
       setImporting(false)
     }
