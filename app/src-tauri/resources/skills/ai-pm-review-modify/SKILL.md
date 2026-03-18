@@ -4,7 +4,7 @@ description: >-
   PRD 评审后修改技能。基于评审报告和指定修改策略，对现有 PRD 进行定向修改，保持文档结构不变，
   只修改评审指出的问题，输出完整的修改后 PRD。
 argument-hint: "修改策略（全部修改 / 核心修改 / 最小修改 / 自定义）"
-allowed-tools: Read
+allowed-tools: Read Write Edit Bash(mkdir)
 ---
 
 # PRD 评审后修改
