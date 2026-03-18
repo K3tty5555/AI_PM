@@ -95,7 +95,7 @@ export function ToolInterviewPage() {
     <div className="mx-auto w-full max-w-[720px]">
       <div className="mb-6 flex items-center gap-3">
         <h1 className="text-base font-semibold text-[var(--text-primary)]">调研访谈</h1>
-        <span className="text-sm text-[var(--text-secondary)]">调研访谈</span>
+        <span className="text-sm text-[var(--text-secondary)]">现场调研 / 客户访谈</span>
       </div>
       <div className="h-px bg-[var(--border)]" />
       <ProjectSelector
