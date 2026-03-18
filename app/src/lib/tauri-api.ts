@@ -55,6 +55,19 @@ export interface ContextFile {
   preview: string
 }
 
+export interface LegacyProjectScan {
+  name: string
+  dir: string
+  completedPhases: string[]
+  lastPhase: string
+  alreadyExists: boolean
+}
+
+export interface ImportResult {
+  imported: number
+  skipped: number
+}
+
 // ─── API functions ─────────────────────────────────────────────────────────
 
 export const api = {
@@ -103,4 +116,10 @@ export const api = {
 
   // Context files
   listProjectContext: (projectId: string) => invoke<ContextFile[]>("list_project_context", { projectId }),
+
+  // Legacy import
+  scanLegacyProjects: (dir: string) =>
+    invoke<LegacyProjectScan[]>("scan_legacy_projects", { dir }),
+  importLegacyProjects: (projects: LegacyProjectScan[]) =>
+    invoke<ImportResult>("import_legacy_projects", { projects }),
 }
