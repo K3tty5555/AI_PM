@@ -105,10 +105,10 @@ pub fn import_legacy_knowledge(
                 let dest_path = dest_dir.join(filename);
                 if dest_path.exists() {
                     skipped += 1;
-                } else {
-                    fs::copy(&entry_path, &dest_path).map_err(|e| e.to_string())?;
+                } else if fs::copy(&entry_path, &dest_path).is_ok() {
                     imported += 1;
                 }
+                // silently skip files that fail to copy (e.g. permission errors)
             }
         }
     }
@@ -128,9 +128,13 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     fs::create_dir_all(dst)?;
     for entry in fs::read_dir(src)? {
         let entry = entry?;
+        let file_type = entry.file_type()?;
+        if file_type.is_symlink() {
+            continue; // skip symlinks to avoid traversal outside source tree
+        }
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
-        if src_path.is_dir() {
+        if file_type.is_dir() {
             copy_dir_all(&src_path, &dst_path)?;
         } else {
             fs::copy(&src_path, &dst_path)?;
