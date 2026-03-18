@@ -131,7 +131,8 @@ export function ReviewPage() {
 
     loadExisting()
     return () => { cancelled = true }
-  }, [projectId, start])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId])
 
   // Load project name for knowledge recommendation
   useEffect(() => {

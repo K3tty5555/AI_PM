@@ -51,11 +51,42 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 - 任务：读取 PRD 和原型，输出三个角色各自的评审意见
 - 输出至：`/tmp/review_product.md`
 
-主线程等待 2 个 subagent 完成后：合并结果，去重（多角色提及同一问题则合并并注明来源），技术组和产品组问题分别按 Critical → Major → Minor 排序。
+主线程等待 2 个 subagent 完成后：合并结果，去重（多角色提及同一问题则合并并注明来源），按 Critical → Major → Minor 排序。
 
 ### 步骤3：生成评审报告
 
-生成 `08-review-report-v{N}.md`，先输出技术视角（前端 + 后端 + 测试）的问题，再输出产品视角（产品经理 + 设计 + 运营）的问题，最后给出评审结论。
+生成 `08-review-report-v{N}.md`，输出问题汇总和修改建议。
+
+### 步骤4：用户确认修改策略
+
+```
+评审完成！共发现 {N} 个问题
+
+Critical（必须修改）：{n} 个
+Major（建议修改）：{n} 个
+Minor（可选优化）：{n} 个
+
+请选择修改策略：
+- "全部修改" → 修改所有问题
+- "核心修改" → Critical + Major（推荐）
+- "最小修改" → 仅 Critical
+- "指定修改" → 告诉我具体修改哪些
+```
+
+### 步骤5：执行 PRD 修改
+
+**修改原则：不创建新文件，直接在 `05-prd/05-PRD-v1.0.md` 中修改，修订日志追加新记录。**
+
+```markdown
+| {日期} | v1.{N} | 评审后修改：修复{N}个问题（{n} Critical + {n} Major） | 全模块 | AI_PM | 基于评审报告v{N} |
+```
+
+### 步骤6：询问是否再次评审
+
+```
+修改完成。Critical 问题：{n}/{n} 已解决。
+是否进行下一轮评审？回复"再次评审"或"确认完成"。
+```
 
 ## 问题格式
 
@@ -92,27 +123,14 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 {每个角色一行}
 | 总计 | {n} | {n} | {n} | {n} |
 
-## 技术视角（前端 + 后端 + 测试）
+## Critical 问题（必须修改）
+{按问题格式逐一列出}
 
-### Critical 问题
-{技术组 Critical 问题，若无则标注「无 Critical 问题」}
+## Major 问题（建议修改）
+{按问题格式逐一列出}
 
-### Major 问题
-{技术组 Major 问题，若无则标注「无 Major 问题」}
-
-### Minor 问题
-{技术组 Minor 问题，若无则标注「无 Minor 问题」}
-
-## 产品视角（产品经理 + 设计 + 运营）
-
-### Critical 问题
-{产品组 Critical 问题，若无则标注「无 Critical 问题」}
-
-### Major 问题
-{产品组 Major 问题，若无则标注「无 Major 问题」}
-
-### Minor 问题
-{产品组 Minor 问题，若无则标注「无 Minor 问题」}
+## Minor 问题（可选优化）
+{按问题格式逐一列出}
 
 ## 评审结论
 - [ ] 通过 — 无需修改或仅 Minor，可进入开发
