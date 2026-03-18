@@ -435,6 +435,9 @@ pub fn scan_legacy_projects(
         return Err(format!("目录不存在: {}", dir));
     }
 
+    fn map_phase(p: &str) -> &str { if p == "competitor" { "research" } else { p } }
+
+    // Lock held for the full scan; acceptable since project count is small (<50) and scan is user-initiated.
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
@@ -470,18 +473,17 @@ pub fn scan_legacy_projects(
                 .to_string(),
         };
 
-        let last_phase = json["last_phase"]
-            .as_str()
-            .map(|p| if p == "competitor" { "research" } else { p })
-            .unwrap_or("requirement")
-            .to_string();
+        let last_phase_str = json["last_phase"].as_str().unwrap_or("requirement");
+        let last_phase = map_phase(last_phase_str).to_string();
 
         let mut completed_phases = Vec::new();
         if let Some(phases) = json["phases"].as_object() {
             for (phase, done) in phases {
                 if done.as_bool().unwrap_or(false) {
-                    let mapped = if phase == "competitor" { "research" } else { phase.as_str() };
-                    completed_phases.push(mapped.to_string());
+                    let mapped = map_phase(phase.as_str());
+                    if PHASES.contains(&mapped) {
+                        completed_phases.push(mapped.to_string());
+                    }
                 }
             }
         }
@@ -504,7 +506,7 @@ pub fn scan_legacy_projects(
         });
     }
 
-    results.sort_by(|a, b| b.dir.cmp(&a.dir));
+    results.sort_by(|a, b| a.name.cmp(&b.name));
 
     Ok(results)
 }
