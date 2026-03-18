@@ -45,4 +45,9 @@ export const PHASE_META: Record<string, PhaseMeta> = {
     nextDescription: "归档所有产出，项目结束",
     backLabel: "← 返回原型",
   },
+  retrospective: {
+    nextLabel: "完成复盘",
+    nextDescription: "复盘完成，经验已记录",
+    backLabel: "← 返回需求评审",
+  },
 }
