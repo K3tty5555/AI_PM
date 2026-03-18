@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { RichEditor } from "@/components/rich-editor"
 import { FileUpload } from "@/components/file-upload"
 import { api } from "@/lib/tauri-api"
+import { cn } from "@/lib/utils"
 
 interface ProjectData {
   id: string
@@ -27,6 +28,7 @@ export function RequirementPage() {
   const [files, setFiles] = useState<File[]>([])
   const [urlInput, setUrlInput] = useState("")
   const [urls, setUrls] = useState<string[]>([])
+  const [teamMode, setTeamMode] = useState(false)
   const [saving, setSaving] = useState(false)
   const [advancing, setAdvancing] = useState(false)
   const [saveHint, setSaveHint] = useState("")
@@ -45,6 +47,7 @@ export function RequirementPage() {
         if (!projectData) throw new Error("获取项目失败")
         if (cancelled) return
         setProject(projectData as ProjectData)
+        setTeamMode(projectData.teamMode ?? false)
 
         // Try to load existing draft
         const draftText = await api.readProjectFile(projectId, DRAFT_FILE)
@@ -111,12 +114,12 @@ export function RequirementPage() {
 
       // Advance phase
       await api.advancePhase(projectId)
-      navigate(`/project/${projectId}/analysis?autostart=1`)
+      navigate(`/project/${projectId}/analysis?autostart=1${teamMode ? "&team=1" : ""}`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
     }
-  }, [projectId, content, saveDraft, navigate])
+  }, [projectId, content, saveDraft, navigate, teamMode])
 
   const handleYolo = useCallback(async () => {
     if (!projectId || !content.trim()) return
@@ -125,12 +128,12 @@ export function RequirementPage() {
       const saved = await saveDraft()
       if (!saved) { setAdvancing(false); return }
       await api.advancePhase(projectId)
-      navigate(`/project/${projectId}/analysis?autostart=1&yolo=1`)
+      navigate(`/project/${projectId}/analysis?autostart=1&yolo=1${teamMode ? "&team=1" : ""}`)
     } catch (err) {
       console.error("Failed to start yolo:", err)
       setAdvancing(false)
     }
-  }, [projectId, content, saveDraft, navigate])
+  }, [projectId, content, saveDraft, navigate, teamMode])
 
   // Loading state
   if (loading) {
@@ -238,6 +241,37 @@ export function RequirementPage() {
             </div>
           )}
         </details>
+      </div>
+
+      {/* Team mode toggle */}
+      <div className="mt-3 flex items-center justify-between py-2 px-3 rounded border border-[var(--border)] bg-[var(--secondary)]">
+        <div>
+          <p className="text-[13px] font-medium text-[var(--text-primary)]">团队模式</p>
+          <p className="text-[11px] text-[var(--text-tertiary)]">需求分析和竞品研究将自动连续执行</p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={teamMode}
+          onClick={async () => {
+            const next = !teamMode
+            setTeamMode(next)
+            try {
+              await api.setTeamMode(projectId, next)
+            } catch {
+              setTeamMode(!next)
+            }
+          }}
+          className={cn(
+            "relative inline-flex w-9 h-5 rounded-full transition-colors flex-shrink-0",
+            teamMode ? "bg-[var(--accent-color)]" : "bg-[var(--border)]"
+          )}
+        >
+          <span className={cn(
+            "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform",
+            teamMode ? "translate-x-4" : "translate-x-0.5"
+          )} />
+        </button>
       </div>
 
       {/* Sticky bottom action bar */}

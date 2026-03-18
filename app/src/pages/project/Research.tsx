@@ -121,6 +121,7 @@ export function ResearchPage() {
   const [searchParams] = useSearchParams()
   const autostart = searchParams.get("autostart") === "1"
   const isYolo = searchParams.get("yolo") === "1"
+  const isTeam = searchParams.get("team") === "1"
 
   const displayContent = existingContent ?? text
 
@@ -249,13 +250,13 @@ export function ResearchPage() {
 
       await api.advancePhase(projectId)
       invalidateProject(projectId)
-      navigate(`/project/${projectId}/stories?autostart=1${isYolo ? "&yolo=1" : ""}`)
+      navigate(`/project/${projectId}/stories?autostart=1${isYolo ? "&yolo=1" : ""}${isTeam ? "&team=1" : ""}`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate, isYolo])
+  }, [projectId, existingContent, text, outputFile, navigate, isYolo, isTeam])
 
   if (loading) {
     return (
