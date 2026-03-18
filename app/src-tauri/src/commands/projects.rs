@@ -676,13 +676,15 @@ pub fn import_legacy_projects(
     Ok(ImportResult { imported, skipped })
 }
 
-#[derive(serde::Serialize)]
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MigrateFailure {
     pub name: String,
     pub error: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MigrateResult {
     pub migrated: usize,
     pub skipped: usize,
@@ -691,39 +693,47 @@ pub struct MigrateResult {
 
 #[tauri::command]
 pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResult, String> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
     let projects_dir = state.projects_dir.clone();
 
-    struct Row {
-        id: String,
-        name: String,
-        output_dir: String,
-    }
+    // ── Phase 1: collect rows under the lock, then release it ──────────────
+    let rows = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
 
-    let mut stmt = db
-        .prepare("SELECT id, name, output_dir FROM projects")
-        .map_err(|e| e.to_string())?;
+        struct Row {
+            id: String,
+            name: String,
+            output_dir: String,
+        }
 
-    let rows: Vec<Row> = stmt
-        .query_map([], |row| {
-            Ok(Row {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                output_dir: row.get(2)?,
+        let mut stmt = db
+            .prepare("SELECT id, name, output_dir FROM projects")
+            .map_err(|e| e.to_string())?;
+
+        let collected = stmt.query_map([], |row| {
+                Ok(Row {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    output_dir: row.get(2)?,
+                })
             })
-        })
-        .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .filter(|r| !r.output_dir.starts_with(projects_dir.as_str()))
-        .collect();
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .filter(|r| !r.output_dir.starts_with(projects_dir.as_str()))
+            .collect::<Vec<_>>();
+        collected
+        // db guard drops here
+    };
 
+    // ── Phase 2: filesystem work (no lock held) ────────────────────────────
     let mut migrated = 0usize;
     let mut skipped = 0usize;
     let mut failed: Vec<MigrateFailure> = Vec::new();
+    // Collect (id, new_path) pairs for successful copies
+    let mut updates: Vec<(String, String)> = Vec::new();
 
     let target_base = std::path::Path::new(&projects_dir);
 
-    for row in rows {
+    for row in &rows {
         let src = std::path::Path::new(&row.output_dir);
         if !src.exists() {
             skipped += 1;
@@ -745,7 +755,7 @@ pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResu
         let target_dir = match target_dir_opt {
             None => {
                 failed.push(MigrateFailure {
-                    name: row.name,
+                    name: row.name.clone(),
                     error: "Target directory already exists".to_string(),
                 });
                 continue;
@@ -755,26 +765,40 @@ pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResu
 
         match copy_dir_recursive(src, &target_dir) {
             Ok(()) => {
-                let new_path = target_dir.to_string_lossy().to_string();
-                if let Err(e) = db.execute(
-                    "UPDATE projects SET output_dir = ?1 WHERE id = ?2",
-                    params![&new_path, &row.id],
-                ) {
-                    let _ = std::fs::remove_dir_all(&target_dir);
-                    failed.push(MigrateFailure {
-                        name: row.name,
-                        error: e.to_string(),
-                    });
-                } else {
-                    migrated += 1;
-                }
+                updates.push((row.id.clone(), target_dir.to_string_lossy().to_string()));
             }
             Err(e) => {
                 let _ = std::fs::remove_dir_all(&target_dir);
                 failed.push(MigrateFailure {
-                    name: row.name,
+                    name: row.name.clone(),
                     error: e.to_string(),
                 });
+            }
+        }
+    }
+
+    // ── Phase 3: DB updates under the lock ────────────────────────────────
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        for (id, new_path) in updates {
+            // Find the name for error reporting
+            let name = rows.iter()
+                .find(|r| r.id == id)
+                .map(|r| r.name.clone())
+                .unwrap_or_else(|| id.clone());
+            match db.execute(
+                "UPDATE projects SET output_dir = ?1 WHERE id = ?2",
+                params![&new_path, &id],
+            ) {
+                Ok(_) => migrated += 1,
+                Err(e) => {
+                    // rollback the copied directory
+                    let _ = std::fs::remove_dir_all(&new_path);
+                    failed.push(MigrateFailure {
+                        name,
+                        error: e.to_string(),
+                    });
+                }
             }
         }
     }
