@@ -18,7 +18,7 @@ const PHASE_LABELS: Record<string, string> = {
   review: "需求评审",
 }
 
-function SidebarShell() {
+function SidebarShell({ open }: { open: boolean }) {
   const [projects, setProjects] = useState<SidebarProject[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [projectName, setProjectName] = useState<string | undefined>()
@@ -93,6 +93,7 @@ function SidebarShell() {
   return (
     <>
       <Sidebar
+        open={open}
         projects={projects}
         activeProjectId={activeProjectId}
         onNewProject={handleNewProject}
