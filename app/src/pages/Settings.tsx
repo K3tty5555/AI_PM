@@ -619,13 +619,24 @@ export function SettingsPage() {
             )}
 
             {importResult && (
-              <p className="text-sm text-[var(--success)]">
-                ✓ 已导入 {importResult.imported} 个项目
-                {importResult.skipped > 0
-                  ? `，跳过 ${importResult.skipped} 个（已存在）`
-                  : ""}
-                ，正在跳转…
-              </p>
+              importResult.imported > 0 ? (
+                <p className="text-sm text-[var(--success)]">
+                  ✓ 已导入 {importResult.imported} 个项目
+                  {importResult.skipped > 0
+                    ? `，跳过 ${importResult.skipped} 个（已存在）`
+                    : ""}
+                  ，正在跳转…
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-[var(--destructive)]">
+                    导入失败，请重试。
+                  </p>
+                  <Button variant="ghost" size="sm" onClick={() => setImportResult(null)}>
+                    重试
+                  </Button>
+                </div>
+              )
             )}
           </CardContent>
         </Card>
