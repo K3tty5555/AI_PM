@@ -4,3 +4,4 @@ pub mod knowledge;
 pub mod projects;
 pub mod stream;
 pub mod tools;
+pub mod templates;
