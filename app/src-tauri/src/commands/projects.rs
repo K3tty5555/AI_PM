@@ -412,3 +412,99 @@ fn write_status_json(output_dir: &str, phases: &[ProjectPhase], last_phase: &str
         let _ = fs::write(path, json);
     }
 }
+
+// ── Legacy import ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LegacyProjectScan {
+    pub name: String,
+    pub dir: String,
+    pub completed_phases: Vec<String>,
+    pub last_phase: String,
+    pub already_exists: bool,
+}
+
+#[tauri::command]
+pub fn scan_legacy_projects(
+    state: State<AppState>,
+    dir: String,
+) -> Result<Vec<LegacyProjectScan>, String> {
+    let path = std::path::Path::new(&dir);
+    if !path.exists() {
+        return Err(format!("目录不存在: {}", dir));
+    }
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+
+    let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
+    let mut results = Vec::new();
+
+    for entry in entries.flatten() {
+        let entry_path = entry.path();
+        if !entry_path.is_dir() {
+            continue;
+        }
+
+        let status_path = entry_path.join("_status.json");
+        if !status_path.exists() {
+            continue;
+        }
+
+        let raw = match fs::read_to_string(&status_path) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+
+        let json: serde_json::Value = match serde_json::from_str(&raw) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        let name = match json["project"].as_str() {
+            Some(n) => n.to_string(),
+            None => entry_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
+        };
+
+        let last_phase = json["last_phase"]
+            .as_str()
+            .map(|p| if p == "competitor" { "research" } else { p })
+            .unwrap_or("requirement")
+            .to_string();
+
+        let mut completed_phases = Vec::new();
+        if let Some(phases) = json["phases"].as_object() {
+            for (phase, done) in phases {
+                if done.as_bool().unwrap_or(false) {
+                    let mapped = if phase == "competitor" { "research" } else { phase.as_str() };
+                    completed_phases.push(mapped.to_string());
+                }
+            }
+        }
+
+        let already_exists: bool = db
+            .query_row(
+                "SELECT COUNT(*) FROM projects WHERE name = ?1",
+                params![&name],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        results.push(LegacyProjectScan {
+            name,
+            dir: entry_path.to_string_lossy().to_string(),
+            completed_phases,
+            last_phase,
+            already_exists,
+        });
+    }
+
+    results.sort_by(|a, b| b.dir.cmp(&a.dir));
+
+    Ok(results)
+}
