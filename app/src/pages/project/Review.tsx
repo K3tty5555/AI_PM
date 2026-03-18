@@ -5,7 +5,7 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
-import { api } from "@/lib/tauri-api"
+import { api, type KnowledgeEntry } from "@/lib/tauri-api"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -85,6 +85,11 @@ export function ReviewPage() {
   // Stores the user's chosen modification strategy (recorded only, does not re-trigger AI)
   const [strategyAnswer, setStrategyAnswer] = useState<string | null>(null)
 
+  // Knowledge recommendation (empty state only)
+  const [projectName, setProjectName] = useState<string>("")
+  const [relevantKnowledge, setRelevantKnowledge] = useState<KnowledgeEntry[]>([])
+  const [knowledgeExpanded, setKnowledgeExpanded] = useState(false)
+
   const startedRef = useRef(false)
 
   const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, outputFile, start, reset } = useAiStream({
@@ -140,6 +145,22 @@ export function ReviewPage() {
     loadExisting()
     return () => { cancelled = true }
   }, [projectId, start])
+
+  // Load project name for knowledge recommendation
+  useEffect(() => {
+    if (!projectId) return
+    api.getProject(projectId).then((project) => {
+      if (project) setProjectName(project.name)
+    }).catch(() => {})
+  }, [projectId])
+
+  // Fetch relevant knowledge for empty state recommendation
+  useEffect(() => {
+    if (!projectName || existingContent) return
+    api.searchKnowledge(projectName).then((entries) => {
+      if (entries.length > 0) setRelevantKnowledge(entries.slice(0, 3))
+    }).catch(() => {})
+  }, [projectName, existingContent])
 
   // Record strategy choice — does NOT call start(), navigates to PRD page instead
   const handleAnswer = useCallback((answer: string) => {
@@ -222,6 +243,29 @@ export function ReviewPage() {
           description="需求评审报告"
           onGenerate={handleGenerate}
         />
+        {relevantKnowledge.length > 0 && (
+          <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--secondary)]">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-[13px] text-[var(--text-secondary)]"
+              onClick={() => setKnowledgeExpanded((v) => !v)}
+            >
+              <span>发现 {relevantKnowledge.length} 条相关经验</span>
+              <span>{knowledgeExpanded ? "▲" : "▼"}</span>
+            </button>
+            {knowledgeExpanded && (
+              <div className="px-4 pb-3 space-y-2 border-t border-[var(--border)]">
+                {relevantKnowledge.map((entry) => (
+                  <div key={entry.id} className="py-2">
+                    <p className="text-[12px] font-medium text-[var(--text-primary)]">{entry.title}</p>
+                    <p className="text-[12px] text-[var(--text-secondary)] line-clamp-2">
+                      {entry.content.replace(/^#[^\n]+\n+/, "").slice(0, 120)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     )
   }

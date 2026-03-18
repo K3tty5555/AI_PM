@@ -88,6 +88,7 @@ pub fn run() {
             commands::knowledge::list_knowledge,
             commands::knowledge::add_knowledge,
             commands::knowledge::delete_knowledge,
+            commands::knowledge::search_knowledge,
             commands::config::get_projects_dir,
             commands::config::save_projects_dir,
             commands::config::test_cli_config,
