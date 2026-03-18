@@ -200,6 +200,11 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           }
 
           bg.notify?.(patch)
+
+          // Auto-mark phase as completed and notify sidebar to refresh
+          api.updatePhase({ projectId, phase, status: "completed", outputFile: file })
+            .catch(() => {})
+          window.dispatchEvent(new CustomEvent("project-phase-updated", { detail: { projectId } }))
         }),
         listen<string>("stream_error", (event) => {
           bg.error = event.payload
