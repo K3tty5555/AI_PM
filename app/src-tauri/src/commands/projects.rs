@@ -584,7 +584,6 @@ pub fn import_legacy_projects(
     state: State<AppState>,
     projects: Vec<LegacyProjectImport>,
 ) -> Result<ImportResult, String> {
-    let projects_dir = state.projects_dir.clone();
     let now = Utc::now().to_rfc3339();
 
     // ── Phase 1: check duplicates and assign IDs under the lock ───────────
@@ -733,7 +732,6 @@ pub struct MigrateResult {
 
 #[tauri::command]
 pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResult, String> {
-    let projects_dir = state.projects_dir.clone();
     let projects_base = state.projects_base();
 
     // ── Phase 1: collect rows under the lock, then release it ──────────────
