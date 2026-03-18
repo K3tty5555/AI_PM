@@ -675,3 +675,109 @@ pub fn import_legacy_projects(
 
     Ok(ImportResult { imported, skipped })
 }
+
+#[derive(serde::Serialize)]
+pub struct MigrateFailure {
+    pub name: String,
+    pub error: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct MigrateResult {
+    pub migrated: usize,
+    pub skipped: usize,
+    pub failed: Vec<MigrateFailure>,
+}
+
+#[tauri::command]
+pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResult, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let projects_dir = state.projects_dir.clone();
+
+    struct Row {
+        id: String,
+        name: String,
+        output_dir: String,
+    }
+
+    let mut stmt = db
+        .prepare("SELECT id, name, output_dir FROM projects")
+        .map_err(|e| e.to_string())?;
+
+    let rows: Vec<Row> = stmt
+        .query_map([], |row| {
+            Ok(Row {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                output_dir: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .filter(|r| !r.output_dir.starts_with(projects_dir.as_str()))
+        .collect();
+
+    let mut migrated = 0usize;
+    let mut skipped = 0usize;
+    let mut failed: Vec<MigrateFailure> = Vec::new();
+
+    let target_base = std::path::Path::new(&projects_dir);
+
+    for row in rows {
+        let src = std::path::Path::new(&row.output_dir);
+        if !src.exists() {
+            skipped += 1;
+            continue;
+        }
+
+        let preferred = target_base.join(&row.name);
+        let target_dir_opt: Option<std::path::PathBuf> = if !preferred.exists() {
+            Some(preferred)
+        } else {
+            let fallback = target_base.join(format!("{}-imported", &row.name));
+            if fallback.exists() {
+                None
+            } else {
+                Some(fallback)
+            }
+        };
+
+        let target_dir = match target_dir_opt {
+            None => {
+                failed.push(MigrateFailure {
+                    name: row.name,
+                    error: "Target directory already exists".to_string(),
+                });
+                continue;
+            }
+            Some(d) => d,
+        };
+
+        match copy_dir_recursive(src, &target_dir) {
+            Ok(()) => {
+                let new_path = target_dir.to_string_lossy().to_string();
+                if let Err(e) = db.execute(
+                    "UPDATE projects SET output_dir = ?1 WHERE id = ?2",
+                    params![&new_path, &row.id],
+                ) {
+                    let _ = std::fs::remove_dir_all(&target_dir);
+                    failed.push(MigrateFailure {
+                        name: row.name,
+                        error: e.to_string(),
+                    });
+                } else {
+                    migrated += 1;
+                }
+            }
+            Err(e) => {
+                let _ = std::fs::remove_dir_all(&target_dir);
+                failed.push(MigrateFailure {
+                    name: row.name,
+                    error: e.to_string(),
+                });
+            }
+        }
+    }
+
+    Ok(MigrateResult { migrated, skipped, failed })
+}

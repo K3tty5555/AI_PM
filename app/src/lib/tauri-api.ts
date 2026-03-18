@@ -69,6 +69,12 @@ export interface ImportResult {
   skipped: number
 }
 
+export interface MigrateResult {
+  migrated: number
+  skipped: number
+  failed: { name: string; error: string }[]
+}
+
 export interface KnowledgeCategoryScan {
   category: string
   total: number
@@ -195,4 +201,7 @@ export const api = {
   // PRD style active management
   setActivePrdStyle: (name: string) => invoke<void>("set_active_prd_style", { name }),
   getActivePrdStyle: () => invoke<string | null>("get_active_prd_style"),
+
+  migrateProjectsToAppDir: () =>
+    invoke<MigrateResult>("migrate_projects_to_app_dir"),
 }
