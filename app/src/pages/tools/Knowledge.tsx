@@ -20,6 +20,8 @@ export function ToolKnowledgePage() {
   const [newContent, setNewContent] = useState("")
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<KnowledgeEntry[] | null>(null)
 
   const loadEntries = useCallback(async () => {
     try {
@@ -33,6 +35,18 @@ export function ToolKnowledgePage() {
   }, [])
 
   useEffect(() => { loadEntries() }, [loadEntries])
+
+  // Debounced search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null)
+      return
+    }
+    const timer = setTimeout(() => {
+      api.searchKnowledge(searchQuery).then(setSearchResults).catch(() => {})
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const filtered = entries.filter((e) => e.category === activeCategory)
 
@@ -82,26 +96,44 @@ export function ToolKnowledgePage() {
       </div>
       <div className="h-px bg-[var(--border)]" />
 
-      {/* 分类标签 */}
-      <div className="mt-4 border-b border-[var(--border)] flex flex-wrap gap-1">
-        {CATEGORIES.map((cat) => {
-          const count = entries.filter((e) => e.category === cat.key).length
-          return (
-            <button
-              key={cat.key}
-              onClick={() => setActiveCategory(cat.key)}
-              className={cn(
-                "px-3 py-1.5 text-xs transition-colors",
-                activeCategory === cat.key
-                  ? "border-b-2 border-[var(--accent-color)] text-[var(--text-primary)] font-medium"
-                  : "border-b-2 border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              {cat.label} {count > 0 && `(${count})`}
-            </button>
-          )
-        })}
+      {/* 搜索框 */}
+      <div className="mt-4">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="搜索知识库..."
+          className={cn(
+            "w-full rounded-lg h-9 px-3 text-sm",
+            "bg-transparent border border-[var(--border)]",
+            "placeholder:text-[var(--text-secondary)]",
+            "outline-none focus:border-[var(--accent-color)] transition-[border-color]"
+          )}
+        />
       </div>
+
+      {/* 分类标签：搜索时隐藏 */}
+      {!searchResults && (
+        <div className="mt-4 border-b border-[var(--border)] flex flex-wrap gap-1">
+          {CATEGORIES.map((cat) => {
+            const count = entries.filter((e) => e.category === cat.key).length
+            return (
+              <button
+                key={cat.key}
+                onClick={() => setActiveCategory(cat.key)}
+                className={cn(
+                  "px-3 py-1.5 text-xs transition-colors",
+                  activeCategory === cat.key
+                    ? "border-b-2 border-[var(--accent-color)] text-[var(--text-primary)] font-medium"
+                    : "border-b-2 border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                {cat.label} {count > 0 && `(${count})`}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* 添加表单 */}
       {showAdd && (
@@ -142,7 +174,37 @@ export function ToolKnowledgePage() {
 
       {/* 条目列表 */}
       <div className="mt-4 space-y-2">
-        {filtered.length === 0 ? (
+        {searchResults !== null ? (
+          searchResults.length === 0 ? (
+            <p className="py-8 text-center text-sm text-[var(--text-secondary)]">
+              未找到相关知识
+            </p>
+          ) : (
+            searchResults.map((entry) => (
+              <div key={`${entry.category}-${entry.id}`} className="group rounded-lg border border-[var(--border)] p-4 hover:border-[var(--accent-color)]/40 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[10px] text-[var(--text-secondary)] bg-[var(--secondary)] px-1.5 py-0.5 rounded">
+                        {CATEGORIES.find((c) => c.key === entry.category)?.label ?? entry.category}
+                      </span>
+                    </div>
+                    <p className="font-medium text-sm text-[var(--text-primary)]">{entry.title}</p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)] line-clamp-2">
+                      {entry.content.replace(/^#[^\n]+\n+/, "").slice(0, 120)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(entry.category, entry.id)}
+                    className="shrink-0 text-[10px] text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 hover:text-[var(--destructive)] transition-opacity"
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+            ))
+          )
+        ) : filtered.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--text-secondary)]">
             该分类暂无条目，点击右上角「+ 添加」记录第一条经验
           </p>

@@ -90,6 +90,38 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
 }
 
 #[tauri::command]
+pub fn search_knowledge(state: State<'_, AppState>, query: String) -> Vec<KnowledgeEntry> {
+    let q = query.to_lowercase();
+    if q.trim().is_empty() {
+        return Vec::new();
+    }
+    let kb_root = Path::new(&state.projects_dir).join("knowledge-base");
+    let mut entries = Vec::new();
+
+    for category in CATEGORIES {
+        let cat_dir = kb_root.join(category);
+        if !cat_dir.exists() { continue; }
+        let Ok(dir) = fs::read_dir(&cat_dir) else { continue; };
+        for file in dir.filter_map(|e| e.ok()) {
+            let path = file.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
+            let Ok(content) = fs::read_to_string(&path) else { continue; };
+            let content_lower = content.to_lowercase();
+            let id = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
+            let title = content.lines()
+                .find(|l| l.starts_with("# "))
+                .map(|l| l[2..].trim().to_string())
+                .unwrap_or_else(|| id.clone());
+            if title.to_lowercase().contains(&q) || content_lower.contains(&q) {
+                entries.push(KnowledgeEntry { id, category: category.to_string(), title, content });
+                if entries.len() >= 20 { return entries; }
+            }
+        }
+    }
+    entries
+}
+
+#[tauri::command]
 pub fn delete_knowledge(state: State<'_, AppState>, category: String, id: String) -> Result<(), String> {
     // Validate inputs to prevent path traversal
     if !CATEGORIES.contains(&category.as_str()) {
