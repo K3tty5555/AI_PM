@@ -7,6 +7,7 @@ import { AnalysisPage } from "./pages/project/Analysis"
 import { ResearchPage } from "./pages/project/Research"
 import { StoriesPage } from "./pages/project/Stories"
 import { PrdPage } from "./pages/project/Prd"
+import { AnalyticsPage } from "./pages/project/Analytics"
 import { PrototypePage } from "./pages/project/Prototype"
 import { ReviewPage } from "./pages/project/Review"
 import { ToolPriorityPage }  from "./pages/tools/Priority"
@@ -15,6 +16,7 @@ import { ToolKnowledgePage } from "./pages/tools/Knowledge"
 import { ToolPersonaPage }   from "./pages/tools/Persona"
 import { ToolDataPage }      from "./pages/tools/Data"
 import { ToolInterviewPage } from "./pages/tools/Interview"
+import { ToolDesignSpecPage } from "./pages/tools/DesignSpec"
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +29,7 @@ export const router = createBrowserRouter([
       { path: "/project/:id/research",    element: <ResearchPage /> },
       { path: "/project/:id/stories",     element: <StoriesPage /> },
       { path: "/project/:id/prd",         element: <PrdPage /> },
+      { path: "/project/:id/analytics",   element: <AnalyticsPage /> },
       { path: "/project/:id/prototype",   element: <PrototypePage /> },
       { path: "/project/:id/review",      element: <ReviewPage /> },
       { path: "/tools/priority",          element: <ToolPriorityPage /> },
@@ -35,6 +38,7 @@ export const router = createBrowserRouter([
       { path: "/tools/persona",           element: <ToolPersonaPage /> },
       { path: "/tools/data",              element: <ToolDataPage /> },
       { path: "/tools/interview",         element: <ToolInterviewPage /> },
+      { path: "/tools/design-spec",       element: <ToolDesignSpecPage /> },
     ],
   },
 ])
