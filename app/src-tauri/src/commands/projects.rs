@@ -561,6 +561,21 @@ fn phase_output_file(phase: &str) -> Option<&'static str> {
     }
 }
 
+fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let dst_path = dst.join(entry.file_name());
+        if ty.is_dir() {
+            copy_dir_recursive(&entry.path(), &dst_path)?;
+        } else {
+            std::fs::copy(entry.path(), &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn import_legacy_projects(
     state: State<AppState>,
@@ -588,10 +603,24 @@ pub fn import_legacy_projects(
 
         let id = Uuid::new_v4().to_string();
 
+        // Attempt to copy files into app-managed directory
+        let target_base = std::path::Path::new(&state.projects_dir);
+        let preferred = target_base.join(&p.name);
+        let target_dir = if preferred.exists() {
+            target_base.join(format!("{}-imported", &p.name))
+        } else {
+            preferred
+        };
+
+        let output_dir = match copy_dir_recursive(std::path::Path::new(&p.dir), &target_dir) {
+            Ok(()) => target_dir.to_string_lossy().to_string(),
+            Err(_) => p.dir.clone(), // fallback: keep original path
+        };
+
         db.execute(
             "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode)
              VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?5, 0)",
-            params![&id, &p.name, &p.last_phase, &p.dir, &now],
+            params![&id, &p.name, &p.last_phase, &output_dir, &now],
         )
         .map_err(|e| e.to_string())?;
 
