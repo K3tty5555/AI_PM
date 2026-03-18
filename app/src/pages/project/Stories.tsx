@@ -47,6 +47,7 @@ export function StoriesPage() {
 
   const [searchParams] = useSearchParams()
   const autostart = searchParams.get("autostart") === "1"
+  const isYolo = searchParams.get("yolo") === "1"
 
   // Parse stories from AI output when streaming completes
   const streamParsedStories = useMemo(() => {
@@ -168,13 +169,13 @@ export function StoriesPage() {
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
-      navigate(`/project/${projectId}/prd?autostart=1`)
+      navigate(`/project/${projectId}/prd${isYolo ? "?yolo=1" : "?autostart=1"}`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, stories, outputFile, navigate])
+  }, [projectId, stories, outputFile, navigate, isYolo])
 
   // -------------------------------------------------------------------------
   // Loading state
