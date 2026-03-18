@@ -23,6 +23,9 @@ export function ToolDataPage() {
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } =
     useToolStream("ai-pm-data", boundProjectId ?? undefined)
 
+  const [prdContext, setPrdContext] = useState<{ projectName: string; content: string } | null>(null)
+  const [prdLoading, setPrdLoading] = useState(false)
+
   // Track projects dir for dashboard save
   const projectsDirRef = useRef<string>("")
 
@@ -30,6 +33,32 @@ export function ToolDataPage() {
     api.getConfig().then(cfg => setIsApiMode(cfg.backend === "api")).catch(() => {})
     api.getProjectsDir().then(dir => { projectsDirRef.current = dir }).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (mode !== "指标设计" || !boundProjectId) {
+      setPrdContext(null)
+      return
+    }
+    let cancelled = false
+    setPrdLoading(true)
+    Promise.all([
+      api.readProjectFile(boundProjectId, "05-prd/05-PRD-v1.0.md"),
+      api.getProject(boundProjectId),
+    ]).then(([prdContent, project]) => {
+      if (!cancelled) {
+        if (prdContent && project) {
+          setPrdContext({ projectName: project.name, content: prdContent })
+        } else {
+          setPrdContext(null)
+        }
+      }
+    }).catch(() => {
+      if (!cancelled) setPrdContext(null)
+    }).finally(() => {
+      if (!cancelled) setPrdLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [boundProjectId, mode])
 
   // When dashboard streaming completes, auto-save HTML
   useEffect(() => {
@@ -66,7 +95,10 @@ export function ToolDataPage() {
       const goal = analysisGoal.trim() || "请对数据进行全面洞察分析，发现关键趋势和问题"
       run(goal, filePath)
     } else if (mode === "指标设计") {
-      const goal = analysisGoal.trim() || "请设计完整的指标体系"
+      const userGoal = analysisGoal.trim() || "请设计完整的指标体系"
+      const goal = prdContext
+        ? `请基于以下项目PRD设计指标体系和埋点方案：\n\n${prdContext.content.slice(0, 3000)}\n\n---\n${userGoal}`
+        : userGoal
       run(goal, filePath || undefined, "metrics")
     } else {
       // 数据仪表盘
@@ -74,7 +106,7 @@ export function ToolDataPage() {
       const goal = analysisGoal.trim() || "请根据数据生成交互式数据仪表盘"
       run(goal, filePath, "dashboard")
     }
-  }, [filePath, analysisGoal, mode, run, reset])
+  }, [filePath, analysisGoal, mode, prdContext, run, reset])
 
   const handleReset = useCallback(() => {
     reset()
@@ -89,6 +121,8 @@ export function ToolDataPage() {
     setFilePath("")
     setAnalysisGoal("")
     setDashboardPath(null)
+    setPrdContext(null)
+    setPrdLoading(false)
   }, [reset])
 
   const progressValue = isStreaming ? Math.min(90, Math.floor(text.length / 30)) : text ? 100 : 0
@@ -164,6 +198,17 @@ export function ToolDataPage() {
               <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[var(--accent-color)]" />
               <p className="text-[13px] text-[var(--text-secondary)]">
                 输出结构化指标体系，包含北极星指标、分解指标、数据口径定义、埋点建议。文件上传可选。
+              </p>
+            </div>
+          )}
+          {isMetrics && prdLoading && (
+            <p className="text-[12px] text-[var(--text-tertiary)]">正在加载项目 PRD···</p>
+          )}
+          {isMetrics && prdContext && (
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--accent-color)]/20 bg-[var(--accent-color)]/5 px-4 py-3">
+              <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[var(--accent-color)]" />
+              <p className="text-[13px] text-[var(--text-secondary)]">
+                已加载「{prdContext.projectName}」PRD 作为指标设计上下文
               </p>
             </div>
           )}
