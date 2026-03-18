@@ -1006,23 +1006,6 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-      {/* About Card */}
-      <Card className="hover:shadow-none">
-        <CardHeader>
-          <CardTitle>关于</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-[var(--text-primary)]">
-              AI PM Desktop v0.1.0
-            </p>
-            <p className="text-sm text-[var(--text-secondary)]">
-              基于 Claude API 的产品经理工作台
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* File Consolidation Card */}
       <Card className="hover:shadow-none">
         <CardHeader>
@@ -1048,7 +1031,7 @@ export function SettingsPage() {
           {migrateResult && (
             <div className="space-y-2">
               <p className="text-sm text-[var(--text-secondary)]">
-                已迁移 {migrateResult.migrated} 个项目 · 跳过 {migrateResult.skipped} 个（已在应用目录）
+                已迁移 {migrateResult.migrated} 个项目，跳过 {migrateResult.skipped} 个（原目录不存在）
               </p>
               {migrateResult.failed.length > 0 && (
                 <div className="space-y-1">
@@ -1072,6 +1055,23 @@ export function SettingsPage() {
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* About Card */}
+      <Card className="hover:shadow-none">
+        <CardHeader>
+          <CardTitle>关于</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-[var(--text-primary)]">
+              AI PM Desktop v0.1.0
+            </p>
+            <p className="text-sm text-[var(--text-secondary)]">
+              基于 Claude API 的产品经理工作台
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
