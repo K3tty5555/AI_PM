@@ -1,26 +1,49 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useToolStream } from "@/hooks/use-tool-stream"
 import { cn } from "@/lib/utils"
 
+function parseReplyTemplates(text: string): Array<{name: string; content: string}> {
+  const match = text.match(/\[REPLY_TEMPLATES\]([\s\S]*?)\[\/REPLY_TEMPLATES\]/)
+  if (!match) return []
+  const block = match[1].trim()
+  const sections = block.split(/(?=^### )/m).filter(Boolean)
+  return sections.map(section => {
+    const lines = section.trim().split('\n')
+    const name = lines[0].replace(/^### /, '').trim()
+    const content = lines.slice(1).join('\n').trim()
+    return { name, content }
+  }).filter(t => t.name && t.content)
+}
+
 export function ToolPriorityPage() {
   const [input, setInput] = useState("")
+  const [templates, setTemplates] = useState<Array<{name: string; content: string}>>([])
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } = useToolStream("ai-pm-priority")
+
+  useEffect(() => {
+    if (!isStreaming && text) {
+      setTemplates(parseReplyTemplates(text))
+    }
+  }, [isStreaming, text])
 
   const handleRun = useCallback(() => {
     if (!input.trim()) return
     reset()
+    setTemplates([])
     run(input.trim())
   }, [input, run, reset])
 
   const handleReset = useCallback(() => {
     reset()
     setInput("")
+    setTemplates([])
   }, [reset])
 
   const progressValue = isStreaming ? Math.min(90, Math.floor(text.length / 20)) : text ? 100 : 0
+  const displayText = text.replace(/\[REPLY_TEMPLATES\][\s\S]*?\[\/REPLY_TEMPLATES\]/g, '').trimEnd()
 
   return (
     <div className="mx-auto w-full max-w-[860px]">
@@ -92,13 +115,34 @@ export function ToolPriorityPage() {
               </div>
             )}
           </div>
-          <PrdViewer markdown={text} isStreaming={isStreaming} />
+          <PrdViewer markdown={displayText} isStreaming={isStreaming} />
           {!isStreaming && streamMeta && (
             <p className="mt-2 text-xs text-[var(--text-tertiary)]">
               {streamMeta.inputTokens != null
                 ? `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens?.toLocaleString()} tokens`
                 : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
             </p>
+          )}
+          {!isStreaming && templates.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-[13px] font-semibold text-[var(--text-primary)] mb-3">回复模板</h3>
+              <div className="space-y-3">
+                {templates.map((t, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--secondary)] p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[13px] font-medium text-[var(--text-primary)]">{t.name}</span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(t.content)}
+                        className="text-[12px] text-[var(--accent-color)] hover:opacity-70 transition-opacity"
+                      >
+                        复制
+                      </button>
+                    </div>
+                    <p className="text-[13px] text-[var(--text-secondary)] whitespace-pre-wrap">{t.content}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
