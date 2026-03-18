@@ -567,7 +567,10 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::
         let entry = entry?;
         let ty = entry.file_type()?;
         let dst_path = dst.join(entry.file_name());
-        if ty.is_dir() {
+        if ty.is_symlink() {
+            // skip symlinks — avoid infinite loops on cyclic links
+            continue;
+        } else if ty.is_dir() {
             copy_dir_recursive(&entry.path(), &dst_path)?;
         } else {
             std::fs::copy(entry.path(), &dst_path)?;
@@ -606,15 +609,31 @@ pub fn import_legacy_projects(
         // Attempt to copy files into app-managed directory
         let target_base = std::path::Path::new(&state.projects_dir);
         let preferred = target_base.join(&p.name);
-        let target_dir = if preferred.exists() {
-            target_base.join(format!("{}-imported", &p.name))
+        let target_dir_opt: Option<std::path::PathBuf> = if !preferred.exists() {
+            Some(preferred)
         } else {
-            preferred
+            let fallback = target_base.join(format!("{}-imported", &p.name));
+            if fallback.exists() {
+                None // both names taken, fall back to original path
+            } else {
+                Some(fallback)
+            }
         };
 
-        let output_dir = match copy_dir_recursive(std::path::Path::new(&p.dir), &target_dir) {
-            Ok(()) => target_dir.to_string_lossy().to_string(),
-            Err(_) => p.dir.clone(), // fallback: keep original path
+        let output_dir = match target_dir_opt {
+            Some(target_dir) => match copy_dir_recursive(std::path::Path::new(&p.dir), &target_dir) {
+                Ok(()) => target_dir.to_string_lossy().to_string(),
+                Err(e) => {
+                    eprintln!("[import] Failed to copy '{}': {}", p.name, e);
+                    // Clean up partial copy
+                    let _ = std::fs::remove_dir_all(&target_dir);
+                    p.dir.clone()
+                }
+            },
+            None => {
+                eprintln!("[import] Target dirs for '{}' already exist, using original path", p.name);
+                p.dir.clone()
+            }
         };
 
         db.execute(
