@@ -26,11 +26,12 @@ const PHASE_LABELS: Record<string, string> = {
   research: "竞品研究",
   stories: "用户故事",
   prd: "PRD 撰写",
+  analytics: "埋点设计",
   prototype: "原型设计",
   review: "评审",
 }
 
-const PHASE_ORDER = ["requirement", "analysis", "research", "stories", "prd", "prototype", "review"] as const
+const PHASE_ORDER = ["requirement", "analysis", "research", "stories", "prd", "analytics", "prototype", "review"] as const
 
 function PhaseMiniMap({ completedPhases }: { completedPhases: string[] }) {
   return (
