@@ -74,10 +74,35 @@ export interface KnowledgeCategoryScan {
   newCount: number
 }
 
-export interface DesignSpecScan {
+export interface PrdStyleScan {
   name: string
   hasPersona: boolean
   alreadyExists: boolean
+}
+
+export interface PrdStyleEntry {
+  name: string
+  hasPersona: boolean
+}
+
+export interface UiSpecScan {
+  name: string
+  alreadyExists: boolean
+}
+
+export interface UiSpecEntry {
+  name: string
+}
+
+export interface DepStatus {
+  name: string
+  label: string
+  installed: boolean
+  version: string | null
+  required: boolean
+  autoInstallable: boolean
+  manualHint: string | null
+  featureHint: string
 }
 
 // ─── API functions ─────────────────────────────────────────────────────────
@@ -110,7 +135,7 @@ export const api = {
     invoke<{ ok: boolean; version?: string; error?: string }>("test_cli_config"),
 
   // Stream (fire-and-forget — results come via events)
-  startStream: (args: { projectId: string; phase: string; messages: ChatMessage[]; excludedContext?: string[] }) =>
+  startStream: (args: { projectId: string; phase: string; messages: ChatMessage[]; excludedContext?: string[]; styleId?: string }) =>
     invoke<void>("start_stream", { args }),
   runTool: (args: { toolName: string; userInput: string; filePath?: string; projectId?: string }) =>
     invoke<void>("run_tool", { args }),
@@ -129,6 +154,15 @@ export const api = {
   // Context files
   listProjectContext: (projectId: string) => invoke<ContextFile[]>("list_project_context", { projectId }),
 
+  // Export
+  exportPrdDocx: (projectId: string) => invoke<string>("export_prd_docx", { projectId }),
+  revealFile: (path: string) => invoke<void>("reveal_file", { path }),
+
+  // Environment
+  checkEnv: () => invoke<DepStatus[]>("check_env"),
+  installDep: (dep: string, useMirror: boolean) => invoke<void>("install_dep", { args: { dep, useMirror } }),
+  checkPlaywrightMcp: () => invoke<boolean>("check_playwright_mcp"),
+
   // Legacy import
   scanLegacyProjects: (dir: string) =>
     invoke<LegacyProjectScan[]>("scan_legacy_projects", { dir }),
@@ -140,8 +174,19 @@ export const api = {
     invoke<KnowledgeCategoryScan[]>("scan_legacy_knowledge", { dir }),
   importLegacyKnowledge: (dir: string) =>
     invoke<ImportResult>("import_legacy_knowledge", { dir }),
-  scanLegacyDesignSpecs: (dir: string) =>
-    invoke<DesignSpecScan[]>("scan_legacy_design_specs", { dir }),
-  importLegacyDesignSpecs: (dir: string) =>
-    invoke<ImportResult>("import_legacy_design_specs", { dir }),
+  listPrdStyles: () => invoke<PrdStyleEntry[]>("list_prd_styles"),
+  scanLegacyPrdStyles: (dir: string) =>
+    invoke<PrdStyleScan[]>("scan_legacy_prd_styles", { dir }),
+  importLegacyPrdStyles: (dir: string) =>
+    invoke<ImportResult>("import_legacy_prd_styles", { dir }),
+  scanLegacyUiSpecs: (dir: string) =>
+    invoke<UiSpecScan[]>("scan_legacy_ui_specs", { dir }),
+  importLegacyUiSpecs: (dir: string) =>
+    invoke<ImportResult>("import_legacy_ui_specs", { dir }),
+  listUiSpecs: () => invoke<UiSpecEntry[]>("list_ui_specs"),
+  addUiSpec: (dir: string) => invoke<string>("add_ui_spec", { dir }),
+
+  // PRD style active management
+  setActivePrdStyle: (name: string) => invoke<void>("set_active_prd_style", { name }),
+  getActivePrdStyle: () => invoke<string | null>("get_active_prd_style"),
 }
