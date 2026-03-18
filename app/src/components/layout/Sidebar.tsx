@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { Plus, Settings, Check } from "lucide-react"
+import { Plus, Settings, Check, PanelLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export interface SidebarProject {
@@ -19,6 +19,7 @@ export interface SidebarPhase {
 
 interface SidebarProps {
   open: boolean
+  onCollapse: () => void
   // Dashboard context
   projects: SidebarProject[]
   activeProjectId?: string
@@ -36,17 +37,22 @@ const PHASE_LABELS: Record<string, string> = {
   research: "竞品研究",
   stories: "用户故事",
   prd: "PRD 撰写",
+  analytics: "埋点设计",
   prototype: "原型设计",
   review: "需求评审",
 }
 
-const TOOLS = [
+const TOOLS_EXTEND = [
   { path: "/tools/priority",  label: "需求优先级" },
   { path: "/tools/weekly",    label: "工作周报"   },
-  { path: "/tools/knowledge", label: "知识库"     },
-  { path: "/tools/persona",   label: "产品分身"   },
   { path: "/tools/data",      label: "数据洞察"   },
   { path: "/tools/interview", label: "调研访谈"   },
+]
+
+const TOOLS_TEMPLATE = [
+  { path: "/tools/knowledge",   label: "知识库"   },
+  { path: "/tools/persona",     label: "产品分身" },
+  { path: "/tools/design-spec", label: "设计规范" },
 ]
 
 function PhaseStatusIcon({ status }: { status: SidebarPhase["status"] }) {
@@ -73,6 +79,7 @@ function PhaseStatusIcon({ status }: { status: SidebarPhase["status"] }) {
 
 function Sidebar({
   open,
+  onCollapse,
   projects,
   activeProjectId,
   onNewProject,
@@ -95,7 +102,7 @@ function Sidebar({
     <aside
       data-slot="sidebar"
       className={cn(
-        "fixed top-[44px] left-0 bottom-0 z-20",
+        "fixed top-0 left-0 bottom-0 z-20",
         "flex w-[220px] flex-col",
         "border-r border-[var(--border)]",
         "bg-[var(--bg-sidebar)] backdrop-blur-[20px]",
@@ -107,19 +114,37 @@ function Sidebar({
         visibility: open ? "visible" : "hidden",
       } as CSSProperties}
     >
-      {/* App logo */}
-      <button
-        type="button"
-        onClick={() => navigate("/")}
-        className="flex items-center gap-2 px-4 py-3 hover:opacity-70 transition-opacity text-left"
+      {/* Header: traffic lights zone + app name + collapse button */}
+      <div
+        data-tauri-drag-region
+        className="flex h-[44px] shrink-0 items-center select-none"
+        style={{ WebkitAppRegion: "drag" } as CSSProperties}
       >
-        <span className="flex size-5 items-center justify-center rounded bg-[var(--accent-color)] shrink-0">
-          <span className="text-[9px] font-bold text-white">AI</span>
-        </span>
-        <span className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight">
-          AI PM
-        </span>
-      </button>
+        {/* Traffic lights clearance */}
+        <div className="w-[72px] shrink-0" style={{ WebkitAppRegion: "drag" } as CSSProperties} />
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
+          className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-70 transition-opacity text-left"
+        >
+          <span className="flex size-5 items-center justify-center rounded bg-[var(--accent-color)] shrink-0">
+            <span className="text-[9px] font-bold text-white leading-none">AI</span>
+          </span>
+          <span className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight">
+            AI PM
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onCollapse}
+          style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
+          title="收起侧边栏"
+          className="flex items-center justify-center size-6 rounded-md mr-2 shrink-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150"
+        >
+          <PanelLeft className="size-4" />
+        </button>
+      </div>
 
       <div className="mx-3 h-px bg-[var(--border)]" />
 
@@ -181,7 +206,7 @@ function Sidebar({
             <p className="px-3 pb-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
               项目
             </p>
-            <ul className="flex flex-col gap-0.5 mb-3">
+            <ul className="flex flex-col gap-0.5 mb-3 max-h-[240px] overflow-y-auto">
               {projects.map((project) => {
                 const active = isProjectActive(project.id)
                 const done = project.completedCount >= project.totalPhases
@@ -226,11 +251,42 @@ function Sidebar({
 
         {/* TOOLS section — always visible */}
         <div className="mx-1 mb-2 h-px bg-[var(--border)]" />
+
+        {/* 扩展工具 */}
         <p className="px-3 pb-1.5 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
-          工具
+          扩展工具
+        </p>
+        <ul className="flex flex-col gap-0.5 mb-2">
+          {TOOLS_EXTEND.map((tool) => {
+            const toolActive = location.pathname === tool.path
+            return (
+              <li key={tool.path}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(activeProjectId ? `${tool.path}?projectId=${activeProjectId}` : tool.path)
+                  }
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left",
+                    "transition-colors duration-[var(--dur-base)]",
+                    toolActive
+                      ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]",
+                  )}
+                >
+                  <span className="text-[13px]">{tool.label}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+
+        {/* 模板工具 */}
+        <p className="px-3 pb-1.5 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
+          模板工具
         </p>
         <ul className="flex flex-col gap-0.5">
-          {TOOLS.map((tool) => {
+          {TOOLS_TEMPLATE.map((tool) => {
             const toolActive = location.pathname === tool.path
             return (
               <li key={tool.path}>
