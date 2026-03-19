@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react"
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Outlet, useNavigate, useParams } from "react-router-dom"
+import { Outlet, useNavigate, useParams, useLocation } from "react-router-dom"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { SidebarShell } from "@/components/layout/SidebarShell"
 import { ActivityBar } from "@/components/layout/ActivityBar"
@@ -12,6 +12,7 @@ import { useTheme } from "@/hooks/use-theme"
 import { useHotkeys } from "@/hooks/use-hotkeys"
 import type { HotkeyDef } from "@/hooks/use-hotkeys"
 import { useNavigationHistory } from "@/hooks/use-navigation-history"
+import { useRecent } from "@/hooks/use-recent"
 
 export type { ThemePreference, ResolvedTheme } from "@/hooks/use-theme"
 
@@ -22,10 +23,34 @@ const PHASE_ORDER = [
   "analytics", "prototype", "review", "retrospective",
 ]
 
+const PHASE_LABELS: Record<string, string> = {
+  requirement: "需求收集",
+  analysis: "需求分析",
+  research: "竞品研究",
+  stories: "用户故事",
+  prd: "PRD 撰写",
+  analytics: "埋点设计",
+  prototype: "原型设计",
+  review: "需求评审",
+  retrospective: "项目复盘",
+}
+
+const TOOL_LABELS: Record<string, string> = {
+  priority: "优先级评估",
+  weekly: "工作周报",
+  data: "数据洞察",
+  interview: "调研访谈",
+  knowledge: "知识库",
+  persona: "产品分身",
+  "design-spec": "设计规范",
+}
+
 export function AppLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id: projectId } = useParams()
   const { canGoBack, canGoForward, goBack, goForward } = useNavigationHistory()
+  const { recordVisit } = useRecent()
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const stored = localStorage.getItem("sidebar-open")
@@ -33,6 +58,38 @@ export function AppLayout() {
   })
 
   const { preference: themePreference, resolved: theme, cycleTheme } = useTheme()
+
+  // Auto-record recent visits for project pages and tool pages
+  useEffect(() => {
+    const path = location.pathname
+
+    // Project pages: /project/:id/:phase
+    const projectMatch = path.match(/^\/project\/([^/]+)\/([^/]+)$/)
+    if (projectMatch) {
+      const [, , phase] = projectMatch
+      const phaseLabel = PHASE_LABELS[phase]
+      if (phaseLabel) {
+        // We need the project name — read it from the document title or sidebar
+        // For simplicity, we use a deferred approach: read from the DOM after render
+        requestAnimationFrame(() => {
+          const sidebarNameEl = document.querySelector('[data-slot="sidebar"] button span.truncate')
+          const projectName = sidebarNameEl?.textContent ?? "项目"
+          recordVisit(path, `${projectName} \u203A ${phaseLabel}`)
+        })
+      }
+      return
+    }
+
+    // Tool pages: /tools/:tool
+    const toolMatch = path.match(/^\/tools\/([^/?]+)/)
+    if (toolMatch) {
+      const [, tool] = toolMatch
+      const toolLabel = TOOL_LABELS[tool]
+      if (toolLabel) {
+        recordVisit(path.split("?")[0], toolLabel)
+      }
+    }
+  }, [location.pathname, recordVisit])
 
   const [cmdOpen, setCmdOpen] = useState(false)
   const [bannerState, setBannerState] = useState<BannerState>("idle")
