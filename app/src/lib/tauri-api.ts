@@ -237,3 +237,17 @@ export const api = {
   renameProject: (id: string, newName: string) =>
     invoke<void>("rename_project", { id, newName }),
 }
+
+// ─── Updater ────────────────────────────────────────────────────────────────
+
+export interface UpdateInfo {
+  available: boolean
+  version: string
+  notes: string
+}
+
+export const checkUpdate = (): Promise<UpdateInfo> =>
+  invoke("check_update")
+
+export const downloadAndInstallUpdate = (): Promise<void> =>
+  invoke("download_and_install_update")
