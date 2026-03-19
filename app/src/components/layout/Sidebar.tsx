@@ -7,6 +7,7 @@ import {
   Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette,
   CheckCircle2,
   FolderOpen, Pencil, Trash2, ArrowRight, RefreshCw, FileText,
+  Star,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ContextMenu, type ContextMenuItem } from "@/components/ui/context-menu"
@@ -34,6 +35,9 @@ interface SidebarProps {
   onNewProject: () => void
   onDeleteProject?: (id: string) => void
   onRenameProject?: (id: string) => void
+  // Favorites
+  favorites: string[]
+  onToggleFavorite: (id: string) => void
   // Project context
   projectName?: string
   projectPhases?: SidebarPhase[]
@@ -112,6 +116,8 @@ function Sidebar({
   onNewProject,
   onDeleteProject,
   onRenameProject,
+  favorites,
+  onToggleFavorite,
   projectName,
   projectPhases,
   activePhase: _activePhase,
@@ -246,15 +252,63 @@ function Sidebar({
           </div>
         )}
 
-        {/* DASHBOARD context: project list */}
+        {/* DASHBOARD context: favorites + project list */}
         {!isInProjectContext && (
           <>
+            {/* Favorites section */}
+            {favorites.length > 0 && (() => {
+              const favProjects = favorites
+                .map((fid) => projects.find((p) => p.id === fid))
+                .filter((p): p is SidebarProject => !!p)
+              return favProjects.length > 0 ? (
+                <div className="mb-2">
+                  <p className="px-3 pb-2 pt-1 text-[11px] font-medium text-[var(--text-tertiary)]">收藏</p>
+                  <ul className="flex flex-col gap-0.5">
+                    {favProjects.map((project) => {
+                      const active = isProjectActive(project.id)
+                      return (
+                        <li key={project.id}>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/project/${project.id}/${project.currentPhase}`)}
+                            className={cn(
+                              "group relative flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left",
+                              "transition-colors duration-[var(--dur-base)]",
+                              active ? "bg-[var(--active-bg)]" : "hover:bg-[var(--hover-bg)]",
+                            )}
+                          >
+                            {active && (
+                              <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--accent-color)]" />
+                            )}
+                            <Star
+                              className="size-3.5 shrink-0"
+                              strokeWidth={1.75}
+                              style={{ color: "var(--accent-color)", fill: "var(--accent-color)" }}
+                            />
+                            <p className={cn(
+                              "truncate text-sm",
+                              active ? "font-medium text-[var(--text-primary)]" : "text-[var(--text-secondary)]",
+                            )}>
+                              {project.name}
+                            </p>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <div className="mx-3 mt-2 h-px bg-[var(--border)]" />
+                </div>
+              ) : null
+            })()}
+
             <p className="px-3 pb-2 pt-1 text-[11px] font-medium text-[var(--text-tertiary)]">项目</p>
             <ul className="flex flex-col gap-0.5 mb-3 max-h-[240px] overflow-y-auto">
               {projects.map((project) => {
                 const active = isProjectActive(project.id)
                 const done = project.status === 'completed' || project.completedCount >= project.totalPhases
+                const isFav = favorites.includes(project.id)
                 const projectCtxItems: ContextMenuItem[] = [
+                  { label: isFav ? "取消收藏" : "收藏", icon: Star, action: () => onToggleFavorite(project.id) },
                   { label: "打开项目", icon: FolderOpen, action: () => navigate(`/project/${project.id}/${project.currentPhase}`) },
                   { label: "重命名", icon: Pencil, action: () => onRenameProject?.(project.id), hidden: !onRenameProject, separator: true },
                   { label: "删除", icon: Trash2, action: () => onDeleteProject?.(project.id), variant: "destructive", hidden: !onDeleteProject },

@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus, Trash2, CheckCircle2, RotateCcw, Pencil, FolderOpen, ExternalLink, GripVertical } from "lucide-react"
+import { Plus, Trash2, CheckCircle2, RotateCcw, Pencil, FolderOpen, ExternalLink, GripVertical, Clock, Star, ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ContextMenu, type ContextMenuItem } from "@/components/ui/context-menu"
+import { useFavorites } from "@/hooks/use-favorites"
+import { useRecent } from "@/hooks/use-recent"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
@@ -71,6 +73,8 @@ function formatDate(dateStr: string): string {
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const { isFavorite, toggleFavorite } = useFavorites()
+  const { recentItems } = useRecent()
   const [projects, setProjects] = useState<DashboardProject[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -479,6 +483,35 @@ export function DashboardPage() {
           </select>
         </div>
 
+        {/* Recent access */}
+        {recentItems.length > 0 && (
+          <div className="mb-5">
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Clock className="size-3.5 text-[var(--text-tertiary)]" strokeWidth={1.75} />
+              <span className="text-[11px] font-medium text-[var(--text-tertiary)]">最近访问</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {recentItems.map((item) => (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={() => navigate(item.path)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5",
+                    "text-[13px] text-[var(--text-primary)]",
+                    "bg-[var(--secondary)] hover:bg-[var(--hover-bg)]",
+                    "border border-[var(--border)]",
+                    "transition-colors duration-150",
+                  )}
+                >
+                  <ArrowRight className="size-3 text-[var(--text-tertiary)]" strokeWidth={1.75} />
+                  <span className="truncate max-w-[180px]">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Project cards grid */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project, index) => {
@@ -491,7 +524,9 @@ export function DashboardPage() {
               ? "已完成"
               : (PHASE_LABELS[project.currentPhase] ?? project.currentPhase)
 
+            const isFav = isFavorite(project.id)
             const contextItems: ContextMenuItem[] = [
+              { label: isFav ? "取消收藏" : "收藏", icon: Star, action: () => toggleFavorite(project.id) },
               { label: "打开项目", icon: FolderOpen, action: () => navigate(`/project/${project.id}/requirement`) },
               { label: "重命名", icon: Pencil, action: () => { setEditingProjectId(project.id); setRenameInput(project.name); setRenameError(""); isConfirmingRef.current = false }, separator: true },
               { label: "在 Finder 中显示", icon: ExternalLink, action: () => api.revealFile(project.outputDir).catch(console.error) },
