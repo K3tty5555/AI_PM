@@ -247,7 +247,7 @@ export interface UpdateInfo {
 }
 
 export const checkUpdate = (): Promise<UpdateInfo> =>
-  invoke("check_update")
+  invoke<UpdateInfo>("check_update")
 
 export const downloadAndInstallUpdate = (): Promise<void> =>
-  invoke("download_and_install_update")
+  invoke<void>("download_and_install_update")
