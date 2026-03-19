@@ -53,10 +53,30 @@
 |------|----|------|
 | `--success` / `--green` | `#16A34A` | 完成态、成功 |
 | `--success-light` | `rgba(22,163,74,0.08)` | 成功浅色背景 |
+| `--warning` | `#F59E0B` | 警告态 |
 | `--destructive` | `#DC2626` | 错误、删除 |
 | `--border` | `rgba(0,0,0,0.08)` | 分割线、描边 |
 | `--hover-bg` | `rgba(0,0,0,0.04)` | hover 背景 |
 | `--active-bg` | `rgba(0,0,0,0.07)` | active/selected 背景 |
+
+### Tooltip 色
+
+| 变量 | Light | Dark | 用途 |
+|------|-------|------|------|
+| `--tooltip-bg` | `#1E293B` | `#E2E8F0` | Tooltip 背景 |
+| `--tooltip-fg` | `#FFFFFF` | `#1E293B` | Tooltip 文字 |
+| `--tooltip-kbd` | `rgba(255,255,255,0.5)` | `rgba(0,0,0,0.35)` | 快捷键文字 |
+
+### 阴影层级
+
+4 级阴影 token，通过 CSS 变量使用，禁止硬编码 `box-shadow`。
+
+| 变量 | Light 值 | Dark 值 | 用途 |
+|------|----------|---------|------|
+| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | `0 1px 3px rgba(0,0,0,0.2)` | 卡片默认、轻量浮层 |
+| `--shadow-md` | `0 4px 12px rgba(0,0,0,0.08)` | `0 4px 16px rgba(0,0,0,0.25)` | 卡片 hover、下拉面板 |
+| `--shadow-lg` | `0 8px 24px rgba(0,0,0,0.12)` | `0 8px 32px rgba(0,0,0,0.35)` | Toast、Tooltip、Context Menu |
+| `--shadow-xl` | `0 16px 48px rgba(0,0,0,0.16)` | `0 20px 60px rgba(0,0,0,0.45)` | Dialog、Command Palette |
 
 ---
 
@@ -185,6 +205,276 @@ H1：22px 700，H2：19px 600，H3：16px 500（均继承 Lora）
 链接：--accent-color，hover underline
 ```
 
+### Toast 通知
+
+4 种语义变体的非阻断通知。固定右上角 (top: 56px, right: 24px)，最多同时显示 3 条。
+
+**文件**：`components/ui/toast.tsx` + `hooks/use-toast.ts`
+
+**Props（useToast hook）**：
+
+| 方法 | 参数 | 说明 |
+|------|------|------|
+| `toast(message, variant?, duration?)` | `message: string`, `variant: 'success'\|'error'\|'info'\|'warning'`, `duration: number (default 3000)` | 显示通知 |
+| `dismiss(id)` | `id: string` | 手动关闭 |
+
+**变体**：
+
+| variant | 左色条 | 图标 | 图标色 |
+|---------|--------|------|--------|
+| `success` | `var(--success)` | CheckCircle2 | `var(--success)` |
+| `error` | `var(--destructive)` | XCircle | `var(--destructive)` |
+| `info` | `var(--accent-color)` | Info | `var(--accent-color)` |
+| `warning` | `var(--warning)` | AlertTriangle | `var(--warning)` |
+
+**样式**：
+
+```
+容器：min-w-[320px] max-w-[420px]，rounded-lg
+背景：var(--card)，border var(--border)，shadow var(--shadow-lg)
+左色条：3px 宽，从 top 到 bottom
+文字：14px var(--text-primary)
+关闭按钮：var(--text-secondary)，hover var(--text-primary) + var(--hover-bg)
+进入动画：slideInRight 300ms
+退出动画：fadeOut 300ms
+```
+
+**用法**：
+
+```tsx
+import { useToast } from "@/hooks/use-toast"
+
+const { toast } = useToast()
+toast("保存成功", "success")
+toast("操作失败", "error", 5000)
+```
+
+### Tooltip
+
+基于 @base-ui/react 的定位提示，支持快捷键 badge。
+
+**文件**：`components/ui/tooltip.tsx`
+
+**Props**：
+
+| prop | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `content` | `string` | — | 提示文字 |
+| `shortcut` | `string?` | — | 快捷键（显示为 `<kbd>`） |
+| `side` | `'top'\|'bottom'\|'left'\|'right'` | `'bottom'` | 弹出方向 |
+| `delay` | `number` | `300` | hover 延迟（ms） |
+| `children` | `ReactElement` | — | 触发元素 |
+
+**样式**：
+
+```
+背景：var(--tooltip-bg)，rounded-md，shadow var(--shadow-lg)
+文字：12px font-medium var(--tooltip-fg)
+快捷键：11px var(--tooltip-kbd)
+箭头：SVG，填充 var(--tooltip-bg)
+进入/退出：scale(0.96→1) + fade，150ms var(--ease-standard)
+z-index：70
+```
+
+**用法**：
+
+```tsx
+import { Tooltip } from "@/components/ui/tooltip"
+
+<Tooltip content="后退" shortcut="⌘[" side="bottom">
+  <button>...</button>
+</Tooltip>
+```
+
+### Skeleton 骨架屏
+
+加载态占位组件。基础 `Skeleton` + 3 个预设变体。
+
+**文件**：`components/ui/skeleton.tsx`
+
+**组件列表**：
+
+| 组件 | Props | 说明 |
+|------|-------|------|
+| `Skeleton` | `className?: string` | 基础矩形占位（h-4, rounded-md） |
+| `SkeletonText` | `lines?: number (default 3)` | 多行文本骨架，最后一行 60% 宽 |
+| `SkeletonCard` | — | 卡片骨架（标题 + 2 行文字 + 按钮） |
+| `SkeletonList` | `count?: number (default 5)` | 列表骨架（圆形头像 + 文字行） |
+
+**样式**：
+
+```
+底色：var(--secondary)
+渐变：linear-gradient(90deg, transparent → var(--background) → transparent)
+动画：shimmer 1.5s infinite（背景从左到右扫过）
+圆角：rounded-md（6px）
+```
+
+### Context Menu 右键菜单
+
+基于 @base-ui/react 的上下文菜单。
+
+**文件**：`components/ui/context-menu.tsx`
+
+**Props**：
+
+| prop | 类型 | 说明 |
+|------|------|------|
+| `items` | `ContextMenuItem[]` | 菜单项列表 |
+| `children` | `ReactNode` | 右键触发区域 |
+
+**ContextMenuItem**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `label` | `string` | 菜单项文字 |
+| `icon` | `React.ElementType?` | lucide-react 图标 |
+| `shortcut` | `string?` | 右侧快捷键提示 |
+| `action` | `() => void` | 点击回调 |
+| `variant` | `'default'\|'destructive'?` | destructive 时 hover 变红 |
+| `separator` | `boolean?` | 此项之后显示分隔线 |
+| `hidden` | `boolean?` | 条件隐藏 |
+
+**样式**：
+
+```
+容器：min-w-[180px]，rounded-lg，border var(--border)，bg var(--card)，shadow var(--shadow-lg)
+菜单项：rounded-md，13px，px-3 py-1.5
+hover 态：bg var(--hover-bg)
+destructive hover：文字变 var(--destructive)
+图标：size-4，var(--text-tertiary)（destructive 时继承文字色）
+快捷键：11px var(--text-tertiary)，右对齐
+分隔线：1px var(--border)，mx-2 my-1
+进入/退出：scale(0.95→1) + fade，150ms ease-out
+z-index：80
+```
+
+**用法**：
+
+```tsx
+import { ContextMenu } from "@/components/ui/context-menu"
+
+<ContextMenu items={[
+  { label: "打开", icon: FolderOpen, action: () => navigate(path) },
+  { label: "重命名", icon: Pencil, action: startRename, separator: true },
+  { label: "删除", icon: Trash2, action: handleDelete, variant: "destructive" },
+]}>
+  <div>右键触发区域</div>
+</ContextMenu>
+```
+
+### Command Palette 命令面板
+
+全局快捷搜索面板 (⌘K)，支持模糊搜索命令、项目和知识库。
+
+**文件**：`components/command-palette.tsx`
+
+**Props**：
+
+| prop | 类型 | 说明 |
+|------|------|------|
+| `open` | `boolean` | 是否显示 |
+| `onClose` | `() => void` | 关闭回调 |
+| `onToggleSidebar` | `() => void` | 切换侧边栏（供内部命令使用） |
+| `onCycleTheme` | `() => void` | 切换主题（供内部命令使用） |
+
+**功能**：
+
+- 模糊搜索：subsequence 匹配 + substring 优先，命中字符高亮为 `var(--accent-color)`
+- 命令分组：导航 / 操作 / 视图 / 项目 / 工具 / 知识库
+- 键盘导航：↑↓ 移动、Enter 执行、Esc 关闭
+- 知识库搜索：输入 2+ 字符后 200ms 防抖搜索
+- 加载指示器：搜索时右侧显示 spinner
+
+**样式**：
+
+```
+遮罩：bg-black/30 + backdrop-blur(4px)，fadeIn 150ms
+面板：w-[560px]，mt-[20vh]，rounded-xl，border var(--border)，bg var(--card)，shadow var(--shadow-xl)
+进入动画：commandPaletteIn 200ms var(--ease-decelerate)（scale 0.98→1 + fade）
+搜索框：16px var(--text-primary)，icon 18px var(--text-tertiary)
+分隔线：1px var(--border)
+结果列表：max-h-[400px]，overflow-y-auto
+分组标题：11px font-medium var(--text-tertiary)
+结果项：px-4 py-2，hover bg var(--hover-bg)
+快捷键 badge：rounded-md，border var(--border)，bg var(--background)，11px var(--text-tertiary)
+页脚：11px var(--text-tertiary)，border-t
+z-index：50
+```
+
+### Tab Bar 标签页栏
+
+多标签页系统，支持拖拽排序和右键菜单。Dashboard 标签不可关闭。
+
+**文件**：`components/layout/TabBar.tsx` + `hooks/use-tabs.ts`
+
+**TabBar Props**：
+
+| prop | 类型 | 说明 |
+|------|------|------|
+| `tabs` | `Tab[]` | 标签列表 |
+| `activeTabId` | `string \| null` | 当前激活 ID |
+| `onActivate` | `(id: string) => void` | 点击激活 |
+| `onClose` | `(id: string) => void` | 关闭标签 |
+| `onCloseOthers` | `(id: string) => void` | 关闭其他 |
+| `onCloseRight` | `(id: string) => void` | 关闭右侧 |
+| `onReorder` | `(from, to) => void` | 拖拽排序 |
+
+**Tab 数据结构**：
+
+```ts
+interface Tab {
+  id: string        // 唯一标识
+  label: string     // 显示名称
+  path: string      // React Router 路径
+  closable: boolean // Dashboard 不可关闭
+}
+```
+
+**样式**：
+
+```
+栏高：36px，sticky top-0，z-10
+背景：var(--background)，border-b var(--border)
+标签：max-w-[180px]，13px leading-none
+激活态：bg var(--card)，text var(--text-primary)，底部 2px 蓝条 var(--accent-color)
+非激活态：text var(--text-secondary)，hover bg var(--hover-bg)
+拖拽 hover：ring-1 ring-inset var(--accent-color)
+关闭按钮：hover 时显示（opacity 0→1），size-4 rounded-sm
+溢出箭头：左右 ChevronLeft/Right，size-3.5 var(--text-tertiary)
+中键点击：关闭标签
+最大标签数：8（超出时替换最早非活跃标签）
+```
+
+**右键菜单**：关闭 / 关闭其他 / 关闭右侧
+
+### Back/Forward Navigation 前进后退
+
+浏览器风格的导航历史按钮。
+
+**文件**：`hooks/use-navigation-history.ts`（逻辑），`layouts/AppLayout.tsx`（渲染）
+
+**API（useNavigationHistory hook）**：
+
+| 返回值 | 类型 | 说明 |
+|--------|------|------|
+| `canGoBack` | `boolean` | 是否可后退 |
+| `canGoForward` | `boolean` | 是否可前进 |
+| `goBack` | `() => void` | 后退 |
+| `goForward` | `() => void` | 前进 |
+
+**样式**：
+
+```
+按钮：size-6，rounded-md，ChevronLeft / ChevronRight（size-4，strokeWidth 1.75）
+默认：text var(--text-tertiary)
+hover：text var(--text-primary)，bg var(--hover-bg)
+禁用：opacity-30，cursor-not-allowed
+过渡：transition-colors 150ms
+```
+
+**快捷键**：⌘[ 后退，⌘] 前进
+
 ---
 
 ## 六、微交互规范
@@ -250,7 +540,128 @@ scrollbar-width: none;        /* Firefox */
 
 ---
 
-## 八、两套规范说明
+## 八、Keyframe 动画
+
+所有动画在 `index.css` 中定义为 `@keyframes`，组件通过 `animation` 属性或 Tailwind `animate-[...]` 引用。
+
+| 名称 | 效果 | 用途 |
+|------|------|------|
+| `fadeIn` | 0→1 透明度 | 遮罩、轻量元素出现 |
+| `fadeOut` | 1→0 透明度 | Toast 退出 |
+| `fadeInUp` | 透明度 0→1 + Y 偏移 8px→0 | 页面/卡片/空状态进入 |
+| `slideInLeft` | scaleX(0→1) | 侧边栏当前项左竖线 |
+| `slideInRight` | translateX(100%→0) + fade | Toast 进入 |
+| `shimmer` | 背景位置 -200%→200% | Skeleton 加载闪光 |
+| `commandPaletteIn` | scale(0.98→1) + fade | Command Palette 进入 |
+| `dotPulse` | scale(1→1.15→1) + 光晕 | 状态指示圆点脉冲 |
+| `checkDraw` | stroke-dashoffset 20→0 | 完成勾选动画 |
+| `thinkingPulse` | 透明度 1→0.3→1 | AI 思考中脉冲 |
+| `progressFill` | width 0→var(--progress-value) | 进度条填充 |
+| `staggerFadeIn` | fade + Y 偏移 4px | 列表逐项出现 |
+| `blink` | 透明度 1→0→1 | AI 流式光标闪烁 |
+| `streamPulse` | 透明度 0.35→1→0.35 | AI 流式左竖线呼吸 |
+
+---
+
+## 九、键盘快捷键
+
+所有快捷键在 `hooks/use-hotkeys.ts` 中注册，在输入框/文本域中自动禁用（Escape 除外）。
+
+### 全局快捷键
+
+| 快捷键 | 功能 | 分组 |
+|--------|------|------|
+| `⌘K` | 打开/关闭命令面板 | 操作 |
+| `⌘B` | 切换侧边栏 | 视图 |
+| `⌘,` | 打开设置 | 导航 |
+| `⌘D` | 循环切换主题（Light → Dark → System） | 视图 |
+| `⌘[` | 后退 | 导航 |
+| `⌘]` | 前进 | 导航 |
+| `⌘W` | 关闭当前标签页 | 标签 |
+| `Escape` | 关闭命令面板 | 操作 |
+
+### 项目内快捷键（仅 `/project/:id/*` 路由下生效）
+
+| 快捷键 | 功能 |
+|--------|------|
+| `⌘1` ~ `⌘9` | 跳转到阶段 1~9 |
+
+### useHotkeys Hook
+
+```ts
+interface HotkeyDef {
+  key: string          // 小写键名：'k', 'b', ',', '[', ']' 等
+  meta?: boolean       // macOS ⌘ 键
+  shift?: boolean
+  handler: () => void
+  description: string  // 命令面板中的显示名
+  group?: string       // 分组名
+}
+
+useHotkeys(hotkeys: HotkeyDef[])
+```
+
+---
+
+## 十、响应式断点
+
+| 断点 | 条件 | 行为 |
+|------|------|------|
+| Compact | `max-width: 900px` | 侧边栏自动折叠，layout-focus 全宽（px-4） |
+| Default | `901px ~ 1440px` | layout-focus max-w-[800px] |
+| Wide | `min-width: 1441px` | layout-focus max-w-[960px]，layout-cards max-w-[1200px] |
+
+**侧边栏响应行为**：窗口宽度 <= 900px 时自动折叠侧边栏。用户可通过 ⌘B 手动切换。
+
+---
+
+## 十一、暗色模式架构
+
+### 三态切换（Light / Dark / System）
+
+**Hook**：`hooks/use-theme.ts`
+
+```ts
+type ThemePreference = "light" | "dark" | "system"
+type ResolvedTheme = "light" | "dark"
+
+useTheme() → {
+  preference: ThemePreference,   // 用户选择
+  resolved: ResolvedTheme,       // 实际生效值
+  setTheme: (pref) => void,      // 直接设置
+  cycleTheme: () => void,        // 循环：light → dark → system → light
+}
+```
+
+**实现机制**：
+
+1. **CSS 变量驱动**：所有颜色定义为 CSS 变量（`:root` 为 light，`html.theme-dark` 为 dark）
+2. **Class 切换**：`<html>` 元素添加 `theme-light` 或 `theme-dark` class
+3. **System 跟随**：preference 为 `system` 时，监听 `prefers-color-scheme` 媒体查询变化
+4. **持久化**：偏好存储在 `localStorage` key `app-theme`
+5. **主题过渡**：`html` 上 `transition: background-color 200ms ease, color 200ms ease`
+
+**禁止事项**：
+
+- 不使用 Tailwind `dark:` variant（组件中已验证无使用）
+- 不硬编码颜色值，必须通过 `var(--*)` 引用
+- 暗色主题使用蓝调色而非纯灰（oklch 色彩空间 + 250 色相角）
+
+### 暗色调色板关键差异
+
+| Token | Light | Dark |
+|-------|-------|------|
+| `--primary` | `#1D4ED8` | `#4F8EF7`（提亮，保证对比度） |
+| `--background` | `#F8FAFF` | `oklch(12% 0.02 250)`（蓝调深色） |
+| `--card` | `#FFFFFF` | `oklch(16% 0.025 250)` |
+| `--destructive` | `#DC2626` | `#F87171`（提亮） |
+| `--success` | `#16A34A` | `#4ADE80`（提亮） |
+| `--border` | `rgba(0,0,0,0.08)` | `rgba(255,255,255,0.07)` |
+| `--hover-bg` | `rgba(0,0,0,0.04)` | `rgba(255,255,255,0.05)` |
+
+---
+
+## 十二、两套规范说明
 
 | 场景 | 规范 |
 |------|------|
