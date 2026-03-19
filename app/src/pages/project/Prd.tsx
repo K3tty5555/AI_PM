@@ -374,7 +374,7 @@ export function PrdPage() {
     return (
       <div className="mx-auto w-full max-w-[1080px]">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-base font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
         {fromYolo && (
@@ -469,9 +469,9 @@ export function PrdPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-base font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="prd-actions flex items-center gap-1">
           {hasContent && !currentStreaming && (
             <>
               <Button variant="ghost" size="sm" onClick={handleCopyMarkdown} title="复制 Markdown 源文本">
@@ -584,7 +584,7 @@ export function PrdPage() {
         {/* Left: PRD content */}
         <div
           ref={contentRef}
-          className="min-w-0 flex-1 overflow-y-auto"
+          className="prd-content min-w-0 flex-1 overflow-y-auto"
         >
           <PrdViewer
             markdown={displayMarkdown || ""}
@@ -602,7 +602,7 @@ export function PrdPage() {
 
         {/* Right: TOC navigation */}
         {hasContent && sectionIds.length > 0 && (
-          <div className="hidden lg:block w-[220px] shrink-0">
+          <div className="prd-toc hidden lg:block w-[220px] shrink-0">
             <PrdToc
               markdown={displayMarkdown || ""}
               activeSection={activeSection}
@@ -616,6 +616,7 @@ export function PrdPage() {
       {hasContent && !currentStreaming && (
         <div
           className={cn(
+            "prd-assist",
             "mt-6",
             "relative pl-5",
             "before:absolute before:left-0 before:top-0 before:bottom-0",
