@@ -101,6 +101,13 @@ function SidebarShell({
     return () => window.removeEventListener("project-phase-updated", handler)
   }, [activeProjectId, activePhase, loadProjectPhases])
 
+  // Listen for ⌘N shortcut: open new project dialog via custom event
+  useEffect(() => {
+    const handler = () => setDialogOpen(true)
+    window.addEventListener("open-new-project-dialog", handler)
+    return () => window.removeEventListener("open-new-project-dialog", handler)
+  }, [])
+
   // Listen for project list changes (e.g. after import from Settings)
   useEffect(() => {
     const handler = () => {
