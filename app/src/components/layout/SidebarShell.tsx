@@ -35,6 +35,7 @@ function SidebarShell({
   const [dialogOpen, setDialogOpen] = useState(false)
   const [projectName, setProjectName] = useState<string | undefined>()
   const [projectPhases, setProjectPhases] = useState<SidebarPhase[] | undefined>()
+  const [projectStatus, setProjectStatus] = useState<'active' | 'completed' | undefined>()
   const { id: activeProjectId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -56,6 +57,7 @@ function SidebarShell({
       .then((project) => {
         if (!project?.id) return
         setProjectName(project.name)
+        setProjectStatus(project.status === 'completed' ? 'completed' : 'active')
 
         const completedPhases = new Set(
           project.phases
@@ -79,6 +81,7 @@ function SidebarShell({
     if (!activeProjectId) {
       setProjectName(undefined)
       setProjectPhases(undefined)
+      setProjectStatus(undefined)
       return
     }
     loadProjectPhases(activeProjectId, activePhase)
@@ -128,6 +131,19 @@ function SidebarShell({
     if (activeProjectId) navigate(`/project/${activeProjectId}/${phaseId}`)
   }
 
+  const handleStatusChange = useCallback(async (status: 'active' | 'completed') => {
+    if (!activeProjectId) return
+    try {
+      await api.setProjectStatus(activeProjectId, status)
+      setProjectStatus(status)
+      // Reload project list so dashboard reflects the new status
+      const updated = await api.listProjects()
+      setProjects(updated)
+    } catch (err) {
+      console.error("Failed to update project status:", err)
+    }
+  }, [activeProjectId])
+
   return (
     <>
       <Sidebar
@@ -140,6 +156,8 @@ function SidebarShell({
         projectPhases={projectPhases}
         activePhase={activePhase}
         onPhaseClick={handlePhaseClick}
+        projectStatus={projectStatus}
+        onStatusChange={handleStatusChange}
         theme={theme}
         onToggleTheme={onToggleTheme}
       />
