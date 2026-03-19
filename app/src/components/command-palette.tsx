@@ -326,6 +326,9 @@ function CommandPalette({
       onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex justify-center bg-black/30 backdrop-blur-[4px]"
       style={{ animation: "fadeIn 150ms var(--ease-decelerate)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="命令面板"
     >
       <div
         className="mt-[20vh] h-fit w-[560px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-xl)]"
@@ -344,6 +347,10 @@ function CommandPalette({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="输入命令或搜索项目..."
             className="flex-1 bg-transparent text-base text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="command-palette-list"
+            aria-autocomplete="list"
           />
           {isSearching && (
             <div className="shrink-0 h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent-color)]" />
@@ -354,7 +361,7 @@ function CommandPalette({
         <div className="h-px bg-[var(--border)]" />
 
         {/* Results */}
-        <div ref={listRef} className="max-h-[400px] overflow-y-auto py-2">
+        <div ref={listRef} id="command-palette-list" role="listbox" className="max-h-[400px] overflow-y-auto py-2">
           {flatItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-10">
               <Search size={32} className="text-[var(--border)]" />
@@ -390,6 +397,8 @@ function CommandPalette({
                   return (
                     <button
                       key={item.id}
+                      role="option"
+                      aria-selected={isActive}
                       data-active={isActive}
                       onClick={() => item.action()}
                       onMouseEnter={() => setActiveIndex(currentFlatIndex)}

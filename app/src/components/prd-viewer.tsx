@@ -177,15 +177,13 @@ function EditableBlock({
 // Markdown components for react-markdown (终末地 style)
 // ---------------------------------------------------------------------------
 
-/** Counter for generating unique block indices per render cycle */
-let blockCounter = 0
-
 function createMarkdownComponents(
   editor: ReturnType<typeof useBlockEditor>,
-  editable: boolean
+  editable: boolean,
+  counter: { value: number }
 ) {
   // Reset counter each time components are created (each render)
-  blockCounter = 0
+  counter.value = 0
 
   return {
     h2: ({ children, ...props }: React.ComponentProps<"h2">) => {
@@ -243,7 +241,7 @@ function createMarkdownComponents(
     ),
 
     p: ({ children, ...props }: React.ComponentProps<"p">) => {
-      const idx = blockCounter++
+      const idx = counter.value++
       const rawText =
         typeof children === "string"
           ? children
@@ -444,9 +442,10 @@ function createMarkdownComponents(
 function PrdViewer({ markdown, isStreaming, onEdit }: PrdViewerProps) {
   const editor = useBlockEditor(markdown, onEdit)
   const editable = !isStreaming && !!onEdit
+  const blockCounterRef = useRef({ value: 0 })
 
   const components = useMemo(
-    () => createMarkdownComponents(editor, editable),
+    () => createMarkdownComponents(editor, editable, blockCounterRef.current),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [editor.editingBlock, editor.editValue, editable]
   )
