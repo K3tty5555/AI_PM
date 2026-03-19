@@ -2,7 +2,7 @@ import type { CSSProperties } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import {
   Plus, ChevronLeft,
-  Sun, Moon,
+  Sun, Moon, Monitor,
   Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone,
   Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette,
   CheckCircle2,
@@ -39,8 +39,9 @@ interface SidebarProps {
   projectStatus?: 'active' | 'completed'
   onStatusChange?: (status: 'active' | 'completed') => void
   // Theme
-  theme: "light" | "dark"
-  onToggleTheme: () => void
+  themePreference: "light" | "dark" | "system"
+  resolvedTheme: "light" | "dark"
+  onCycleTheme: () => void
 }
 
 const PHASE_LABELS: Record<string, string> = {
@@ -111,8 +112,9 @@ function Sidebar({
   onPhaseClick,
   projectStatus,
   onStatusChange,
-  theme,
-  onToggleTheme,
+  themePreference,
+  resolvedTheme: _resolvedTheme,
+  onCycleTheme,
 }: SidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -363,14 +365,22 @@ function Sidebar({
         <div className="flex justify-center">
           <button
             type="button"
-            onClick={onToggleTheme}
-            title={theme === "light" ? "切换深色" : "切换浅色"}
+            onClick={onCycleTheme}
+            title={
+              themePreference === "light" ? "切换深色" :
+              themePreference === "dark" ? "跟随系统" : "切换浅色"
+            }
             className="flex size-8 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150"
           >
-            {theme === "light"
-              ? <Moon className="size-3.5 transition-transform duration-300 ease-out hover:rotate-180" strokeWidth={1.75} />
-              : <Sun className="size-3.5 transition-transform duration-300 ease-out hover:rotate-180" strokeWidth={1.75} />
-            }
+            {themePreference === "light" && (
+              <Moon className="size-3.5 transition-transform duration-300 ease-out" strokeWidth={1.75} />
+            )}
+            {themePreference === "dark" && (
+              <Sun className="size-3.5 transition-transform duration-300 ease-out" strokeWidth={1.75} />
+            )}
+            {themePreference === "system" && (
+              <Monitor className="size-3.5 transition-transform duration-300 ease-out" strokeWidth={1.75} />
+            )}
           </button>
         </div>
       </div>

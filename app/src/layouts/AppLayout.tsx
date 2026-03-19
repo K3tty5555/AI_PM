@@ -5,8 +5,9 @@ import { SidebarShell } from "@/components/layout/SidebarShell"
 import { ActivityBar } from "@/components/layout/ActivityBar"
 import { checkUpdate, downloadAndInstallUpdate } from "@/lib/tauri-api"
 import type { UpdateInfo } from "@/lib/tauri-api"
+import { useTheme } from "@/hooks/use-theme"
 
-export type Theme = "light" | "dark"
+export type { ThemePreference, ResolvedTheme } from "@/hooks/use-theme"
 
 type BannerState = "idle" | "available" | "downloading" | "ready" | "error"
 
@@ -16,22 +17,12 @@ export function AppLayout() {
     return stored === null ? true : stored === "true"
   })
 
-  const [theme, setTheme] = useState<Theme>(() => {
-    return (localStorage.getItem("app-theme") as Theme) ?? "light"
-  })
+  const { preference: themePreference, resolved: theme, cycleTheme } = useTheme()
 
   const [bannerState, setBannerState] = useState<BannerState>("idle")
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const checkDoneRef = useRef(false)
-
-  // Sync theme class to <html>
-  useEffect(() => {
-    const html = document.documentElement
-    html.classList.remove("theme-light", "theme-dark")
-    html.classList.add(`theme-${theme}`)
-    localStorage.setItem("app-theme", theme)
-  }, [theme])
 
   // Startup update check (runs once)
   useEffect(() => {
@@ -69,10 +60,6 @@ export function AppLayout() {
     })
   }
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"))
-  }
-
   const showBanner =
     !bannerDismissed && bannerState !== "idle"
 
@@ -96,8 +83,9 @@ export function AppLayout() {
       <SidebarShell
         open={sidebarOpen}
         onToggle={toggleSidebar}
-        theme={theme}
-        onToggleTheme={toggleTheme}
+        themePreference={themePreference}
+        resolvedTheme={theme}
+        onCycleTheme={cycleTheme}
       />
 
       <main
