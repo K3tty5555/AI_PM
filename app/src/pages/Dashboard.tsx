@@ -74,6 +74,7 @@ export function DashboardPage() {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all')
   const [sortOrder, setSortOrder] = useState<'updatedAt' | 'createdAt'>('updatedAt')
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   // Inline rename state
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
@@ -152,6 +153,14 @@ export function DashboardPage() {
     fetchProjects()
   }, [fetchProjects])
 
+  useEffect(() => {
+    api.getConfig().then((cfg) => {
+      if (!cfg.hasConfig && !localStorage.getItem("onboarding-dismissed")) {
+        setShowOnboarding(true)
+      }
+    }).catch((err) => console.error("[Dashboard] getConfig:", err))
+  }, [])
+
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     setConfirmId(id)
@@ -180,6 +189,16 @@ export function DashboardPage() {
       console.error("Failed to update project status:", err)
     }
   }, [])
+
+  const dismissOnboarding = useCallback(() => {
+    localStorage.setItem("onboarding-dismissed", "1")
+    setShowOnboarding(false)
+  }, [])
+
+  const goToSettings = useCallback(() => {
+    dismissOnboarding()
+    navigate("/settings")
+  }, [dismissOnboarding, navigate])
 
   const handleCreated = (project: { id: string; name: string }) => {
     setDialogOpen(false)
@@ -259,6 +278,31 @@ export function DashboardPage() {
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmId(null)}
         />
+        {showOnboarding && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-xl w-96">
+              <p className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
+              <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
+                使用 AI 功能前，需要先配置 Claude API Key。
+                前往设置页填写后，即可开始使用完整功能。
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  onClick={dismissOnboarding}
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)]"
+                >
+                  稍后再说
+                </button>
+                <button
+                  onClick={goToSettings}
+                  className="rounded-lg bg-[var(--accent-color)] px-4 py-1.5 text-sm text-white hover:opacity-90"
+                >
+                  去设置
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     )
   }
@@ -471,6 +515,31 @@ export function DashboardPage() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmId(null)}
       />
+      {showOnboarding && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-xl w-96">
+            <p className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
+              使用 AI 功能前，需要先配置 Claude API Key。
+              前往设置页填写后，即可开始使用完整功能。
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={dismissOnboarding}
+                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)]"
+              >
+                稍后再说
+              </button>
+              <button
+                onClick={goToSettings}
+                className="rounded-lg bg-[var(--accent-color)] px-4 py-1.5 text-sm text-white hover:opacity-90"
+              >
+                去设置
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
