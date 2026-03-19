@@ -232,6 +232,8 @@ export const api = {
     invoke<void>("rename_prd_style", { oldName, newName }),
   renameUiSpec: (oldName: string, newName: string) =>
     invoke<void>("rename_ui_spec", { oldName, newName }),
+  deleteUiSpec: (name: string) =>
+    invoke<void>("delete_ui_spec", { name }),
   renameProject: (id: string, newName: string) =>
     invoke<void>("rename_project", { id, newName }),
 }
