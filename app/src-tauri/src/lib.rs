@@ -199,6 +199,7 @@ pub fn run() {
             commands::templates::get_ui_spec_content,
             commands::templates::rename_prd_style,
             commands::templates::rename_ui_spec,
+            commands::templates::delete_ui_spec,
             commands::projects::rename_project,
         ])
         .setup(|app| {
