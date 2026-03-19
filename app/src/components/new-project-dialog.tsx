@@ -12,10 +12,17 @@ interface NewProjectDialogProps {
 function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
   const [name, setName] = useState("")
   const [teamMode, setTeamMode] = useState(false)
+  const [isApiMode, setIsApiMode] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const nameInputRef = useRef<HTMLInputElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (open) {
+      api.getConfig().then(cfg => setIsApiMode(cfg.backend === "api")).catch(() => {})
+    }
+  }, [open])
 
   // Focus name input on open
   useEffect(() => {
@@ -131,6 +138,16 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
               </span>
               <span className="text-sm text-[var(--text-secondary)]">多代理模式（复杂需求）</span>
             </button>
+            {teamMode && isApiMode && (
+              <p className="mt-2 ml-7 text-[12px] text-[var(--text-tertiary)] leading-relaxed">
+                API 模式下为增强提示词，不会真正并行执行。切换到 Claude CLI 后端可启用完整多代理协作。
+              </p>
+            )}
+            {teamMode && !isApiMode && (
+              <p className="mt-2 ml-7 text-[12px] text-[var(--accent-color)] leading-relaxed">
+                CLI 模式：Claude Code 将并行派出多个 Agent 协同完成各阶段任务。
+              </p>
+            )}
           </div>
 
           {/* Actions */}

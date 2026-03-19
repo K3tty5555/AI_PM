@@ -1,6 +1,12 @@
 import type { CSSProperties } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { Plus, Settings, Check, PanelLeft } from "lucide-react"
+import {
+  Plus, Settings, PanelLeft, ChevronLeft,
+  Sun, Moon,
+  Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone,
+  Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette,
+  CheckCircle2,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export interface SidebarProject {
@@ -29,6 +35,9 @@ interface SidebarProps {
   projectPhases?: SidebarPhase[]
   activePhase?: string  // kept for caller convenience; phase highlight driven by phase.status
   onPhaseClick?: (phaseId: string) => void
+  // Theme
+  theme: "light" | "dark"
+  onToggleTheme: () => void
 }
 
 const PHASE_LABELS: Record<string, string> = {
@@ -43,38 +52,48 @@ const PHASE_LABELS: Record<string, string> = {
   retrospective: "项目复盘（可选）",
 }
 
-const TOOLS_EXTEND = [
-  { path: "/tools/priority",  label: "需求优先级" },
-  { path: "/tools/weekly",    label: "工作周报"   },
-  { path: "/tools/data",      label: "数据洞察"   },
-  { path: "/tools/interview", label: "调研访谈"   },
+const PHASE_ICONS: Record<string, React.ElementType> = {
+  requirement:   Inbox,
+  analysis:      ScanSearch,
+  research:      Globe,
+  stories:       Users,
+  prd:           ScrollText,
+  analytics:     Activity,
+  prototype:     Layers,
+  review:        ClipboardCheck,
+  retrospective: Milestone,
+}
+
+const TOOLS_ACTION = [
+  { path: "/tools/priority",  label: "优先级评估", icon: Zap         },
+  { path: "/tools/weekly",    label: "工作周报",   icon: CalendarDays },
+  { path: "/tools/data",      label: "数据洞察",   icon: BarChart2    },
+  { path: "/tools/interview", label: "调研访谈",   icon: Mic          },
 ]
 
-const TOOLS_TEMPLATE = [
-  { path: "/tools/knowledge",   label: "知识库"   },
-  { path: "/tools/persona",     label: "产品分身" },
-  { path: "/tools/design-spec", label: "设计规范" },
+const TOOLS_RESOURCE = [
+  { path: "/tools/knowledge",   label: "知识库",   icon: Library  },
+  { path: "/tools/persona",     label: "产品分身", icon: Bot      },
+  { path: "/tools/design-spec", label: "设计规范", icon: Palette  },
 ]
 
-function PhaseStatusIcon({ status }: { status: SidebarPhase["status"] }) {
+function PhaseIcon({ phaseId, status }: { phaseId: string; status: SidebarPhase["status"] }) {
   if (status === "completed") {
     return (
-      <span className="flex size-4 items-center justify-center rounded-full bg-[var(--success-light)]">
-        <Check className="size-2.5 text-[var(--success)] stroke-[2.5]" />
-      </span>
+      <CheckCircle2
+        className="size-4 shrink-0"
+        style={{ color: "var(--success)" }}
+        strokeWidth={1.75}
+      />
     )
   }
-  if (status === "current") {
-    return (
-      <span className="flex size-4 items-center justify-center">
-        <span className="size-2 rounded-full bg-[var(--accent-color)]" />
-      </span>
-    )
-  }
+  const Icon = PHASE_ICONS[phaseId] ?? Inbox
   return (
-    <span className="flex size-4 items-center justify-center">
-      <span className="size-2 rounded-full border border-[var(--text-tertiary)]" />
-    </span>
+    <Icon
+      className="size-4 shrink-0"
+      style={{ color: status === "current" ? "var(--accent-color)" : "var(--text-tertiary)" }}
+      strokeWidth={1.75}
+    />
   )
 }
 
@@ -88,6 +107,8 @@ function Sidebar({
   projectPhases,
   activePhase: _activePhase,
   onPhaseClick,
+  theme,
+  onToggleTheme,
 }: SidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -115,7 +136,7 @@ function Sidebar({
         visibility: open ? "visible" : "hidden",
       } as CSSProperties}
     >
-      {/* Header: traffic lights zone + app name + collapse button */}
+      {/* Header: traffic lights zone + app name / back button + collapse button */}
       <div
         data-tauri-drag-region
         className="flex h-[44px] shrink-0 items-center select-none"
@@ -123,19 +144,36 @@ function Sidebar({
       >
         {/* Traffic lights clearance */}
         <div className="w-[72px] shrink-0" style={{ WebkitAppRegion: "drag" } as CSSProperties} />
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
-          className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-70 transition-opacity text-left"
-        >
-          <span className="flex size-5 items-center justify-center rounded bg-[var(--accent-color)] shrink-0">
-            <span className="text-[9px] font-bold text-white leading-none">AI</span>
-          </span>
-          <span className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight">
-            AI PM
-          </span>
-        </button>
+
+        {isInProjectContext ? (
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
+            className="flex items-center gap-1.5 flex-1 min-w-0 px-1 text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors duration-150 group"
+          >
+            <ChevronLeft
+              className="size-3.5 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--text-primary)] transition-colors"
+              strokeWidth={1.75}
+            />
+            <span className="text-[13px] font-medium truncate">{projectName ?? "项目"}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
+            className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-70 transition-opacity text-left"
+          >
+            <span className="flex size-5 items-center justify-center rounded bg-[var(--accent-color)] shrink-0">
+              <span className="text-[9px] font-bold text-white leading-none">AI</span>
+            </span>
+            <span className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight">
+              AI PM
+            </span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onCollapse}
@@ -143,7 +181,7 @@ function Sidebar({
           title="收起侧边栏"
           className="flex items-center justify-center size-6 rounded-md mr-2 shrink-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150"
         >
-          <PanelLeft className="size-4" />
+          <PanelLeft className="size-4" strokeWidth={1.75} />
         </button>
       </div>
 
@@ -155,11 +193,9 @@ function Sidebar({
         {/* PROJECT context: phase list */}
         {isInProjectContext && (
           <div className="mb-3">
-            {projectName && (
-              <p className="px-3 pt-1 pb-2 text-[11px] font-medium text-[var(--text-tertiary)] truncate">
-                {projectName}
-              </p>
-            )}
+            <p className="px-3 pb-2 pt-1 text-[11px] font-medium text-[var(--text-tertiary)]">
+              阶段
+            </p>
             <ul className="flex flex-col gap-0.5">
               {projectPhases!.map((phase) => (
                 <li key={phase.id}>
@@ -181,7 +217,7 @@ function Sidebar({
                         style={{ animation: "slideInLeft 200ms var(--ease-decelerate)" }}
                       />
                     )}
-                    <PhaseStatusIcon status={phase.status} />
+                    <PhaseIcon phaseId={phase.id} status={phase.status} />
                     <span
                       className={cn(
                         "text-sm",
@@ -204,9 +240,7 @@ function Sidebar({
         {/* DASHBOARD context: project list */}
         {!isInProjectContext && (
           <>
-            <p className="px-3 pb-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
-              项目
-            </p>
+            <p className="px-3 pb-2 pt-1 text-[11px] font-medium text-[var(--text-tertiary)]">项目</p>
             <ul className="flex flex-col gap-0.5 mb-3 max-h-[240px] overflow-y-auto">
               {projects.map((project) => {
                 const active = isProjectActive(project.id)
@@ -227,7 +261,7 @@ function Sidebar({
                       )}
                       <span
                         className={cn(
-                          "size-1.5 shrink-0 rounded-full",
+                          "size-2 shrink-0 rounded-full",
                           done ? "bg-[var(--success)]" : "bg-[var(--accent-color)]",
                         )}
                       />
@@ -253,13 +287,10 @@ function Sidebar({
         {/* TOOLS section — always visible */}
         <div className="mx-1 mb-2 h-px bg-[var(--border)]" />
 
-        {/* 扩展工具 */}
-        <p className="px-3 pb-1.5 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
-          扩展工具
-        </p>
-        <ul className="flex flex-col gap-0.5 mb-2">
-          {TOOLS_EXTEND.map((tool) => {
-            const toolActive = location.pathname === tool.path
+        <ul className="flex flex-col gap-0.5 mb-0">
+          {TOOLS_ACTION.map((tool) => {
+            const toolActive = location.pathname.startsWith(tool.path)
+            const Icon = tool.icon
             return (
               <li key={tool.path}>
                 <button
@@ -268,13 +299,18 @@ function Sidebar({
                     navigate(activeProjectId ? `${tool.path}?projectId=${activeProjectId}` : tool.path)
                   }
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left",
+                    "flex w-full items-center gap-2.5 rounded-md px-3 py-[7px] text-left",
                     "transition-colors duration-[var(--dur-base)]",
                     toolActive
                       ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
                       : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]",
                   )}
                 >
+                  <Icon
+                    className="size-4 shrink-0"
+                    strokeWidth={1.75}
+                    style={{ color: toolActive ? "var(--accent-color)" : "var(--text-tertiary)" }}
+                  />
                   <span className="text-[13px]">{tool.label}</span>
                 </button>
               </li>
@@ -282,13 +318,12 @@ function Sidebar({
           })}
         </ul>
 
-        {/* 模板工具 */}
-        <p className="px-3 pb-1.5 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
-          模板工具
-        </p>
+        <div className="mx-3 my-1.5 h-px bg-[var(--border)]" />
+
         <ul className="flex flex-col gap-0.5">
-          {TOOLS_TEMPLATE.map((tool) => {
-            const toolActive = location.pathname === tool.path
+          {TOOLS_RESOURCE.map((tool) => {
+            const toolActive = location.pathname.startsWith(tool.path)
+            const Icon = tool.icon
             return (
               <li key={tool.path}>
                 <button
@@ -297,13 +332,18 @@ function Sidebar({
                     navigate(activeProjectId ? `${tool.path}?projectId=${activeProjectId}` : tool.path)
                   }
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left",
+                    "flex w-full items-center gap-2.5 rounded-md px-3 py-[7px] text-left",
                     "transition-colors duration-[var(--dur-base)]",
                     toolActive
                       ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
                       : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]",
                   )}
                 >
+                  <Icon
+                    className="size-4 shrink-0"
+                    strokeWidth={1.75}
+                    style={{ color: toolActive ? "var(--accent-color)" : "var(--text-tertiary)" }}
+                  />
                   <span className="text-[13px]">{tool.label}</span>
                 </button>
               </li>
@@ -312,8 +352,9 @@ function Sidebar({
         </ul>
       </nav>
 
-      {/* Bottom: New project + Settings */}
+      {/* Bottom: New project + Settings + Theme toggle */}
       <div className="border-t border-[var(--border)] px-2 py-2 flex flex-col gap-1">
+        {/* New project */}
         <button
           type="button"
           onClick={onNewProject}
@@ -323,23 +364,38 @@ function Sidebar({
             "transition-colors duration-[var(--dur-base)] group",
           )}
         >
-          <Plus className="size-3.5 transition-transform duration-150 group-hover:rotate-90" />
+          <Plus className="size-3.5 transition-transform duration-150 group-hover:rotate-90" strokeWidth={1.75} />
           <span className="text-[13px]">新建项目</span>
         </button>
-        <button
-          type="button"
-          onClick={() => navigate("/settings")}
-          className={cn(
-            "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left",
-            location.pathname === "/settings"
-              ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
-              : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]",
-            "transition-colors duration-[var(--dur-base)]",
-          )}
-        >
-          <Settings className="size-3.5" />
-          <span className="text-[13px]">设置</span>
-        </button>
+
+        {/* Settings + Theme toggle — same row */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            className={cn(
+              "flex flex-1 items-center gap-2 rounded-md px-3 py-2 text-left",
+              location.pathname === "/settings"
+                ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
+                : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]",
+              "transition-colors duration-[var(--dur-base)]",
+            )}
+          >
+            <Settings className="size-3.5 shrink-0" strokeWidth={1.75} />
+            <span className="text-[13px]">设置</span>
+          </button>
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            title={theme === "light" ? "切换深色" : "切换浅色"}
+            className="flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150"
+          >
+            {theme === "light"
+              ? <Moon className="size-3.5" strokeWidth={1.75} />
+              : <Sun className="size-3.5" strokeWidth={1.75} />
+            }
+          </button>
+        </div>
       </div>
     </aside>
   )
