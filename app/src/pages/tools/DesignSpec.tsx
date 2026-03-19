@@ -264,17 +264,31 @@ export function ToolDesignSpecPage() {
                               </div>
 
                               {/* 输入框 */}
-                              <input
-                                readOnly
-                                placeholder="输入框示例..."
-                                style={{
-                                  border: '1.5px solid #d1d5db',
-                                  borderRadius: pt.radius, padding: '7px 12px',
-                                  fontSize: 13, outline: 'none',
-                                  width: '100%', maxWidth: 280,
-                                  background: '#fff', color: '#374151',
-                                }}
-                              />
+                              <div className="flex flex-wrap gap-2">
+                                <input
+                                  readOnly
+                                  placeholder="默认状态..."
+                                  style={{
+                                    border: '1.5px solid #d1d5db',
+                                    borderRadius: pt.radius, padding: '7px 12px',
+                                    fontSize: 13, outline: 'none',
+                                    width: 130,
+                                    background: '#fff', color: '#374151',
+                                  }}
+                                />
+                                <input
+                                  readOnly
+                                  placeholder="聚焦状态..."
+                                  style={{
+                                    border: `1.5px solid ${pt.primary}`,
+                                    borderRadius: pt.radius, padding: '7px 12px',
+                                    fontSize: 13, outline: 'none',
+                                    width: 130,
+                                    background: '#fff', color: '#374151',
+                                    boxShadow: `0 0 0 3px ${pt.primary}22`,
+                                  }}
+                                />
+                              </div>
 
                               {/* 状态徽章 */}
                               <div className="flex flex-wrap gap-2">
