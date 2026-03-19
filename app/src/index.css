@@ -465,6 +465,12 @@ html.theme-dark .prose-lora {
     height: auto !important;
     overflow: visible !important;
   }
+
+  /* Reset root shell wrapper */
+  .app-shell {
+    height: auto !important;
+    overflow: visible !important;
+  }
   main,
   .prd-content {
     overflow: visible !important;
