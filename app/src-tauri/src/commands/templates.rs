@@ -254,12 +254,10 @@ pub fn rename_ui_spec(
     old_name: String,
     new_name: String,
 ) -> Result<(), String> {
-    if new_name.is_empty()
-        || new_name.starts_with('.')
-        || new_name.contains('/')
-        || new_name.contains('\\')
-        || new_name.contains('\0')
-    {
+    if !is_safe_style_name(&old_name) {
+        return Err(format!("无效的旧名称: {}", old_name));
+    }
+    if !is_safe_style_name(&new_name) {
         return Err(format!("无效的新名称: {}", new_name));
     }
     if old_name == new_name {
