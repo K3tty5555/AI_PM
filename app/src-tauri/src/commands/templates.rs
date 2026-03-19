@@ -118,6 +118,30 @@ pub fn list_prd_styles(state: State<'_, AppState>) -> Vec<PrdStyleEntry> {
     result
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrdStyleContent {
+    pub config: String,
+    pub profile: Option<String>,
+    pub has_template: bool,
+}
+
+#[tauri::command]
+pub fn get_prd_style_content(state: State<'_, AppState>, name: String) -> Result<PrdStyleContent, String> {
+    if !is_safe_style_name(&name) {
+        return Err(format!("无效风格名称: {}", name));
+    }
+    let style_dir = state.templates_base().join("prd-styles").join(&name);
+    if !style_dir.exists() {
+        return Err(format!("风格「{}」不存在", name));
+    }
+    let config = fs::read_to_string(style_dir.join("style-config.json"))
+        .map_err(|e| e.to_string())?;
+    let profile = fs::read_to_string(style_dir.join("style-profile.json")).ok();
+    let has_template = style_dir.join("feishu-template.md").exists();
+    Ok(PrdStyleContent { config, profile, has_template })
+}
+
 #[tauri::command]
 pub fn add_ui_spec(
     state: State<'_, AppState>,
@@ -164,6 +188,27 @@ pub fn list_ui_specs(state: State<'_, AppState>) -> Vec<UiSpecEntry> {
         .collect();
     result.sort_by(|a, b| a.name.cmp(&b.name));
     result
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UiSpecContent {
+    pub readme: Option<String>,
+    pub tokens_raw: Option<String>,
+}
+
+#[tauri::command]
+pub fn get_ui_spec_content(state: State<'_, AppState>, name: String) -> Result<UiSpecContent, String> {
+    if name.is_empty() || name.starts_with('.') || name.contains('/') || name.contains('\\') {
+        return Err(format!("无效规范名称: {}", name));
+    }
+    let spec_dir = state.templates_base().join("ui-specs").join(&name);
+    if !spec_dir.exists() {
+        return Err(format!("规范「{}」不存在", name));
+    }
+    let readme = fs::read_to_string(spec_dir.join("README.md")).ok();
+    let tokens_raw = fs::read_to_string(spec_dir.join("design-tokens.json")).ok();
+    Ok(UiSpecContent { readme, tokens_raw })
 }
 
 const KB_CATEGORIES: &[&str] = &["patterns", "decisions", "pitfalls", "metrics", "playbooks", "insights"];
