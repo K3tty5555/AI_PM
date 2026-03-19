@@ -2,6 +2,7 @@ import type { CSSProperties } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { Settings, PanelLeftClose, PanelLeftOpen, Home } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Tooltip } from "@/components/ui/tooltip"
 
 interface ActivityBarProps {
   sidebarOpen: boolean
@@ -29,52 +30,55 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
       {/* Top icons */}
       <div className="flex flex-1 flex-col items-center gap-1 pt-2">
         {/* Sidebar toggle */}
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          title={sidebarOpen ? "收起侧边栏" : "展开侧边栏"}
-          style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
-          className="flex size-8 items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-all duration-150 active:scale-95"
-        >
-          {sidebarOpen
-            ? <PanelLeftClose className="size-[15px]" strokeWidth={1.75} />
-            : <PanelLeftOpen className="size-[15px]" strokeWidth={1.75} />
-          }
-        </button>
+        <Tooltip content="切换侧边栏" shortcut="⌘B" side="right">
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
+            className="flex size-8 items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-all duration-150 active:scale-95"
+          >
+            {sidebarOpen
+              ? <PanelLeftClose className="size-[15px]" strokeWidth={1.75} />
+              : <PanelLeftOpen className="size-[15px]" strokeWidth={1.75} />
+            }
+          </button>
+        </Tooltip>
 
         {/* Home — back to project list */}
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          title="项目总览"
-          style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
-          className={cn(
-            "flex size-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
-            location.pathname === "/"
-              ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
-              : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
-          )}
-        >
-          <Home className="size-[15px]" strokeWidth={1.75} />
-        </button>
+        <Tooltip content="首页" side="right">
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
+            className={cn(
+              "flex size-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
+              location.pathname === "/"
+                ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
+                : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
+            )}
+          >
+            <Home className="size-[15px]" strokeWidth={1.75} />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Bottom: Settings */}
       <div className="mb-3 flex flex-col items-center">
-        <button
-          type="button"
-          onClick={() => navigate("/settings")}
-          title="设置"
-          style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
-          className={cn(
-            "flex size-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
-            isSettings
-              ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
-              : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
-          )}
-        >
-          <Settings className="size-[15px]" strokeWidth={1.75} />
-        </button>
+        <Tooltip content="设置" shortcut="⌘," side="right">
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
+            className={cn(
+              "flex size-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
+              isSettings
+                ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
+                : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
+            )}
+          >
+            <Settings className="size-[15px]" strokeWidth={1.75} />
+          </button>
+        </Tooltip>
       </div>
     </aside>
   )
