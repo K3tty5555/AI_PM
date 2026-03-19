@@ -145,7 +145,7 @@ const markdownComponents = {
   ),
   blockquote: ({ children, ...props }: React.ComponentProps<"blockquote">) => (
     <blockquote
-      className="border-l-2 border-[var(--yellow)] pl-3 my-2 text-sm text-[var(--text-muted)] italic"
+      className="border-l-2 border-[var(--accent-color)] pl-3 my-2 text-sm text-[var(--text-muted)] italic"
       {...props}
     >
       {children}
@@ -161,7 +161,7 @@ const markdownComponents = {
     if (isInline) {
       return (
         <code
-          className="px-1 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] font-terminal"
+          className="px-1 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] rounded font-mono"
           {...props}
         >
           {children}
@@ -221,7 +221,7 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
           )}
           style={{ borderRadius: "50%" }}
         />
-        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
+        <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
           ANALYZING...
         </span>
       </div>
@@ -236,7 +236,7 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
         return (
           <RarityStripeCard key={`${section.title}-${index}`} rarity={section.rarity}>
             {/* Card title */}
-            <h3 className="text-sm font-semibold text-[var(--dark)] mb-3 uppercase tracking-[1px] font-terminal">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
               {section.title}
             </h3>
 

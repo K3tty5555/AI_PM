@@ -1,19 +1,52 @@
-import { useState, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { open as openDialog } from "@tauri-apps/plugin-dialog"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useToolStream } from "@/hooks/use-tool-stream"
-import { api } from "@/lib/tauri-api"
+import { api, type PrdStyleEntry } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
 export function ToolPersonaPage() {
   const [tab, setTab] = useState<"analyze" | "list">("analyze")
+  const [styles, setStyles] = useState<PrdStyleEntry[]>([])
+  const [stylesLoading, setStylesLoading] = useState(false)
+  const [activeStyle, setActiveStyle] = useState<string | null>(null)
+  const [settingActive, setSettingActive] = useState<string | null>(null)
+
+  const loadStyles = useCallback(async () => {
+    setStylesLoading(true)
+    try {
+      const [data, active] = await Promise.all([api.listPrdStyles(), api.getActivePrdStyle()])
+      setStyles(data)
+      setActiveStyle(active)
+    } catch {
+      setStyles([])
+    } finally {
+      setStylesLoading(false)
+    }
+  }, [])
+
+  const handleSetActive = useCallback(async (name: string) => {
+    setSettingActive(name)
+    try {
+      await api.setActivePrdStyle(name)
+      setActiveStyle(name)
+    } catch {
+      // silently ignore
+    } finally {
+      setSettingActive(null)
+    }
+  }, [])
+
   const [filePath, setFilePath] = useState("")
   const [fileContent, setFileContent] = useState("")
   const [fileError, setFileError] = useState<string | null>(null)
   const { text, isStreaming, isThinking, elapsedSeconds, error, run, reset } = useToolStream("ai-pm-persona")
+
+  useEffect(() => {
+    if (tab === "list") loadStyles()
+  }, [tab, loadStyles])
 
   const handleSelectFile = useCallback(async () => {
     const selected = await openDialog({ filters: [{ name: "Markdown", extensions: ["md"] }] })
@@ -40,8 +73,8 @@ export function ToolPersonaPage() {
   return (
     <div className="mx-auto w-full max-w-[860px]">
       <div className="mb-6 flex items-center gap-3">
-        <Badge variant="outline">PERSONA</Badge>
-        <span className="text-sm text-[var(--text-muted)]">产品分身 — 学习你的写作风格</span>
+        <h1 className="text-base font-semibold text-[var(--text-primary)]">产品分身</h1>
+        <span className="text-sm text-[var(--text-secondary)]">产品分身 — 学习你的写作风格</span>
       </div>
       <div className="h-px bg-[var(--border)]" />
 
@@ -52,10 +85,10 @@ export function ToolPersonaPage() {
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              "px-4 py-2 text-xs font-terminal uppercase tracking-[1px] transition-colors",
+              "px-4 py-2 text-xs transition-colors",
               tab === t
-                ? "border-b-2 border-[var(--yellow)] text-[var(--dark)]"
-                : "text-[var(--text-muted)] hover:text-[var(--dark)]"
+                ? "border-b-2 border-[var(--accent-color)] text-[var(--text-primary)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             )}
           >
             {t === "analyze" ? "分析文档" : "已保存风格"}
@@ -67,7 +100,7 @@ export function ToolPersonaPage() {
         <div className="mt-6">
           {!isStreaming && !text && (
             <>
-              <p className="mb-3 text-sm text-[var(--text-muted)]">
+              <p className="mb-3 text-sm text-[var(--text-secondary)]">
                 上传你写的 PRD 文件，AI 将分析你的写作风格、措辞习惯和结构偏好
               </p>
               <div className="flex items-center gap-2">
@@ -79,7 +112,7 @@ export function ToolPersonaPage() {
                   className={cn(
                     "flex-1 h-9 px-3 text-sm",
                     "bg-transparent border border-[var(--border)]",
-                    "placeholder:text-[var(--text-muted)]",
+                    "placeholder:text-[var(--text-secondary)]",
                     "outline-none"
                   )}
                 />
@@ -99,15 +132,15 @@ export function ToolPersonaPage() {
           {isStreaming && (
             <div className="mt-6">
               <ProgressBar value={progressValue} animated />
-              {isThinking && <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>}
-              <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
+              {isThinking && <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>}
+              <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
                 {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
               </p>
             </div>
           )}
 
           {error && (
-            <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
+            <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
               <p className="text-sm text-[var(--destructive)]">{error}</p>
               <Button variant="ghost" size="sm" onClick={() => { reset(); setFileContent(""); setFilePath(""); setFileError(null) }} className="mt-2">重置</Button>
             </div>
@@ -116,7 +149,7 @@ export function ToolPersonaPage() {
           {text && (
             <div className="mt-6">
               <div className="mb-3 flex items-center justify-between">
-                <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">风格分析结果</span>
+                <span className="text-[13px] text-[var(--text-secondary)]">风格分析结果</span>
                 {!isStreaming && (
                   <Button variant="ghost" size="sm" onClick={() => { reset(); setFileContent(""); setFilePath(""); setFileError(null) }}>重新分析</Button>
                 )}
@@ -129,11 +162,51 @@ export function ToolPersonaPage() {
 
       {tab === "list" && (
         <div className="mt-6">
-          <p className="text-sm text-[var(--text-muted)]">
-            已保存的风格档案将在这里显示。分析 PRD 文档后可保存为风格档案。
-          </p>
-          {/* TODO: 列出 {projectsDir}/templates/prd-styles/ 下各目录 */}
-          <p className="mt-4 text-xs text-[var(--text-muted)]">（功能完善中）</p>
+          {stylesLoading ? (
+            <p className="text-sm text-[var(--text-secondary)]">加载中···</p>
+          ) : styles.length === 0 ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-[var(--text-secondary)]">暂无已保存的风格档案</p>
+              <p className="text-xs text-[var(--text-tertiary)]">
+                在「分析文档」tab 上传 PRD 后可生成风格档案，或在「设置 → 模板迁移」从旧版 AI PM 导入
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {styles.map((s) => (
+                <div
+                  key={s.name}
+                  className="rounded-lg border border-[var(--border)] px-4 py-3 hover:border-[var(--accent-color)]/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[var(--text-primary)]">{s.name}</span>
+                      {s.hasPersona && (
+                        <span className="rounded-full bg-[var(--accent-color)]/10 px-2 py-0.5 text-[10px] text-[var(--accent-color)]">
+                          含分身档案
+                        </span>
+                      )}
+                      {activeStyle === s.name && (
+                        <span className="rounded-full bg-[var(--accent-color)]/15 px-2 py-0.5 text-[10px] text-[var(--accent-color)] font-medium">
+                          当前默认
+                        </span>
+                      )}
+                    </div>
+                    {activeStyle !== s.name && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSetActive(s.name)}
+                        disabled={settingActive === s.name}
+                      >
+                        {settingActive === s.name ? "设置中..." : "设为默认"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
