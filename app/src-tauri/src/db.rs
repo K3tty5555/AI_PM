@@ -32,5 +32,8 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
     // Migration: add team_mode if not exists (for existing databases)
     let _ = conn.execute("ALTER TABLE projects ADD COLUMN team_mode INTEGER NOT NULL DEFAULT 0", []);
 
+    // Migration: add status if not exists
+    let _ = conn.execute("ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'active'", []);
+
     Ok(conn)
 }
