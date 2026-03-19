@@ -225,3 +225,73 @@ pub async fn run_tool(
 
     Ok(())
 }
+
+/// Fetch a URL and return plain text (HTML stripped, truncated to 8 000 chars).
+#[tauri::command]
+pub async fn fetch_url_content(url: String) -> Result<String, String> {
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err("仅支持 http/https URL".to_string());
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .user_agent("Mozilla/5.0 (compatible; AI-PM-Research/1.0)")
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let html = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("请求失败：{}", e))?
+        .text()
+        .await
+        .map_err(|e| format!("读取响应失败：{}", e))?;
+
+    let text = strip_html(html);
+    let truncated = if text.len() > 8000 {
+        format!("{}…（内容已截断）", &text[..8000])
+    } else {
+        text
+    };
+    Ok(truncated)
+}
+
+fn strip_html(html: String) -> String {
+    let mut out = String::with_capacity(html.len() / 2);
+    let mut in_tag = false;
+    let mut skip_block = false;
+    let html_lower = html.to_lowercase();
+    let bytes = html.as_bytes();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        if !skip_block && !in_tag {
+            let ahead = &html_lower[i..std::cmp::min(i + 8, html_lower.len())];
+            if ahead.starts_with("<script") || ahead.starts_with("<style") {
+                skip_block = true;
+            }
+        }
+        if skip_block {
+            let ahead = &html_lower[i..std::cmp::min(i + 9, html_lower.len())];
+            if ahead.starts_with("</script") || ahead.starts_with("</style") {
+                skip_block = false;
+                i += 9;
+                continue;
+            }
+            i += 1;
+            continue;
+        }
+        match bytes[i] as char {
+            '<' => in_tag = true,
+            '>' => {
+                in_tag = false;
+                out.push(' ');
+            }
+            c if !in_tag => out.push(c),
+            _ => {}
+        }
+        i += 1;
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
