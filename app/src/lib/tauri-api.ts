@@ -160,6 +160,8 @@ export const api = {
   deleteKnowledge: (category: string, id: string) =>
     invoke<void>("delete_knowledge", { category, id }),
   searchKnowledge: (query: string) => invoke<KnowledgeEntry[]>("search_knowledge", { query }),
+  getKnowledgeContent: (category: string, id: string) =>
+    invoke<string>("get_knowledge_content", { category, id }),
 
   // Context files
   listProjectContext: (projectId: string) => invoke<ContextFile[]>("list_project_context", { projectId }),

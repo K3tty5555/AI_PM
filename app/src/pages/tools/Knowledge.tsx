@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { api, type KnowledgeEntry } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
+import { X, Loader2 } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 const CATEGORIES = [
   { key: "patterns",   label: "最佳模式" },
@@ -22,6 +25,9 @@ export function ToolKnowledgePage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<KnowledgeEntry[] | null>(null)
+  const [drawerEntry, setDrawerEntry] = useState<KnowledgeEntry | null>(null)
+  const [drawerContent, setDrawerContent] = useState("")
+  const [drawerLoading, setDrawerLoading] = useState(false)
 
   const loadEntries = useCallback(async () => {
     try {
@@ -74,6 +80,20 @@ export function ToolKnowledgePage() {
       console.error("Failed to delete entry:", err)
     }
   }, [loadEntries])
+
+  const handleOpenDrawer = useCallback(async (entry: KnowledgeEntry) => {
+    setDrawerEntry(entry)
+    setDrawerContent("")
+    setDrawerLoading(true)
+    try {
+      const content = await api.getKnowledgeContent(entry.category, entry.id)
+      setDrawerContent(content)
+    } catch {
+      setDrawerContent("_无法加载内容_")
+    } finally {
+      setDrawerLoading(false)
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -181,7 +201,7 @@ export function ToolKnowledgePage() {
             </p>
           ) : (
             searchResults.map((entry) => (
-              <div key={`${entry.category}-${entry.id}`} className="group rounded-lg border border-[var(--border)] p-4 hover:border-[var(--accent-color)]/40 transition-colors">
+              <div key={`${entry.category}-${entry.id}`} className="group rounded-lg border border-[var(--border)] p-4 hover:border-[var(--accent-color)]/40 transition-colors cursor-pointer" onClick={() => handleOpenDrawer(entry)}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -195,7 +215,7 @@ export function ToolKnowledgePage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => handleDelete(entry.category, entry.id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(entry.category, entry.id) }}
                     className="shrink-0 text-[10px] text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 hover:text-[var(--destructive)] transition-opacity"
                   >
                     删除
@@ -210,7 +230,7 @@ export function ToolKnowledgePage() {
           </p>
         ) : (
           filtered.map((entry) => (
-            <div key={entry.id} className="group rounded-lg border border-[var(--border)] p-4 hover:border-[var(--accent-color)]/40 transition-colors">
+            <div key={entry.id} className="group rounded-lg border border-[var(--border)] p-4 hover:border-[var(--accent-color)]/40 transition-colors cursor-pointer" onClick={() => handleOpenDrawer(entry)}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-sm text-[var(--text-primary)]">{entry.title}</p>
@@ -219,7 +239,7 @@ export function ToolKnowledgePage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => handleDelete(entry.category, entry.id)}
+                  onClick={(e) => { e.stopPropagation(); handleDelete(entry.category, entry.id) }}
                   className="shrink-0 text-[10px] text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 hover:text-[var(--destructive)] transition-opacity"
                 >
                   删除
@@ -229,6 +249,50 @@ export function ToolKnowledgePage() {
           ))
         )}
       </div>
+
+      {/* Knowledge detail drawer */}
+      {drawerEntry && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="flex-1 bg-black/20 backdrop-blur-[2px]"
+            onClick={() => setDrawerEntry(null)}
+          />
+          {/* Panel */}
+          <div className="w-[480px] max-w-[90vw] bg-[var(--background)] border-l border-[var(--border)] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
+                  {drawerEntry.title}
+                </h2>
+                <span className="text-[12px] text-[var(--text-tertiary)]">
+                  {CATEGORIES.find(c => c.key === drawerEntry.category)?.label ?? drawerEntry.category}
+                </span>
+              </div>
+              <button
+                onClick={() => setDrawerEntry(null)}
+                className="ml-3 shrink-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {drawerLoading ? (
+                <div className="flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
+                  <Loader2 className="size-4 animate-spin" />
+                  加载中...
+                </div>
+              ) : (
+                <div className="prose prose-sm max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {drawerContent}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

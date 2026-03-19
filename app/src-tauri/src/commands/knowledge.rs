@@ -134,3 +134,27 @@ pub fn delete_knowledge(state: State<'_, AppState>, category: String, id: String
     if path.exists() { fs::remove_file(&path).map_err(|e| e.to_string())?; }
     Ok(())
 }
+
+/// Return full markdown content of a single knowledge entry.
+#[tauri::command]
+pub async fn get_knowledge_content(
+    state: State<'_, AppState>,
+    category: String,
+    id: String,
+) -> Result<String, String> {
+    // Prevent path traversal
+    if category.contains('/') || category.contains('.') || id.contains('/') {
+        return Err("无效路径".to_string());
+    }
+    if !CATEGORIES.contains(&category.as_str()) {
+        return Err(format!("Invalid category: {}", category));
+    }
+    if id.contains('\\') || id.contains("..") {
+        return Err("无效路径".to_string());
+    }
+    let path = state.templates_base()
+        .join("knowledge-base")
+        .join(&category)
+        .join(format!("{}.md", id));
+    std::fs::read_to_string(&path).map_err(|e| e.to_string())
+}
