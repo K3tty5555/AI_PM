@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { AnalysisCards } from "@/components/analysis-cards"
@@ -123,6 +122,8 @@ export function AnalysisPage() {
 
   const [searchParams] = useSearchParams()
   const autostart = searchParams.get("autostart") === "1"
+  const isYolo = searchParams.get("yolo") === "1"
+  const isTeam = searchParams.get("team") === "1"
 
   // The content to render — either from existing file or from AI stream
   const displayContent = existingContent ?? text
@@ -292,13 +293,17 @@ export function AnalysisPage() {
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
-      navigate(`/project/${projectId}/stories?autostart=1`)
+      if (isTeam) {
+        navigate(`/project/${projectId}/research?autostart=1${isYolo ? "&yolo=1" : ""}&team=1`)
+      } else {
+        navigate(`/project/${projectId}/stories?autostart=1${isYolo ? "&yolo=1" : ""}`)
+      }
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate])
+  }, [projectId, existingContent, text, outputFile, navigate, isYolo, isTeam])
 
   // -------------------------------------------------------------------------
   // Loading state
@@ -307,9 +312,7 @@ export function AnalysisPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
-          LOADING...
-        </span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
       </div>
     )
   }
@@ -317,9 +320,9 @@ export function AnalysisPage() {
   // Empty state — no file, no autostart, not currently streaming
   if (!loading && !existingContent && !text && !isStreaming && !error) {
     return (
-      <div className="mx-auto w-full max-w-[720px]">
+      <div className="layout-focus page-enter">
         <div className="mb-6 flex items-center justify-between">
-          <Badge variant="outline">ANALYSIS</Badge>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求分析</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
         <ContextPills
@@ -344,10 +347,10 @@ export function AnalysisPage() {
   const canAdvance = hasContent && !isStreaming && !advancing
 
   return (
-    <div className="mx-auto w-full max-w-[720px]">
+    <div className="layout-focus page-enter">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <Badge variant="outline">ANALYSIS</Badge>
+        <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求分析</h1>
         <Button
           variant="ghost"
           size="sm"
@@ -373,12 +376,12 @@ export function AnalysisPage() {
           {(() => {
             const status = !isThinking ? extractStreamStatus(text) : ""
             return isThinking
-              ? <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
               : status
-                ? <p className="mt-2 font-terminal text-xs tracking-[1px] text-[var(--text-muted)]">{status}</p>
+                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
           })()}
-          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
+          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
         </div>
@@ -386,7 +389,7 @@ export function AnalysisPage() {
 
       {/* Error display */}
       {error && (
-        <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">
             {error}
           </p>
@@ -420,7 +423,7 @@ export function AnalysisPage() {
 
         {/* Stream metadata bar — shown after streaming completes */}
         {!isStreaming && streamMeta && (
-          <p className="mt-2 text-xs text-[var(--text-muted)] font-terminal">
+          <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
             {streamMeta.inputTokens != null && streamMeta.outputTokens != null
               ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
               : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
@@ -495,7 +498,7 @@ export function AnalysisPage() {
                 : PHASE_META.analysis.nextLabel + " →"}
           </Button>
           {!advancing && !saving && (
-            <p className="font-terminal text-[10px] text-[var(--text-muted)] tracking-[0.5px]">
+            <p className="text-[11px] text-[var(--text-tertiary)]">
               {PHASE_META.analysis.nextDescription}
             </p>
           )}

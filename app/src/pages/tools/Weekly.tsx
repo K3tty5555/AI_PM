@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -29,14 +28,14 @@ export function ToolWeeklyPage() {
   return (
     <div className="mx-auto w-full max-w-[860px]">
       <div className="mb-6 flex items-center gap-3">
-        <Badge variant="outline">WEEKLY</Badge>
-        <span className="text-sm text-[var(--text-muted)]">工作周报生成</span>
+        <h1 className="text-base font-semibold text-[var(--text-primary)]">工作周报</h1>
+        <span className="text-sm text-[var(--text-secondary)]">工作周报生成</span>
       </div>
       <div className="h-px bg-[var(--border)]" />
 
       {!isStreaming && !text && (
         <div className="mt-6">
-          <p className="mb-3 text-sm text-[var(--text-muted)]">
+          <p className="mb-3 text-sm text-[var(--text-secondary)]">
             随意描述本周工作内容，不需要特定格式
           </p>
           <textarea
@@ -45,11 +44,11 @@ export function ToolWeeklyPage() {
             placeholder={"这周主要跟进了 NPS 量表需求，和运营对齐了触发策略，修复了一个登录 bug，前端联调了 2 个接口。下周要推进用户故事评审。"}
             rows={6}
             className={cn(
-              "w-full px-4 py-3 text-sm",
+              "w-full rounded-lg px-4 py-3 text-sm",
               "bg-transparent border border-[var(--border)]",
-              "placeholder:text-[var(--text-muted)]",
+              "placeholder:text-[var(--text-secondary)]",
               "outline-none resize-none",
-              "focus:border-[var(--yellow)] transition-[border-color]"
+              "focus:border-[var(--accent-color)] transition-[border-color]"
             )}
           />
           <div className="mt-3 flex justify-end gap-2">
@@ -67,16 +66,16 @@ export function ToolWeeklyPage() {
         <div className="mt-6">
           <ProgressBar value={progressValue} animated />
           {isThinking && (
-            <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+            <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
           )}
-          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
+          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
         </div>
       )}
 
       {error && (
-        <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">{error}</p>
           <Button variant="ghost" size="sm" onClick={handleReset} className="mt-2">重置</Button>
         </div>
@@ -85,7 +84,7 @@ export function ToolWeeklyPage() {
       {text && (
         <div className="mt-6">
           <div className="mb-3 flex items-center justify-between">
-            <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">RESULT</span>
+            <span className="text-[13px] text-[var(--text-secondary)]">结果</span>
             {!isStreaming && (
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={handleReset}>重新生成</Button>
@@ -95,7 +94,7 @@ export function ToolWeeklyPage() {
           </div>
           <PrdViewer markdown={text} isStreaming={isStreaming} />
           {!isStreaming && streamMeta && (
-            <p className="mt-2 text-xs text-[var(--text-muted)] font-terminal">
+            <p className="mt-2 text-xs text-[var(--text-tertiary)]">
               {streamMeta.inputTokens != null
                 ? `耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens`
                 : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}

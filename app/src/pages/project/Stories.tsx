@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { StoryBoard } from "@/components/story-board"
@@ -48,6 +47,7 @@ export function StoriesPage() {
 
   const [searchParams] = useSearchParams()
   const autostart = searchParams.get("autostart") === "1"
+  const isYolo = searchParams.get("yolo") === "1"
 
   // Parse stories from AI output when streaming completes
   const streamParsedStories = useMemo(() => {
@@ -169,13 +169,13 @@ export function StoriesPage() {
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
-      navigate(`/project/${projectId}/prd?autostart=1`)
+      navigate(`/project/${projectId}/prd${isYolo ? "?yolo=1" : "?autostart=1"}`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, stories, outputFile, navigate])
+  }, [projectId, stories, outputFile, navigate, isYolo])
 
   // -------------------------------------------------------------------------
   // Loading state
@@ -184,9 +184,7 @@ export function StoriesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
-          LOADING...
-        </span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
       </div>
     )
   }
@@ -197,9 +195,9 @@ export function StoriesPage() {
 
   if (!loading && !existingMarkdown && !text && !isStreaming && !error) {
     return (
-      <div className="mx-auto w-full max-w-[720px]">
+      <div className="layout-focus page-enter">
         <div className="mb-6 flex items-center justify-between">
-          <Badge variant="outline">USER_STORIES</Badge>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">用户故事</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
         <ContextPills
@@ -224,11 +222,11 @@ export function StoriesPage() {
   const canAdvance = hasStories && !isStreaming && !advancing
 
   return (
-    <div className="mx-auto w-full max-w-[720px]">
+    <div className="layout-focus page-enter">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Badge variant="outline">USER_STORIES</Badge>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">用户故事</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -265,12 +263,12 @@ export function StoriesPage() {
           {(() => {
             const status = !isThinking ? extractStreamStatus(text) : ""
             return isThinking
-              ? <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
               : status
-                ? <p className="mt-2 font-terminal text-xs tracking-[1px] text-[var(--text-muted)]">{status}</p>
+                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
           })()}
-          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
+          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
         </div>
@@ -286,7 +284,7 @@ export function StoriesPage() {
             )}
             style={{ borderRadius: "50%" }}
           />
-          <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
+          <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
             GENERATING STORIES...
           </span>
         </div>
@@ -294,7 +292,7 @@ export function StoriesPage() {
 
       {/* Error display */}
       {error && (
-        <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">{error}</p>
           <div className="mt-2 flex items-center gap-2">
             <Button
@@ -338,7 +336,7 @@ export function StoriesPage() {
           isStreaming={isStreaming}
         />
         {!isStreaming && streamMeta !== null && (
-          <p className="text-xs text-[var(--text-muted)] font-terminal mt-2">
+          <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
             {streamMeta.inputTokens != null && streamMeta.outputTokens != null
               ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
               : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
@@ -374,7 +372,7 @@ export function StoriesPage() {
                 : PHASE_META.stories.nextLabel + " →"}
           </Button>
           {!advancing && !saving && (
-            <p className="font-terminal text-[10px] text-[var(--text-muted)] tracking-[0.5px]">
+            <p className="text-[11px] text-[var(--text-tertiary)]">
               {PHASE_META.stories.nextDescription}
             </p>
           )}
@@ -419,7 +417,7 @@ function AddStoryInline({
   const inputClass = cn(
     "w-full px-3 py-1.5 text-sm text-[var(--dark)]",
     "bg-transparent border border-[var(--border)]",
-    "placeholder:text-[var(--text-muted)]",
+    "placeholder:text-[var(--text-secondary)]",
     "outline-none",
     "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
     "focus:border-[var(--yellow)]",
@@ -435,7 +433,7 @@ function AddStoryInline({
       )}
     >
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 items-center">
-        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
+        <label className="text-[12px] font-medium text-[var(--text-tertiary)]">
           角色
         </label>
         <input
@@ -447,7 +445,7 @@ function AddStoryInline({
           autoFocus
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
+        <label className="text-[12px] font-medium text-[var(--text-tertiary)]">
           想要
         </label>
         <input
@@ -458,7 +456,7 @@ function AddStoryInline({
           className={inputClass}
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
+        <label className="text-[12px] font-medium text-[var(--text-tertiary)]">
           以便
         </label>
         <input
@@ -469,7 +467,7 @@ function AddStoryInline({
           className={inputClass}
         />
 
-        <label className="text-xs text-[var(--text-muted)] font-terminal uppercase tracking-[1px]">
+        <label className="text-[12px] font-medium text-[var(--text-tertiary)]">
           优先级
         </label>
         <div className="flex gap-2">
@@ -481,10 +479,9 @@ function AddStoryInline({
               className={cn(
                 "px-3 py-1 text-xs font-medium border cursor-pointer",
                 "transition-all duration-150",
-                "font-terminal",
                 priority === p
                   ? "border-[var(--yellow)] bg-[var(--yellow)] text-[var(--dark)]"
-                  : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--yellow)]",
+                  : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent-color)]",
               )}
             >
               {p}
