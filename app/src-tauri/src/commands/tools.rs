@@ -261,28 +261,45 @@ fn strip_html(html: String) -> String {
     let mut out = String::with_capacity(html.len() / 2);
     let mut in_tag = false;
     let mut skip_block = false;
-    let html_lower = html.to_lowercase();
-    let bytes = html.as_bytes();
+
+    // We iterate by char index; maintain a byte position to enable cheap prefix checks
+    let chars: Vec<char> = html.chars().collect();
+    let lower: Vec<char> = html.to_lowercase().chars().collect();
+    let len = chars.len();
     let mut i = 0;
 
-    while i < bytes.len() {
+    // Helper: check if lower[i..] starts with a string literal (char-by-char)
+    let starts_with = |lower: &Vec<char>, i: usize, pat: &str| -> bool {
+        let pat_chars: Vec<char> = pat.chars().collect();
+        if i + pat_chars.len() > lower.len() {
+            return false;
+        }
+        lower[i..i + pat_chars.len()].iter().zip(pat_chars.iter()).all(|(a, b)| a == b)
+    };
+
+    while i < len {
+        // Detect start of <script>/<style> blocks
         if !skip_block && !in_tag {
-            let ahead = &html_lower[i..std::cmp::min(i + 8, html_lower.len())];
-            if ahead.starts_with("<script") || ahead.starts_with("<style") {
+            if starts_with(&lower, i, "<script") || starts_with(&lower, i, "<style") {
                 skip_block = true;
             }
         }
+        // Detect end of script/style blocks
         if skip_block {
-            let ahead = &html_lower[i..std::cmp::min(i + 9, html_lower.len())];
-            if ahead.starts_with("</script") || ahead.starts_with("</style") {
+            if starts_with(&lower, i, "</script>") {
                 skip_block = false;
-                i += 9;
+                i += 9; // "</script>" = 9 chars
+                continue;
+            }
+            if starts_with(&lower, i, "</style>") {
+                skip_block = false;
+                i += 8; // "</style>" = 8 chars
                 continue;
             }
             i += 1;
             continue;
         }
-        match bytes[i] as char {
+        match chars[i] {
             '<' => in_tag = true,
             '>' => {
                 in_tag = false;
