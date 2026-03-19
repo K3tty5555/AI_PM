@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { open as openDialog } from "@tauri-apps/plugin-dialog"
+import { Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -59,6 +60,67 @@ export function ToolPersonaPage() {
       }
     }
   }, [styleContents, loadingContent])
+
+  // Inline rename state
+  const [editingStyle, setEditingStyle] = useState<string | null>(null)
+  const [renameInput, setRenameInput] = useState("")
+  const [renamingStyle, setRenamingStyle] = useState<string | null>(null)
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const isConfirmingRef = useRef(false)
+
+  const startRename = useCallback((name: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingStyle(name)
+    setRenameInput(name)
+    setRenameError(null)
+    isConfirmingRef.current = false
+  }, [])
+
+  const cancelRename = useCallback(() => {
+    setEditingStyle(null)
+    setRenameInput("")
+    setRenameError(null)
+    isConfirmingRef.current = false
+  }, [])
+
+  const confirmRename = useCallback(async (oldName: string) => {
+    if (isConfirmingRef.current) return
+    const newName = renameInput.trim()
+    if (!newName) {
+      setRenameError("名称不能为空")
+      return
+    }
+    if (newName === oldName) {
+      cancelRename()
+      return
+    }
+    isConfirmingRef.current = true
+    setRenamingStyle(oldName)
+    setRenameError(null)
+    try {
+      await api.renamePrdStyle(oldName, newName)
+      setStyles(prev => prev.map(s => s.name === oldName ? { ...s, name: newName } : s))
+      if (activeStyle === oldName) setActiveStyle(newName)
+      setExpandedStyles(prev => {
+        const next = new Set(prev)
+        if (next.has(oldName)) { next.delete(oldName); next.add(newName) }
+        return next
+      })
+      setStyleContents(prev => {
+        if (!prev[oldName]) return prev
+        const next = { ...prev, [newName]: prev[oldName] }
+        delete next[oldName]
+        return next
+      })
+      setEditingStyle(null)
+      setRenameInput("")
+    } catch (err) {
+      setRenameError(String(err))
+      isConfirmingRef.current = false
+    } finally {
+      setRenamingStyle(null)
+    }
+  }, [renameInput, activeStyle, cancelRename])
 
   const [filePath, setFilePath] = useState("")
   const [fileContent, setFileContent] = useState("")
@@ -202,23 +264,66 @@ export function ToolPersonaPage() {
                   {/* 头部：点击展开/折叠 */}
                   <div
                     className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3"
-                    onClick={() => toggleExpand(s.name)}
+                    onClick={() => editingStyle !== s.name && toggleExpand(s.name)}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-medium text-[var(--text-primary)]">{s.name}</span>
-                      {s.hasPersona && (
+                    <div className="flex items-center gap-2 min-w-0 group">
+                      {editingStyle === s.name ? (
+                        <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            <input
+                              autoFocus
+                              value={renameInput}
+                              onChange={(e) => { setRenameInput(e.target.value); setRenameError(null) }}
+                              onFocus={(e) => e.target.select()}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") { e.preventDefault(); confirmRename(s.name) }
+                                else if (e.key === "Escape") { e.preventDefault(); cancelRename() }
+                              }}
+                              onBlur={() => confirmRename(s.name)}
+                              disabled={renamingStyle === s.name}
+                              className={cn(
+                                "h-7 px-2 text-sm font-medium rounded border bg-transparent outline-none",
+                                renameError
+                                  ? "border-[var(--destructive)] text-[var(--destructive)]"
+                                  : "border-[var(--accent-color)] text-[var(--text-primary)]"
+                              )}
+                            />
+                            {renamingStyle === s.name && (
+                              <svg className="h-3.5 w-3.5 animate-spin text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                              </svg>
+                            )}
+                          </div>
+                          {renameError && (
+                            <span className="text-[10px] text-[var(--destructive)]">{renameError}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-sm font-medium text-[var(--text-primary)]">{s.name}</span>
+                          <button
+                            onClick={(e) => startRename(s.name, e)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-0.5 rounded hover:bg-[var(--accent-color)]/10 text-[var(--text-tertiary)] hover:text-[var(--accent-color)] shrink-0"
+                            title="重命名"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        </>
+                      )}
+                      {editingStyle !== s.name && s.hasPersona && (
                         <span className="rounded-full bg-[var(--accent-color)]/10 px-2 py-0.5 text-[10px] text-[var(--accent-color)]">
                           含分身档案
                         </span>
                       )}
-                      {activeStyle === s.name && (
+                      {editingStyle !== s.name && activeStyle === s.name && (
                         <span className="rounded-full bg-[var(--accent-color)]/15 px-2 py-0.5 text-[10px] text-[var(--accent-color)] font-medium">
                           当前默认
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {activeStyle !== s.name && (
+                      {activeStyle !== s.name && editingStyle !== s.name && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -228,14 +333,16 @@ export function ToolPersonaPage() {
                           {settingActive === s.name ? "设置中..." : "设为默认"}
                         </Button>
                       )}
-                      <span
-                        className={cn(
-                          "text-[10px] text-[var(--text-tertiary)] transition-transform duration-200 inline-block",
-                          expandedStyles.has(s.name) && "rotate-180"
-                        )}
-                      >
-                        ▼
-                      </span>
+                      {editingStyle !== s.name && (
+                        <span
+                          className={cn(
+                            "text-[10px] text-[var(--text-tertiary)] transition-transform duration-200 inline-block",
+                            expandedStyles.has(s.name) && "rotate-180"
+                          )}
+                        >
+                          ▼
+                        </span>
+                      )}
                     </div>
                   </div>
 
