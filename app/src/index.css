@@ -145,6 +145,12 @@
   --yellow-glow: 0 0 16px rgba(29, 78, 216, 0.25);
   --yellow-bg: rgba(29, 78, 216, 0.08);
 
+  /* --- Shadows (elevation system) --- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
+
   /* --- Transitions --- */
   --ease-terminal: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
@@ -221,6 +227,12 @@ html.theme-dark {
   --text-tertiary: oklch(42% 0.01 250);
   --hover-bg: rgba(255, 255, 255, 0.05);
   --active-bg: rgba(255, 255, 255, 0.09);
+
+  /* Shadows (deeper for dark backgrounds) */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.45);
 
   /* Compat aliases */
   --yellow: #4F8EF7;
