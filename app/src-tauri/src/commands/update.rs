@@ -36,11 +36,15 @@ pub async fn download_and_install_update(app: AppHandle) -> Result<(), String> {
         .updater()
         .map_err(|e| e.to_string())?;
 
+    // Re-fetch the update manifest here rather than caching the Update object,
+    // because tauri_plugin_updater::Update is not Send+Sync and cannot be stored
+    // in AppState. The double network request is acceptable: this is a rare,
+    // user-initiated action and latest.json is tiny.
     let update = updater
         .check()
         .await
         .map_err(|e| e.to_string())?
-        .ok_or("No update available")?;
+        .ok_or_else(|| "No update available".to_string())?;
 
     update
         .download_and_install(|_chunk, _total| {}, || {})
