@@ -500,12 +500,15 @@ export function SettingsPage() {
                           size="sm"
                           onClick={handleTestCli}
                           disabled={cliChecking}
-                          className="h-7 px-2 text-xs shrink-0 whitespace-nowrap"
+                          className="relative h-7 w-[116px] shrink-0 overflow-hidden text-xs"
                         >
-                          <span className="inline-flex size-3 items-center justify-center">
-                            {cliChecking && <Loader2 className="size-3 animate-spin" />}
+                          <span className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-150 ${cliChecking ? "opacity-0" : "opacity-100"}`}>
+                            检测 claude 命令
                           </span>
-                          检测 claude 命令
+                          <span className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-150 ${cliChecking ? "opacity-100" : "opacity-0"}`}>
+                            <Loader2 className="size-3 animate-spin" />
+                            检测中…
+                          </span>
                         </Button>
                         {cliStatus && (
                           <span className={`flex items-center gap-1 text-xs ${cliStatus.ok ? "text-[var(--green)]" : "text-[var(--destructive)]"}`}>
