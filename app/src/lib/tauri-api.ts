@@ -27,6 +27,7 @@ export interface ProjectSummary {
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases' | 'completedPhases'> {
   phases: ProjectPhase[]
+  teamMode: boolean
 }
 
 export interface ConfigState {
@@ -55,6 +56,62 @@ export interface ContextFile {
   preview: string
 }
 
+export interface LegacyProjectScan {
+  name: string
+  dir: string
+  completedPhases: string[]
+  lastPhase: string
+  alreadyExists: boolean
+}
+
+export interface ImportResult {
+  imported: number
+  skipped: number
+}
+
+export interface MigrateResult {
+  migrated: number
+  skipped: number
+  failed: { name: string; error: string }[]
+}
+
+export interface KnowledgeCategoryScan {
+  category: string
+  total: number
+  newCount: number
+}
+
+export interface PrdStyleScan {
+  name: string
+  hasPersona: boolean
+  alreadyExists: boolean
+}
+
+export interface PrdStyleEntry {
+  name: string
+  hasPersona: boolean
+}
+
+export interface UiSpecScan {
+  name: string
+  alreadyExists: boolean
+}
+
+export interface UiSpecEntry {
+  name: string
+}
+
+export interface DepStatus {
+  name: string
+  label: string
+  installed: boolean
+  version: string | null
+  required: boolean
+  autoInstallable: boolean
+  manualHint: string | null
+  featureHint: string
+}
+
 // ─── API functions ─────────────────────────────────────────────────────────
 
 export const api = {
@@ -65,6 +122,8 @@ export const api = {
   getProject: (id: string) => invoke<ProjectDetail | null>("get_project", { id }),
   deleteProject: (id: string) => invoke<void>("delete_project", { id }),
   advancePhase: (id: string) => invoke<string | null>("advance_phase", { id }),
+  setTeamMode: (id: string, enabled: boolean) =>
+    invoke<void>("set_team_mode", { args: { id, enabled } }),
   updatePhase: (args: { projectId: string; phase: string; status: string; outputFile?: string }) =>
     invoke<void>("update_phase", { args }),
 
@@ -85,9 +144,9 @@ export const api = {
     invoke<{ ok: boolean; version?: string; error?: string }>("test_cli_config"),
 
   // Stream (fire-and-forget — results come via events)
-  startStream: (args: { projectId: string; phase: string; messages: ChatMessage[]; excludedContext?: string[] }) =>
+  startStream: (args: { projectId: string; phase: string; messages: ChatMessage[]; excludedContext?: string[]; styleId?: string }) =>
     invoke<void>("start_stream", { args }),
-  runTool: (args: { toolName: string; userInput: string; filePath?: string; projectId?: string }) =>
+  runTool: (args: { toolName: string; userInput: string; filePath?: string; projectId?: string; mode?: string }) =>
     invoke<void>("run_tool", { args }),
 
   // Projects dir
@@ -100,7 +159,54 @@ export const api = {
     invoke<KnowledgeEntry>("add_knowledge", { args }),
   deleteKnowledge: (category: string, id: string) =>
     invoke<void>("delete_knowledge", { category, id }),
+  searchKnowledge: (query: string) => invoke<KnowledgeEntry[]>("search_knowledge", { query }),
+  getKnowledgeContent: (category: string, id: string) =>
+    invoke<string>("get_knowledge_content", { category, id }),
 
   // Context files
   listProjectContext: (projectId: string) => invoke<ContextFile[]>("list_project_context", { projectId }),
+
+  // Export
+  exportPrdDocx: (projectId: string) => invoke<string>("export_prd_docx", { projectId }),
+  revealFile: (path: string) => invoke<void>("reveal_file", { path }),
+  openFile: (path: string) => invoke<void>("open_file", { path }),
+  writeFile: (path: string, content: string) => invoke<void>("write_file", { path, content }),
+
+  // URL fetch
+  fetchUrlContent: (url: string) => invoke<string>("fetch_url_content", { url }),
+
+  // Environment
+  checkEnv: () => invoke<DepStatus[]>("check_env"),
+  installDep: (dep: string, useMirror: boolean) => invoke<void>("install_dep", { args: { dep, useMirror } }),
+  checkPlaywrightMcp: () => invoke<boolean>("check_playwright_mcp"),
+
+  // Legacy import
+  scanLegacyProjects: (dir: string) =>
+    invoke<LegacyProjectScan[]>("scan_legacy_projects", { dir }),
+  importLegacyProjects: (projects: LegacyProjectScan[]) =>
+    invoke<ImportResult>("import_legacy_projects", { projects }),
+
+  // Template migration
+  scanLegacyKnowledge: (dir: string) =>
+    invoke<KnowledgeCategoryScan[]>("scan_legacy_knowledge", { dir }),
+  importLegacyKnowledge: (dir: string) =>
+    invoke<ImportResult>("import_legacy_knowledge", { dir }),
+  listPrdStyles: () => invoke<PrdStyleEntry[]>("list_prd_styles"),
+  scanLegacyPrdStyles: (dir: string) =>
+    invoke<PrdStyleScan[]>("scan_legacy_prd_styles", { dir }),
+  importLegacyPrdStyles: (dir: string) =>
+    invoke<ImportResult>("import_legacy_prd_styles", { dir }),
+  scanLegacyUiSpecs: (dir: string) =>
+    invoke<UiSpecScan[]>("scan_legacy_ui_specs", { dir }),
+  importLegacyUiSpecs: (dir: string) =>
+    invoke<ImportResult>("import_legacy_ui_specs", { dir }),
+  listUiSpecs: () => invoke<UiSpecEntry[]>("list_ui_specs"),
+  addUiSpec: (dir: string) => invoke<string>("add_ui_spec", { dir }),
+
+  // PRD style active management
+  setActivePrdStyle: (name: string) => invoke<void>("set_active_prd_style", { name }),
+  getActivePrdStyle: () => invoke<string | null>("get_active_prd_style"),
+
+  migrateProjectsToAppDir: () =>
+    invoke<MigrateResult>("migrate_projects_to_app_dir"),
 }

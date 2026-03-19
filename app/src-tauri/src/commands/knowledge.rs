@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
 use tauri::State;
 use crate::state::AppState;
 
@@ -16,7 +15,7 @@ pub struct KnowledgeEntry {
 
 #[tauri::command]
 pub fn list_knowledge(state: State<'_, AppState>) -> Vec<KnowledgeEntry> {
-    let kb_root = Path::new(&state.projects_dir).join("knowledge-base");
+    let kb_root = state.templates_base().join("knowledge-base");
     let mut entries = Vec::new();
 
     for category in CATEGORIES {
@@ -51,7 +50,7 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
     if !CATEGORIES.contains(&args.category.as_str()) {
         return Err(format!("Invalid category: {}", args.category));
     }
-    let kb_dir = Path::new(&state.projects_dir).join("knowledge-base").join(&args.category);
+    let kb_dir = state.templates_base().join("knowledge-base").join(&args.category);
     fs::create_dir_all(&kb_dir).map_err(|e| e.to_string())?;
 
     // 用标题生成 slug
@@ -90,6 +89,38 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
 }
 
 #[tauri::command]
+pub fn search_knowledge(state: State<'_, AppState>, query: String) -> Vec<KnowledgeEntry> {
+    let q = query.to_lowercase();
+    if q.trim().is_empty() {
+        return Vec::new();
+    }
+    let kb_root = state.templates_base().join("knowledge-base");
+    let mut entries = Vec::new();
+
+    for category in CATEGORIES {
+        let cat_dir = kb_root.join(category);
+        if !cat_dir.exists() { continue; }
+        let Ok(dir) = fs::read_dir(&cat_dir) else { continue; };
+        for file in dir.filter_map(|e| e.ok()) {
+            let path = file.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
+            let Ok(content) = fs::read_to_string(&path) else { continue; };
+            let content_lower = content.to_lowercase();
+            let id = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
+            let title = content.lines()
+                .find(|l| l.starts_with("# "))
+                .map(|l| l[2..].trim().to_string())
+                .unwrap_or_else(|| id.clone());
+            if title.to_lowercase().contains(&q) || content_lower.contains(&q) {
+                entries.push(KnowledgeEntry { id, category: category.to_string(), title, content });
+                if entries.len() >= 20 { return entries; }
+            }
+        }
+    }
+    entries
+}
+
+#[tauri::command]
 pub fn delete_knowledge(state: State<'_, AppState>, category: String, id: String) -> Result<(), String> {
     // Validate inputs to prevent path traversal
     if !CATEGORIES.contains(&category.as_str()) {
@@ -98,8 +129,31 @@ pub fn delete_knowledge(state: State<'_, AppState>, category: String, id: String
     if id.contains('/') || id.contains('\\') || id.contains("..") {
         return Err("Invalid id".to_string());
     }
-    let path = Path::new(&state.projects_dir)
+    let path = state.templates_base()
         .join("knowledge-base").join(&category).join(format!("{}.md", id));
     if path.exists() { fs::remove_file(&path).map_err(|e| e.to_string())?; }
     Ok(())
+}
+
+/// Return full markdown content of a single knowledge entry.
+#[tauri::command]
+pub async fn get_knowledge_content(
+    state: State<'_, AppState>,
+    category: String,
+    id: String,
+) -> Result<String, String> {
+    // Prevent path traversal — consolidated guard (matches delete_knowledge entry pattern)
+    if category.contains('/') || category.contains('.') ||
+       id.contains('/') || id.contains('\\') || id.contains("..") {
+        return Err("无效路径".to_string());
+    }
+    // Validate category against whitelist
+    if !CATEGORIES.contains(&category.as_str()) {
+        return Err("无效分类".to_string());
+    }
+    let path = state.templates_base()
+        .join("knowledge-base")
+        .join(&category)
+        .join(format!("{}.md", id));
+    std::fs::read_to_string(&path).map_err(|e| e.to_string())
 }

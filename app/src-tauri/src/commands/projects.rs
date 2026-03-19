@@ -10,6 +10,7 @@ use crate::state::AppState;
 
 const PHASES: &[&str] = &[
     "requirement", "analysis", "research", "stories", "prd", "prototype", "review",
+    "analytics", "review-modify", "retrospective",
 ];
 
 #[derive(Debug, Serialize, Clone)]
@@ -49,6 +50,7 @@ pub struct ProjectDetail {
     pub output_dir: String,
     pub created_at: String,
     pub updated_at: String,
+    pub team_mode: bool,
     pub phases: Vec<ProjectPhase>,
 }
 
@@ -100,7 +102,7 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
 pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result<ProjectDetail, String> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
-    let output_dir = format!("{}/{}", state.projects_dir, args.name);
+    let output_dir = state.projects_base().join(&args.name).to_string_lossy().to_string();
     let team_mode_int: i64 = if args.team_mode.unwrap_or(false) { 1 } else { 0 };
 
     // Create project directory
@@ -152,6 +154,7 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
         output_dir,
         created_at: now.clone(),
         updated_at: now,
+        team_mode: args.team_mode.unwrap_or(false),
         phases,
     })
 }
@@ -160,15 +163,15 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
 pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectDetail>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
-    let result: rusqlite::Result<(String, String, Option<String>, String, String, String, String)> =
+    let result: rusqlite::Result<(String, String, Option<String>, String, String, String, String, i64)> =
         db.query_row(
-            "SELECT id, name, description, current_phase, output_dir, created_at, updated_at
+            "SELECT id, name, description, current_phase, output_dir, created_at, updated_at, COALESCE(team_mode, 0)
              FROM projects WHERE id = ?1",
             params![&id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?)),
         );
 
-    let (pid, name, description, current_phase, output_dir, created_at, updated_at) = match result {
+    let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val) = match result {
         Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
         Err(e) => return Err(e.to_string()),
         Ok(row) => row,
@@ -205,6 +208,7 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
         output_dir,
         created_at,
         updated_at,
+        team_mode: team_mode_val != 0,
         phases,
     }))
 }
@@ -411,4 +415,432 @@ fn write_status_json(output_dir: &str, phases: &[ProjectPhase], last_phase: &str
     if let Ok(json) = serde_json::to_string_pretty(&status) {
         let _ = fs::write(path, json);
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetTeamModeArgs {
+    pub id: String,
+    pub enabled: bool,
+}
+
+#[tauri::command]
+pub fn set_team_mode(state: State<'_, AppState>, args: SetTeamModeArgs) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.execute(
+        "UPDATE projects SET team_mode = ?1 WHERE id = ?2",
+        params![args.enabled as i64, &args.id],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ── Legacy import ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LegacyProjectScan {
+    pub name: String,
+    pub dir: String,
+    pub completed_phases: Vec<String>,
+    pub last_phase: String,
+    pub already_exists: bool,
+}
+
+#[tauri::command]
+pub fn scan_legacy_projects(
+    state: State<AppState>,
+    dir: String,
+) -> Result<Vec<LegacyProjectScan>, String> {
+    let path = std::path::Path::new(&dir);
+    if !path.exists() {
+        return Err(format!("目录不存在: {}", dir));
+    }
+
+    fn map_phase(p: &str) -> &str { if p == "competitor" { "research" } else { p } }
+
+    // Lock held for the full scan; acceptable since project count is small (<50) and scan is user-initiated.
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+
+    let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
+    let mut results = Vec::new();
+
+    for entry in entries.flatten() {
+        let entry_path = entry.path();
+        if !entry_path.is_dir() {
+            continue;
+        }
+
+        let status_path = entry_path.join("_status.json");
+        if !status_path.exists() {
+            continue;
+        }
+
+        let raw = match fs::read_to_string(&status_path) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+
+        let json: serde_json::Value = match serde_json::from_str(&raw) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        let name = match json["project"].as_str() {
+            Some(n) => n.to_string(),
+            None => entry_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
+        };
+
+        let last_phase_str = json["last_phase"].as_str().unwrap_or("requirement");
+        let last_phase = map_phase(last_phase_str).to_string();
+
+        let mut completed_phases = Vec::new();
+        if let Some(phases) = json["phases"].as_object() {
+            for (phase, done) in phases {
+                if done.as_bool().unwrap_or(false) {
+                    let mapped = map_phase(phase.as_str());
+                    if PHASES.contains(&mapped) {
+                        completed_phases.push(mapped.to_string());
+                    }
+                }
+            }
+        }
+
+        let already_exists: bool = db
+            .query_row(
+                "SELECT COUNT(*) FROM projects WHERE name = ?1",
+                params![&name],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        results.push(LegacyProjectScan {
+            name,
+            dir: entry_path.to_string_lossy().to_string(),
+            completed_phases,
+            last_phase,
+            already_exists,
+        });
+    }
+
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+
+    Ok(results)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LegacyProjectImport {
+    pub name: String,
+    pub dir: String,
+    pub completed_phases: Vec<String>,
+    pub last_phase: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportResult {
+    pub imported: usize,
+    pub skipped: usize,
+}
+
+fn phase_output_file(phase: &str) -> Option<&'static str> {
+    match phase {
+        "requirement" => Some("01-requirement-draft.md"),
+        "analysis"    => Some("02-analysis-report.md"),
+        "research"    => Some("03-competitor-report.md"),
+        "stories"     => Some("04-user-stories.md"),
+        "prd"         => Some("05-prd"),
+        "prototype"   => Some("06-prototype"),
+        "review"      => Some("07-review-report.md"),
+        _ => None,
+    }
+}
+
+fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let dst_path = dst.join(entry.file_name());
+        if ty.is_symlink() {
+            // skip symlinks — avoid infinite loops on cyclic links
+            continue;
+        } else if ty.is_dir() {
+            copy_dir_recursive(&entry.path(), &dst_path)?;
+        } else {
+            std::fs::copy(entry.path(), &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn import_legacy_projects(
+    state: State<AppState>,
+    projects: Vec<LegacyProjectImport>,
+) -> Result<ImportResult, String> {
+    let now = Utc::now().to_rfc3339();
+
+    // ── Phase 1: check duplicates and assign IDs under the lock ───────────
+    struct PendingImport {
+        id: String,
+        project: LegacyProjectImport,
+    }
+
+    let (pending, skipped) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let mut pending: Vec<PendingImport> = Vec::new();
+        let mut skipped = 0usize;
+
+        for p in projects {
+            let exists: i64 = db
+                .query_row(
+                    "SELECT COUNT(*) FROM projects WHERE name = ?1",
+                    params![&p.name],
+                    |row| row.get(0),
+                )
+                .unwrap_or(1);
+
+            if exists > 0 {
+                skipped += 1;
+                continue;
+            }
+
+            pending.push(PendingImport {
+                id: Uuid::new_v4().to_string(),
+                project: p,
+            });
+        }
+        (pending, skipped)
+        // db guard drops here
+    };
+
+    // ── Phase 2: file copy (no lock held) ─────────────────────────────────
+    struct ReadyImport {
+        id: String,
+        project: LegacyProjectImport,
+        output_dir: String,
+    }
+
+    let mut ready: Vec<ReadyImport> = Vec::new();
+    let projects_base = state.projects_base();
+    let target_base = projects_base.as_path();
+
+    for pi in pending {
+        let preferred = target_base.join(&pi.project.name);
+        let target_dir_opt: Option<std::path::PathBuf> = if !preferred.exists() {
+            Some(preferred)
+        } else {
+            let fallback = target_base.join(format!("{}-imported", &pi.project.name));
+            if fallback.exists() {
+                None
+            } else {
+                Some(fallback)
+            }
+        };
+
+        let output_dir = match target_dir_opt {
+            Some(target_dir) => match copy_dir_recursive(std::path::Path::new(&pi.project.dir), &target_dir) {
+                Ok(()) => target_dir.to_string_lossy().to_string(),
+                Err(e) => {
+                    eprintln!("[import] Failed to copy '{}': {}", pi.project.name, e);
+                    let _ = std::fs::remove_dir_all(&target_dir);
+                    pi.project.dir.clone()
+                }
+            },
+            None => {
+                eprintln!("[import] Target dirs for '{}' already exist, using original path", pi.project.name);
+                pi.project.dir.clone()
+            }
+        };
+
+        ready.push(ReadyImport {
+            id: pi.id,
+            project: pi.project,
+            output_dir,
+        });
+    }
+
+    // ── Phase 3: DB inserts under the lock ────────────────────────────────
+    let mut imported = 0usize;
+
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+
+        for ri in ready {
+            db.execute(
+                "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode)
+                 VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?5, 0)",
+                params![&ri.id, &ri.project.name, &ri.project.last_phase, &ri.output_dir, &now],
+            )
+            .map_err(|e| e.to_string())?;
+
+            let completed_set: std::collections::HashSet<String> =
+                ri.project.completed_phases.iter().cloned().collect();
+
+            for &phase in PHASES {
+                let phase_id = Uuid::new_v4().to_string();
+                let status = if completed_set.contains(phase) {
+                    "completed"
+                } else if phase == ri.project.last_phase {
+                    "in_progress"
+                } else {
+                    "pending"
+                };
+                let output_file = if status == "completed" {
+                    phase_output_file(phase)
+                } else {
+                    None
+                };
+                let completed_at: Option<&str> = if status == "completed" { Some(&now) } else { None };
+
+                db.execute(
+                    "INSERT INTO project_phases (id, project_id, phase, status, output_file, completed_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![&phase_id, &ri.id, phase, status, output_file, completed_at],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+
+            imported += 1;
+        }
+        // db guard drops here
+    }
+
+    Ok(ImportResult { imported, skipped })
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MigrateFailure {
+    pub name: String,
+    pub error: String,
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MigrateResult {
+    pub migrated: usize,
+    pub skipped: usize,
+    pub failed: Vec<MigrateFailure>,
+}
+
+#[tauri::command]
+pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResult, String> {
+    let projects_base = state.projects_base();
+
+    // ── Phase 1: collect rows under the lock, then release it ──────────────
+    let rows = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+
+        struct Row {
+            id: String,
+            name: String,
+            output_dir: String,
+        }
+
+        let mut stmt = db
+            .prepare("SELECT id, name, output_dir FROM projects")
+            .map_err(|e| e.to_string())?;
+
+        let collected = stmt.query_map([], |row| {
+                Ok(Row {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    output_dir: row.get(2)?,
+                })
+            })
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .filter(|r| !std::path::Path::new(&r.output_dir).starts_with(&projects_base))
+            .collect::<Vec<_>>();
+        collected
+        // db guard drops here
+    };
+
+    // ── Phase 2: filesystem work (no lock held) ────────────────────────────
+    let mut migrated = 0usize;
+    let mut skipped = 0usize;
+    let mut failed: Vec<MigrateFailure> = Vec::new();
+    // Collect (id, new_path) pairs for successful copies
+    let mut updates: Vec<(String, String)> = Vec::new();
+
+    let target_base = projects_base.as_path();
+
+    for row in &rows {
+        let src = std::path::Path::new(&row.output_dir);
+        if !src.exists() {
+            skipped += 1;
+            continue;
+        }
+
+        let preferred = target_base.join(&row.name);
+        let target_dir_opt: Option<std::path::PathBuf> = if !preferred.exists() {
+            Some(preferred)
+        } else {
+            let fallback = target_base.join(format!("{}-imported", &row.name));
+            if fallback.exists() {
+                None
+            } else {
+                Some(fallback)
+            }
+        };
+
+        let target_dir = match target_dir_opt {
+            None => {
+                failed.push(MigrateFailure {
+                    name: row.name.clone(),
+                    error: "Target directory already exists".to_string(),
+                });
+                continue;
+            }
+            Some(d) => d,
+        };
+
+        match copy_dir_recursive(src, &target_dir) {
+            Ok(()) => {
+                updates.push((row.id.clone(), target_dir.to_string_lossy().to_string()));
+            }
+            Err(e) => {
+                let _ = std::fs::remove_dir_all(&target_dir);
+                failed.push(MigrateFailure {
+                    name: row.name.clone(),
+                    error: e.to_string(),
+                });
+            }
+        }
+    }
+
+    // ── Phase 3: DB updates under the lock ────────────────────────────────
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        for (id, new_path) in updates {
+            // Find the name for error reporting
+            let name = rows.iter()
+                .find(|r| r.id == id)
+                .map(|r| r.name.clone())
+                .unwrap_or_else(|| id.clone());
+            match db.execute(
+                "UPDATE projects SET output_dir = ?1 WHERE id = ?2",
+                params![&new_path, &id],
+            ) {
+                Ok(_) => migrated += 1,
+                Err(e) => {
+                    // rollback the copied directory
+                    let _ = std::fs::remove_dir_all(&new_path);
+                    failed.push(MigrateFailure {
+                        name,
+                        error: e.to_string(),
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(MigrateResult { migrated, skipped, failed })
 }

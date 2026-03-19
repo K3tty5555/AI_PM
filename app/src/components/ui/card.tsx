@@ -9,11 +9,11 @@ function Card({ className, children, ...props }: CardProps) {
     <div
       data-slot="card"
       className={cn(
-        "bg-[var(--card)] text-[var(--card-foreground)]",
+        "rounded-xl bg-[var(--card)] text-[var(--card-foreground)]",
         "border border-[var(--border)]",
         "shadow-[0_2px_16px_rgba(0,0,0,0.04)]",
-        "transition-shadow duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
-        "hover:shadow-[0_0_20px_rgba(255,250,0,0.35)]",
+        "transition-shadow duration-200",
+        "hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)]",
         "p-6",
         className
       )}
@@ -38,7 +38,7 @@ function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElem
   return (
     <h3
       data-slot="card-title"
-      className={cn("text-lg font-semibold leading-tight text-[var(--dark)]", className)}
+      className={cn("text-base font-semibold leading-tight text-[var(--text-primary)]", className)}
       {...props}
     />
   )
@@ -48,7 +48,7 @@ function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParag
   return (
     <p
       data-slot="card-description"
-      className={cn("text-sm text-[var(--text-muted)]", className)}
+      className={cn("text-sm text-[var(--text-secondary)]", className)}
       {...props}
     />
   )

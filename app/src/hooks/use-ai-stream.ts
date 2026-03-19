@@ -60,7 +60,7 @@ interface UseAiStreamReturn {
   error: string | null
   outputFile: string | null
   streamMeta: StreamMeta | null
-  start: (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[] }) => void
+  start: (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[]; styleId?: string }) => void
   reset: () => void
 }
 
@@ -139,7 +139,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
   }, [key])
 
   const start = useCallback(
-    (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[] }) => {
+    (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[]; styleId?: string }) => {
       // Guard: if this key is already streaming in the background, skip.
       // This prevents duplicate generation when the component remounts
       // (e.g. user navigated away and back while generation was in progress).
@@ -200,6 +200,11 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           }
 
           bg.notify?.(patch)
+
+          // Auto-mark phase as completed and notify sidebar to refresh
+          api.updatePhase({ projectId, phase, status: "completed", outputFile: file })
+            .catch(() => {})
+          window.dispatchEvent(new CustomEvent("project-phase-updated", { detail: { projectId } }))
         }),
         listen<string>("stream_error", (event) => {
           bg.error = event.payload
@@ -211,7 +216,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
       ]).then((unlisteners) => {
         bg.unlisteners = unlisteners
 
-        api.startStream({ projectId, phase, messages, excludedContext: options?.excludedContext }).catch((err: unknown) => {
+        api.startStream({ projectId, phase, messages, excludedContext: options?.excludedContext, styleId: options?.styleId }).catch((err: unknown) => {
           bg.error = String(err)
           bg.isStreaming = false
           bg.unlisteners.forEach((fn) => fn())
