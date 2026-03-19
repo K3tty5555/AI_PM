@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--bg-primary)] text-[var(--text-primary)]">
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--background)] text-[var(--text-primary)]">
           <p className="text-lg font-medium">出了点问题</p>
           <p className="max-w-md text-center text-sm text-[var(--text-secondary)]">
             {this.state.error?.message ?? "未知错误"}
