@@ -49,7 +49,7 @@ export function ToolPersonaPage() {
       next.add(name)
       return next
     })
-    if (!styleContents[name]) {
+    if (!styleContents[name] && !loadingContent.has(name)) {
       setLoadingContent(prev => new Set(prev).add(name))
       try {
         const content = await api.getPrdStyleContent(name)
@@ -58,7 +58,7 @@ export function ToolPersonaPage() {
         setLoadingContent(prev => { const s = new Set(prev); s.delete(name); return s })
       }
     }
-  }, [styleContents])
+  }, [styleContents, loadingContent])
 
   const [filePath, setFilePath] = useState("")
   const [fileContent, setFileContent] = useState("")

@@ -62,7 +62,7 @@ export function ToolDesignSpecPage() {
       next.add(name)
       return next
     })
-    if (!specContents[name]) {
+    if (!specContents[name] && !loadingContent.has(name)) {
       setLoadingContent(prev => new Set(prev).add(name))
       try {
         const content = await api.getUiSpecContent(name)
@@ -71,7 +71,7 @@ export function ToolDesignSpecPage() {
         setLoadingContent(prev => { const s = new Set(prev); s.delete(name); return s })
       }
     }
-  }, [specContents])
+  }, [specContents, loadingContent])
 
   return (
     <div className="mx-auto w-full max-w-[860px]">

@@ -199,7 +199,7 @@ pub struct UiSpecContent {
 
 #[tauri::command]
 pub fn get_ui_spec_content(state: State<'_, AppState>, name: String) -> Result<UiSpecContent, String> {
-    if name.is_empty() || name.starts_with('.') || name.contains('/') || name.contains('\\') {
+    if name.is_empty() || name.starts_with('.') || name.contains('/') || name.contains('\\') || name.contains('\0') {
         return Err(format!("无效规范名称: {}", name));
     }
     let spec_dir = state.templates_base().join("ui-specs").join(&name);
