@@ -158,6 +158,7 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
         created_at: now.clone(),
         updated_at: now,
         team_mode: args.team_mode.unwrap_or(false),
+        status: "active".to_string(),
         phases,
     })
 }
