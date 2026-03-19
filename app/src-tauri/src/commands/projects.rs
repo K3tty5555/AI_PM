@@ -1,5 +1,6 @@
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
+use serde_json;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -238,6 +239,89 @@ pub fn delete_project(state: State<AppState>, id: String) -> Result<(), String> 
     if let Some(dir) = output_dir {
         if Path::new(&dir).exists() {
             fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn rename_project(
+    state: State<AppState>,
+    id: String,
+    new_name: String,
+) -> Result<(), String> {
+    // Validate: non-empty, no path separators or traversal
+    if new_name.is_empty()
+        || new_name.contains('/')
+        || new_name.contains('\\')
+        || new_name.contains('\0')
+        || new_name.contains("..")
+    {
+        return Err(format!("无效的项目名称: {}", new_name));
+    }
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let now = Utc::now().to_rfc3339();
+
+    // Get current name and output_dir
+    let (old_name, old_output_dir): (String, String) = db
+        .query_row(
+            "SELECT name, output_dir FROM projects WHERE id = ?1",
+            params![&id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|_| "项目不存在".to_string())?;
+
+    if old_name == new_name {
+        return Ok(());
+    }
+
+    // Check new name not used by another project
+    let count: i64 = db
+        .query_row(
+            "SELECT COUNT(*) FROM projects WHERE name = ?1 AND id != ?2",
+            params![&new_name, &id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    if count > 0 {
+        return Err(format!("名称「{}」已存在", new_name));
+    }
+
+    // Build new output_dir
+    let new_output_dir = Path::new(&old_output_dir)
+        .parent()
+        .ok_or("无法解析项目路径")?
+        .join(&new_name)
+        .to_string_lossy()
+        .to_string();
+
+    if Path::new(&new_output_dir).exists() {
+        return Err(format!("目录「{}」已存在", new_name));
+    }
+
+    // Phase 1: rename filesystem directory
+    fs::rename(&old_output_dir, &new_output_dir).map_err(|e| e.to_string())?;
+
+    // Phase 2: update DB (rollback filesystem on failure)
+    let db_result = db.execute(
+        "UPDATE projects SET name = ?1, output_dir = ?2, updated_at = ?3 WHERE id = ?4",
+        params![&new_name, &new_output_dir, &now, &id],
+    );
+    if let Err(e) = db_result {
+        let _ = fs::rename(&new_output_dir, &old_output_dir); // rollback
+        return Err(e.to_string());
+    }
+
+    // Phase 3: update _status.json project_name (best-effort)
+    let status_path = Path::new(&new_output_dir).join("_status.json");
+    if let Ok(raw) = fs::read_to_string(&status_path) {
+        if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(&raw) {
+            v["project_name"] = serde_json::Value::String(new_name.clone());
+            if let Ok(updated) = serde_json::to_string_pretty(&v) {
+                let _ = fs::write(&status_path, updated);
+            }
         }
     }
 
