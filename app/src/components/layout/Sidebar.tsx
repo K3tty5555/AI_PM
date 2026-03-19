@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import {
-  Plus, Settings, PanelLeft, ChevronLeft,
+  Plus, ChevronLeft,
   Sun, Moon,
   Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone,
   Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette,
@@ -26,7 +26,6 @@ export interface SidebarPhase {
 
 interface SidebarProps {
   open: boolean
-  onCollapse: () => void
   // Dashboard context
   projects: SidebarProject[]
   activeProjectId?: string
@@ -103,7 +102,6 @@ function PhaseIcon({ phaseId, status }: { phaseId: string; status: SidebarPhase[
 
 function Sidebar({
   open,
-  onCollapse,
   projects,
   activeProjectId,
   onNewProject,
@@ -130,7 +128,7 @@ function Sidebar({
     <aside
       data-slot="sidebar"
       className={cn(
-        "fixed top-0 left-0 bottom-0 z-20",
+        "fixed top-0 left-[52px] bottom-0 z-20",
         "flex w-[220px] flex-col",
         "border-r border-[var(--border)]",
         "bg-[var(--bg-sidebar)] backdrop-blur-[20px]",
@@ -142,21 +140,14 @@ function Sidebar({
         visibility: open ? "visible" : "hidden",
       } as CSSProperties}
     >
-      {/* Header: traffic lights zone + app name / back button + collapse button */}
-      <div
-        data-tauri-drag-region
-        className="flex h-[44px] shrink-0 items-center select-none"
-        style={{ WebkitAppRegion: "drag" } as CSSProperties}
-      >
-        {/* Traffic lights clearance */}
-        <div className="w-[72px] shrink-0" style={{ WebkitAppRegion: "drag" } as CSSProperties} />
-
-        {isInProjectContext ? (
+      {/* Main nav area */}
+      <nav className="flex-1 overflow-y-auto px-2 pt-3 pb-2">
+        {/* Project back button */}
+        {isInProjectContext && (
           <button
             type="button"
             onClick={() => navigate("/")}
-            style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
-            className="flex items-center gap-1.5 flex-1 min-w-0 px-1 text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors duration-150 group"
+            className="mb-1 flex w-full items-center gap-1.5 rounded-md px-3 py-2 text-left text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-colors duration-150 group"
           >
             <ChevronLeft
               className="size-3.5 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--text-primary)] transition-colors"
@@ -164,37 +155,7 @@ function Sidebar({
             />
             <span className="text-[13px] font-medium truncate">{projectName ?? "项目"}</span>
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
-            className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-70 transition-opacity text-left"
-          >
-            <span className="flex size-5 items-center justify-center rounded bg-[var(--accent-color)] shrink-0">
-              <span className="text-[9px] font-bold text-white leading-none">AI</span>
-            </span>
-            <span className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight">
-              AI PM
-            </span>
-          </button>
         )}
-
-        <button
-          type="button"
-          onClick={onCollapse}
-          style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
-          title="收起侧边栏"
-          className="flex items-center justify-center size-6 rounded-md mr-2 shrink-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150"
-        >
-          <PanelLeft className="size-4" strokeWidth={1.75} />
-        </button>
-      </div>
-
-      <div className="mx-3 h-px bg-[var(--border)]" />
-
-      {/* Main nav area */}
-      <nav className="flex-1 overflow-y-auto px-2 py-2">
 
         {/* PROJECT context: phase list */}
         {isInProjectContext && (
@@ -397,27 +358,12 @@ function Sidebar({
           <span className="text-[13px]">新建项目</span>
         </button>
 
-        {/* Settings + Theme toggle — same row */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => navigate("/settings")}
-            className={cn(
-              "group flex flex-1 items-center gap-2 rounded-md px-3 py-2 text-left",
-              location.pathname === "/settings"
-                ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
-                : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]",
-              "transition-colors duration-[var(--dur-base)]",
-            )}
-          >
-            <Settings className="size-3.5 shrink-0 transition-transform duration-200 ease-out group-hover:rotate-[15deg]" strokeWidth={1.75} />
-            <span className="text-[13px]">设置</span>
-          </button>
+        <div className="flex justify-center">
           <button
             type="button"
             onClick={onToggleTheme}
             title={theme === "light" ? "切换深色" : "切换浅色"}
-            className="flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150"
+            className="flex size-8 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150"
           >
             {theme === "light"
               ? <Moon className="size-3.5 transition-transform duration-300 ease-out hover:rotate-180" strokeWidth={1.75} />
