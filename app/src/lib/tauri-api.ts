@@ -105,6 +105,7 @@ export interface UiSpecEntry {
 export interface PrdStyleContent {
   config: string
   profile: string | null
+  sample: string | null
   hasTemplate: boolean
 }
 
