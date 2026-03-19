@@ -127,6 +127,7 @@ function Sidebar({
   return (
     <aside
       data-slot="sidebar"
+      data-tauri-drag-region
       className={cn(
         "fixed top-0 left-[72px] bottom-0 z-20",
         "flex w-[180px] flex-col",
@@ -135,13 +136,14 @@ function Sidebar({
       )}
       style={{
         WebkitBackdropFilter: "blur(20px)",
+        WebkitAppRegion: "drag",
         transform: open ? "translateX(0)" : "translateX(-100%)",
         transition: "transform 250ms cubic-bezier(0.4, 0, 0.2, 1)",
         visibility: open ? "visible" : "hidden",
       } as CSSProperties}
     >
       {/* Main nav area */}
-      <nav className="flex-1 overflow-y-auto px-2 pt-3 pb-2">
+      <nav className="flex-1 overflow-y-auto px-2 pt-3 pb-2" style={{ WebkitAppRegion: "no-drag" } as CSSProperties}>
         {/* Project back button */}
         {isInProjectContext && (
           <button
@@ -343,7 +345,7 @@ function Sidebar({
       </nav>
 
       {/* Bottom: New project + Settings + Theme toggle */}
-      <div className="border-t border-[var(--border)] px-2 py-2 flex flex-col gap-1">
+      <div className="border-t border-[var(--border)] px-2 py-2 flex flex-col gap-1" style={{ WebkitAppRegion: "no-drag" } as CSSProperties}>
         {/* New project */}
         <button
           type="button"
