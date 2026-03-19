@@ -114,10 +114,8 @@ export function AppLayout() {
             className="sticky top-0 z-20 flex items-center justify-between gap-4 px-4 py-2 text-sm"
             style={{
               background:
-                bannerState === "ready"
-                  ? "var(--accent-light, #DBEAFE)"
-                  : bannerState === "error"
-                  ? "#FEE2E2"
+                bannerState === "error"
+                  ? "var(--error-light, rgba(239, 68, 68, 0.12))"
                   : "var(--accent-light, #DBEAFE)",
               borderBottom: "1px solid var(--border)",
             }}
@@ -134,7 +132,8 @@ export function AppLayout() {
               {bannerState === "available" && (
                 <button
                   onClick={handleDownload}
-                  className="rounded-md bg-[var(--accent-color)] px-3 py-1 text-xs text-white hover:opacity-90"
+                  disabled={bannerState !== "available"}
+                  className="rounded-md bg-[var(--accent-color)] px-3 py-1 text-xs text-white hover:opacity-90 disabled:opacity-50"
                 >
                   下载更新
                 </button>
