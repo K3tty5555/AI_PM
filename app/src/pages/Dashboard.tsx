@@ -321,10 +321,14 @@ export function DashboardPage() {
             )
           })}
 
-          {filteredProjects.length === 0 && search && (
+          {filteredProjects.length === 0 && (search || statusFilter !== 'all') && (
             <div className="col-span-full py-16 text-center">
               <p className="text-sm font-medium text-[var(--text-secondary)]">没有匹配结果</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">没有匹配「{search}」的项目</p>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                {search
+                  ? `没有匹配「${search}」的项目`
+                  : statusFilter === 'completed' ? '暂无已完成的项目' : '暂无进行中的项目'}
+              </p>
             </div>
           )}
         </div>
