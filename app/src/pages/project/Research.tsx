@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -100,6 +101,7 @@ export function ResearchPage() {
   const [hasPlaywrightMcp, setHasPlaywrightMcp] = useState(false)
   const [urlInput, setUrlInput] = useState("")
   const [urls, setUrls] = useState<string[]>([])
+  const [fetchingUrls, setFetchingUrls] = useState(false)
 
   useEffect(() => {
     api.getConfig().then(cfg => {
@@ -197,25 +199,60 @@ export function ResearchPage() {
     [messages, text, questionInfo.question, start]
   )
 
-  const handleGenerate = useCallback(() => {
-    const urlContext = urls.length > 0
-      ? `\n\n参考网址：\n${urls.map(u => `- ${u}`).join("\n")}`
-      : ""
-    const initialMessages: Message[] = [{ role: "user", content: `请开始竞品研究${urlContext}` }]
+  const handleGenerate = useCallback(async () => {
+    let urlContext = ""
+    if (urls.length > 0) {
+      setFetchingUrls(true)
+      const results = await Promise.allSettled(
+        urls.map(url => api.fetchUrlContent(url))
+      )
+      setFetchingUrls(false)
+      urlContext = urls
+        .map((url, i) => {
+          const r = results[i]
+          return r.status === "fulfilled"
+            ? `### 来源：${url}\n${r.value}`
+            : `### 来源：${url}\n（抓取失败，请基于已知信息分析）`
+        })
+        .join("\n\n---\n\n")
+    }
+
+    const promptContent = urlContext
+      ? `请开始竞品研究\n\n以下是参考网页的实际内容，请基于真实内容进行分析：\n\n${urlContext}`
+      : `请开始竞品研究`
+    const initialMessages: Message[] = [{ role: "user", content: promptContent }]
     setMessages(initialMessages)
     startedRef.current = true
     start(initialMessages, { excludedContext })
   }, [start, excludedContext, urls])
 
-  const handleRestart = useCallback(() => {
+  const handleRestart = useCallback(async () => {
     reset()
     setExistingContent(null)
     setChatHistory([])
-    const urlContext = urls.length > 0
-      ? `\n\n参考网址：\n${urls.map(u => `- ${u}`).join("\n")}`
-      : ""
+
+    let urlContext = ""
+    if (urls.length > 0) {
+      setFetchingUrls(true)
+      const results = await Promise.allSettled(
+        urls.map(url => api.fetchUrlContent(url))
+      )
+      setFetchingUrls(false)
+      urlContext = urls
+        .map((url, i) => {
+          const r = results[i]
+          return r.status === "fulfilled"
+            ? `### 来源：${url}\n${r.value}`
+            : `### 来源：${url}\n（抓取失败，请基于已知信息分析）`
+        })
+        .join("\n\n---\n\n")
+    }
+
+    const promptContent = urlContext
+      ? `请开始竞品研究\n\n以下是参考网页的实际内容，请基于真实内容进行分析：\n\n${urlContext}`
+      : `请开始竞品研究`
     const initialMessages: Message[] = [
-      { role: "user", content: `请开始竞品研究${urlContext}` },
+      { role: "user", content: promptContent },
     ]
     setMessages(initialMessages)
     startedRef.current = true
@@ -269,9 +306,9 @@ export function ResearchPage() {
   // Empty state — no file, no autostart, not currently streaming
   if (!loading && !existingContent && !text && !isStreaming && !error) {
     return (
-      <div className="mx-auto w-full max-w-[720px]">
+      <div className="layout-focus page-enter">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-base font-semibold text-[var(--text-primary)]">竞品研究</h1>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">竞品研究</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
         {isApiMode ? (
@@ -353,6 +390,12 @@ export function ResearchPage() {
               ))}
             </div>
           )}
+          {fetchingUrls && (
+            <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] mt-1">
+              <Loader2 className="size-3 animate-spin" />
+              正在抓取参考网页…
+            </div>
+          )}
         </div>
       </div>
     )
@@ -362,10 +405,10 @@ export function ResearchPage() {
   const canAdvance = hasContent && !isStreaming && !advancing
 
   return (
-    <div className="mx-auto w-full max-w-[720px]">
+    <div className="layout-focus page-enter">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-base font-semibold text-[var(--text-primary)]">竞品研究</h1>
+        <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">竞品研究</h1>
         <Button
           variant="ghost"
           size="sm"

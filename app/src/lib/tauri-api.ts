@@ -172,6 +172,9 @@ export const api = {
   openFile: (path: string) => invoke<void>("open_file", { path }),
   writeFile: (path: string, content: string) => invoke<void>("write_file", { path, content }),
 
+  // URL fetch
+  fetchUrlContent: (url: string) => invoke<string>("fetch_url_content", { url }),
+
   // Environment
   checkEnv: () => invoke<DepStatus[]>("check_env"),
   installDep: (dep: string, useMirror: boolean) => invoke<void>("install_dep", { args: { dep, useMirror } }),
