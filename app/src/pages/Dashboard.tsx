@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, CheckCircle2, RotateCcw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
@@ -117,6 +117,18 @@ export function DashboardPage() {
       console.error("Failed to delete project:", err)
     }
   }
+
+  const handleToggleStatus = useCallback(async (e: React.MouseEvent, project: DashboardProject) => {
+    e.stopPropagation()
+    const newStatus = project.status === 'completed' ? 'active' : 'completed'
+    try {
+      await api.setProjectStatus(project.id, newStatus)
+      setProjects((prev) => prev.map((p) => p.id === project.id ? { ...p, status: newStatus } : p))
+      window.dispatchEvent(new Event("projects-updated"))
+    } catch (err) {
+      console.error("Failed to update project status:", err)
+    }
+  }, [])
 
   const handleCreated = (project: { id: string; name: string }) => {
     setDialogOpen(false)
@@ -277,16 +289,32 @@ export function DashboardPage() {
                   animation: `fadeInUp 0.4s cubic-bezier(0.16,1,0.3,1) ${index * 0.08}s both`,
                 }}
               >
-                {/* Delete button — top-right, revealed on card hover */}
-                <button
-                  onClick={(e) => handleDelete(e, project.id)}
-                  className="absolute top-3 right-3 flex size-6 items-center justify-center rounded-md
-                             text-[var(--text-tertiary)] opacity-0 group-hover/card:opacity-100
-                             hover:text-red-500 hover:bg-red-50 transition-all duration-150"
-                  title="删除项目"
-                >
-                  <Trash2 className="size-3.5" strokeWidth={1.75} />
-                </button>
+                {/* Card action buttons — top-right, revealed on hover */}
+                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity duration-150">
+                  <button
+                    onClick={(e) => handleToggleStatus(e, project)}
+                    className={cn(
+                      "flex size-6 items-center justify-center rounded-md transition-all duration-150",
+                      project.status === 'completed'
+                        ? "text-[var(--success)] hover:bg-[var(--success)]/10"
+                        : "text-[var(--text-tertiary)] hover:text-[var(--success)] hover:bg-[var(--success)]/10"
+                    )}
+                    title={project.status === 'completed' ? '重新激活' : '标记完成'}
+                  >
+                    {project.status === 'completed'
+                      ? <RotateCcw className="size-3.5" strokeWidth={1.75} />
+                      : <CheckCircle2 className="size-3.5" strokeWidth={1.75} />
+                    }
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(e, project.id)}
+                    className="flex size-6 items-center justify-center rounded-md
+                               text-[var(--text-tertiary)] hover:text-red-500 hover:bg-red-50 transition-all duration-150"
+                    title="删除项目"
+                  >
+                    <Trash2 className="size-3.5" strokeWidth={1.75} />
+                  </button>
+                </div>
 
                 {/* Project name */}
                 <div className="flex items-start gap-2 pr-6 mb-3">
