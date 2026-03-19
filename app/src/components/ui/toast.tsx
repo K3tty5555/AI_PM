@@ -102,6 +102,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
       {/* Toast container — fixed top-right */}
       <div
+        role="region"
+        aria-live="polite"
+        aria-label="通知"
         className="pointer-events-none fixed z-60 flex flex-col gap-2"
         style={{ top: 56, right: 24 }}
       >

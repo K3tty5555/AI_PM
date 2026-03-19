@@ -585,7 +585,7 @@ export function DashboardPage() {
                   <button
                     onClick={(e) => handleDelete(e, project.id)}
                     className="flex size-6 items-center justify-center rounded-md
-                               text-[var(--text-tertiary)] hover:text-red-500 hover:bg-red-50 transition-all duration-150"
+                               text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10 transition-all duration-150"
                     title="删除项目"
                   >
                     <Trash2 className="size-3.5" strokeWidth={1.75} />
