@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { Settings } from "lucide-react"
+import { Settings, PanelLeftClose, PanelLeftOpen, Home } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ActivityBarProps {
@@ -25,8 +25,9 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
         style={{ WebkitAppRegion: "drag" } as CSSProperties}
       />
 
-      {/* Logo / sidebar toggle */}
-      <div className="flex flex-1 flex-col items-center pt-2">
+      {/* Top icons */}
+      <div className="flex flex-1 flex-col items-center gap-1 pt-2">
+        {/* Sidebar toggle */}
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -34,9 +35,26 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
           style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
           className="flex size-8 items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-colors duration-150 active:scale-95"
         >
-          <span className="flex size-[26px] items-center justify-center rounded-md border border-[var(--accent-color)]/50 text-[10px] font-semibold text-[var(--accent-color)] leading-none select-none">
-            AI
-          </span>
+          {sidebarOpen
+            ? <PanelLeftClose className="size-[15px]" strokeWidth={1.75} />
+            : <PanelLeftOpen className="size-[15px]" strokeWidth={1.75} />
+          }
+        </button>
+
+        {/* Home — back to project list */}
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          title="项目总览"
+          style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
+          className={cn(
+            "flex size-8 items-center justify-center rounded-lg transition-colors duration-150",
+            location.pathname === "/"
+              ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
+              : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
+          )}
+        >
+          <Home className="size-[15px]" strokeWidth={1.75} />
         </button>
       </div>
 
