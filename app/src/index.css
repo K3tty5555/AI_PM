@@ -129,6 +129,7 @@
   --bg-activity-bar: rgba(209, 224, 248, 0.96);
   --success: #16A34A;
   --success-light: rgba(22, 163, 74, 0.08);
+  --warning: #F59E0B;
   --text-primary: #0F172A;
   --text-secondary: #64748B;
   --text-tertiary: #94A3B8;
@@ -222,6 +223,7 @@ html.theme-dark {
   --bg-activity-bar: rgba(12, 18, 30, 0.96);
   --success: #4ADE80;
   --success-light: rgba(74, 222, 128, 0.10);
+  --warning: #FBBF24;
   --text-primary: oklch(94% 0.005 250);
   --text-secondary: oklch(62% 0.01 250);
   --text-tertiary: oklch(42% 0.01 250);
