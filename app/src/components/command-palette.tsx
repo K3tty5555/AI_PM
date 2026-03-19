@@ -15,16 +15,19 @@ import {
   Mic,
   Palette,
   Search,
+  BookOpen,
+  FileText,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { api } from "@/lib/tauri-api"
-import type { ProjectSummary } from "@/lib/tauri-api"
+import type { ProjectSummary, KnowledgeEntry } from "@/lib/tauri-api"
 
 /* ─── Types ──────────────────────────────────────────────── */
 
 interface CommandItem {
   id: string
   label: string
+  subtitle?: string
   icon: LucideIcon
   action: () => void
   shortcut?: string
@@ -40,7 +43,63 @@ interface CommandPaletteProps {
 
 /* ─── Group ordering ─────────────────────────────────────── */
 
-const GROUP_ORDER = ["导航", "操作", "视图", "项目", "工具"]
+const GROUP_ORDER = ["导航", "操作", "视图", "项目", "工具", "知识库"]
+
+/* ─── Fuzzy matching helper ──────────────────────────────── */
+
+/** Check if `query` chars appear in `text` in order (case-insensitive). */
+function fuzzyMatch(text: string, query: string): boolean {
+  const t = text.toLowerCase()
+  const q = query.toLowerCase()
+  // Fast path: substring match
+  if (t.includes(q)) return true
+  // Subsequence match for short queries
+  let ti = 0
+  for (let qi = 0; qi < q.length; qi++) {
+    const found = t.indexOf(q[qi], ti)
+    if (found === -1) return false
+    ti = found + 1
+  }
+  return true
+}
+
+/** Highlight matching characters in a label. Returns React nodes. */
+function highlightMatch(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text
+  const q = query.toLowerCase()
+  const t = text.toLowerCase()
+
+  // Try substring highlight first
+  const subIdx = t.indexOf(q)
+  if (subIdx !== -1) {
+    return (
+      <>
+        {text.slice(0, subIdx)}
+        <span className="text-[var(--accent-color)] font-medium">
+          {text.slice(subIdx, subIdx + q.length)}
+        </span>
+        {text.slice(subIdx + q.length)}
+      </>
+    )
+  }
+
+  // Subsequence highlight
+  const chars: React.ReactNode[] = []
+  let qi = 0
+  for (let i = 0; i < text.length; i++) {
+    if (qi < q.length && t[i] === q[qi]) {
+      chars.push(
+        <span key={i} className="text-[var(--accent-color)] font-medium">
+          {text[i]}
+        </span>
+      )
+      qi++
+    } else {
+      chars.push(text[i])
+    }
+  }
+  return <>{chars}</>
+}
 
 /* ─── Component ──────────────────────────────────────────── */
 
@@ -54,9 +113,12 @@ function CommandPalette({
   const [query, setQuery] = useState("")
   const [activeIndex, setActiveIndex] = useState(0)
   const [projects, setProjects] = useState<ProjectSummary[]>([])
+  const [knowledgeResults, setKnowledgeResults] = useState<KnowledgeEntry[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load projects when palette opens
   useEffect(() => {
@@ -66,17 +128,55 @@ function CommandPalette({
       .catch((err) => console.error("[CommandPalette] Failed to load projects:", err))
   }, [open])
 
-  // Reset state on open
+  // Reset state on open/close
   useEffect(() => {
     if (open) {
       setQuery("")
       setActiveIndex(0)
+      setKnowledgeResults([])
+      setIsSearching(false)
       const timer = setTimeout(() => inputRef.current?.focus(), 50)
       return () => clearTimeout(timer)
     }
   }, [open])
 
-  // Build command list
+  // Debounced knowledge search when query has 2+ chars
+  useEffect(() => {
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = null
+    }
+
+    const trimmed = query.trim()
+    if (trimmed.length < 2) {
+      setKnowledgeResults([])
+      setIsSearching(false)
+      return
+    }
+
+    setIsSearching(true)
+    searchTimerRef.current = setTimeout(() => {
+      api.searchKnowledge(trimmed)
+        .then((results) => {
+          setKnowledgeResults(results.slice(0, 5)) // Limit to 5 results
+          setIsSearching(false)
+        })
+        .catch((err) => {
+          console.error("[CommandPalette] Knowledge search failed:", err)
+          setKnowledgeResults([])
+          setIsSearching(false)
+        })
+    }, 200)
+
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current)
+        searchTimerRef.current = null
+      }
+    }
+  }, [query])
+
+  // Build command list (static commands + projects + tools)
   const commands: CommandItem[] = useMemo(() => {
     const openNewProject = () => {
       onClose()
@@ -99,6 +199,7 @@ function CommandPalette({
     const projectCommands: CommandItem[] = projects.map((p) => ({
       id: `proj-${p.id}`,
       label: p.name,
+      subtitle: p.description || undefined,
       icon: FolderOpen,
       action: nav(`/project/${p.id}/requirement`),
       group: "项目",
@@ -117,12 +218,36 @@ function CommandPalette({
     return [...staticCommands, ...projectCommands, ...toolCommands]
   }, [projects, navigate, onClose, onToggleSidebar, onCycleTheme])
 
-  // Filter by query
-  const filtered = useMemo(() => {
+  // Filter commands by query (fuzzy matching on label + subtitle)
+  const filteredCommands = useMemo(() => {
     if (!query.trim()) return commands
-    const q = query.toLowerCase()
-    return commands.filter((cmd) => cmd.label.toLowerCase().includes(q))
+    const q = query.trim()
+    return commands.filter((cmd) =>
+      fuzzyMatch(cmd.label, q) || (cmd.subtitle && fuzzyMatch(cmd.subtitle, q))
+    )
   }, [commands, query])
+
+  // Build knowledge command items from search results
+  const knowledgeCommands: CommandItem[] = useMemo(() => {
+    if (knowledgeResults.length === 0) return []
+
+    return knowledgeResults.map((entry) => ({
+      id: `kb-${entry.id}`,
+      label: entry.title,
+      subtitle: entry.category,
+      icon: getCategoryIcon(entry.category),
+      action: () => {
+        onClose()
+        navigate("/tools/knowledge")
+      },
+      group: "知识库",
+    }))
+  }, [knowledgeResults, navigate, onClose])
+
+  // Merge filtered commands + knowledge results
+  const filtered = useMemo(() => {
+    return [...filteredCommands, ...knowledgeCommands]
+  }, [filteredCommands, knowledgeCommands])
 
   // Group filtered results
   const grouped = useMemo(() => {
@@ -156,7 +281,7 @@ function CommandPalette({
   // Clamp active index when filtered results change
   useEffect(() => {
     setActiveIndex(0)
-  }, [query])
+  }, [query, knowledgeResults])
 
   // Scroll active item into view
   useEffect(() => {
@@ -192,6 +317,7 @@ function CommandPalette({
 
   if (!open) return null
 
+  const trimmedQuery = query.trim()
   let flatIndex = -1
 
   return (
@@ -216,9 +342,12 @@ function CommandPalette({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索命令..."
+            placeholder="输入命令或搜索项目..."
             className="flex-1 bg-transparent text-base text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
           />
+          {isSearching && (
+            <div className="shrink-0 h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent-color)]" />
+          )}
         </div>
 
         {/* Divider */}
@@ -227,15 +356,30 @@ function CommandPalette({
         {/* Results */}
         <div ref={listRef} className="max-h-[400px] overflow-y-auto py-2">
           {flatItems.length === 0 ? (
-            <div className="flex items-center justify-center py-8 text-sm text-[var(--text-tertiary)]">
-              无匹配结果
+            <div className="flex flex-col items-center justify-center gap-2 py-10">
+              <Search size={32} className="text-[var(--border)]" />
+              <p className="text-sm text-[var(--text-tertiary)]">
+                {trimmedQuery
+                  ? "没有匹配的命令或项目"
+                  : "输入关键词搜索命令、项目和知识库"}
+              </p>
+              {trimmedQuery && trimmedQuery.length < 2 && (
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  输入两个字以上可搜索知识库
+                </p>
+              )}
             </div>
           ) : (
             grouped.map((group) => (
               <div key={group.group}>
                 {/* Group header */}
-                <div className="px-4 pb-1 pt-3 text-[11px] font-medium uppercase text-[var(--text-tertiary)]">
-                  {group.group}
+                <div className="flex items-center gap-2 px-4 pb-1 pt-3 text-[11px] font-medium text-[var(--text-tertiary)]">
+                  <span>{group.group}</span>
+                  {trimmedQuery && (
+                    <span className="rounded-full bg-[var(--secondary)] px-1.5 py-px text-[10px]">
+                      {group.items.length}
+                    </span>
+                  )}
                 </div>
                 {group.items.map((item) => {
                   flatIndex++
@@ -255,9 +399,18 @@ function CommandPalette({
                       }}
                     >
                       <Icon size={18} className="shrink-0 text-[var(--text-secondary)]" />
-                      <span className="flex-1 text-sm text-[var(--text-primary)]">
-                        {item.label}
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm text-[var(--text-primary)]">
+                          {trimmedQuery
+                            ? highlightMatch(item.label, trimmedQuery)
+                            : item.label}
+                        </span>
+                        {item.subtitle && (
+                          <span className="ml-2 text-xs text-[var(--text-tertiary)] truncate">
+                            {item.subtitle}
+                          </span>
+                        )}
+                      </div>
                       {item.shortcut && (
                         <kbd className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--background)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-tertiary)]">
                           {item.shortcut}
@@ -286,10 +439,30 @@ function CommandPalette({
             <kbd className="rounded border border-[var(--border)] bg-[var(--background)] px-1 py-px text-[10px]">Esc</kbd>
             关闭
           </span>
+          {trimmedQuery && flatItems.length > 0 && (
+            <span className="ml-auto">
+              {flatItems.length} 个结果
+            </span>
+          )}
         </div>
       </div>
     </div>
   )
+}
+
+/* ─── Helpers ────────────────────────────────────────────── */
+
+/** Map knowledge category to an icon. */
+function getCategoryIcon(category: string): LucideIcon {
+  const map: Record<string, LucideIcon> = {
+    patterns: BookOpen,
+    decisions: FileText,
+    pitfalls: FileText,
+    metrics: BarChart2,
+    playbooks: BookOpen,
+    insights: BookOpen,
+  }
+  return map[category] || BookOpen
 }
 
 export { CommandPalette }
