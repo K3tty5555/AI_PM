@@ -170,7 +170,7 @@ export function PrdPage() {
     Promise.all([api.listPrdStyles(), api.getActivePrdStyle()]).then(([styles, active]) => {
       setPrdStyles(styles)
       setSelectedStyle(active ?? "")
-    }).catch(() => {})
+    }).catch((err) => console.error("[Prd]", err))
   }, [])
 
   // Load project name for knowledge recommendation
@@ -178,7 +178,7 @@ export function PrdPage() {
     if (!projectId) return
     api.getProject(projectId).then((project) => {
       if (project) setProjectName(project.name)
-    }).catch(() => {})
+    }).catch((err) => console.error("[Prd]", err))
   }, [projectId])
 
   // Fetch relevant knowledge for empty state recommendation
@@ -186,7 +186,7 @@ export function PrdPage() {
     if (!projectName || existingMarkdown) return
     api.searchKnowledge(projectName).then((entries) => {
       if (entries.length > 0) setRelevantKnowledge(entries.slice(0, 3))
-    }).catch(() => {})
+    }).catch((err) => console.error("[Prd]", err))
   }, [projectName, existingMarkdown])
 
   // -------------------------------------------------------------------------
@@ -201,7 +201,7 @@ export function PrdPage() {
       // Check for review report (non-blocking)
       api.readProjectFile(projectId, "07-review-report.md").then((r) => {
         if (!cancelled && r) setReviewContent(r)
-      }).catch(() => {})
+      }).catch((err) => console.error("[Prd]", err))
 
       try {
         const content = await api.readProjectFile(projectId, PRD_FILE)
