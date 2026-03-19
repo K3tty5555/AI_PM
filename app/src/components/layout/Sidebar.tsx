@@ -35,6 +35,9 @@ interface SidebarProps {
   projectPhases?: SidebarPhase[]
   activePhase?: string  // kept for caller convenience; phase highlight driven by phase.status
   onPhaseClick?: (phaseId: string) => void
+  // Project status
+  projectStatus?: 'active' | 'completed'
+  onStatusChange?: (status: 'active' | 'completed') => void
   // Theme
   theme: "light" | "dark"
   onToggleTheme: () => void
@@ -107,6 +110,8 @@ function Sidebar({
   projectPhases,
   activePhase: _activePhase,
   onPhaseClick,
+  projectStatus,
+  onStatusChange,
   theme,
   onToggleTheme,
 }: SidebarProps) {
@@ -234,6 +239,29 @@ function Sidebar({
                 </li>
               ))}
             </ul>
+            {onStatusChange && (
+              <>
+                <div className="mx-3 mt-2 h-px bg-[var(--border)]" />
+                <button
+                  type="button"
+                  onClick={() => onStatusChange(projectStatus === 'completed' ? 'active' : 'completed')}
+                  className={cn(
+                    "mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs",
+                    "transition-colors duration-[var(--dur-base)]",
+                    projectStatus === 'completed'
+                      ? "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
+                      : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-secondary)]"
+                  )}
+                >
+                  <CheckCircle2
+                    className="size-3.5 shrink-0"
+                    style={{ color: projectStatus === 'completed' ? 'var(--success)' : 'var(--text-tertiary)' }}
+                    strokeWidth={1.75}
+                  />
+                  {projectStatus === 'completed' ? '重新激活项目' : '完成项目'}
+                </button>
+              </>
+            )}
           </div>
         )}
 
