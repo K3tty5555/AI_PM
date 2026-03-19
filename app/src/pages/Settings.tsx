@@ -6,8 +6,8 @@ import { open as openUrl } from "@tauri-apps/plugin-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
-import { api } from "@/lib/tauri-api"
-import type { LegacyProjectScan, KnowledgeCategoryScan, PrdStyleScan, UiSpecScan, MigrateResult } from "@/lib/tauri-api"
+import { api, checkUpdate, downloadAndInstallUpdate } from "@/lib/tauri-api"
+import type { LegacyProjectScan, KnowledgeCategoryScan, PrdStyleScan, UiSpecScan, MigrateResult, UpdateInfo } from "@/lib/tauri-api"
 import { EnvChecker } from "@/components/env-checker"
 
 interface ConfigState {
@@ -91,6 +91,44 @@ export function SettingsPage() {
     ok: boolean
     message: string
   } | null>(null)
+
+  // Manual update check state
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [manualUpdateInfo, setManualUpdateInfo] = useState<UpdateInfo | null>(null)
+  const [manualUpdateState, setManualUpdateState] = useState<
+    "idle" | "available" | "downloading" | "ready" | "none" | "error"
+  >("idle")
+
+  const handleCheckUpdate = async () => {
+    setCheckingUpdate(true)
+    setManualUpdateState("idle")
+    setManualUpdateInfo(null)
+    try {
+      const info = await checkUpdate()
+      if (info.available) {
+        setManualUpdateInfo(info)
+        setManualUpdateState("available")
+      } else {
+        setManualUpdateState("none")
+      }
+    } catch (err) {
+      console.error("[Settings] check update failed", err)
+      setManualUpdateState("error")
+    } finally {
+      setCheckingUpdate(false)
+    }
+  }
+
+  const handleManualDownload = async () => {
+    setManualUpdateState("downloading")
+    try {
+      await downloadAndInstallUpdate()
+      setManualUpdateState("ready")
+    } catch (err) {
+      console.error("[Settings] download update failed", err)
+      setManualUpdateState("error")
+    }
+  }
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -1066,7 +1104,7 @@ export function SettingsPage() {
           <CardTitle>关于</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <p className="text-sm text-[var(--text-primary)]">
               AI PM Desktop v0.1.0
             </p>
@@ -1081,6 +1119,54 @@ export function SettingsPage() {
               <ExternalLink className="size-3.5" strokeWidth={1.75} />
               github.com/K3tty5555/AI_PM
             </button>
+
+            {/* Manual update check */}
+            <div className="mt-1 flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleCheckUpdate}
+                  disabled={checkingUpdate || manualUpdateState === "downloading"}
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-50"
+                >
+                  {checkingUpdate ? "检查中…" : "检查更新"}
+                </button>
+
+                {manualUpdateState === "none" && (
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    已是最新版本
+                  </span>
+                )}
+                {manualUpdateState === "available" && (
+                  <span className="text-sm text-[var(--text-primary)]">
+                    发现新版本 v{manualUpdateInfo?.version}
+                  </span>
+                )}
+                {manualUpdateState === "downloading" && (
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    正在下载…
+                  </span>
+                )}
+                {manualUpdateState === "ready" && (
+                  <span className="text-sm text-[var(--accent-color)]">
+                    ✅ 已下载，下次启动自动安装
+                  </span>
+                )}
+                {manualUpdateState === "error" && (
+                  <span className="text-sm text-red-500">检查失败，请重试</span>
+                )}
+              </div>
+
+              {manualUpdateState === "available" && (
+                <button
+                  type="button"
+                  onClick={handleManualDownload}
+                  className="w-fit rounded-lg bg-[var(--accent-color)] px-3 py-1.5 text-sm text-white hover:opacity-90"
+                >
+                  下载并安装
+                </button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
