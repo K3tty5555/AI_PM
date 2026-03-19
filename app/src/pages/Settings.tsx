@@ -500,10 +500,12 @@ export function SettingsPage() {
                           size="sm"
                           onClick={handleTestCli}
                           disabled={cliChecking}
-                          className="h-7 gap-1.5 px-2 text-xs shrink-0 whitespace-nowrap"
+                          className="h-7 px-2 text-xs shrink-0 whitespace-nowrap"
                         >
-                          {cliChecking && <Loader2 className="size-3 animate-spin" />}
-                          {cliChecking ? "检测中…" : "检测 claude 命令"}
+                          <span className="inline-flex size-3 items-center justify-center">
+                            {cliChecking && <Loader2 className="size-3 animate-spin" />}
+                          </span>
+                          检测 claude 命令
                         </Button>
                         {cliStatus && (
                           <span className={`flex items-center gap-1 text-xs ${cliStatus.ok ? "text-[var(--green)]" : "text-[var(--destructive)]"}`}>
