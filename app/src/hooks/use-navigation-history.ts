@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 
 /**
@@ -19,6 +19,10 @@ export function useNavigationHistory() {
   // "push" = normal navigation, "back" / "forward" = our own goBack / goForward
   const navActionRef = useRef<"push" | "back" | "forward">("push")
   const currentKeyRef = useRef<string>("")
+
+  // State to trigger re-renders when stacks change
+  const [stackVersion, setStackVersion] = useState(0)
+  const bumpVersion = useCallback(() => setStackVersion((v) => v + 1), [])
 
   useEffect(() => {
     const key = location.key ?? location.pathname
@@ -47,10 +51,12 @@ export function useNavigationHistory() {
     currentKeyRef.current = key
     // Reset action for next navigation
     navActionRef.current = "push"
-  }, [location])
+    bumpVersion()
+  }, [location, bumpVersion])
 
-  const canGoBack = backStackRef.current.length > 0
-  const canGoForward = forwardStackRef.current.length > 0
+  // Derive from refs + stackVersion ensures re-render when stacks change
+  const canGoBack = stackVersion >= 0 && backStackRef.current.length > 0
+  const canGoForward = stackVersion >= 0 && forwardStackRef.current.length > 0
 
   const goBack = useCallback(() => {
     if (backStackRef.current.length === 0) return
