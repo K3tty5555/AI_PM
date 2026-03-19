@@ -6,8 +6,10 @@ import {
   Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone,
   Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette,
   CheckCircle2,
+  FolderOpen, Pencil, Trash2, ArrowRight, RefreshCw, FileText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ContextMenu, type ContextMenuItem } from "@/components/ui/context-menu"
 
 export interface SidebarProject {
   id: string
@@ -30,6 +32,8 @@ interface SidebarProps {
   projects: SidebarProject[]
   activeProjectId?: string
   onNewProject: () => void
+  onDeleteProject?: (id: string) => void
+  onRenameProject?: (id: string) => void
   // Project context
   projectName?: string
   projectPhases?: SidebarPhase[]
@@ -106,6 +110,8 @@ function Sidebar({
   projects,
   activeProjectId,
   onNewProject,
+  onDeleteProject,
+  onRenameProject,
   projectName,
   projectPhases,
   activePhase: _activePhase,
@@ -168,8 +174,15 @@ function Sidebar({
               阶段
             </p>
             <ul className="flex flex-col gap-0.5">
-              {projectPhases!.map((phase) => (
+              {projectPhases!.map((phase) => {
+                const phaseCtxItems: ContextMenuItem[] = [
+                  { label: "跳转到此阶段", icon: ArrowRight, action: () => onPhaseClick?.(phase.id) },
+                  { label: "重新生成", icon: RefreshCw, action: () => onPhaseClick?.(phase.id), hidden: phase.status !== "completed" },
+                  { label: "查看输出文件", icon: FileText, action: () => onPhaseClick?.(phase.id), hidden: phase.status !== "completed" },
+                ]
+                return (
                 <li key={phase.id}>
+                  <ContextMenu items={phaseCtxItems}>
                   <button
                     type="button"
                     onClick={() => onPhaseClick?.(phase.id)}
@@ -202,8 +215,10 @@ function Sidebar({
                       {phase.label}
                     </span>
                   </button>
+                  </ContextMenu>
                 </li>
-              ))}
+                )
+              })}
             </ul>
             {onStatusChange && (
               <>
@@ -239,8 +254,14 @@ function Sidebar({
               {projects.map((project) => {
                 const active = isProjectActive(project.id)
                 const done = project.status === 'completed' || project.completedCount >= project.totalPhases
+                const projectCtxItems: ContextMenuItem[] = [
+                  { label: "打开项目", icon: FolderOpen, action: () => navigate(`/project/${project.id}/${project.currentPhase}`) },
+                  { label: "重命名", icon: Pencil, action: () => onRenameProject?.(project.id), hidden: !onRenameProject, separator: true },
+                  { label: "删除", icon: Trash2, action: () => onDeleteProject?.(project.id), variant: "destructive", hidden: !onDeleteProject },
+                ]
                 return (
                   <li key={project.id}>
+                    <ContextMenu items={projectCtxItems}>
                     <button
                       type="button"
                       onClick={() => navigate(`/project/${project.id}/${project.currentPhase}`)}
@@ -271,6 +292,7 @@ function Sidebar({
                         </p>
                       </div>
                     </button>
+                    </ContextMenu>
                   </li>
                 )
               })}
