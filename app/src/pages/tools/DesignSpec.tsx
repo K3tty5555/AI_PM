@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
-import { Pencil } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api, type UiSpecEntry, type UiSpecContent } from "@/lib/tauri-api"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -88,6 +88,10 @@ export function ToolDesignSpecPage() {
   const [renameError, setRenameError] = useState<string | null>(null)
   const isConfirmingRef = useRef(false)
 
+  // Delete state
+  const [deletingSpec, setDeletingSpec] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
   const startRename = useCallback((name: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setEditingSpec(name)
@@ -140,6 +144,21 @@ export function ToolDesignSpecPage() {
       setRenamingSpec(null)
     }
   }, [renameInput, cancelRename])
+
+  const handleDelete = useCallback(async (name: string) => {
+    setDeletingSpec(name)
+    try {
+      await api.deleteUiSpec(name)
+      setSpecs(prev => prev.filter(s => s.name !== name))
+      setExpandedSpecs(prev => { const n = new Set(prev); n.delete(name); return n })
+      setSpecContents(prev => { const n = { ...prev }; delete n[name]; return n })
+    } catch (err) {
+      console.error("[DesignSpec] delete failed", err)
+    } finally {
+      setDeletingSpec(null)
+      setDeleteConfirm(null)
+    }
+  }, [])
 
   const load = useCallback(async () => {
     try {
@@ -269,6 +288,15 @@ export function ToolDesignSpecPage() {
                         title="重命名"
                       >
                         <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirm(spec.name) }}
+                        title="删除规范"
+                        disabled={deletingSpec === spec.name}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center rounded p-1 text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10"
+                      >
+                        <Trash2 className="h-3 w-3" />
                       </button>
                     </>
                   )}
@@ -438,6 +466,27 @@ export function ToolDesignSpecPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setDeleteConfirm(null)}>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-xl w-80" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-medium text-[var(--text-primary)]">删除「{deleteConfirm}」？</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">规范目录将被永久删除，无法恢复。</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setDeleteConfirm(null)} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--hover-bg)]">
+                取消
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                disabled={deletingSpec === deleteConfirm}
+                className="rounded-lg bg-[var(--destructive)] px-3 py-1.5 text-xs text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {deletingSpec === deleteConfirm ? "删除中…" : "确认删除"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
