@@ -1,14 +1,17 @@
 import type { CSSProperties } from "react"
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Outlet, useNavigate, useParams } from "react-router-dom"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { SidebarShell } from "@/components/layout/SidebarShell"
 import { ActivityBar } from "@/components/layout/ActivityBar"
 import { CommandPalette } from "@/components/command-palette"
+import { Tooltip } from "@/components/ui/tooltip"
 import { checkUpdate, downloadAndInstallUpdate } from "@/lib/tauri-api"
 import type { UpdateInfo } from "@/lib/tauri-api"
 import { useTheme } from "@/hooks/use-theme"
 import { useHotkeys } from "@/hooks/use-hotkeys"
 import type { HotkeyDef } from "@/hooks/use-hotkeys"
+import { useNavigationHistory } from "@/hooks/use-navigation-history"
 
 export type { ThemePreference, ResolvedTheme } from "@/hooks/use-theme"
 
@@ -22,6 +25,7 @@ const PHASE_ORDER = [
 export function AppLayout() {
   const navigate = useNavigate()
   const { id: projectId } = useParams()
+  const { canGoBack, canGoForward, goBack, goForward } = useNavigationHistory()
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const stored = localStorage.getItem("sidebar-open")
@@ -82,8 +86,8 @@ export function AppLayout() {
         { key: "b", meta: true, handler: toggleSidebar, description: "切换侧边栏", group: "视图" },
         { key: ",", meta: true, handler: () => { closeCommandPalette(); navigate("/settings") }, description: "打开设置", group: "导航" },
         { key: "d", meta: true, handler: () => { closeCommandPalette(); cycleTheme() }, description: "切换主题", group: "视图" },
-        { key: "[", meta: true, handler: () => navigate(-1), description: "后退", group: "导航" },
-        { key: "]", meta: true, handler: () => navigate(1), description: "前进", group: "导航" },
+        { key: "[", meta: true, handler: goBack, description: "后退", group: "导航" },
+        { key: "]", meta: true, handler: goForward, description: "前进", group: "导航" },
         { key: "Escape", handler: closeCommandPalette, description: "关闭命令面板", group: "操作" },
       ]
 
@@ -102,7 +106,7 @@ export function AppLayout() {
 
       return base
     },
-    [toggleSidebar, cycleTheme, navigate, closeCommandPalette, projectId]
+    [toggleSidebar, cycleTheme, navigate, closeCommandPalette, projectId, goBack, goForward]
   )
 
   useHotkeys(hotkeys)
@@ -143,6 +147,30 @@ export function AppLayout() {
           transition: "margin-left 250ms cubic-bezier(0.4, 0, 0.2, 1)",
         } as CSSProperties}
       >
+        {/* Back / Forward navigation */}
+        <div className="flex items-center gap-1 pt-2 pb-1 px-1">
+          <Tooltip content="后退" shortcut="⌘[" side="bottom">
+            <button
+              onClick={goBack}
+              disabled={!canGoBack}
+              className="flex size-6 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--text-tertiary)]"
+              aria-label="后退"
+            >
+              <ChevronLeft className="size-4" strokeWidth={1.75} />
+            </button>
+          </Tooltip>
+          <Tooltip content="前进" shortcut="⌘]" side="bottom">
+            <button
+              onClick={goForward}
+              disabled={!canGoForward}
+              className="flex size-6 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--text-tertiary)]"
+              aria-label="前进"
+            >
+              <ChevronRight className="size-4" strokeWidth={1.75} />
+            </button>
+          </Tooltip>
+        </div>
+
         {/* Update banner */}
         {showBanner && (
           <div
