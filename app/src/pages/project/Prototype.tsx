@@ -159,7 +159,7 @@ export function PrototypePage() {
 
   if (!loading && !existingHtml && !text && !isStreaming && !error) {
     return (
-      <div className="mx-auto w-full max-w-[900px]">
+      <div className="layout-canvas">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-base font-semibold text-[var(--text-primary)]">原型设计</h1>
         </div>
