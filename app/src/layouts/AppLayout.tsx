@@ -15,6 +15,7 @@ import { useNavigationHistory } from "@/hooks/use-navigation-history"
 import { useRecent } from "@/hooks/use-recent"
 import { useTabs } from "@/hooks/use-tabs"
 import { TabBar } from "@/components/layout/TabBar"
+import { listen } from "@tauri-apps/api/event"
 
 export type { ThemePreference, ResolvedTheme } from "@/hooks/use-theme"
 
@@ -273,6 +274,47 @@ export function AppLayout() {
   )
 
   useHotkeys(hotkeys)
+
+  // ─── Native menu bar event listener (Task 24) ────────────────────
+  useEffect(() => {
+    const unlisten = listen<string>("menu-action", (event) => {
+      switch (event.payload) {
+        case "new-project":
+          window.dispatchEvent(new Event("open-new-project-dialog"))
+          break
+        case "toggle-sidebar":
+          toggleSidebar()
+          break
+        case "toggle-theme":
+          cycleTheme()
+          break
+        case "command-palette":
+          setCmdOpen((prev) => !prev)
+          break
+        case "check-update":
+          navigate("/settings")
+          break
+        case "about":
+          // no-op for now
+          break
+      }
+    })
+    return () => {
+      unlisten.then((fn) => fn())
+    }
+  }, [toggleSidebar, cycleTheme, navigate])
+
+  // ─── Responsive: auto-collapse sidebar on small windows (Task 26) ─
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 900px)")
+    const handler = (e: MediaQueryListEvent) => {
+      if (e.matches) setSidebarOpen(false)
+    }
+    // Initial check
+    if (mql.matches) setSidebarOpen(false)
+    mql.addEventListener("change", handler)
+    return () => mql.removeEventListener("change", handler)
+  }, [])
 
   const showBanner =
     !bannerDismissed && bannerState !== "idle"

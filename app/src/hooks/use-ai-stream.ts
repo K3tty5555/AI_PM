@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { listen, type UnlistenFn } from "@tauri-apps/api/event"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 import { api } from "@/lib/tauri-api"
 
 interface StreamDonePayload {
@@ -200,6 +201,14 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           }
 
           bg.notify?.(patch)
+
+          // Dock bounce when AI completes and window is not focused (Task 25)
+          getCurrentWindow().isFocused().then((focused) => {
+            if (!focused) {
+              // UserAttentionType.Informational = 2 (bounces Dock icon once)
+              getCurrentWindow().requestUserAttention(2).catch(() => {})
+            }
+          }).catch(() => {})
 
           // Auto-mark phase as completed and notify sidebar to refresh
           api.updatePhase({ projectId, phase, status: "completed", outputFile: file })

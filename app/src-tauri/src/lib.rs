@@ -8,6 +8,11 @@ use state::AppState;
 use std::fs;
 use tauri::Manager;
 
+#[cfg(desktop)]
+use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+#[cfg(desktop)]
+use tauri::Emitter;
+
 fn resolve_app_paths() -> (String, String) {
     let home = dirs::home_dir().unwrap_or_default();
     let config_dir = home
@@ -210,6 +215,81 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_icon(tauri::include_image!("icons/128x128@2x.png"));
             }
+
+            // ── Native macOS menu bar ─────────────────────────────────────
+            #[cfg(desktop)]
+            {
+                let handle = app.handle();
+
+                // File menu
+                let file_menu = SubmenuBuilder::new(handle, "文件")
+                    .text("new-project", "新建项目")
+                    .separator()
+                    .close_window()
+                    .build()?;
+
+                // Edit menu (standard system items)
+                let edit_menu = SubmenuBuilder::new(handle, "编辑")
+                    .undo()
+                    .redo()
+                    .separator()
+                    .cut()
+                    .copy()
+                    .paste()
+                    .select_all()
+                    .build()?;
+
+                // View menu
+                let toggle_sidebar = MenuItemBuilder::with_id("toggle-sidebar", "切换侧边栏")
+                    .accelerator("CmdOrCtrl+B")
+                    .build(handle)?;
+                let toggle_theme = MenuItemBuilder::with_id("toggle-theme", "切换主题")
+                    .accelerator("CmdOrCtrl+D")
+                    .build(handle)?;
+                let command_palette = MenuItemBuilder::with_id("command-palette", "命令面板")
+                    .accelerator("CmdOrCtrl+K")
+                    .build(handle)?;
+
+                let view_menu = SubmenuBuilder::new(handle, "视图")
+                    .item(&toggle_sidebar)
+                    .item(&toggle_theme)
+                    .separator()
+                    .item(&command_palette)
+                    .build()?;
+
+                // Window menu
+                let window_menu = SubmenuBuilder::new(handle, "窗口")
+                    .minimize()
+                    .maximize()
+                    .separator()
+                    .close_window()
+                    .build()?;
+
+                // Help menu
+                let help_menu = SubmenuBuilder::new(handle, "帮助")
+                    .text("about", "关于 AI PM")
+                    .text("check-update", "检查更新")
+                    .build()?;
+
+                let menu = MenuBuilder::new(handle)
+                    .items(&[&file_menu, &edit_menu, &view_menu, &window_menu, &help_menu])
+                    .build()?;
+
+                app.set_menu(menu)?;
+
+                // Handle custom menu events → emit to frontend
+                app.on_menu_event(|app_handle, event| {
+                    let id = event.id().as_ref();
+                    match id {
+                        "new-project" | "toggle-sidebar" | "toggle-theme"
+                        | "command-palette" | "check-update" | "about" => {
+                            let _ = app_handle.emit("menu-action", id);
+                        }
+                        _ => {}
+                    }
+                });
+            }
+
             Ok(())
         })
         .run(tauri::generate_context!())
