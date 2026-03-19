@@ -15,6 +15,7 @@ export interface SidebarProject {
   currentPhase: string
   completedCount: number
   totalPhases: number
+  status?: 'active' | 'completed'
 }
 
 export interface SidebarPhase {
@@ -272,7 +273,7 @@ function Sidebar({
             <ul className="flex flex-col gap-0.5 mb-3 max-h-[240px] overflow-y-auto">
               {projects.map((project) => {
                 const active = isProjectActive(project.id)
-                const done = project.completedCount >= project.totalPhases
+                const done = project.status === 'completed' || project.completedCount >= project.totalPhases
                 return (
                   <li key={project.id}>
                     <button
