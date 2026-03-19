@@ -102,6 +102,17 @@ export interface UiSpecEntry {
   name: string
 }
 
+export interface PrdStyleContent {
+  config: string
+  profile: string | null
+  hasTemplate: boolean
+}
+
+export interface UiSpecContent {
+  readme: string | null
+  tokensRaw: string | null
+}
+
 export interface DepStatus {
   name: string
   label: string
@@ -205,6 +216,8 @@ export const api = {
     invoke<ImportResult>("import_legacy_ui_specs", { dir }),
   listUiSpecs: () => invoke<UiSpecEntry[]>("list_ui_specs"),
   addUiSpec: (dir: string) => invoke<string>("add_ui_spec", { dir }),
+  getPrdStyleContent: (name: string) => invoke<PrdStyleContent>("get_prd_style_content", { name }),
+  getUiSpecContent: (name: string) => invoke<UiSpecContent>("get_ui_spec_content", { name }),
 
   // PRD style active management
   setActivePrdStyle: (name: string) => invoke<void>("set_active_prd_style", { name }),
