@@ -123,6 +123,7 @@ pub fn list_prd_styles(state: State<'_, AppState>) -> Vec<PrdStyleEntry> {
 pub struct PrdStyleContent {
     pub config: String,
     pub profile: Option<String>,
+    pub sample: Option<String>,
     pub has_template: bool,
 }
 
@@ -138,8 +139,9 @@ pub fn get_prd_style_content(state: State<'_, AppState>, name: String) -> Result
     let config = fs::read_to_string(style_dir.join("style-config.json"))
         .map_err(|e| e.to_string())?;
     let profile = fs::read_to_string(style_dir.join("style-profile.json")).ok();
+    let sample = fs::read_to_string(style_dir.join("sample.md")).ok();
     let has_template = style_dir.join("feishu-template.md").exists();
-    Ok(PrdStyleContent { config, profile, has_template })
+    Ok(PrdStyleContent { config, profile, sample, has_template })
 }
 
 #[tauri::command]
