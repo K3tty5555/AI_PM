@@ -195,6 +195,8 @@ pub fn run() {
             commands::templates::add_ui_spec,
             commands::templates::set_active_prd_style,
             commands::templates::get_active_prd_style,
+            commands::templates::get_prd_style_content,
+            commands::templates::get_ui_spec_content,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]
