@@ -142,15 +142,14 @@ pub async fn get_knowledge_content(
     category: String,
     id: String,
 ) -> Result<String, String> {
-    // Prevent path traversal
-    if category.contains('/') || category.contains('.') || id.contains('/') {
+    // Prevent path traversal — consolidated guard (matches delete_knowledge entry pattern)
+    if category.contains('/') || category.contains('.') ||
+       id.contains('/') || id.contains('\\') || id.contains("..") {
         return Err("无效路径".to_string());
     }
+    // Validate category against whitelist
     if !CATEGORIES.contains(&category.as_str()) {
-        return Err(format!("Invalid category: {}", category));
-    }
-    if id.contains('\\') || id.contains("..") {
-        return Err("无效路径".to_string());
+        return Err("无效分类".to_string());
     }
     let path = state.templates_base()
         .join("knowledge-base")
