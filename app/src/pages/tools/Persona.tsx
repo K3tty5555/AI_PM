@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useToolStream } from "@/hooks/use-tool-stream"
-import { api, type PrdStyleEntry } from "@/lib/tauri-api"
+import { api, type PrdStyleEntry, type PrdStyleContent } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
 export function ToolPersonaPage() {
@@ -13,6 +13,9 @@ export function ToolPersonaPage() {
   const [stylesLoading, setStylesLoading] = useState(false)
   const [activeStyle, setActiveStyle] = useState<string | null>(null)
   const [settingActive, setSettingActive] = useState<string | null>(null)
+  const [expandedStyles, setExpandedStyles] = useState<Set<string>>(new Set())
+  const [styleContents, setStyleContents] = useState<Record<string, PrdStyleContent>>({})
+  const [loadingContent, setLoadingContent] = useState<Set<string>>(new Set())
 
   const loadStyles = useCallback(async () => {
     setStylesLoading(true)
@@ -38,6 +41,24 @@ export function ToolPersonaPage() {
       setSettingActive(null)
     }
   }, [])
+
+  const toggleExpand = useCallback(async (name: string) => {
+    setExpandedStyles(prev => {
+      const next = new Set(prev)
+      if (next.has(name)) { next.delete(name); return next }
+      next.add(name)
+      return next
+    })
+    if (!styleContents[name]) {
+      setLoadingContent(prev => new Set(prev).add(name))
+      try {
+        const content = await api.getPrdStyleContent(name)
+        setStyleContents(prev => ({ ...prev, [name]: content }))
+      } catch { /* silently ignore */ } finally {
+        setLoadingContent(prev => { const s = new Set(prev); s.delete(name); return s })
+      }
+    }
+  }, [styleContents])
 
   const [filePath, setFilePath] = useState("")
   const [fileContent, setFileContent] = useState("")
@@ -176,10 +197,14 @@ export function ToolPersonaPage() {
               {styles.map((s) => (
                 <div
                   key={s.name}
-                  className="rounded-lg border border-[var(--border)] px-4 py-3 hover:border-[var(--accent-color)]/40 transition-colors"
+                  className="rounded-lg border border-[var(--border)] transition-colors hover:border-[var(--accent-color)]/40"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                  {/* 头部：点击展开/折叠 */}
+                  <div
+                    className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3"
+                    onClick={() => toggleExpand(s.name)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className="text-sm font-medium text-[var(--text-primary)]">{s.name}</span>
                       {s.hasPersona && (
                         <span className="rounded-full bg-[var(--accent-color)]/10 px-2 py-0.5 text-[10px] text-[var(--accent-color)]">
@@ -192,17 +217,41 @@ export function ToolPersonaPage() {
                         </span>
                       )}
                     </div>
-                    {activeStyle !== s.name && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSetActive(s.name)}
-                        disabled={settingActive === s.name}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {activeStyle !== s.name && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); handleSetActive(s.name) }}
+                          disabled={settingActive === s.name}
+                        >
+                          {settingActive === s.name ? "设置中..." : "设为默认"}
+                        </Button>
+                      )}
+                      <span
+                        className={cn(
+                          "text-[10px] text-[var(--text-tertiary)] transition-transform duration-200 inline-block",
+                          expandedStyles.has(s.name) && "rotate-180"
+                        )}
                       >
-                        {settingActive === s.name ? "设置中..." : "设为默认"}
-                      </Button>
-                    )}
+                        ▼
+                      </span>
+                    </div>
                   </div>
+
+                  {/* 展开内容 */}
+                  {expandedStyles.has(s.name) && (
+                    <div className="border-t border-[var(--border)] px-4 py-3">
+                      {loadingContent.has(s.name) ? (
+                        <p className="text-xs text-[var(--text-secondary)]">加载中···</p>
+                      ) : styleContents[s.name] ? (
+                        <PrdViewer
+                          markdown={styleContents[s.name].profile ?? `\`\`\`json\n${styleContents[s.name].config}\n\`\`\``}
+                          isStreaming={false}
+                        />
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
