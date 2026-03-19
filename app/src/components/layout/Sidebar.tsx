@@ -129,7 +129,7 @@ function Sidebar({
       data-slot="sidebar"
       className={cn(
         "fixed top-0 left-[72px] bottom-0 z-20",
-        "flex w-[220px] flex-col",
+        "flex w-[180px] flex-col",
         "border-r border-[var(--border)]",
         "bg-[var(--bg-sidebar)] backdrop-blur-[20px]",
       )}

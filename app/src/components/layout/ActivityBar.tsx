@@ -15,8 +15,8 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
 
   return (
     <aside
-      className="fixed top-0 left-0 bottom-0 z-30 flex w-[72px] flex-col items-center border-r border-[var(--border)] bg-[var(--bg-sidebar)]"
-      style={{ WebkitBackdropFilter: "blur(20px)", backdropFilter: "blur(20px)" } as CSSProperties}
+      className="fixed top-0 left-0 bottom-0 z-30 flex w-[72px] flex-col items-center border-r border-[var(--border)]"
+      style={{ background: "rgba(209,224,248,0.96)", WebkitBackdropFilter: "blur(20px)", backdropFilter: "blur(20px)" } as CSSProperties}
     >
       {/* Traffic lights drag zone — 40px, nothing here */}
       <div
