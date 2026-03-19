@@ -11,9 +11,9 @@ function Card({ className, children, ...props }: CardProps) {
       className={cn(
         "rounded-xl bg-[var(--card)] text-[var(--card-foreground)]",
         "border border-[var(--border)]",
-        "shadow-[0_2px_16px_rgba(0,0,0,0.04)]",
+        "shadow-[var(--shadow-sm)]",
         "transition-shadow duration-200",
-        "hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)]",
+        "hover:shadow-[var(--shadow-md)]",
         "p-6",
         className
       )}

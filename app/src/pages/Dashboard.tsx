@@ -549,7 +549,7 @@ export function DashboardPage() {
                 className={cn(
                   "group/card relative rounded-xl border bg-[var(--card)] p-5 cursor-pointer",
                   "transition-all duration-200",
-                  "hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:-translate-y-[1px]",
+                  "hover:shadow-[var(--shadow-md)] hover:-translate-y-[1px]",
                   "active:scale-[0.99] active:shadow-none",
                   isDragged && "opacity-50",
                   isDropTarget && "border-[var(--accent-color)] shadow-[0_0_0_1px_var(--accent-color)]",
