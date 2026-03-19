@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react"
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { Outlet, useNavigate } from "react-router-dom"
+import { Outlet, useNavigate, useParams } from "react-router-dom"
 import { SidebarShell } from "@/components/layout/SidebarShell"
 import { ActivityBar } from "@/components/layout/ActivityBar"
 import { CommandPalette } from "@/components/command-palette"
@@ -14,8 +14,14 @@ export type { ThemePreference, ResolvedTheme } from "@/hooks/use-theme"
 
 type BannerState = "idle" | "available" | "downloading" | "ready" | "error"
 
+const PHASE_ORDER = [
+  "requirement", "analysis", "research", "stories", "prd",
+  "analytics", "prototype", "review", "retrospective",
+]
+
 export function AppLayout() {
   const navigate = useNavigate()
+  const { id: projectId } = useParams()
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const stored = localStorage.getItem("sidebar-open")
@@ -70,16 +76,33 @@ export function AppLayout() {
 
   // Global keyboard shortcuts
   const hotkeys: HotkeyDef[] = useMemo(
-    () => [
-      { key: "k", meta: true, handler: () => setCmdOpen((prev) => !prev), description: "打开命令面板", group: "操作" },
-      { key: "b", meta: true, handler: toggleSidebar, description: "切换侧边栏", group: "视图" },
-      { key: ",", meta: true, handler: () => { closeCommandPalette(); navigate("/settings") }, description: "打开设置", group: "导航" },
-      { key: "d", meta: true, handler: () => { closeCommandPalette(); cycleTheme() }, description: "切换主题", group: "视图" },
-      { key: "[", meta: true, handler: () => navigate(-1), description: "后退", group: "导航" },
-      { key: "]", meta: true, handler: () => navigate(1), description: "前进", group: "导航" },
-      { key: "Escape", handler: closeCommandPalette, description: "关闭命令面板", group: "操作" },
-    ],
-    [toggleSidebar, cycleTheme, navigate, closeCommandPalette]
+    () => {
+      const base: HotkeyDef[] = [
+        { key: "k", meta: true, handler: () => setCmdOpen((prev) => !prev), description: "打开命令面板", group: "操作" },
+        { key: "b", meta: true, handler: toggleSidebar, description: "切换侧边栏", group: "视图" },
+        { key: ",", meta: true, handler: () => { closeCommandPalette(); navigate("/settings") }, description: "打开设置", group: "导航" },
+        { key: "d", meta: true, handler: () => { closeCommandPalette(); cycleTheme() }, description: "切换主题", group: "视图" },
+        { key: "[", meta: true, handler: () => navigate(-1), description: "后退", group: "导航" },
+        { key: "]", meta: true, handler: () => navigate(1), description: "前进", group: "导航" },
+        { key: "Escape", handler: closeCommandPalette, description: "关闭命令面板", group: "操作" },
+      ]
+
+      // ⌘1-9: phase shortcuts (only active inside a project)
+      if (projectId) {
+        PHASE_ORDER.forEach((phase, i) => {
+          base.push({
+            key: String(i + 1),
+            meta: true,
+            handler: () => navigate(`/project/${projectId}/${phase}`),
+            description: `跳转到阶段 ${i + 1}`,
+            group: "阶段",
+          })
+        })
+      }
+
+      return base
+    },
+    [toggleSidebar, cycleTheme, navigate, closeCommandPalette, projectId]
   )
 
   useHotkeys(hotkeys)
