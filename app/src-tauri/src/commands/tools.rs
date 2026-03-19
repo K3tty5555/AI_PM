@@ -249,8 +249,9 @@ pub async fn fetch_url_content(url: String) -> Result<String, String> {
         .map_err(|e| format!("读取响应失败：{}", e))?;
 
     let text = strip_html(html);
-    let truncated = if text.len() > 8000 {
-        format!("{}…（内容已截断）", &text[..8000])
+    let truncated = if text.chars().count() > 8000 {
+        let cutoff = text.char_indices().nth(8000).map(|(i, _)| i).unwrap_or(text.len());
+        format!("{}…（内容已截断）", &text[..cutoff])
     } else {
         text
     };
