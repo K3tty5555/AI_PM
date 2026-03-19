@@ -33,7 +33,7 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
           onClick={onToggleSidebar}
           title={sidebarOpen ? "收起侧边栏" : "展开侧边栏"}
           style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
-          className="flex size-8 items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-colors duration-150 active:scale-95"
+          className="flex size-8 items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-all duration-150 active:scale-95"
         >
           {sidebarOpen
             ? <PanelLeftClose className="size-[15px]" strokeWidth={1.75} />
@@ -48,7 +48,7 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
           title="项目总览"
           style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
           className={cn(
-            "flex size-8 items-center justify-center rounded-lg transition-colors duration-150",
+            "flex size-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
             location.pathname === "/"
               ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
               : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
@@ -66,7 +66,7 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
           title="设置"
           style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
           className={cn(
-            "flex size-8 items-center justify-center rounded-lg transition-colors duration-150",
+            "flex size-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
             isSettings
               ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
               : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
