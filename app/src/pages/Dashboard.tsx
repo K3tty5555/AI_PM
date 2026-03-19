@@ -94,12 +94,13 @@ export function DashboardPage() {
     })
 
   const startRename = useCallback((project: DashboardProject, e: React.MouseEvent) => {
+    if (renamingProjectId !== null) return
     e.stopPropagation()
     setEditingProjectId(project.id)
     setRenameInput(project.name)
     setRenameError("")
     isConfirmingRef.current = false
-  }, [])
+  }, [renamingProjectId])
 
   const cancelRename = useCallback(() => {
     setEditingProjectId(null)
@@ -127,6 +128,7 @@ export function DashboardPage() {
       setProjects(prev => prev.map(p => p.id === project.id ? { ...p, name: newName } : p))
       setEditingProjectId(null)
       setRenameInput("")
+      isConfirmingRef.current = false
     } catch (err) {
       setRenameError(String(err))
       isConfirmingRef.current = false
