@@ -100,7 +100,7 @@ export function TitleBar({ sidebarOpen, onToggleSidebar }: TitleBarProps) {
   return (
     <header
       data-tauri-drag-region
-      className="flex h-11 shrink-0 select-none items-center border-b border-[var(--border)] bg-[rgba(250,250,250,0.9)] backdrop-blur-sm"
+      className="flex h-11 shrink-0 select-none items-center border-b border-[var(--border)] bg-[var(--bg-sidebar)] backdrop-blur-sm"
       style={{ WebkitAppRegion: "drag" } as CSSProperties}
     >
       {/* Left: traffic lights space + sidebar toggle */}
