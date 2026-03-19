@@ -43,6 +43,7 @@ jobs:
           args: --target universal-apple-darwin
 
   build-windows:
+    needs: [build-macos]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -78,6 +79,8 @@ jobs:
   update-manifest:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -90,18 +93,21 @@ jobs:
           TAG="${{ github.ref_name }}"
           VERSION="${TAG#v}"
 
+          mkdir -p /tmp/deploy
+
           # Download .sig files
           gh release download "$TAG" --pattern "*.sig" --dir /tmp/sigs
 
           # Read signatures
-          SIG_MAC_ARM=$(cat /tmp/sigs/*.aarch64.dmg.tar.gz.sig 2>/dev/null || echo "")
-          SIG_MAC_X64=$(cat /tmp/sigs/*.x64.dmg.tar.gz.sig 2>/dev/null || echo "")
+          SIG_MAC_UNIVERSAL=$(cat /tmp/sigs/*.dmg.tar.gz.sig 2>/dev/null || echo "")
+          SIG_MAC_ARM="$SIG_MAC_UNIVERSAL"
+          SIG_MAC_X64="$SIG_MAC_UNIVERSAL"
           SIG_WIN=$(cat /tmp/sigs/*.msi.zip.sig 2>/dev/null || echo "")
 
-          REPO="K3tty5555/AI_PM"
+          REPO="${{ github.repository }}"
           PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          cat > latest.json <<EOF
+          cat > /tmp/deploy/latest.json <<EOF
           {
             "version": "${VERSION}",
             "notes": "更新至 ${TAG}",
@@ -109,11 +115,11 @@ jobs:
             "platforms": {
               "darwin-aarch64": {
                 "signature": "${SIG_MAC_ARM}",
-                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_aarch64.dmg.tar.gz"
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_universal.dmg.tar.gz"
               },
               "darwin-x86_64": {
                 "signature": "${SIG_MAC_X64}",
-                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_x64.dmg.tar.gz"
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_universal.dmg.tar.gz"
               },
               "windows-x86_64": {
                 "signature": "${SIG_WIN}",
@@ -127,8 +133,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: /tmp/deploy
           publish_branch: gh-pages
           force_orphan: false
           keep_files: true
-          include_files: latest.json
