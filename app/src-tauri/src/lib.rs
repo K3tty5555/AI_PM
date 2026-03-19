@@ -170,6 +170,7 @@ pub fn run() {
             commands::env::check_playwright_mcp,
             commands::stream::start_stream,
             commands::tools::run_tool,
+            commands::tools::fetch_url_content,
             commands::knowledge::list_knowledge,
             commands::knowledge::add_knowledge,
             commands::knowledge::delete_knowledge,
