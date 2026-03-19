@@ -7,6 +7,7 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { api } from "@/lib/tauri-api"
+import { cn } from "@/lib/utils"
 
 interface DashboardProject {
   id: string
@@ -18,6 +19,7 @@ interface DashboardProject {
   completedPhases: string[]
   updatedAt: string
   createdAt: string
+  status: 'active' | 'completed'
 }
 
 const PHASE_LABELS: Record<string, string> = {
@@ -70,12 +72,19 @@ export function DashboardPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all')
+  const [sortOrder, setSortOrder] = useState<'updatedAt' | 'createdAt'>('updatedAt')
 
-  const filteredProjects = search.trim()
-    ? projects.filter((p) =>
-        p.name.toLowerCase().includes(search.trim().toLowerCase())
-      )
-    : projects
+  const filteredProjects = projects
+    .filter((p) => {
+      const matchSearch = !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
+      const matchStatus = statusFilter === 'all' || p.status === statusFilter
+      return matchSearch && matchStatus
+    })
+    .sort((a, b) => {
+      const key = sortOrder === 'updatedAt' ? 'updatedAt' : 'createdAt'
+      return b[key].localeCompare(a[key])
+    })
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -217,6 +226,33 @@ export function DashboardPage() {
           </div>
         )}
 
+        {/* Filter tabs + sort */}
+        <div className="mb-4 flex items-center">
+          {(['all', 'active', 'completed'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={cn(
+                "px-3 py-1.5 text-xs transition-colors",
+                statusFilter === s
+                  ? "border-b-2 border-[var(--accent-color)] text-[var(--text-primary)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              )}
+            >
+              {({ all: '全部', active: '进行中', completed: '已完成' } as const)[s]}
+            </button>
+          ))}
+          <div className="flex-1" />
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+            className="text-xs text-[var(--text-secondary)] bg-transparent border border-[var(--border)] rounded px-2 py-1 outline-none cursor-pointer"
+          >
+            <option value="updatedAt">最近更新</option>
+            <option value="createdAt">最早创建</option>
+          </select>
+        </div>
+
         {/* Project cards grid */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project, index) => {
@@ -257,6 +293,11 @@ export function DashboardPage() {
                   <span className="text-[16px] font-semibold text-[var(--text-primary)] leading-snug truncate">
                     {project.name}
                   </span>
+                  {project.status === 'completed' && (
+                    <span className="ml-2 rounded-full bg-[var(--success)]/15 px-2 py-0.5 text-[10px] text-[var(--success)] font-medium shrink-0">
+                      已完成
+                    </span>
+                  )}
                 </div>
 
                 {/* Phase badge */}
