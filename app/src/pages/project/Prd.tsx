@@ -398,7 +398,7 @@ export function PrdPage() {
               onChange={(e) => {
                 const val = e.target.value
                 setSelectedStyle(val)
-                if (val) api.setActivePrdStyle(val).catch(() => {})
+                if (val) api.setActivePrdStyle(val).catch((err) => console.error("[Prd]", err))
               }}
               className={cn(
                 "h-7 px-2 text-xs rounded",
