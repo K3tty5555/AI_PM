@@ -38,6 +38,7 @@ pub struct ProjectSummary {
     pub completed_count: i64,
     pub total_phases: i64,
     pub completed_phases: Vec<String>,
+    pub status: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -61,7 +62,7 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
     // Fix 3: Replace N+1 queries with a single JOIN query
     let mut stmt = db
         .prepare(
-            "SELECT p.id, p.name, p.description, p.current_phase, p.output_dir, p.created_at, p.updated_at,
+            "SELECT p.id, p.name, p.description, p.current_phase, p.output_dir, p.created_at, p.updated_at, p.status,
                     COUNT(CASE WHEN pp.status = 'completed' THEN 1 END) as completed_count,
                     GROUP_CONCAT(CASE WHEN pp.status = 'completed' THEN pp.phase END) as completed_phases
              FROM projects p
@@ -81,9 +82,10 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
                 output_dir: row.get(4)?,
                 created_at: row.get(5)?,
                 updated_at: row.get(6)?,
-                completed_count: row.get(7)?,
+                status: row.get::<_, Option<String>>(7)?.unwrap_or_else(|| "active".to_string()),
+                completed_count: row.get(8)?,
                 total_phases: PHASES.len() as i64,
-                completed_phases: row.get::<_, Option<String>>(8)?
+                completed_phases: row.get::<_, Option<String>>(9)?
                     .unwrap_or_default()
                     .split(',')
                     .filter(|s| !s.is_empty())
@@ -843,4 +845,18 @@ pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResu
     }
 
     Ok(MigrateResult { migrated, skipped, failed })
+}
+
+#[tauri::command]
+pub fn set_project_status(state: State<AppState>, id: String, status: String) -> Result<(), String> {
+    if status != "active" && status != "completed" {
+        return Err(format!("无效状态: {}", status));
+    }
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let now = chrono::Utc::now().to_rfc3339();
+    db.execute(
+        "UPDATE projects SET status = ?1, updated_at = ?2 WHERE id = ?3",
+        rusqlite::params![&status, &now, &id],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
 }
