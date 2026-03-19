@@ -12,7 +12,7 @@
 - 单一 Accent：全局只有钴蓝一个强调色
 - 高对比文字：主文字接近纯黑，清晰优先
 - 微交互精细：每个可交互元素都有有意义的反馈
-- 系统字体优先：等宽字体仅限代码/终端输出场景
+- GeistSans 优先：UI 文字用 GeistSans，长文阅读区（Markdown/流式输出）用 Lora，等宽字体仅限代码/终端输出场景
 - 禁止装饰性设计：`uppercase tracking-[2px]`、`font-terminal` 不用于 UI 元素
 
 ---
@@ -34,10 +34,10 @@
 
 | 变量 | 值 | 用途 |
 |------|----|------|
-| `--background` | `#FFFFFF` | 主背景（纯白） |
-| `--bg-sidebar` | `rgba(248,248,248,0.90)` | 侧边栏毛玻璃底色 |
-| `--secondary` | `#F4F4F5` | 次要背景、输入框填充 |
-| `--card` | `#FFFFFF` | 卡片 |
+| `--background` | `#F8FAFF` | 主背景（钴蓝调白） |
+| `--bg-sidebar` | `rgba(234,241,252,0.90)` | 侧边栏毛玻璃底色 |
+| `--secondary` | `#EEF2FB` | 次要背景、输入框填充 |
+| `--card` | `#FFFFFF` | 卡片（纯白，在蓝调底上自然浮起） |
 
 ### 文字层级
 
@@ -65,18 +65,19 @@
 ### 字体栈
 
 ```
-UI 文字：GeistSans → -apple-system → BlinkMacSystemFont → "Segoe UI" → "PingFang SC"
-代码/终端：GeistMono → 'JetBrains Mono' → Menlo → monospace
+UI 文字：   GeistSans → -apple-system → BlinkMacSystemFont → "Segoe UI" → "PingFang SC"
+长文阅读区：Lora → Georgia → serif
+代码/终端： GeistMono → 'JetBrains Mono' → Menlo → monospace
 ```
 
-Tailwind 使用：`font-sans`（默认）、`font-mono`（仅代码场景）
+Tailwind 使用：`font-sans`（UI 默认）、`font-serif`（Markdown/流式输出区）、`font-mono`（仅代码场景）
 
 ### 字号层级
 
 | 场景 | 大小 | 字重 | 颜色 |
 |------|------|------|------|
-| 页面/卡片标题 | 16px | 600 | `--text-primary` |
-| 区块标题、阶段名 | 14px | 500 | `--text-primary` |
+| 页面/卡片标题 | 18px | 600 | `--text-primary` |
+| 区块标题、阶段名 | 15px | 500 | `--text-primary` |
 | 正文、说明文字 | 14px | 400 | `--text-primary` |
 | 辅助说明 | 13px | 400 | `--text-secondary` |
 | 标签、Badge | 12px | 500 | — |
@@ -160,7 +161,7 @@ Error：border #DC2626，ring rgba(220,38,38,0.15)
 ```
 遮罩：rgba(0,0,0,0.3) + backdrop-blur(4px)
 本体：#FFFFFF，rounded-xl，shadow-xl
-标题：16px 600 --text-primary
+标题：18px 600 --text-primary
 内容：14px --text-secondary
 按钮区：右对齐，primary + ghost
 动画：scale(0.95→1) + fade，200ms ease-decelerate
@@ -177,9 +178,9 @@ Error：border #DC2626，ring rgba(220,38,38,0.15)
 ### Markdown / 流式输出区
 
 ```
-行高：1.7
-H1：20px 600，H2：17px 600，H3：15px 500
-代码块：--secondary 背景，rounded-lg，GeistMono 13px
+字体：Lora（font-serif），15px，行高 1.8
+H1：22px 700，H2：19px 600，H3：16px 500（均继承 Lora）
+代码块：--secondary 背景，rounded-lg，GeistMono 13px，font-mono
 分割线：rgba(0,0,0,0.08)
 链接：--accent-color，hover underline
 ```
@@ -229,7 +230,7 @@ TitleBar (h-11, 44px, 半透明毛玻璃)
 ### 毛玻璃实现（CSS，跨平台）
 
 ```css
-background: rgba(248, 248, 248, 0.90);
+background: rgba(234, 241, 252, 0.90);
 backdrop-filter: blur(20px);
 -webkit-backdrop-filter: blur(20px);
 border-right: 1px solid rgba(0,0,0,0.08);

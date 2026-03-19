@@ -157,10 +157,10 @@ export function RequirementPage() {
   const canSubmit = content.trim().length > 0
 
   return (
-    <div className="relative mx-auto w-full max-w-[720px] pb-24">
+    <div className="layout-focus page-enter">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-base font-semibold text-[var(--text-primary)]">需求收集</h1>
+        <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求收集</h1>
       </div>
 
       <div className="h-px bg-[var(--border)]" />

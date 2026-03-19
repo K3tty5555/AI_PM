@@ -67,21 +67,22 @@ README.md                  项目介绍
 ### 客户端设计规范
 
 客户端（Tauri App）有独立设计规范：**`docs/design-system.md`**，所有新页面、新组件必须遵循。核心要点：
-- 风格：Apple HIG，琥珀金（`#F0A500`）Accent，`#FAFAFA` 背景，8px 圆角
-- 字体：系统字体 `-apple-system`，等宽字体仅限代码场景
+- 风格：Bauhaus + Apple HIG，钴蓝（`#1D4ED8`）Accent，纯白背景，8px 圆角
+- 字体：GeistSans 优先，-apple-system 兜底（完整字体栈见 `docs/design-system.md`）；等宽字体仅限代码场景
 - 侧边栏：220px 毛玻璃（`backdrop-blur-xl`），项目内显示 7 阶段列表
 - 微交互：按钮按压 `scale(0.97)`，导航项 hover 背景过渡，阶段切换 fadeInUp
 - ❌ 禁止：`uppercase tracking-[2px]`、`font-terminal` 用于 UI 元素、终末地风格
 
-### 新页面开发 → `frontend-design` 插件
+### 新页面开发 → `impeccable` 套件
 
-- **客户端页面**（`app/src/pages/` 或 `app/src/components/`）：先通过 `frontend-design` 插件生成视觉初稿，再落地到 Tauri + React 代码。告知插件参考 `docs/design-system.md`（Apple HIG 风格，琥珀金 accent）。
+- **客户端页面**（`app/src/pages/` 或 `app/src/components/`）：通过 `impeccable`（`frontend-design` 增强版）生成视觉初稿，再落地到 Tauri + React 代码。impeccable 会自动读取项目根目录的 `.impeccable.md` 获取设计上下文，无需每次手动说明规范。
 - **AI 生成的 HTML 原型**：沿用三档选择机制（首次询问用户偏好并记住），**不受 `docs/design-system.md` 约束**。
 
-### UI/UX 迭代 → `ui-ux-pro-max` 技能
+### UI/UX 审查与迭代 → `impeccable` + `ui-ux-pro-max`
 
-- **客户端页面**迭代：使用 `ui-ux-pro-max` 技能先输出分析方案，再落地代码，参考基准为 `docs/design-system.md`。
-- **HTML 原型**迭代：同样使用 `ui-ux-pro-max`，但以用户选定的原型设计规范为准，不套用客户端规范。
+- **客户端页面审查**：优先使用 `impeccable` 的审查命令：`/audit`（无障碍/性能/响应式）、`/critique`（UX 层级）、`/polish`（上线前精修）。
+- **客户端页面迭代**：复杂交互/流程重设计用 `ui-ux-pro-max` 先输出分析方案，参考基准为 `docs/design-system.md`。
+- **HTML 原型**：两个技能均可用，以用户选定的原型设计规范为准，不套用客户端规范。
 
 ### 新技能开发 → `skill-creator` 技能
 
