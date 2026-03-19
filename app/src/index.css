@@ -126,6 +126,7 @@
   --accent-light: rgba(29, 78, 216, 0.08);
   --accent-ring: rgba(29, 78, 216, 0.25);
   --bg-sidebar: rgba(234, 241, 252, 0.90);
+  --bg-activity-bar: rgba(209, 224, 248, 0.96);
   --success: #16A34A;
   --success-light: rgba(22, 163, 74, 0.08);
   --text-primary: #0F172A;
@@ -212,6 +213,7 @@ html.theme-dark {
   --accent-light: rgba(79, 142, 247, 0.12);
   --accent-ring: rgba(79, 142, 247, 0.3);
   --bg-sidebar: rgba(18, 26, 42, 0.92);
+  --bg-activity-bar: rgba(12, 18, 30, 0.96);
   --success: #4ADE80;
   --success-light: rgba(74, 222, 128, 0.10);
   --text-primary: oklch(94% 0.005 250);
