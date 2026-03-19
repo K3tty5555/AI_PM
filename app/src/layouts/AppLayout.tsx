@@ -49,7 +49,7 @@ export function AppLayout() {
         data-tauri-drag-region
         className="fixed top-0 right-0 h-[44px] z-10"
         style={{
-          left: sidebarOpen ? "272px" : "52px",
+          left: sidebarOpen ? "292px" : "72px",
           WebkitAppRegion: "drag",
           transition: "left 250ms cubic-bezier(0.4, 0, 0.2, 1)",
         } as CSSProperties}
@@ -65,7 +65,7 @@ export function AppLayout() {
       <main
         className="min-h-0 flex-1 overflow-y-auto px-8 pb-8 relative"
         style={{
-          marginLeft: sidebarOpen ? 272 : 52,
+          marginLeft: sidebarOpen ? 292 : 72,
           paddingTop: "44px",
           transition: "margin-left 250ms cubic-bezier(0.4, 0, 0.2, 1)",
         } as CSSProperties}
