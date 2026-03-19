@@ -22,7 +22,7 @@ const PHASE_LABELS: Record<string, string> = {
 
 function SidebarShell({
   open,
-  onToggle,
+  onToggle: _onToggle,
   theme,
   onToggleTheme,
 }: {
@@ -151,7 +151,6 @@ function SidebarShell({
         projects={projects}
         activeProjectId={activeProjectId}
         onNewProject={handleNewProject}
-        onCollapse={onToggle}
         projectName={projectName}
         projectPhases={projectPhases}
         activePhase={activePhase}
