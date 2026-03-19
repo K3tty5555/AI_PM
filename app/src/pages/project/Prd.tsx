@@ -467,7 +467,7 @@ export function PrdPage() {
   return (
     <div className="mx-auto w-full max-w-[1080px]">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="prd-header mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
         </div>
@@ -656,6 +656,7 @@ export function PrdPage() {
       {/* Bottom action bar */}
       <div
         className={cn(
+          "prd-footer",
           "mt-8 flex items-center justify-between",
           "border-t border-[var(--border)] pt-6",
         )}

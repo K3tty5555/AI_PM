@@ -445,10 +445,12 @@ html.theme-dark .prose-lora {
 @media print {
   /* Hide all chrome */
   aside,
-  [data-sidebar],
+  [data-slot="sidebar"],
   .prd-actions,
   .prd-toc,
   .prd-assist,
+  .prd-header,
+  .prd-footer,
   nav {
     display: none !important;
   }
@@ -456,6 +458,18 @@ html.theme-dark .prose-lora {
   /* Reset background */
   body, html {
     background: white !important;
+  }
+
+  /* Unlock scroll containers so all content prints */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  main,
+  .prd-content {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
   /* Full-width content with paper margins */
@@ -468,11 +482,11 @@ html.theme-dark .prose-lora {
     color: #000 !important;
   }
 
-  /* Typography */
-  h1 { font-size: 18pt; page-break-before: always; }
-  h1:first-of-type { page-break-before: avoid; }
-  h2 { font-size: 14pt; }
-  h3 { font-size: 12pt; }
+  /* Typography — scoped to PRD content only */
+  .prd-content h1 { font-size: 18pt; page-break-before: always; }
+  .prd-content h1:first-child { page-break-before: avoid; }
+  .prd-content h2 { font-size: 14pt; }
+  .prd-content h3 { font-size: 12pt; }
 
   /* Prevent orphaned blocks */
   table, pre, blockquote, figure {
