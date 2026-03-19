@@ -226,4 +226,12 @@ export const api = {
 
   migrateProjectsToAppDir: () =>
     invoke<MigrateResult>("migrate_projects_to_app_dir"),
+
+  // Rename
+  renamePrdStyle: (oldName: string, newName: string) =>
+    invoke<void>("rename_prd_style", { oldName, newName }),
+  renameUiSpec: (oldName: string, newName: string) =>
+    invoke<void>("rename_ui_spec", { oldName, newName }),
+  renameProject: (id: number, newName: string) =>
+    invoke<void>("rename_project", { id, newName }),
 }
