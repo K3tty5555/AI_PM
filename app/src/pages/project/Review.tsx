@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -17,22 +19,34 @@ import { ContextPills } from "@/components/context-pills"
 
 const REVIEW_FILE = "07-review-report.md"
 
+const REVIEW_ROLES = [
+  { key: "product", label: "产品经理",   icon: "📋", heading: "## 产品经理视角" },
+  { key: "tech",    label: "技术架构师", icon: "⚙️", heading: "## 技术架构师视角" },
+  { key: "ux",      label: "UX 设计",   icon: "🎨", heading: "## UX 设计视角" },
+  { key: "ops",     label: "运营",       icon: "📈", heading: "## 运营视角" },
+  { key: "biz",     label: "商务",       icon: "💼", heading: "## 商务视角" },
+  { key: "user",    label: "用户代表",   icon: "👤", heading: "## 用户代表视角" },
+] as const
+
+type RoleKey = typeof REVIEW_ROLES[number]["key"]
+
 // ---------------------------------------------------------------------------
-// Section parser — splits review report into tech / product panels
+// Section parser — splits review report into 6 role panels
 // ---------------------------------------------------------------------------
 
-function parseReviewSections(text: string): { tech: string; product: string } {
-  const techIdx = text.indexOf("## 技术视角")
-  const productIdx = text.indexOf("## 产品视角")
-  const conclusionIdx = text.indexOf("## 评审结论")
-
-  const techEnd = productIdx !== -1 ? productIdx : (conclusionIdx !== -1 ? conclusionIdx : text.length)
-  const productEnd = conclusionIdx !== -1 ? conclusionIdx : text.length
-
-  return {
-    tech: techIdx !== -1 ? text.slice(techIdx, techEnd).trim() : "",
-    product: productIdx !== -1 ? text.slice(productIdx, productEnd).trim() : "",
+function parseReviewSections(markdown: string): Partial<Record<RoleKey, string>> {
+  const result: Partial<Record<RoleKey, string>> = {}
+  for (const role of REVIEW_ROLES) {
+    const idx = markdown.indexOf(role.heading)
+    if (idx === -1) continue
+    const start = idx + role.heading.length
+    const nextIdx = REVIEW_ROLES
+      .map(r => markdown.indexOf(r.heading, start))
+      .filter(i => i > idx)
+      .sort((a, b) => a - b)[0] ?? markdown.length
+    result[role.key] = markdown.slice(start, nextIdx).trim()
   }
+  return result
 }
 
 // ---------------------------------------------------------------------------
@@ -51,8 +65,8 @@ export function ReviewPage() {
   const [excludedContext, setExcludedContext] = useState<string[]>([])
   const [completed, setCompleted] = useState(false)
 
-  // Dual-panel tab state
-  const [activeTab, setActiveTab] = useState<"all" | "tech" | "product">("all")
+  // Role tab state
+  const [activeRole, setActiveRole] = useState<RoleKey>("product")
 
   // Strategy + modification state
   const [strategyChosen, setStrategyChosen] = useState<string | null>(null)
@@ -87,13 +101,8 @@ export function ReviewPage() {
 
   const displayContent = existingContent ?? text
 
-  // Compute tab-filtered content
+  // Compute role-filtered content
   const sections = !isStreaming && displayContent ? parseReviewSections(displayContent) : null
-  const tabContent = activeTab === "all" || !sections
-    ? displayContent || ""
-    : activeTab === "tech"
-      ? sections.tech
-      : sections.product
 
   const progressValue = isStreaming
     ? Math.min(90, Math.floor(text.length / 20))
@@ -115,7 +124,7 @@ export function ReviewPage() {
           } else if (autostart) {
             if (!startedRef.current) {
               startedRef.current = true
-              start([{ role: "user", content: "请开始需求评审" }])
+              start([{ role: "user", content: "请从以下六个专业视角评审 PRD，每个视角单独输出，严格使用以下标题（不要修改标题文字）：\n\n## 产品经理视角\n## 技术架构师视角\n## UX 设计视角\n## 运营视角\n## 商务视角\n## 用户代表视角\n\n每个视角包含：核心关注点、主要问题（标注 Critical / Major / Minor 等级）、具体改进建议。" }])
             }
           }
         }
@@ -123,7 +132,7 @@ export function ReviewPage() {
         console.error("Failed to load review file:", err)
         if (!cancelled && !startedRef.current && autostart) {
           startedRef.current = true
-          start([{ role: "user", content: "请开始需求评审" }])
+          start([{ role: "user", content: "请从以下六个专业视角评审 PRD，每个视角单独输出，严格使用以下标题（不要修改标题文字）：\n\n## 产品经理视角\n## 技术架构师视角\n## UX 设计视角\n## 运营视角\n## 商务视角\n## 用户代表视角\n\n每个视角包含：核心关注点、主要问题（标注 Critical / Major / Minor 等级）、具体改进建议。" }])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -165,7 +174,7 @@ export function ReviewPage() {
   // Handlers
   const handleGenerate = useCallback(() => {
     startedRef.current = true
-    start([{ role: "user", content: "请开始需求评审" }], { excludedContext })
+    start([{ role: "user", content: "请从以下六个专业视角评审 PRD，每个视角单独输出，严格使用以下标题（不要修改标题文字）：\n\n## 产品经理视角\n## 技术架构师视角\n## UX 设计视角\n## 运营视角\n## 商务视角\n## 用户代表视角\n\n每个视角包含：核心关注点、主要问题（标注 Critical / Major / Minor 等级）、具体改进建议。" }], { excludedContext })
   }, [start, excludedContext])
 
   const handleRestart = useCallback(() => {
@@ -173,9 +182,9 @@ export function ReviewPage() {
     resetModify()
     setExistingContent(null)
     setStrategyChosen(null)
-    setActiveTab("all")
+    setActiveRole("product")
     startedRef.current = true
-    start([{ role: "user", content: "请开始需求评审" }], { excludedContext })
+    start([{ role: "user", content: "请从以下六个专业视角评审 PRD，每个视角单独输出，严格使用以下标题（不要修改标题文字）：\n\n## 产品经理视角\n## 技术架构师视角\n## UX 设计视角\n## 运营视角\n## 商务视角\n## 用户代表视角\n\n每个视角包含：核心关注点、主要问题（标注 Critical / Major / Minor 等级）、具体改进建议。" }], { excludedContext })
   }, [reset, resetModify, start, excludedContext])
 
   const handleBack = useCallback(() => {
@@ -225,9 +234,9 @@ export function ReviewPage() {
 
   if (!loading && !existingContent && !text && !isStreaming && !error) {
     return (
-      <div className="mx-auto w-full max-w-[720px]">
+      <div className="layout-focus page-enter">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-base font-semibold text-[var(--text-primary)]">需求评审</h1>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求评审</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
         <ContextPills
@@ -271,10 +280,10 @@ export function ReviewPage() {
   const canComplete = hasContent && !isStreaming && !advancing
 
   return (
-    <div className="mx-auto w-full max-w-[720px]">
+    <div className="layout-focus page-enter">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-base font-semibold text-[var(--text-primary)]">需求评审</h1>
+        <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求评审</h1>
         <Button
           variant="ghost"
           size="sm"
@@ -334,21 +343,22 @@ export function ReviewPage() {
         </div>
       )}
 
-      {/* Dual-panel tabs — only after streaming completes */}
+      {/* Role tabs — only after streaming completes */}
       {!isStreaming && hasContent && (
-        <div className="flex items-center gap-1 mt-4">
-          {(["all", "tech", "product"] as const).map((tab) => (
+        <div className="flex gap-0 border-b border-[var(--border)] overflow-x-auto mt-4">
+          {REVIEW_ROLES.map(role => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={role.key}
+              onClick={() => setActiveRole(role.key)}
               className={cn(
-                "px-3 py-1 rounded text-[12px] transition-colors",
-                activeTab === tab
-                  ? "bg-[var(--accent-color)]/10 text-[var(--accent-color)] font-medium"
-                  : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                "flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors",
+                activeRole === role.key
+                  ? "border-[var(--accent-color)] text-[var(--text-primary)]"
+                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               )}
             >
-              {tab === "all" ? "全部" : tab === "tech" ? "技术视角" : "产品视角"}
+              <span className="text-base leading-none">{role.icon}</span>
+              {role.label}
             </button>
           ))}
         </div>
@@ -441,10 +451,27 @@ export function ReviewPage() {
 
       {/* Review report */}
       <div className="mt-6">
-        <PrdViewer
-          markdown={tabContent}
-          isStreaming={isStreaming}
-        />
+        {isStreaming ? (
+          <PrdViewer
+            markdown={displayContent || ""}
+            isStreaming={isStreaming}
+          />
+        ) : sections ? (
+          <>
+            {sections[activeRole] ? (
+              <div className="prose prose-sm max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{sections[activeRole]!}</ReactMarkdown>
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--text-tertiary)] py-6 text-center">该视角暂无内容</p>
+            )}
+          </>
+        ) : (
+          <PrdViewer
+            markdown={displayContent || ""}
+            isStreaming={false}
+          />
+        )}
         {!isStreaming && streamMeta !== null && (
           <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
             {streamMeta.inputTokens != null && streamMeta.outputTokens != null
