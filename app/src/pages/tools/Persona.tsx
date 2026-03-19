@@ -244,12 +244,17 @@ export function ToolPersonaPage() {
                     <div className="border-t border-[var(--border)] px-4 py-3">
                       {loadingContent.has(s.name) ? (
                         <p className="text-xs text-[var(--text-secondary)]">加载中···</p>
-                      ) : styleContents[s.name] ? (
-                        <PrdViewer
-                          markdown={styleContents[s.name].profile ?? `\`\`\`json\n${styleContents[s.name].config}\n\`\`\``}
-                          isStreaming={false}
-                        />
-                      ) : null}
+                      ) : styleContents[s.name] ? (() => {
+                        const c = styleContents[s.name]
+                        const markdown = c.sample ?? c.profile ?? `\`\`\`json\n${c.config}\n\`\`\``
+                        const label = c.sample ? '风格示例' : c.profile ? '风格档案' : '风格配置'
+                        return (
+                          <div>
+                            <p className="mb-2 text-[10px] text-[var(--text-tertiary)]">{label}</p>
+                            <PrdViewer markdown={markdown} isStreaming={false} />
+                          </div>
+                        )
+                      })() : null}
                     </div>
                   )}
                 </div>
