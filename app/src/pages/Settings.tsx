@@ -96,7 +96,7 @@ export function SettingsPage() {
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [manualUpdateInfo, setManualUpdateInfo] = useState<UpdateInfo | null>(null)
   const [manualUpdateState, setManualUpdateState] = useState<
-    "idle" | "available" | "downloading" | "ready" | "none" | "error"
+    "idle" | "available" | "downloading" | "ready" | "none" | "check-error" | "download-error"
   >("idle")
 
   const handleCheckUpdate = async () => {
@@ -113,7 +113,7 @@ export function SettingsPage() {
       }
     } catch (err) {
       console.error("[Settings] check update failed", err)
-      setManualUpdateState("error")
+      setManualUpdateState("check-error")
     } finally {
       setCheckingUpdate(false)
     }
@@ -126,7 +126,7 @@ export function SettingsPage() {
       setManualUpdateState("ready")
     } catch (err) {
       console.error("[Settings] download update failed", err)
-      setManualUpdateState("error")
+      setManualUpdateState("download-error")
     }
   }
 
@@ -1152,8 +1152,11 @@ export function SettingsPage() {
                     ✅ 已下载，下次启动自动安装
                   </span>
                 )}
-                {manualUpdateState === "error" && (
+                {manualUpdateState === "check-error" && (
                   <span className="text-sm text-red-500">检查失败，请重试</span>
+                )}
+                {manualUpdateState === "download-error" && (
+                  <span className="text-sm text-red-500">下载失败，请重试</span>
                 )}
               </div>
 
