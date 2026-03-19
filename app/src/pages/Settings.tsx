@@ -521,6 +521,32 @@ export function SettingsPage() {
               </div>
             </div>
 
+            {/* Mode capability summary */}
+            <div className={`rounded-lg border px-3 py-2.5 text-xs ${
+              backend === "claude_cli"
+                ? "border-[var(--accent-color)]/30 bg-[var(--accent-light,#DBEAFE)]/20"
+                : "border-[var(--border)] bg-[var(--secondary)]"
+            }`}>
+              {backend === "claude_cli" ? (
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-[var(--accent-color)]">全部功能可用</span>
+                  <span className="text-[var(--text-secondary)]">PRD 生成 · 竞品研究 · 网页截图分析 · Word 导出 · 多 Agent 并行</span>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-[var(--text-primary)]">核心功能可用</span>
+                    <span className="text-[var(--text-tertiary)]">·</span>
+                    <span className="text-[var(--text-tertiary)]">以下功能在此模式下不可用</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 text-[var(--text-tertiary)]">
+                    <span>╌ 网页截图深度分析（需 Claude Code CLI 模式）</span>
+                    <span>╌ 竞品自动截图（需 Playwright MCP + CLI 模式）</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {backend === "api" && (
               <>
                 {/* API Key */}
@@ -677,7 +703,7 @@ export function SettingsPage() {
           <CardTitle>运行环境</CardTitle>
         </CardHeader>
         <CardContent>
-          <EnvChecker />
+          <EnvChecker backend={backend} />
         </CardContent>
       </Card>
 

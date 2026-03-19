@@ -14,9 +14,16 @@ interface DepInstallState {
   log: string
 }
 
+// deps that only matter when using Claude Code CLI mode
+const CLI_ONLY_DEPS = new Set(["claude-cli", "playwright-mcp"])
+
 // ── EnvChecker ───────────────────────────────────────────────────────────────
 
-export function EnvChecker() {
+interface EnvCheckerProps {
+  backend?: "api" | "claude_cli"
+}
+
+export function EnvChecker({ backend = "api" }: EnvCheckerProps) {
   const [deps, setDeps] = useState<DepStatus[] | null>(null)
   const [checking, setChecking] = useState(false)
   const [useMirror, setUseMirror] = useState(true)
@@ -138,106 +145,135 @@ export function EnvChecker() {
           <Loader2 className="size-4 animate-spin" />
           检测中...
         </div>
-      ) : (
-        <ul className="flex flex-col divide-y divide-[var(--border)]">
-          {(deps ?? []).map(dep => {
-            const is = installStates[dep.name]
-            const installing = is?.state === "installing"
-            const installDone = is?.state === "done"
-            const installError = is?.state === "error"
+      ) : (() => {
+        const allDeps = deps ?? []
+        const coreDeps = allDeps.filter(d => !CLI_ONLY_DEPS.has(d.name))
+        const cliDeps = allDeps.filter(d => CLI_ONLY_DEPS.has(d.name))
 
-            return (
-              <li key={dep.name} className="py-3 first:pt-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  {/* Status icon */}
-                  <span className="shrink-0">
-                    {installing ? (
-                      <Loader2 className="size-4 animate-spin text-[var(--accent-color)]" />
-                    ) : dep.installed || installDone ? (
-                      <CheckCircle2 className="size-4 text-[var(--success)]" />
-                    ) : (
-                      <XCircle className={cn("size-4", dep.required ? "text-[var(--destructive)]" : "text-[var(--text-tertiary)]")} />
+        const renderDep = (dep: DepStatus, dimmed = false) => {
+          const is = installStates[dep.name]
+          const installing = is?.state === "installing"
+          const installDone = is?.state === "done"
+          const installError = is?.state === "error"
+          const isCliOnly = CLI_ONLY_DEPS.has(dep.name)
+          // In API mode, CLI-only uninstalled deps are not errors
+          const effectiveRequired = dep.required && !(dimmed && isCliOnly)
+
+          return (
+            <li key={dep.name} className={cn("py-3 first:pt-0 last:pb-0", dimmed && !dep.installed && !installDone && "opacity-50")}>
+              <div className="flex items-center gap-3">
+                {/* Status icon */}
+                <span className="shrink-0">
+                  {installing ? (
+                    <Loader2 className="size-4 animate-spin text-[var(--accent-color)]" />
+                  ) : dep.installed || installDone ? (
+                    <CheckCircle2 className="size-4 text-[var(--success)]" />
+                  ) : (
+                    <XCircle className={cn("size-4", effectiveRequired ? "text-[var(--destructive)]" : "text-[var(--text-tertiary)]")} />
+                  )}
+                </span>
+
+                {/* Label + version */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm text-[var(--text-primary)]">{dep.label}</span>
+                    {!dep.required && !isCliOnly && (
+                      <span className="text-[11px] text-[var(--text-tertiary)]">可选</span>
                     )}
+                  </div>
+                  <span className="text-[12px] text-[var(--text-tertiary)]">
+                    {dep.installed && dep.version ? dep.version : dep.featureHint}
                   </span>
-
-                  {/* Label + version */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm text-[var(--text-primary)]">{dep.label}</span>
-                      {!dep.required && (
-                        <span className="text-[11px] text-[var(--text-tertiary)]">可选</span>
-                      )}
-                    </div>
-                    <span className="text-[12px] text-[var(--text-tertiary)]">
-                      {dep.installed && dep.version ? dep.version : dep.featureHint}
-                    </span>
-                    {installError && (
-                      <span className="text-[12px] text-[var(--destructive)]">安装失败</span>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="shrink-0 flex items-center gap-2">
-                    {!dep.installed && !installDone && (
-                      dep.autoInstallable ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleInstall(dep)}
-                          disabled={installing || anyInstalling}
-                          className="h-7 px-2 text-xs"
-                        >
-                          {installing ? "安装中..." : installError ? "重试" : "安装"}
-                        </Button>
-                      ) : dep.manualHint ? (
-                        <span className="text-[12px] text-[var(--text-tertiary)] max-w-[180px] text-right">
-                          {dep.manualHint.startsWith("请访问") || dep.manualHint.startsWith("需要先") ? (
-                            <a
-                              href={dep.manualHint.match(/https?:\/\/\S+/)?.[0]}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-0.5 text-[var(--accent-color)] hover:opacity-70"
-                            >
-                              手动安装 <ExternalLink className="size-2.5" />
-                            </a>
-                          ) : (
-                            dep.manualHint
-                          )}
-                        </span>
-                      ) : null
-                    )}
-
-                    {/* Log toggle */}
-                    {is?.log && (
-                      <button
-                        onClick={() => setExpandedLog(expandedLog === dep.name ? null : dep.name)}
-                        className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                      >
-                        {expandedLog === dep.name ? "收起" : "日志"}
-                      </button>
-                    )}
-                  </div>
+                  {installError && (
+                    <span className="text-[12px] text-[var(--destructive)]">安装失败</span>
+                  )}
                 </div>
 
-                {/* Install log */}
-                {expandedLog === dep.name && is?.log && (
-                  <pre
-                    ref={logRef}
-                    className={cn(
-                      "mt-2 max-h-[140px] overflow-y-auto rounded-md",
-                      "bg-[var(--secondary)] px-3 py-2",
-                      "text-[11px] leading-relaxed text-[var(--text-secondary)]",
-                      "font-mono whitespace-pre-wrap break-all",
-                    )}
-                  >
-                    {is.log}
-                  </pre>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
+                {/* Actions */}
+                <div className="shrink-0 flex items-center gap-2">
+                  {!dep.installed && !installDone && (
+                    dep.autoInstallable ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleInstall(dep)}
+                        disabled={installing || anyInstalling}
+                        className="h-7 px-2 text-xs"
+                      >
+                        {installing ? "安装中..." : installError ? "重试" : "安装"}
+                      </Button>
+                    ) : dep.manualHint ? (
+                      <span className="text-[12px] text-[var(--text-tertiary)] max-w-[180px] text-right">
+                        {dep.manualHint.startsWith("请访问") || dep.manualHint.startsWith("需要先") ? (
+                          <a
+                            href={dep.manualHint.match(/https?:\/\/\S+/)?.[0]}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-0.5 text-[var(--accent-color)] hover:opacity-70"
+                          >
+                            手动安装 <ExternalLink className="size-2.5" />
+                          </a>
+                        ) : (
+                          dep.manualHint
+                        )}
+                      </span>
+                    ) : null
+                  )}
+
+                  {/* Log toggle */}
+                  {is?.log && (
+                    <button
+                      onClick={() => setExpandedLog(expandedLog === dep.name ? null : dep.name)}
+                      className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                    >
+                      {expandedLog === dep.name ? "收起" : "日志"}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Install log */}
+              {expandedLog === dep.name && is?.log && (
+                <pre
+                  ref={logRef}
+                  className={cn(
+                    "mt-2 max-h-[140px] overflow-y-auto rounded-md",
+                    "bg-[var(--secondary)] px-3 py-2",
+                    "text-[11px] leading-relaxed text-[var(--text-secondary)]",
+                    "font-mono whitespace-pre-wrap break-all",
+                  )}
+                >
+                  {is.log}
+                </pre>
+              )}
+            </li>
+          )
+        }
+
+        return (
+          <div className="flex flex-col gap-0">
+            <ul className="flex flex-col divide-y divide-[var(--border)]">
+              {coreDeps.map(dep => renderDep(dep, false))}
+            </ul>
+
+            {cliDeps.length > 0 && (
+              <>
+                <div className="mt-3 mb-1 flex items-center gap-2">
+                  <span className="text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+                    CLI 模式专属
+                  </span>
+                  {backend === "api" && (
+                    <span className="text-[11px] text-[var(--text-tertiary)]">· API 模式下不影响使用</span>
+                  )}
+                </div>
+                <ul className="flex flex-col divide-y divide-[var(--border)]">
+                  {cliDeps.map(dep => renderDep(dep, backend === "api"))}
+                </ul>
+              </>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
