@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { Sidebar, type SidebarProject, type SidebarPhase } from "./Sidebar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
+import { useFavorites } from "@/hooks/use-favorites"
 import { api } from "@/lib/tauri-api"
 
 const PHASE_ORDER = [
@@ -38,6 +39,7 @@ function SidebarShell({
   const [projectName, setProjectName] = useState<string | undefined>()
   const [projectPhases, setProjectPhases] = useState<SidebarPhase[] | undefined>()
   const [projectStatus, setProjectStatus] = useState<'active' | 'completed' | undefined>()
+  const { favorites, toggleFavorite } = useFavorites()
   const { id: activeProjectId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -160,6 +162,8 @@ function SidebarShell({
         projects={projects}
         activeProjectId={activeProjectId}
         onNewProject={handleNewProject}
+        favorites={favorites}
+        onToggleFavorite={toggleFavorite}
         projectName={projectName}
         projectPhases={projectPhases}
         activePhase={activePhase}
