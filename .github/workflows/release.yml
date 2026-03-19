@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: app
+
+      - name: Build and release (macOS universal)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: app
+          tagName: ${{ github.ref_name }}
+          releaseName: AI PM ${{ github.ref_name }}
+          releaseBody: '请查看 CHANGELOG 了解此版本变更。'
+          releaseDraft: false
+          prerelease: false
+          args: --target universal-apple-darwin
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: app
+
+      - name: Build and release (Windows x64)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: app
+          tagName: ${{ github.ref_name }}
+          releaseName: AI PM ${{ github.ref_name }}
+          releaseBody: '请查看 CHANGELOG 了解此版本变更。'
+          releaseDraft: false
+          prerelease: false
+
+  update-manifest:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download release assets and generate latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+
+          # Download .sig files
+          gh release download "$TAG" --pattern "*.sig" --dir /tmp/sigs
+
+          # Read signatures
+          SIG_MAC_ARM=$(cat /tmp/sigs/*.aarch64.dmg.tar.gz.sig 2>/dev/null || echo "")
+          SIG_MAC_X64=$(cat /tmp/sigs/*.x64.dmg.tar.gz.sig 2>/dev/null || echo "")
+          SIG_WIN=$(cat /tmp/sigs/*.msi.zip.sig 2>/dev/null || echo "")
+
+          REPO="K3tty5555/AI_PM"
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          cat > latest.json <<EOF
+          {
+            "version": "${VERSION}",
+            "notes": "更新至 ${TAG}",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "${SIG_MAC_ARM}",
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_aarch64.dmg.tar.gz"
+              },
+              "darwin-x86_64": {
+                "signature": "${SIG_MAC_X64}",
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_x64.dmg.tar.gz"
+              },
+              "windows-x86_64": {
+                "signature": "${SIG_WIN}",
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_x64_en-US.msi.zip"
+              }
+            }
+          }
+          EOF
+
+      - name: Deploy latest.json to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          force_orphan: false
+          keep_files: true
+          include_files: latest.json
