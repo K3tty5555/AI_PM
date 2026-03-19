@@ -13,6 +13,8 @@ import { useHotkeys } from "@/hooks/use-hotkeys"
 import type { HotkeyDef } from "@/hooks/use-hotkeys"
 import { useNavigationHistory } from "@/hooks/use-navigation-history"
 import { useRecent } from "@/hooks/use-recent"
+import { useTabs } from "@/hooks/use-tabs"
+import { TabBar } from "@/components/layout/TabBar"
 
 export type { ThemePreference, ResolvedTheme } from "@/hooks/use-theme"
 
@@ -51,6 +53,17 @@ export function AppLayout() {
   const { id: projectId } = useParams()
   const { canGoBack, canGoForward, goBack, goForward } = useNavigationHistory()
   const { recordVisit } = useRecent()
+  const {
+    tabs,
+    activeTabId,
+    addTab,
+    closeTab,
+    closeOtherTabs,
+    closeTabsToRight,
+    setActiveTab,
+    reorderTabs,
+    isTabNavigationRef,
+  } = useTabs()
 
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const stored = localStorage.getItem("sidebar-open")
@@ -90,6 +103,54 @@ export function AppLayout() {
       }
     }
   }, [location.pathname, recordVisit])
+
+  // ─── Sync tabs with navigation ────────────────────────────────────
+  useEffect(() => {
+    // Skip if this navigation was triggered by a tab click
+    if (isTabNavigationRef.current) {
+      isTabNavigationRef.current = false
+      return
+    }
+
+    const path = location.pathname
+
+    // Dashboard
+    if (path === "/") {
+      addTab("/", "Dashboard")
+      return
+    }
+
+    // Settings
+    if (path === "/settings") {
+      addTab("/settings", "设置")
+      return
+    }
+
+    // Project pages: /project/:id/:phase
+    const projectMatch = path.match(/^\/project\/([^/]+)\/([^/]+)$/)
+    if (projectMatch) {
+      const [, , phase] = projectMatch
+      const phaseLabel = PHASE_LABELS[phase]
+      if (phaseLabel) {
+        requestAnimationFrame(() => {
+          const sidebarNameEl = document.querySelector('[data-slot="sidebar"] button span.truncate')
+          const projectName = sidebarNameEl?.textContent ?? "项目"
+          addTab(path, `${projectName} \u203A ${phaseLabel}`)
+        })
+      }
+      return
+    }
+
+    // Tool pages: /tools/:tool
+    const toolMatch = path.match(/^\/tools\/([^/?]+)/)
+    if (toolMatch) {
+      const [, tool] = toolMatch
+      const toolLabel = TOOL_LABELS[tool]
+      if (toolLabel) {
+        addTab(path.split("?")[0], toolLabel)
+      }
+    }
+  }, [location.pathname, addTab, isTabNavigationRef])
 
   const [cmdOpen, setCmdOpen] = useState(false)
   const [bannerState, setBannerState] = useState<BannerState>("idle")
@@ -135,6 +196,50 @@ export function AppLayout() {
 
   const closeCommandPalette = useCallback(() => setCmdOpen(false), [])
 
+  // Tab click → navigate + activate
+  const handleTabActivate = useCallback((id: string) => {
+    const tab = tabs.find((t) => t.id === id)
+    if (tab) {
+      isTabNavigationRef.current = true
+      setActiveTab(id)
+      navigate(tab.path)
+    }
+  }, [tabs, setActiveTab, navigate, isTabNavigationRef])
+
+  // Close active tab (for ⌘W hotkey)
+  const handleCloseActiveTab = useCallback(() => {
+    if (!activeTabId) return
+    const tab = tabs.find((t) => t.id === activeTabId)
+    if (tab?.closable) {
+      // Find the next tab to navigate to before closing
+      const index = tabs.indexOf(tab)
+      const remaining = tabs.filter((t) => t.id !== activeTabId)
+      const nextTab = remaining[Math.min(index, remaining.length - 1)] ?? remaining[0]
+      closeTab(activeTabId)
+      if (nextTab) {
+        isTabNavigationRef.current = true
+        navigate(nextTab.path)
+      }
+    }
+  }, [activeTabId, tabs, closeTab, navigate, isTabNavigationRef])
+
+  // Close tab + navigate to adjacent
+  const handleTabClose = useCallback((id: string) => {
+    const tab = tabs.find((t) => t.id === id)
+    if (!tab?.closable) return
+    const index = tabs.indexOf(tab)
+    const remaining = tabs.filter((t) => t.id !== id)
+    closeTab(id)
+    // If closing the active tab, navigate to the adjacent one
+    if (id === activeTabId && remaining.length > 0) {
+      const nextTab = remaining[Math.min(index, remaining.length - 1)]
+      if (nextTab) {
+        isTabNavigationRef.current = true
+        navigate(nextTab.path)
+      }
+    }
+  }, [tabs, activeTabId, closeTab, navigate, isTabNavigationRef])
+
   // Global keyboard shortcuts
   const hotkeys: HotkeyDef[] = useMemo(
     () => {
@@ -146,6 +251,7 @@ export function AppLayout() {
         { key: "[", meta: true, handler: goBack, description: "后退", group: "导航" },
         { key: "]", meta: true, handler: goForward, description: "前进", group: "导航" },
         { key: "Escape", handler: closeCommandPalette, description: "关闭命令面板", group: "操作" },
+        { key: "w", meta: true, handler: handleCloseActiveTab, description: "关闭当前标签页", group: "标签" },
       ]
 
       // ⌘1-9: phase shortcuts (only active inside a project)
@@ -163,7 +269,7 @@ export function AppLayout() {
 
       return base
     },
-    [toggleSidebar, cycleTheme, navigate, closeCommandPalette, projectId, goBack, goForward]
+    [toggleSidebar, cycleTheme, navigate, closeCommandPalette, projectId, goBack, goForward, handleCloseActiveTab]
   )
 
   useHotkeys(hotkeys)
@@ -228,10 +334,21 @@ export function AppLayout() {
           </Tooltip>
         </div>
 
+        {/* Tab bar */}
+        <TabBar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          onActivate={handleTabActivate}
+          onClose={handleTabClose}
+          onCloseOthers={closeOtherTabs}
+          onCloseRight={closeTabsToRight}
+          onReorder={reorderTabs}
+        />
+
         {/* Update banner */}
         {showBanner && (
           <div
-            className="sticky top-0 z-20 flex items-center justify-between gap-4 px-4 py-2 text-sm"
+            className="flex items-center justify-between gap-4 px-4 py-2 text-sm"
             style={{
               background:
                 bannerState === "error"
