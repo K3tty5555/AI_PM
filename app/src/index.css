@@ -146,6 +146,11 @@
   --yellow-glow: 0 0 16px rgba(29, 78, 216, 0.25);
   --yellow-bg: rgba(29, 78, 216, 0.08);
 
+  /* --- Tooltip --- */
+  --tooltip-bg: #1E293B;
+  --tooltip-fg: #FFFFFF;
+  --tooltip-kbd: rgba(255, 255, 255, 0.5);
+
   /* --- Shadows (elevation system) --- */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -229,6 +234,11 @@ html.theme-dark {
   --text-tertiary: oklch(42% 0.01 250);
   --hover-bg: rgba(255, 255, 255, 0.05);
   --active-bg: rgba(255, 255, 255, 0.09);
+
+  /* Tooltip */
+  --tooltip-bg: #E2E8F0;
+  --tooltip-fg: #1E293B;
+  --tooltip-kbd: rgba(0, 0, 0, 0.35);
 
   /* Shadows (deeper for dark backgrounds) */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
