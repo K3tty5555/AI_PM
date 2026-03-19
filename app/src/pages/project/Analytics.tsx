@@ -145,9 +145,9 @@ export function AnalyticsPage() {
   // Empty state — no file, no autostart, not currently streaming
   if (!loading && !existingContent && !text && !isStreaming && !error) {
     return (
-      <div className="mx-auto w-full max-w-[720px]">
+      <div className="layout-focus page-enter">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-base font-semibold text-[var(--text-primary)]">埋点设计</h1>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">埋点设计</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
         <ContextPills
@@ -168,10 +168,10 @@ export function AnalyticsPage() {
   const canAdvance = hasContent && !isStreaming && !advancing
 
   return (
-    <div className="mx-auto w-full max-w-[720px]">
+    <div className="layout-focus page-enter">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-base font-semibold text-[var(--text-primary)]">埋点设计</h1>
+        <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">埋点设计</h1>
         <Button
           variant="ghost"
           size="sm"

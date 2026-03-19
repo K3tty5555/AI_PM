@@ -20,7 +20,17 @@ const PHASE_LABELS: Record<string, string> = {
   retrospective: "项目复盘（可选）",
 }
 
-function SidebarShell({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+function SidebarShell({
+  open,
+  onToggle,
+  theme,
+  onToggleTheme,
+}: {
+  open: boolean
+  onToggle: () => void
+  theme: "light" | "dark"
+  onToggleTheme: () => void
+}) {
   const [projects, setProjects] = useState<SidebarProject[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [projectName, setProjectName] = useState<string | undefined>()
@@ -86,6 +96,17 @@ function SidebarShell({ open, onToggle }: { open: boolean; onToggle: () => void 
     return () => window.removeEventListener("project-phase-updated", handler)
   }, [activeProjectId, activePhase, loadProjectPhases])
 
+  // Listen for project list changes (e.g. after import from Settings)
+  useEffect(() => {
+    const handler = () => {
+      api.listProjects()
+        .then(setProjects)
+        .catch((err) => console.error("Failed to reload projects:", err))
+    }
+    window.addEventListener("projects-updated", handler)
+    return () => window.removeEventListener("projects-updated", handler)
+  }, [])
+
   const handleNewProject = () => setDialogOpen(true)
 
   const handleCreated = (project: { id: string; name: string }) => {
@@ -119,6 +140,8 @@ function SidebarShell({ open, onToggle }: { open: boolean; onToggle: () => void 
         projectPhases={projectPhases}
         activePhase={activePhase}
         onPhaseClick={handlePhaseClick}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
       />
       <NewProjectDialog
         open={dialogOpen}

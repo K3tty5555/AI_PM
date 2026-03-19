@@ -241,6 +241,7 @@ export function SettingsPage() {
       setImportResult(result)
       setScanResults(null)
       if (result.imported > 0) {
+        window.dispatchEvent(new CustomEvent("projects-updated"))
         setTimeout(() => navigate("/"), 1500)
       }
     } catch (err) {
