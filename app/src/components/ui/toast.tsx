@@ -31,8 +31,8 @@ const variantConfig: Record<
   },
   warning: {
     icon: AlertTriangle,
-    barColor: "bg-[#F59E0B] dark:bg-[#FBBF24]",
-    iconColor: "text-[#F59E0B] dark:text-[#FBBF24]",
+    barColor: "bg-[var(--warning)]",
+    iconColor: "text-[var(--warning)]",
   },
 }
 
