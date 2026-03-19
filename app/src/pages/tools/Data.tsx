@@ -30,8 +30,8 @@ export function ToolDataPage() {
   const projectsDirRef = useRef<string>("")
 
   useEffect(() => {
-    api.getConfig().then(cfg => setIsApiMode(cfg.backend === "api")).catch(() => {})
-    api.getProjectsDir().then(dir => { projectsDirRef.current = dir }).catch(() => {})
+    api.getConfig().then(cfg => setIsApiMode(cfg.backend === "api")).catch((err) => console.error("[Data]", err))
+    api.getProjectsDir().then(dir => { projectsDirRef.current = dir }).catch((err) => console.error("[Data]", err))
   }, [])
 
   useEffect(() => {

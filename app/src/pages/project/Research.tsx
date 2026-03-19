@@ -108,9 +108,9 @@ export function ResearchPage() {
       const apiMode = cfg.backend === "api"
       setIsApiMode(apiMode)
       if (!apiMode) {
-        api.checkPlaywrightMcp().then(setHasPlaywrightMcp).catch(() => {})
+        api.checkPlaywrightMcp().then(setHasPlaywrightMcp).catch((err) => console.error("[Research]", err))
       }
-    }).catch(() => {})
+    }).catch((err) => console.error("[Research]", err))
   }, [])
 
   const startedRef = useRef(false)
