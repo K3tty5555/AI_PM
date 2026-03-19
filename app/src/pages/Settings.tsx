@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info, ChevronLeft, FolderOpen } from "lucide-react"
+import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info, ChevronLeft, FolderOpen, ExternalLink } from "lucide-react"
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
+import { open as openUrl } from "@tauri-apps/plugin-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
@@ -1072,6 +1073,14 @@ export function SettingsPage() {
             <p className="text-sm text-[var(--text-secondary)]">
               基于 Claude API 的产品经理工作台
             </p>
+            <button
+              type="button"
+              onClick={() => openUrl("https://github.com/K3tty5555/AI_PM")}
+              className="flex w-fit items-center gap-1.5 text-sm text-[var(--accent-color)] hover:underline"
+            >
+              <ExternalLink className="size-3.5" strokeWidth={1.75} />
+              github.com/K3tty5555/AI_PM
+            </button>
           </div>
         </CardContent>
       </Card>
