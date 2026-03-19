@@ -145,6 +145,41 @@ pub fn get_prd_style_content(state: State<'_, AppState>, name: String) -> Result
 }
 
 #[tauri::command]
+pub fn rename_prd_style(
+    state: State<'_, AppState>,
+    old_name: String,
+    new_name: String,
+) -> Result<(), String> {
+    if !is_safe_style_name(&old_name) {
+        return Err(format!("无效的旧名称: {}", old_name));
+    }
+    if !is_safe_style_name(&new_name) {
+        return Err(format!("无效的新名称: {}", new_name));
+    }
+    if old_name == new_name {
+        return Ok(());
+    }
+    let styles_dir = state.templates_base().join("prd-styles");
+    let old_dir = styles_dir.join(&old_name);
+    let new_dir = styles_dir.join(&new_name);
+    if !old_dir.exists() {
+        return Err(format!("风格「{}」不存在", old_name));
+    }
+    if new_dir.exists() {
+        return Err(format!("名称「{}」已存在", new_name));
+    }
+    fs::rename(&old_dir, &new_dir).map_err(|e| e.to_string())?;
+    // Update _active if it referenced old_name
+    let active_file = styles_dir.join("_active");
+    if let Ok(current) = fs::read_to_string(&active_file) {
+        if current.trim() == old_name {
+            let _ = fs::write(&active_file, &new_name);
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn add_ui_spec(
     state: State<'_, AppState>,
     dir: String,
@@ -211,6 +246,35 @@ pub fn get_ui_spec_content(state: State<'_, AppState>, name: String) -> Result<U
     let readme = fs::read_to_string(spec_dir.join("README.md")).ok();
     let tokens_raw = fs::read_to_string(spec_dir.join("design-tokens.json")).ok();
     Ok(UiSpecContent { readme, tokens_raw })
+}
+
+#[tauri::command]
+pub fn rename_ui_spec(
+    state: State<'_, AppState>,
+    old_name: String,
+    new_name: String,
+) -> Result<(), String> {
+    if new_name.is_empty()
+        || new_name.starts_with('.')
+        || new_name.contains('/')
+        || new_name.contains('\\')
+        || new_name.contains('\0')
+    {
+        return Err(format!("无效的新名称: {}", new_name));
+    }
+    if old_name == new_name {
+        return Ok(());
+    }
+    let specs_dir = state.templates_base().join("ui-specs");
+    let old_dir = specs_dir.join(&old_name);
+    let new_dir = specs_dir.join(&new_name);
+    if !old_dir.exists() {
+        return Err(format!("规范「{}」不存在", old_name));
+    }
+    if new_dir.exists() {
+        return Err(format!("名称「{}」已存在", new_name));
+    }
+    fs::rename(&old_dir, &new_dir).map_err(|e| e.to_string())
 }
 
 const KB_CATEGORIES: &[&str] = &["patterns", "decisions", "pitfalls", "metrics", "playbooks", "insights"];
