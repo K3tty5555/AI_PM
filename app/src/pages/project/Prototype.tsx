@@ -78,6 +78,7 @@ export function PrototypePage() {
         }
 
         const content = await api.readProjectFile(projectId!, PROTOTYPE_FILE)
+          ?? await api.readProjectFile(projectId!, "06-prototype/index.html")
         if (!cancelled) {
           if (content) {
             setExistingHtml(content)
@@ -159,7 +160,7 @@ export function PrototypePage() {
 
   if (!loading && !existingHtml && !text && !isStreaming && !error) {
     return (
-      <div className="layout-canvas">
+      <div className="mx-auto w-full max-w-[900px]">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-base font-semibold text-[var(--text-primary)]">原型设计</h1>
         </div>

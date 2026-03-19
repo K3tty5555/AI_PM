@@ -274,8 +274,8 @@ export function RequirementPage() {
         </button>
       </div>
 
-      {/* Sticky bottom action bar */}
-      <div className="sticky bottom-0 -mx-8 border-t border-[var(--border)] bg-[var(--background)] px-8 py-4">
+      {/* Action bar */}
+      <div className="mt-8 -mx-8 border-t border-[var(--border)] bg-[var(--background)] px-8 py-4">
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-[var(--text-tertiary)]">
             {!canSubmit ? "请填写需求描述后继续" : ""}
