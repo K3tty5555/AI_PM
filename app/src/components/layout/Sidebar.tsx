@@ -90,7 +90,7 @@ function PhaseIcon({ phaseId, status }: { phaseId: string; status: SidebarPhase[
   const Icon = PHASE_ICONS[phaseId] ?? Inbox
   return (
     <Icon
-      className="size-4 shrink-0"
+      className="size-4 shrink-0 transition-transform duration-200 ease-out group-hover:scale-110"
       style={{ color: status === "current" ? "var(--accent-color)" : "var(--text-tertiary)" }}
       strokeWidth={1.75}
     />
@@ -299,7 +299,7 @@ function Sidebar({
                     navigate(activeProjectId ? `${tool.path}?projectId=${activeProjectId}` : tool.path)
                   }
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-3 py-[7px] text-left",
+                    "group flex w-full items-center gap-2.5 rounded-md px-3 py-[7px] text-left",
                     "transition-colors duration-[var(--dur-base)]",
                     toolActive
                       ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
@@ -307,7 +307,7 @@ function Sidebar({
                   )}
                 >
                   <Icon
-                    className="size-4 shrink-0"
+                    className="size-4 shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:scale-110"
                     strokeWidth={1.75}
                     style={{ color: toolActive ? "var(--accent-color)" : "var(--text-tertiary)" }}
                   />
@@ -332,7 +332,7 @@ function Sidebar({
                     navigate(activeProjectId ? `${tool.path}?projectId=${activeProjectId}` : tool.path)
                   }
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-3 py-[7px] text-left",
+                    "group flex w-full items-center gap-2.5 rounded-md px-3 py-[7px] text-left",
                     "transition-colors duration-[var(--dur-base)]",
                     toolActive
                       ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
@@ -340,7 +340,7 @@ function Sidebar({
                   )}
                 >
                   <Icon
-                    className="size-4 shrink-0"
+                    className="size-4 shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:scale-110"
                     strokeWidth={1.75}
                     style={{ color: toolActive ? "var(--accent-color)" : "var(--text-tertiary)" }}
                   />
@@ -374,14 +374,14 @@ function Sidebar({
             type="button"
             onClick={() => navigate("/settings")}
             className={cn(
-              "flex flex-1 items-center gap-2 rounded-md px-3 py-2 text-left",
+              "group flex flex-1 items-center gap-2 rounded-md px-3 py-2 text-left",
               location.pathname === "/settings"
                 ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
                 : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]",
               "transition-colors duration-[var(--dur-base)]",
             )}
           >
-            <Settings className="size-3.5 shrink-0" strokeWidth={1.75} />
+            <Settings className="size-3.5 shrink-0 transition-transform duration-200 ease-out group-hover:rotate-[15deg]" strokeWidth={1.75} />
             <span className="text-[13px]">设置</span>
           </button>
           <button
@@ -391,8 +391,8 @@ function Sidebar({
             className="flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150"
           >
             {theme === "light"
-              ? <Moon className="size-3.5" strokeWidth={1.75} />
-              : <Sun className="size-3.5" strokeWidth={1.75} />
+              ? <Moon className="size-3.5 transition-transform duration-300 ease-out hover:rotate-180" strokeWidth={1.75} />
+              : <Sun className="size-3.5 transition-transform duration-300 ease-out hover:rotate-180" strokeWidth={1.75} />
             }
           </button>
         </div>
