@@ -77,7 +77,7 @@ function MermaidRenderer({ chart }: MermaidRendererProps) {
         <pre
           className={cn(
             "overflow-x-auto p-4 text-xs",
-            "bg-[var(--dark)] text-[#e0e0e0]",
+            "bg-[var(--secondary)] text-[var(--text-primary)]",
             "border-l-3 border-l-[var(--yellow)]",
             "font-mono",
           )}
