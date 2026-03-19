@@ -183,6 +183,7 @@ pub fn run() {
             commands::projects::scan_legacy_projects,
             commands::projects::import_legacy_projects,
             commands::projects::migrate_projects_to_app_dir,
+            commands::projects::set_project_status,
             commands::templates::scan_legacy_knowledge,
             commands::templates::import_legacy_knowledge,
             commands::templates::list_prd_styles,
