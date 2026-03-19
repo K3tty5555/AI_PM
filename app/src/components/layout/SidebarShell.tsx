@@ -23,13 +23,15 @@ const PHASE_LABELS: Record<string, string> = {
 function SidebarShell({
   open,
   onToggle: _onToggle,
-  theme,
-  onToggleTheme,
+  themePreference,
+  resolvedTheme,
+  onCycleTheme,
 }: {
   open: boolean
   onToggle: () => void
-  theme: "light" | "dark"
-  onToggleTheme: () => void
+  themePreference: "light" | "dark" | "system"
+  resolvedTheme: "light" | "dark"
+  onCycleTheme: () => void
 }) {
   const [projects, setProjects] = useState<SidebarProject[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -157,8 +159,9 @@ function SidebarShell({
         onPhaseClick={handlePhaseClick}
         projectStatus={projectStatus}
         onStatusChange={handleStatusChange}
-        theme={theme}
-        onToggleTheme={onToggleTheme}
+        themePreference={themePreference}
+        resolvedTheme={resolvedTheme}
+        onCycleTheme={onCycleTheme}
       />
       <NewProjectDialog
         open={dialogOpen}
