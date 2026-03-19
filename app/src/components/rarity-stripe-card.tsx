@@ -6,16 +6,16 @@ const rarityStripeCardVariants = cva(
     "relative",
     "bg-[var(--card)] text-[var(--card-foreground)]",
     "border border-[var(--border)]",
-    "shadow-[0_2px_16px_rgba(0,0,0,0.04)]",
+    "shadow-[var(--shadow-sm)]",
     "transition-shadow duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
-    "hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
+    "hover:shadow-[var(--shadow-md)]",
     "p-5 pl-7",
   ].join(" "),
   {
     variants: {
       rarity: {
         gold: "before:bg-[var(--accent-color)]",
-        teal: "before:bg-[#4ECDC4]",
+        teal: "before:bg-[var(--teal)]",
         gray: "before:bg-[var(--text-tertiary)]",
       },
     },
