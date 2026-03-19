@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus, Trash2, CheckCircle2, RotateCcw } from "lucide-react"
+import { Plus, Trash2, CheckCircle2, RotateCcw, Pencil } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
@@ -75,6 +75,13 @@ export function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all')
   const [sortOrder, setSortOrder] = useState<'updatedAt' | 'createdAt'>('updatedAt')
 
+  // Inline rename state
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
+  const [renameInput, setRenameInput] = useState("")
+  const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null)
+  const [renameError, setRenameError] = useState<string>("")
+  const isConfirmingRef = useRef(false)
+
   const filteredProjects = projects
     .filter((p) => {
       const matchSearch = !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
@@ -85,6 +92,48 @@ export function DashboardPage() {
       const key = sortOrder === 'updatedAt' ? 'updatedAt' : 'createdAt'
       return b[key].localeCompare(a[key])
     })
+
+  const startRename = useCallback((project: DashboardProject, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingProjectId(project.id)
+    setRenameInput(project.name)
+    setRenameError("")
+    isConfirmingRef.current = false
+  }, [])
+
+  const cancelRename = useCallback(() => {
+    setEditingProjectId(null)
+    setRenameInput("")
+    setRenameError("")
+    isConfirmingRef.current = false
+  }, [])
+
+  const confirmRename = useCallback(async (project: DashboardProject) => {
+    if (isConfirmingRef.current) return
+    const newName = renameInput.trim()
+    if (!newName) {
+      setRenameError("名称不能为空")
+      return
+    }
+    if (newName === project.name) {
+      cancelRename()
+      return
+    }
+    isConfirmingRef.current = true
+    setRenamingProjectId(project.id)
+    setRenameError("")
+    try {
+      await api.renameProject(project.id, newName)
+      setProjects(prev => prev.map(p => p.id === project.id ? { ...p, name: newName } : p))
+      setEditingProjectId(null)
+      setRenameInput("")
+    } catch (err) {
+      setRenameError(String(err))
+      isConfirmingRef.current = false
+    } finally {
+      setRenamingProjectId(null)
+    }
+  }, [renameInput, cancelRename])
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -318,13 +367,56 @@ export function DashboardPage() {
 
                 {/* Project name */}
                 <div className="flex items-start gap-2 pr-6 mb-3">
-                  <span className="text-[16px] font-semibold text-[var(--text-primary)] leading-snug truncate">
-                    {project.name}
-                  </span>
-                  {project.status === 'completed' && (
-                    <span className="ml-2 rounded-full bg-[var(--success)]/15 px-2 py-0.5 text-[10px] text-[var(--success)] font-medium shrink-0">
-                      已完成
-                    </span>
+                  {editingProjectId === project.id ? (
+                    <div className="flex flex-col gap-1 min-w-0 flex-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <input
+                          autoFocus
+                          value={renameInput}
+                          onChange={(e) => { setRenameInput(e.target.value); setRenameError("") }}
+                          onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); confirmRename(project) }
+                            else if (e.key === "Escape") { e.preventDefault(); cancelRename() }
+                          }}
+                          onBlur={() => confirmRename(project)}
+                          disabled={renamingProjectId === project.id}
+                          className={cn(
+                            "h-8 px-2 text-[15px] font-semibold rounded border bg-transparent outline-none w-full",
+                            renameError
+                              ? "border-[var(--destructive)] text-[var(--destructive)]"
+                              : "border-[var(--accent-color)] text-[var(--text-primary)]"
+                          )}
+                        />
+                        {renamingProjectId === project.id && (
+                          <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                          </svg>
+                        )}
+                      </div>
+                      {renameError && (
+                        <span className="text-[10px] text-[var(--destructive)]">{renameError}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 min-w-0 group/name">
+                      <span className="text-[16px] font-semibold text-[var(--text-primary)] leading-snug truncate">
+                        {project.name}
+                      </span>
+                      <button
+                        onClick={(e) => startRename(project, e)}
+                        className="opacity-0 group-hover/name:opacity-100 transition-opacity duration-150 p-0.5 rounded hover:bg-[var(--accent-color)]/10 text-[var(--text-tertiary)] hover:text-[var(--accent-color)] shrink-0"
+                        title="重命名"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      {project.status === 'completed' && (
+                        <span className="ml-1 rounded-full bg-[var(--success)]/15 px-2 py-0.5 text-[10px] text-[var(--success)] font-medium shrink-0">
+                          已完成
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
 
