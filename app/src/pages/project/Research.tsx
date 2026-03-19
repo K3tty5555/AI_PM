@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { Badge } from "@/components/ui/badge"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -97,6 +97,21 @@ export function ResearchPage() {
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
+  const [isApiMode, setIsApiMode] = useState(false)
+  const [hasPlaywrightMcp, setHasPlaywrightMcp] = useState(false)
+  const [urlInput, setUrlInput] = useState("")
+  const [urls, setUrls] = useState<string[]>([])
+  const [fetchingUrls, setFetchingUrls] = useState(false)
+
+  useEffect(() => {
+    api.getConfig().then(cfg => {
+      const apiMode = cfg.backend === "api"
+      setIsApiMode(apiMode)
+      if (!apiMode) {
+        api.checkPlaywrightMcp().then(setHasPlaywrightMcp).catch(() => {})
+      }
+    }).catch(() => {})
+  }, [])
 
   const startedRef = useRef(false)
 
@@ -107,6 +122,8 @@ export function ResearchPage() {
 
   const [searchParams] = useSearchParams()
   const autostart = searchParams.get("autostart") === "1"
+  const isYolo = searchParams.get("yolo") === "1"
+  const isTeam = searchParams.get("team") === "1"
 
   const displayContent = existingContent ?? text
 
@@ -182,24 +199,65 @@ export function ResearchPage() {
     [messages, text, questionInfo.question, start]
   )
 
-  const handleGenerate = useCallback(() => {
-    const initialMessages: Message[] = [{ role: "user", content: "请开始竞品研究" }]
+  const handleGenerate = useCallback(async () => {
+    let urlContext = ""
+    if (urls.length > 0) {
+      setFetchingUrls(true)
+      const results = await Promise.allSettled(
+        urls.map(url => api.fetchUrlContent(url))
+      )
+      setFetchingUrls(false)
+      urlContext = urls
+        .map((url, i) => {
+          const r = results[i]
+          return r.status === "fulfilled"
+            ? `### 来源：${url}\n${r.value}`
+            : `### 来源：${url}\n（抓取失败，请基于已知信息分析）`
+        })
+        .join("\n\n---\n\n")
+    }
+
+    const promptContent = urlContext
+      ? `请开始竞品研究\n\n以下是参考网页的实际内容，请基于真实内容进行分析：\n\n${urlContext}`
+      : `请开始竞品研究`
+    const initialMessages: Message[] = [{ role: "user", content: promptContent }]
     setMessages(initialMessages)
     startedRef.current = true
     start(initialMessages, { excludedContext })
-  }, [start, excludedContext])
+  }, [start, excludedContext, urls])
 
-  const handleRestart = useCallback(() => {
+  const handleRestart = useCallback(async () => {
     reset()
     setExistingContent(null)
     setChatHistory([])
+
+    let urlContext = ""
+    if (urls.length > 0) {
+      setFetchingUrls(true)
+      const results = await Promise.allSettled(
+        urls.map(url => api.fetchUrlContent(url))
+      )
+      setFetchingUrls(false)
+      urlContext = urls
+        .map((url, i) => {
+          const r = results[i]
+          return r.status === "fulfilled"
+            ? `### 来源：${url}\n${r.value}`
+            : `### 来源：${url}\n（抓取失败，请基于已知信息分析）`
+        })
+        .join("\n\n---\n\n")
+    }
+
+    const promptContent = urlContext
+      ? `请开始竞品研究\n\n以下是参考网页的实际内容，请基于真实内容进行分析：\n\n${urlContext}`
+      : `请开始竞品研究`
     const initialMessages: Message[] = [
-      { role: "user", content: "请开始竞品研究" },
+      { role: "user", content: promptContent },
     ]
     setMessages(initialMessages)
     startedRef.current = true
     start(initialMessages, { excludedContext })
-  }, [reset, start, excludedContext])
+  }, [reset, start, excludedContext, urls])
 
   const handleBack = useCallback(() => {
     navigate(`/project/${projectId}/analysis`)
@@ -229,20 +287,18 @@ export function ResearchPage() {
 
       await api.advancePhase(projectId)
       invalidateProject(projectId)
-      navigate(`/project/${projectId}/stories?autostart=1`)
+      navigate(`/project/${projectId}/stories?autostart=1${isYolo ? "&yolo=1" : ""}${isTeam ? "&team=1" : ""}`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate])
+  }, [projectId, existingContent, text, outputFile, navigate, isYolo, isTeam])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
-          LOADING...
-        </span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
       </div>
     )
   }
@@ -250,11 +306,37 @@ export function ResearchPage() {
   // Empty state — no file, no autostart, not currently streaming
   if (!loading && !existingContent && !text && !isStreaming && !error) {
     return (
-      <div className="mx-auto w-full max-w-[720px]">
+      <div className="layout-focus page-enter">
         <div className="mb-6 flex items-center justify-between">
-          <Badge variant="outline">RESEARCH</Badge>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">竞品研究</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
+        {isApiMode ? (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
+            <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[var(--text-tertiary)]" />
+            <p className="min-w-0 flex-1 text-[13px] text-[var(--text-secondary)]">
+              API 模式下竞品分析依赖模型知识，无法获取实时数据。切换到 Claude CLI 后端可启用联网搜索和深度分析。
+            </p>
+            <button
+              onClick={() => navigate("/settings")}
+              className="shrink-0 text-[13px] text-[var(--accent-color)] hover:opacity-70 transition-opacity"
+            >
+              去设置
+            </button>
+          </div>
+        ) : !hasPlaywrightMcp ? (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
+            <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[var(--yellow)]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] text-[var(--text-secondary)]">
+                未检测到 Playwright MCP，深度分析（自动登录截图）不可用。普通竞品分析仍可正常运行。
+              </p>
+              <p className="mt-1 font-mono text-[11px] text-[var(--text-tertiary)] select-all">
+                claude mcp add playwright -s user -- npx @playwright/mcp@latest
+              </p>
+            </div>
+          </div>
+        ) : null}
         <ContextPills
           projectId={projectId!}
           onExcludeChange={setExcludedContext}
@@ -265,6 +347,56 @@ export function ResearchPage() {
           description="竞品研究报告"
           onGenerate={handleGenerate}
         />
+        {/* URL reference input */}
+        <div className="mt-4">
+          <p className="text-[12px] text-[var(--text-tertiary)] mb-2">添加参考网址（可选）</p>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              placeholder="https://..."
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && urlInput.trim()) {
+                  setUrls((prev) => [...prev, urlInput.trim()])
+                  setUrlInput("")
+                }
+              }}
+              className="flex-1 h-8 px-3 rounded text-[13px] bg-[var(--secondary)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-color)] transition-colors"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (urlInput.trim()) {
+                  setUrls((prev) => [...prev, urlInput.trim()])
+                  setUrlInput("")
+                }
+              }}
+            >
+              添加
+            </Button>
+          </div>
+          {urls.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {urls.map((u, i) => (
+                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-[var(--secondary)] border border-[var(--border)] text-[var(--text-secondary)]">
+                  {(() => { try { return new URL(u).hostname } catch { return u.slice(0, 30) } })()}
+                  <button
+                    onClick={() => setUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                  >×</button>
+                </span>
+              ))}
+            </div>
+          )}
+          {fetchingUrls && (
+            <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] mt-1">
+              <Loader2 className="size-3 animate-spin" />
+              正在抓取参考网页…
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -273,10 +405,10 @@ export function ResearchPage() {
   const canAdvance = hasContent && !isStreaming && !advancing
 
   return (
-    <div className="mx-auto w-full max-w-[720px]">
+    <div className="layout-focus page-enter">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <Badge variant="outline">RESEARCH</Badge>
+        <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">竞品研究</h1>
         <Button
           variant="ghost"
           size="sm"
@@ -302,12 +434,12 @@ export function ResearchPage() {
           {(() => {
             const status = !isThinking ? extractStreamStatus(text) : ""
             return isThinking
-              ? <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
               : status
-                ? <p className="mt-2 font-terminal text-xs tracking-[1px] text-[var(--text-muted)]">{status}</p>
+                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
           })()}
-          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
+          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
         </div>
@@ -315,7 +447,7 @@ export function ResearchPage() {
 
       {/* Error display */}
       {error && (
-        <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">
             {error}
           </p>
@@ -343,7 +475,7 @@ export function ResearchPage() {
           isStreaming={isStreaming}
         />
         {!isStreaming && streamMeta !== null && (
-          <p className="text-xs text-[var(--text-muted)] font-terminal mt-2">
+          <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
             {streamMeta.inputTokens != null && streamMeta.outputTokens != null
               ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
               : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
@@ -418,7 +550,7 @@ export function ResearchPage() {
                 : PHASE_META.research.nextLabel + " →"}
           </Button>
           {!advancing && !saving && (
-            <p className="font-terminal text-[10px] text-[var(--text-muted)] tracking-[0.5px]">
+            <p className="text-[11px] text-[var(--text-tertiary)]">
               {PHASE_META.research.nextDescription}
             </p>
           )}

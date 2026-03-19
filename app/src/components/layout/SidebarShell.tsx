@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { Sidebar, type SidebarProject, type SidebarPhase } from "./Sidebar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { api } from "@/lib/tauri-api"
 
 const PHASE_ORDER = [
-  "requirement", "research", "analysis", "stories", "prd", "prototype", "review",
+  "requirement", "analysis", "research", "stories", "prd", "analytics", "prototype", "review", "retrospective",
 ]
 
 const PHASE_LABELS: Record<string, string> = {
@@ -14,11 +14,23 @@ const PHASE_LABELS: Record<string, string> = {
   analysis: "需求分析",
   stories: "用户故事",
   prd: "PRD 撰写",
+  analytics: "埋点设计",
   prototype: "原型设计",
   review: "需求评审",
+  retrospective: "项目复盘（可选）",
 }
 
-function SidebarShell() {
+function SidebarShell({
+  open,
+  onToggle,
+  theme,
+  onToggleTheme,
+}: {
+  open: boolean
+  onToggle: () => void
+  theme: "light" | "dark"
+  onToggleTheme: () => void
+}) {
   const [projects, setProjects] = useState<SidebarProject[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [projectName, setProjectName] = useState<string | undefined>()
@@ -26,6 +38,10 @@ function SidebarShell() {
   const { id: activeProjectId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
+
+  const activePhase = activeProjectId
+    ? location.pathname.split("/").pop()
+    : undefined
 
   // Load project list
   useEffect(() => {
@@ -35,14 +51,8 @@ function SidebarShell() {
   }, [])
 
   // Load current project phases when inside a project
-  useEffect(() => {
-    if (!activeProjectId) {
-      setProjectName(undefined)
-      setProjectPhases(undefined)
-      return
-    }
-
-    api.getProject(activeProjectId)
+  const loadProjectPhases = useCallback((projectId: string, currentPhase: string | undefined) => {
+    api.getProject(projectId)
       .then((project) => {
         if (!project?.id) return
         setProjectName(project.name)
@@ -56,14 +66,46 @@ function SidebarShell() {
         const phases: SidebarPhase[] = PHASE_ORDER.map((id) => {
           let status: SidebarPhase["status"] = "pending"
           if (completedPhases.has(id)) status = "completed"
-          else if (id === project.currentPhase) status = "current"
+          else if (id === currentPhase) status = "current"  // URL wins only if not completed
           return { id, label: PHASE_LABELS[id] ?? id, status }
         })
 
         setProjectPhases(phases)
       })
       .catch((err) => console.error("Failed to load project:", err))
-  }, [activeProjectId, location.pathname])
+  }, [])
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setProjectName(undefined)
+      setProjectPhases(undefined)
+      return
+    }
+    loadProjectPhases(activeProjectId, activePhase)
+  }, [activeProjectId, location.pathname, loadProjectPhases])
+
+  // Listen for phase completion events dispatched by use-ai-stream
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { projectId } = (e as CustomEvent).detail
+      if (projectId === activeProjectId && activeProjectId) {
+        loadProjectPhases(activeProjectId, activePhase)
+      }
+    }
+    window.addEventListener("project-phase-updated", handler)
+    return () => window.removeEventListener("project-phase-updated", handler)
+  }, [activeProjectId, activePhase, loadProjectPhases])
+
+  // Listen for project list changes (e.g. after import from Settings)
+  useEffect(() => {
+    const handler = () => {
+      api.listProjects()
+        .then(setProjects)
+        .catch((err) => console.error("Failed to reload projects:", err))
+    }
+    window.addEventListener("projects-updated", handler)
+    return () => window.removeEventListener("projects-updated", handler)
+  }, [])
 
   const handleNewProject = () => setDialogOpen(true)
 
@@ -75,7 +117,7 @@ function SidebarShell() {
         name: project.name,
         currentPhase: "requirement",
         completedCount: 0,
-        totalPhases: 7,
+        totalPhases: 9,
       },
       ...prev,
     ])
@@ -86,20 +128,20 @@ function SidebarShell() {
     if (activeProjectId) navigate(`/project/${activeProjectId}/${phaseId}`)
   }
 
-  const activePhase = activeProjectId
-    ? location.pathname.split("/").pop()
-    : undefined
-
   return (
     <>
       <Sidebar
+        open={open}
         projects={projects}
         activeProjectId={activeProjectId}
         onNewProject={handleNewProject}
+        onCollapse={onToggle}
         projectName={projectName}
         projectPhases={projectPhases}
         activePhase={activePhase}
         onPhaseClick={handlePhaseClick}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
       />
       <NewProjectDialog
         open={dialogOpen}

@@ -35,7 +35,7 @@ export function ProjectSelector({ toolKey, value, onChange, className }: Project
         className,
       )}
     >
-      <span className="font-terminal text-[10px] uppercase tracking-[2px] text-[var(--text-muted)] shrink-0">
+      <span className="text-[11px] font-medium text-[var(--text-tertiary)] shrink-0">
         绑定项目
       </span>
       <select
@@ -55,7 +55,7 @@ export function ProjectSelector({ toolKey, value, onChange, className }: Project
         ))}
       </select>
       {selectedProject && (
-        <span className="font-terminal text-[10px] text-[var(--text-muted)] shrink-0">
+        <span className="text-[11px] text-[var(--text-tertiary)] shrink-0">
           运行后自动保存上下文
         </span>
       )}

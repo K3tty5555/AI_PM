@@ -70,7 +70,7 @@ function MermaidRenderer({ chart }: MermaidRendererProps) {
     return (
       <div className="my-3">
         <div className="border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 px-3 py-2 mb-1">
-          <span className="text-[10px] font-terminal uppercase tracking-[1px] text-[var(--destructive)]">
+          <span className="text-[11px] text-[var(--destructive)]">
             MERMAID_RENDER_ERROR
           </span>
         </div>
@@ -79,7 +79,7 @@ function MermaidRenderer({ chart }: MermaidRendererProps) {
             "overflow-x-auto p-4 text-xs",
             "bg-[var(--dark)] text-[#e0e0e0]",
             "border-l-3 border-l-[var(--yellow)]",
-            "font-terminal",
+            "font-mono",
           )}
         >
           <code>{chart}</code>
@@ -100,7 +100,7 @@ function MermaidRenderer({ chart }: MermaidRendererProps) {
             )}
             style={{ borderRadius: "50%" }}
           />
-          <span className="text-[10px] font-terminal uppercase tracking-[1px] text-[var(--text-muted)]">
+          <span className="text-[11px] text-[var(--text-tertiary)]">
             RENDERING...
           </span>
         </div>

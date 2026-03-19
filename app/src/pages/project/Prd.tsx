@@ -1,12 +1,11 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
-import { api } from "@/lib/tauri-api"
+import { api, type PrdStyleEntry, type KnowledgeEntry } from "@/lib/tauri-api"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -54,6 +53,17 @@ export function PrdPage() {
   const [editedMarkdown, setEditedMarkdown] = useState<string | null>(null)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
   const [reviewContent, setReviewContent] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [exportResult, setExportResult] = useState<{ path: string } | { error: string } | null>(null)
+
+  // PRD style selector
+  const [prdStyles, setPrdStyles] = useState<PrdStyleEntry[]>([])
+  const [selectedStyle, setSelectedStyle] = useState<string>("")
+
+  // Knowledge recommendation (empty state only)
+  const [projectName, setProjectName] = useState<string>("")
+  const [relevantKnowledge, setRelevantKnowledge] = useState<KnowledgeEntry[]>([])
+  const [knowledgeExpanded, setKnowledgeExpanded] = useState(false)
 
   // AI assist input
   const [assistInput, setAssistInput] = useState("")
@@ -67,6 +77,7 @@ export function PrdPage() {
 
   const [searchParams] = useSearchParams()
   const autostart = searchParams.get("autostart") === "1"
+  const fromYolo = searchParams.get("yolo") === "1"
 
   // AI stream hook for initial generation
   const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, outputFile, start, reset } = useAiStream({
@@ -152,6 +163,33 @@ export function PrdPage() {
   }, [sectionIds, displayMarkdown])
 
   // -------------------------------------------------------------------------
+  // Load PRD styles on mount
+  // -------------------------------------------------------------------------
+
+  useEffect(() => {
+    Promise.all([api.listPrdStyles(), api.getActivePrdStyle()]).then(([styles, active]) => {
+      setPrdStyles(styles)
+      setSelectedStyle(active ?? "")
+    }).catch(() => {})
+  }, [])
+
+  // Load project name for knowledge recommendation
+  useEffect(() => {
+    if (!projectId) return
+    api.getProject(projectId).then((project) => {
+      if (project) setProjectName(project.name)
+    }).catch(() => {})
+  }, [projectId])
+
+  // Fetch relevant knowledge for empty state recommendation
+  useEffect(() => {
+    if (!projectName || existingMarkdown) return
+    api.searchKnowledge(projectName).then((entries) => {
+      if (entries.length > 0) setRelevantKnowledge(entries.slice(0, 3))
+    }).catch(() => {})
+  }, [projectName, existingMarkdown])
+
+  // -------------------------------------------------------------------------
   // Load existing PRD on mount
   // -------------------------------------------------------------------------
 
@@ -215,8 +253,11 @@ export function PrdPage() {
   /** Generate PRD for the first time */
   const handleGenerate = useCallback(() => {
     startedRef.current = true
-    start([{ role: "user", content: "请生成 PRD" }], { excludedContext })
-  }, [start, excludedContext])
+    start([{ role: "user", content: "请生成 PRD" }], {
+      excludedContext,
+      styleId: selectedStyle || undefined,
+    })
+  }, [start, excludedContext, selectedStyle])
 
   /** Regenerate the entire PRD */
   const handleRegenerate = useCallback(() => {
@@ -261,6 +302,23 @@ export function PrdPage() {
     navigate(`/project/${projectId}/stories`)
   }, [navigate, projectId])
 
+  const handleCopyMarkdown = useCallback(() => {
+    if (displayMarkdown) navigator.clipboard.writeText(displayMarkdown)
+  }, [displayMarkdown])
+
+  const handleExportDocx = useCallback(async () => {
+    setExporting(true)
+    setExportResult(null)
+    try {
+      const path = await api.exportPrdDocx(projectId)
+      setExportResult({ path })
+    } catch (err) {
+      setExportResult({ error: typeof err === "string" ? err : String(err) })
+    } finally {
+      setExporting(false)
+    }
+  }, [projectId])
+
   /** Save PRD & mark phase complete */
   const handleComplete = useCallback(async () => {
     if (!projectId || !displayMarkdown) return
@@ -288,7 +346,7 @@ export function PrdPage() {
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
-      navigate(`/project/${projectId}/prototype?autostart=1`)
+      navigate(`/project/${projectId}/analytics?autostart=1`)
     } catch (err) {
       console.error("Failed to complete PRD:", err)
       setAdvancing(false)
@@ -303,9 +361,7 @@ export function PrdPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)]">
-          LOADING...
-        </span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
       </div>
     )
   }
@@ -318,19 +374,85 @@ export function PrdPage() {
     return (
       <div className="mx-auto w-full max-w-[1080px]">
         <div className="mb-6 flex items-center justify-between">
-          <Badge variant="outline">PRD_V1.0</Badge>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
         </div>
         <div className="h-px bg-[var(--border)]" />
+        {fromYolo && (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
+            <span className="mt-0.5 shrink-0 text-[var(--accent-color)]">⚡</span>
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              加急模式已完成前 4 阶段（需求分析、竞品研究、用户故事）。确认内容无误后点击生成 PRD。
+            </p>
+          </div>
+        )}
         <ContextPills
           projectId={projectId!}
           onExcludeChange={setExcludedContext}
           className="border-b border-[var(--border)]"
         />
+        {prdStyles.length > 0 && (
+          <div className="flex items-center gap-2 px-1 py-3 border-b border-[var(--border)]">
+            <span className="text-xs text-[var(--text-secondary)] shrink-0">写作风格</span>
+            <select
+              value={selectedStyle}
+              onChange={(e) => {
+                const val = e.target.value
+                setSelectedStyle(val)
+                if (val) api.setActivePrdStyle(val).catch(() => {})
+              }}
+              className={cn(
+                "h-7 px-2 text-xs rounded",
+                "bg-[var(--secondary)] border border-[var(--border)]",
+                "text-[var(--text-primary)]",
+                "outline-none cursor-pointer",
+                "hover:border-[var(--accent-color)]/60 transition-colors",
+                "focus:border-[var(--accent-color)]",
+              )}
+            >
+              <option value="">（无）</option>
+              {prdStyles.map((s) => (
+                <option key={s.name} value={s.name}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <PhaseEmptyState
           phaseLabel="PRD"
           description="产品需求文档"
           onGenerate={handleGenerate}
         />
+        {/* Direct generation shortcut */}
+        <div className="mt-3 text-center">
+          <button
+            onClick={handleGenerate}
+            className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] underline underline-offset-2 transition-colors"
+          >
+            ⚡ 跳过分析，直接生成 PRD
+          </button>
+        </div>
+        {relevantKnowledge.length > 0 && (
+          <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--secondary)]">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-[13px] text-[var(--text-secondary)]"
+              onClick={() => setKnowledgeExpanded((v) => !v)}
+            >
+              <span>发现 {relevantKnowledge.length} 条相关经验</span>
+              <span>{knowledgeExpanded ? "▲" : "▼"}</span>
+            </button>
+            {knowledgeExpanded && (
+              <div className="px-4 pb-3 space-y-2 border-t border-[var(--border)]">
+                {relevantKnowledge.map((entry) => (
+                  <div key={entry.id} className="py-2">
+                    <p className="text-[12px] font-medium text-[var(--text-primary)]">{entry.title}</p>
+                    <p className="text-[12px] text-[var(--text-secondary)] line-clamp-2">
+                      {entry.content.replace(/^#[^\n]+\n+/, "").slice(0, 120)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     )
   }
@@ -345,18 +467,39 @@ export function PrdPage() {
   return (
     <div className="mx-auto w-full max-w-[1080px]">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="prd-header mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Badge variant="outline">PRD_V1.0</Badge>
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRegenerate}
-          disabled={currentStreaming}
-        >
-          &#x21bb; 重新生成
-        </Button>
+        <div className="prd-actions flex items-center gap-1">
+          {hasContent && !currentStreaming && (
+            <>
+              <Button variant="ghost" size="sm" onClick={handleCopyMarkdown} title="复制 Markdown 源文本">
+                复制 MD
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => window.print()} title="打印或存储为 PDF">
+                打印 / PDF
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExportDocx}
+                disabled={exporting}
+                title="导出为 Word / DOCX 格式"
+              >
+                {exporting ? "导出中..." : "导出 DOCX"}
+              </Button>
+            </>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRegenerate}
+            disabled={currentStreaming}
+          >
+            &#x21bb; 重新生成
+          </Button>
+        </div>
       </div>
 
       <div className="h-px bg-[var(--border)]" />
@@ -374,12 +517,12 @@ export function PrdPage() {
           {(() => {
             const status = !isThinking ? extractStreamStatus(streamText) : ""
             return isThinking
-              ? <p className="mt-2 font-terminal text-xs uppercase tracking-[2px] text-[var(--text-muted)] animate-[blink_1s_step-end_infinite]">THINKING...</p>
+              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
               : status
-                ? <p className="mt-2 font-terminal text-xs tracking-[1px] text-[var(--text-muted)]">{status}</p>
+                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
           })()}
-          <p className="mt-2 font-terminal text-xs text-[var(--text-muted)]">
+          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
         </div>
@@ -387,7 +530,7 @@ export function PrdPage() {
 
       {/* Error display */}
       {(error || assistError) && (
-        <div className="mt-4 border border-[var(--destructive)]/30 bg-[var(--destructive)]/5 p-4">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">
             {error || assistError}
           </p>
@@ -412,12 +555,55 @@ export function PrdPage() {
         </div>
       )}
 
+      {/* DOCX export result */}
+      {exportResult && (
+        "error" in exportResult ? (() => {
+          const err = exportResult.error
+          const needsDep =
+            err.includes("python3") ||
+            err.includes("python-docx") ||
+            err.includes("pip3")
+          return (
+            <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm text-[var(--destructive)]">{err}</p>
+                {needsDep && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 h-7 px-2 text-xs text-[var(--accent-color)]"
+                    onClick={() => navigate("/settings")}
+                  >
+                    前往设置安装
+                  </Button>
+                )}
+              </div>
+              <button onClick={() => setExportResult(null)} className="mt-1 text-[12px] text-[var(--text-tertiary)] hover:opacity-70">关闭</button>
+            </div>
+          )
+        })() : (
+          <div className="mt-4 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
+            <span className="size-1.5 shrink-0 rounded-full bg-[var(--success)]" />
+            <p className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-secondary)]">
+              DOCX 已导出：{exportResult.path}
+            </p>
+            <button
+              onClick={() => api.revealFile(exportResult.path)}
+              className="shrink-0 text-[13px] text-[var(--accent-color)] hover:opacity-70 transition-opacity"
+            >
+              在 Finder 中显示
+            </button>
+            <button onClick={() => setExportResult(null)} className="shrink-0 text-[12px] text-[var(--text-tertiary)] hover:opacity-70">×</button>
+          </div>
+        )
+      )}
+
       {/* Main content: two-column layout */}
       <div className="mt-6 flex gap-6">
         {/* Left: PRD content */}
         <div
           ref={contentRef}
-          className="min-w-0 flex-1 overflow-y-auto"
+          className="prd-content min-w-0 flex-1 overflow-y-auto"
         >
           <PrdViewer
             markdown={displayMarkdown || ""}
@@ -425,7 +611,7 @@ export function PrdPage() {
             onEdit={handleEdit}
           />
           {!currentStreaming && streamMeta !== null && (
-            <p className="text-xs text-[var(--text-muted)] font-terminal mt-2">
+            <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
               {streamMeta.inputTokens != null && streamMeta.outputTokens != null
                 ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
                 : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
@@ -435,7 +621,7 @@ export function PrdPage() {
 
         {/* Right: TOC navigation */}
         {hasContent && sectionIds.length > 0 && (
-          <div className="hidden lg:block w-[220px] shrink-0">
+          <div className="prd-toc hidden lg:block w-[220px] shrink-0">
             <PrdToc
               markdown={displayMarkdown || ""}
               activeSection={activeSection}
@@ -449,6 +635,7 @@ export function PrdPage() {
       {hasContent && !currentStreaming && (
         <div
           className={cn(
+            "prd-assist",
             "mt-6",
             "relative pl-5",
             "before:absolute before:left-0 before:top-0 before:bottom-0",
@@ -467,7 +654,7 @@ export function PrdPage() {
                 "flex-1 h-9 px-3",
                 "text-sm text-[var(--dark)]",
                 "bg-transparent border border-[var(--border)]",
-                "placeholder:text-[var(--text-muted)]",
+                "placeholder:text-[var(--text-secondary)]",
                 "outline-none",
                 "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
                 "focus:border-[var(--yellow)]",
@@ -488,6 +675,7 @@ export function PrdPage() {
       {/* Bottom action bar */}
       <div
         className={cn(
+          "prd-footer",
           "mt-8 flex items-center justify-between",
           "border-t border-[var(--border)] pt-6",
         )}
@@ -513,7 +701,7 @@ export function PrdPage() {
                 : PHASE_META.prd.nextLabel + " →"}
           </Button>
           {!advancing && !saving && (
-            <p className="font-terminal text-[10px] text-[var(--text-muted)] tracking-[0.5px]">
+            <p className="text-[11px] text-[var(--text-tertiary)]">
               {PHASE_META.prd.nextDescription}
             </p>
           )}

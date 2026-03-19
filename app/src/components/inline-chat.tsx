@@ -51,19 +51,14 @@ function InlineChat({
     return (
       <div
         data-slot="inline-chat"
-        className={cn(
-          "relative pl-5",
-          "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
-          "animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]",
-          className
-        )}
+        className={cn("rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]", className)}
       >
         <button
           type="button"
           onClick={() => setInternalCollapsed(false)}
           className={cn(
-            "flex items-center gap-2 py-2 w-full text-left",
-            "text-sm text-[var(--text-muted)]",
+            "flex items-center gap-2 w-full text-left",
+            "text-sm text-[var(--text-secondary)]",
             "hover:text-[var(--dark)] transition-colors duration-[0.28s]",
             "cursor-pointer",
           )}
@@ -84,12 +79,7 @@ function InlineChat({
   return (
     <div
       data-slot="inline-chat"
-      className={cn(
-        "relative pl-5",
-        "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
-        "animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]",
-        className
-      )}
+      className={cn("rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]", className)}
     >
       <div className="py-3 space-y-3">
         {/* AI Question */}
@@ -130,13 +120,13 @@ function InlineChat({
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="输入你的回答..."
             className={cn(
-              "flex-1 h-8 px-3",
+              "flex-1 h-8 px-3 rounded-lg",
               "text-sm text-[var(--dark)]",
               "bg-transparent border border-[var(--border)]",
-              "placeholder:text-[var(--text-muted)]",
+              "placeholder:text-[var(--text-secondary)]",
               "outline-none",
               "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
-              "focus:border-[var(--yellow)]",
+              "focus:border-[var(--accent-color)]",
             )}
           />
           <Button

@@ -12,10 +12,17 @@ interface NewProjectDialogProps {
 function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
   const [name, setName] = useState("")
   const [teamMode, setTeamMode] = useState(false)
+  const [isApiMode, setIsApiMode] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const nameInputRef = useRef<HTMLInputElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (open) {
+      api.getConfig().then(cfg => setIsApiMode(cfg.backend === "api")).catch(() => {})
+    }
+  }, [open])
 
   // Focus name input on open
   useEffect(() => {
@@ -74,26 +81,22 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      style={{ animation: "fadeInUp 0.2s ease-out" }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[4px]"
+      style={{ animation: "fadeIn 150ms var(--ease-decelerate)" }}
     >
       <div
-        className="w-full max-w-[480px] border border-[var(--border)] bg-[var(--background)] p-8 shadow-[0_4px_24px_rgba(0,0,0,0.08)]"
-        style={{ animation: "fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1)" }}
+        className="w-full max-w-[480px] rounded-xl bg-[var(--background)] p-6 shadow-xl"
+        style={{ animation: "fadeInUp 200ms var(--ease-decelerate)" }}
       >
-        {/* Title — HUD label style */}
-        <div className="mb-8">
-          <span className="font-terminal text-xs font-medium uppercase tracking-[3px] text-[var(--text-muted)]">
-            NEW_PROJECT
-          </span>
-        </div>
+        {/* 标题 */}
+        <h2 className="mb-6 text-base font-semibold text-[var(--text-primary)]">新建项目</h2>
 
         <form onSubmit={handleSubmit}>
           {/* Project name */}
           <div className="mb-6">
             <label
               htmlFor="project-name"
-              className="mb-2 block text-sm font-medium text-[var(--dark)]"
+              className="mb-2 block text-sm font-medium text-[var(--text-primary)]"
             >
               项目名称
             </label>
@@ -107,7 +110,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
                 if (error) setError("")
               }}
               placeholder="输入项目名称"
-              className="h-10 w-full border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--dark)] outline-none transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)] placeholder:text-[var(--text-muted)]/50 focus:border-[var(--yellow)]"
+              className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)] placeholder:text-[var(--text-secondary)]/50 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
             />
             {error && (
               <p className="mt-1.5 text-xs text-[var(--destructive)]">
@@ -126,15 +129,25 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
               <span className={cn(
                 "inline-flex h-4 w-4 shrink-0 items-center justify-center border transition-colors duration-[var(--duration-terminal)]",
                 teamMode
-                  ? "border-[var(--yellow)] bg-[var(--yellow)]"
-                  : "border-[var(--border)] bg-transparent group-hover:border-[var(--yellow)]"
+                  ? "border-[var(--accent-color)] bg-[var(--accent-color)]"
+                  : "border-[var(--border)] bg-transparent group-hover:border-[var(--accent-color)]"
               )}>
                 {teamMode && (
-                  <span className="block h-2 w-2 bg-[var(--dark)]" />
+                  <span className="block h-2 w-2 bg-white" />
                 )}
               </span>
-              <span className="text-sm text-[var(--text-muted)]">多代理模式（复杂需求）</span>
+              <span className="text-sm text-[var(--text-secondary)]">多代理模式（复杂需求）</span>
             </button>
+            {teamMode && isApiMode && (
+              <p className="mt-2 ml-7 text-[12px] text-[var(--text-tertiary)] leading-relaxed">
+                API 模式下为增强提示词，不会真正并行执行。切换到 Claude CLI 后端可启用完整多代理协作。
+              </p>
+            )}
+            {teamMode && !isApiMode && (
+              <p className="mt-2 ml-7 text-[12px] text-[var(--accent-color)] leading-relaxed">
+                CLI 模式：Claude Code 将并行派出多个 Agent 协同完成各阶段任务。
+              </p>
+            )}
           </div>
 
           {/* Actions */}
