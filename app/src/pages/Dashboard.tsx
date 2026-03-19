@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus, Trash2, CheckCircle2, RotateCcw, Pencil } from "lucide-react"
+import { Plus, Trash2, CheckCircle2, RotateCcw, Pencil, FolderOpen, ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ContextMenu, type ContextMenuItem } from "@/components/ui/context-menu"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
@@ -20,6 +21,7 @@ interface DashboardProject {
   updatedAt: string
   createdAt: string
   status: 'active' | 'completed'
+  outputDir: string
 }
 
 const PHASE_LABELS: Record<string, string> = {
@@ -372,9 +374,16 @@ export function DashboardPage() {
               ? "已完成"
               : (PHASE_LABELS[project.currentPhase] ?? project.currentPhase)
 
+            const contextItems: ContextMenuItem[] = [
+              { label: "打开项目", icon: FolderOpen, action: () => navigate(`/project/${project.id}/requirement`) },
+              { label: "重命名", icon: Pencil, action: () => { setEditingProjectId(project.id); setRenameInput(project.name); setRenameError(""); isConfirmingRef.current = false }, separator: true },
+              { label: "在 Finder 中显示", icon: ExternalLink, action: () => api.revealFile(project.outputDir).catch(console.error) },
+              { label: "删除项目", icon: Trash2, action: () => setConfirmId(project.id), variant: "destructive" as const },
+            ]
+
             return (
+              <ContextMenu key={project.id} items={contextItems}>
               <div
-                key={project.id}
                 className="group/card relative rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 cursor-pointer
                            transition-all duration-200
                            hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:-translate-y-[1px]
@@ -484,6 +493,7 @@ export function DashboardPage() {
                   </span>
                 </div>
               </div>
+              </ContextMenu>
             )
           })}
 
