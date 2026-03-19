@@ -146,6 +146,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             commands::config::get_config,
@@ -201,6 +202,8 @@ pub fn run() {
             commands::templates::rename_ui_spec,
             commands::templates::delete_ui_spec,
             commands::projects::rename_project,
+            commands::update::check_update,
+            commands::update::download_and_install_update,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]
