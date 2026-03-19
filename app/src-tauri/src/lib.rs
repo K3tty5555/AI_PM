@@ -174,6 +174,7 @@ pub fn run() {
             commands::knowledge::add_knowledge,
             commands::knowledge::delete_knowledge,
             commands::knowledge::search_knowledge,
+            commands::knowledge::get_knowledge_content,
             commands::config::get_projects_dir,
             commands::config::save_projects_dir,
             commands::config::test_cli_config,
