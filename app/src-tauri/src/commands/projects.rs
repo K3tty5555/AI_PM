@@ -314,11 +314,11 @@ pub fn rename_project(
         return Err(e.to_string());
     }
 
-    // Phase 3: update _status.json project_name (best-effort)
+    // Phase 3: update _status.json project name (best-effort)
     let status_path = Path::new(&new_output_dir).join("_status.json");
     if let Ok(raw) = fs::read_to_string(&status_path) {
         if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(&raw) {
-            v["project_name"] = serde_json::Value::String(new_name.clone());
+            v["project"] = serde_json::Value::String(new_name.clone());
             if let Ok(updated) = serde_json::to_string_pretty(&v) {
                 let _ = fs::write(&status_path, updated);
             }
