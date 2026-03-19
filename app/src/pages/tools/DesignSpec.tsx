@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
+import { Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api, type UiSpecEntry, type UiSpecContent } from "@/lib/tauri-api"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -79,6 +80,66 @@ export function ToolDesignSpecPage() {
   const [expandedSpecs, setExpandedSpecs] = useState<Set<string>>(new Set())
   const [specContents, setSpecContents] = useState<Record<string, UiSpecContent>>({})
   const [loadingContent, setLoadingContent] = useState<Set<string>>(new Set())
+
+  // Inline rename state
+  const [editingSpec, setEditingSpec] = useState<string | null>(null)
+  const [renameInput, setRenameInput] = useState("")
+  const [renamingSpec, setRenamingSpec] = useState<string | null>(null)
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const isConfirmingRef = useRef(false)
+
+  const startRename = useCallback((name: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingSpec(name)
+    setRenameInput(name)
+    setRenameError(null)
+    isConfirmingRef.current = false
+  }, [])
+
+  const cancelRename = useCallback(() => {
+    setEditingSpec(null)
+    setRenameInput("")
+    setRenameError(null)
+    isConfirmingRef.current = false
+  }, [])
+
+  const confirmRename = useCallback(async (oldName: string) => {
+    if (isConfirmingRef.current) return
+    const newName = renameInput.trim()
+    if (!newName) {
+      setRenameError("名称不能为空")
+      return
+    }
+    if (newName === oldName) {
+      cancelRename()
+      return
+    }
+    isConfirmingRef.current = true
+    setRenamingSpec(oldName)
+    setRenameError(null)
+    try {
+      await api.renameUiSpec(oldName, newName)
+      setSpecs(prev => prev.map(s => s.name === oldName ? { ...s, name: newName } : s))
+      setExpandedSpecs(prev => {
+        const next = new Set(prev)
+        if (next.has(oldName)) { next.delete(oldName); next.add(newName) }
+        return next
+      })
+      setSpecContents(prev => {
+        if (!prev[oldName]) return prev
+        const next = { ...prev, [newName]: prev[oldName] }
+        delete next[oldName]
+        return next
+      })
+      setEditingSpec(null)
+      setRenameInput("")
+    } catch (err) {
+      setRenameError(String(err))
+      isConfirmingRef.current = false
+    } finally {
+      setRenamingSpec(null)
+    }
+  }, [renameInput, cancelRename])
 
   const load = useCallback(async () => {
     try {
@@ -163,18 +224,65 @@ export function ToolDesignSpecPage() {
             >
               {/* 头部 */}
               <div
-                className="flex cursor-pointer items-center justify-between px-4 py-3"
-                onClick={() => toggleExpand(spec.name)}
+                className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3"
+                onClick={() => editingSpec !== spec.name && toggleExpand(spec.name)}
               >
-                <span className="text-sm font-medium text-[var(--text-primary)]">{spec.name}</span>
-                <span
-                  className={cn(
-                    "text-[10px] text-[var(--text-tertiary)] transition-transform duration-200 inline-block",
-                    expandedSpecs.has(spec.name) && "rotate-180"
+                <div className="flex items-center gap-2 min-w-0 group">
+                  {editingSpec === spec.name ? (
+                    <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <input
+                          autoFocus
+                          value={renameInput}
+                          onChange={(e) => { setRenameInput(e.target.value); setRenameError(null) }}
+                          onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); confirmRename(spec.name) }
+                            else if (e.key === "Escape") { e.preventDefault(); cancelRename() }
+                          }}
+                          onBlur={() => confirmRename(spec.name)}
+                          disabled={renamingSpec === spec.name}
+                          className={cn(
+                            "h-7 px-2 text-sm font-medium rounded border bg-transparent outline-none",
+                            renameError
+                              ? "border-[var(--destructive)] text-[var(--destructive)]"
+                              : "border-[var(--accent-color)] text-[var(--text-primary)]"
+                          )}
+                        />
+                        {renamingSpec === spec.name && (
+                          <svg className="h-3.5 w-3.5 animate-spin text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                          </svg>
+                        )}
+                      </div>
+                      {renameError && (
+                        <span className="text-[10px] text-[var(--destructive)]">{renameError}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-sm font-medium text-[var(--text-primary)]">{spec.name}</span>
+                      <button
+                        onClick={(e) => startRename(spec.name, e)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-0.5 rounded hover:bg-[var(--accent-color)]/10 text-[var(--text-tertiary)] hover:text-[var(--accent-color)] shrink-0"
+                        title="重命名"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    </>
                   )}
-                >
-                  ▼
-                </span>
+                </div>
+                {editingSpec !== spec.name && (
+                  <span
+                    className={cn(
+                      "text-[10px] text-[var(--text-tertiary)] transition-transform duration-200 inline-block shrink-0",
+                      expandedSpecs.has(spec.name) && "rotate-180"
+                    )}
+                  >
+                    ▼
+                  </span>
+                )}
               </div>
 
               {/* 展开内容 */}
