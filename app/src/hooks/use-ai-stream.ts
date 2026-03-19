@@ -203,7 +203,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
 
           // Auto-mark phase as completed and notify sidebar to refresh
           api.updatePhase({ projectId, phase, status: "completed", outputFile: file })
-            .catch(() => {})
+            .catch((err) => console.error("[AiStream]", err))
           window.dispatchEvent(new CustomEvent("project-phase-updated", { detail: { projectId } }))
         }),
         listen<string>("stream_error", (event) => {

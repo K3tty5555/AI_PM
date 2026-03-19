@@ -49,7 +49,7 @@ export function ToolKnowledgePage() {
       return
     }
     const timer = setTimeout(() => {
-      api.searchKnowledge(searchQuery).then(setSearchResults).catch(() => {})
+      api.searchKnowledge(searchQuery).then(setSearchResults).catch((err) => console.error("[Knowledge]", err))
     }, 300)
     return () => clearTimeout(timer)
   }, [searchQuery])
@@ -88,7 +88,8 @@ export function ToolKnowledgePage() {
     try {
       const content = await api.getKnowledgeContent(entry.category, entry.id)
       setDrawerContent(content)
-    } catch {
+    } catch (err) {
+      console.error("[Knowledge]", err)
       setDrawerContent("_无法加载内容_")
     } finally {
       setDrawerLoading(false)

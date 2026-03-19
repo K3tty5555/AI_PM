@@ -20,7 +20,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
 
   useEffect(() => {
     if (open) {
-      api.getConfig().then(cfg => setIsApiMode(cfg.backend === "api")).catch(() => {})
+      api.getConfig().then(cfg => setIsApiMode(cfg.backend === "api")).catch((err) => console.error("[NewProjectDialog]", err))
     }
   }, [open])
 
