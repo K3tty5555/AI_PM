@@ -23,6 +23,7 @@ export interface ProjectSummary {
   completedCount: number
   totalPhases: number
   completedPhases: string[]
+  status: 'active' | 'completed'
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases' | 'completedPhases'> {
@@ -121,6 +122,8 @@ export const api = {
     invoke<ProjectDetail>("create_project", { args: { name, teamMode: teamMode ?? false } }),
   getProject: (id: string) => invoke<ProjectDetail | null>("get_project", { id }),
   deleteProject: (id: string) => invoke<void>("delete_project", { id }),
+  setProjectStatus: (id: string, status: 'active' | 'completed') =>
+    invoke<void>("set_project_status", { id, status }),
   advancePhase: (id: string) => invoke<string | null>("advance_phase", { id }),
   setTeamMode: (id: string, enabled: boolean) =>
     invoke<void>("set_team_mode", { args: { id, enabled } }),
