@@ -2,7 +2,7 @@ use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 use crate::state::AppState;
 
 #[tauri::command]
@@ -77,19 +77,27 @@ pub fn save_project_file(state: State<AppState>, args: SaveFileArgs) -> Result<(
 }
 
 /// 读取任意本地文件（用于 Persona 分析等场景）
+/// Only allows reading under the user's home directory for safety.
 #[tauri::command]
 pub fn read_file(path: String) -> Result<String, String> {
     // Reject path traversal attempts
     if path.contains("..") {
         return Err("路径包含非法字符".to_string());
     }
+    // Restrict to user's home directory
+    let canonical = std::fs::canonicalize(&path).map_err(|e| format!("读取文件失败：{}", e))?;
+    if let Some(home) = dirs::home_dir() {
+        if !canonical.starts_with(&home) {
+            return Err("只允许读取用户主目录下的文件".to_string());
+        }
+    }
     // Guard against reading huge files (10 MB limit)
-    let metadata = std::fs::metadata(&path).map_err(|e| format!("读取文件失败：{}", e))?;
+    let metadata = std::fs::metadata(&canonical).map_err(|e| format!("读取文件失败：{}", e))?;
     const MAX_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
     if metadata.len() > MAX_SIZE {
         return Err(format!("文件过大（{}MB），最大支持 10MB", metadata.len() / 1024 / 1024));
     }
-    std::fs::read_to_string(&path).map_err(|e| format!("读取文件失败：{}", e))
+    std::fs::read_to_string(&canonical).map_err(|e| format!("读取文件失败：{}", e))
 }
 
 #[derive(Debug, Serialize)]
@@ -246,6 +254,25 @@ pub fn write_file(path: String, content: String) -> Result<(), String> {
     // Basic safety: reject path traversal
     if path.contains("..") {
         return Err("路径包含非法字符".to_string());
+    }
+    // Restrict to user's home directory
+    if let Some(home) = dirs::home_dir() {
+        let p = std::path::Path::new(&path);
+        // For new files, canonicalize the parent directory
+        let check_path = if p.exists() {
+            std::fs::canonicalize(p).map_err(|e| e.to_string())?
+        } else if let Some(parent) = p.parent() {
+            if parent.exists() {
+                std::fs::canonicalize(parent).map_err(|e| e.to_string())?.join(p.file_name().unwrap_or_default())
+            } else {
+                p.to_path_buf()
+            }
+        } else {
+            p.to_path_buf()
+        };
+        if !check_path.starts_with(&home) {
+            return Err("只允许写入用户主目录下的文件".to_string());
+        }
     }
     let p = std::path::Path::new(&path);
     if let Some(parent) = p.parent() {

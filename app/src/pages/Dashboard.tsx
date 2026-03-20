@@ -287,7 +287,7 @@ export function DashboardPage() {
         />
         {showOnboarding && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-xl w-96">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-[var(--shadow-xl)] w-96">
               <p className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
               <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
                 使用 AI 功能前，需要先配置 Claude API Key。
@@ -296,13 +296,13 @@ export function DashboardPage() {
               <div className="mt-5 flex justify-end gap-2">
                 <button
                   onClick={dismissOnboarding}
-                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)]"
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-all duration-150 active:scale-[0.97]"
                 >
                   稍后再说
                 </button>
                 <button
                   onClick={goToSettings}
-                  className="rounded-lg bg-[var(--accent-color)] px-4 py-1.5 text-sm text-white hover:opacity-90"
+                  className="rounded-lg bg-[var(--accent-color)] px-4 py-1.5 text-sm text-white hover:opacity-90 transition-all duration-150 active:scale-[0.97]"
                 >
                   去设置
                 </button>
@@ -360,7 +360,7 @@ export function DashboardPage() {
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
-            className="text-xs text-[var(--text-secondary)] bg-transparent border border-[var(--border)] rounded px-2 py-1 outline-none cursor-pointer"
+            className="text-xs text-[var(--text-secondary)] bg-transparent border border-[var(--border)] rounded-lg px-2 py-1 outline-none cursor-pointer"
           >
             <option value="updatedAt">最近更新</option>
             <option value="createdAt">最早创建</option>
@@ -565,7 +565,7 @@ export function DashboardPage() {
       />
       {showOnboarding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-xl w-96">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-[var(--shadow-xl)] w-96">
             <p className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
             <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
               使用 AI 功能前，需要先配置 Claude API Key。

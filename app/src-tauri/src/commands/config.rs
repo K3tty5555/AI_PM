@@ -89,8 +89,9 @@ pub fn read_config_internal(config_dir: &str) -> Option<ClaudeConfig> {
 }
 
 fn mask_key(key: &str) -> String {
-    if key.len() > 8 {
-        format!("{}****", &key[..8])
+    let prefix: String = key.chars().take(8).collect();
+    if prefix.chars().count() == 8 {
+        format!("{}****", prefix)
     } else {
         "****".to_string()
     }

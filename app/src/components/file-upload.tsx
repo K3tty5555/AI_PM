@@ -108,7 +108,7 @@ function FileUpload({
             isDragOver ? "text-[var(--dark)]" : "text-[var(--text-muted)]"
           )}
         >
-          {isDragOver ? "DROP_HERE" : "DRAG_OR_CLICK"}
+          {isDragOver ? "松手放置" : "拖拽或点击上传"}
         </span>
         <span className="text-xs text-[var(--text-muted)]/60">
           支持 PDF, Word, Excel, 图片
@@ -144,7 +144,7 @@ function FileUpload({
                     "text-[var(--text-tertiary)]"
                   )}
                 >
-                  FILE
+                  文件
                 </span>
                 <span className="truncate text-sm text-[var(--dark)]">
                   {file.name}
@@ -172,7 +172,7 @@ function FileUpload({
                 )}
                 aria-label={`删除 ${file.name}`}
               >
-                DEL
+                删除
               </button>
             </div>
           ))}

@@ -85,7 +85,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
       style={{ animation: "fadeIn 150ms var(--ease-decelerate)" }}
     >
       <div
-        className="w-full max-w-[480px] rounded-xl bg-[var(--background)] p-6 shadow-xl"
+        className="w-full max-w-[480px] rounded-xl bg-[var(--background)] p-6 shadow-[var(--shadow-xl)]"
         style={{ animation: "fadeInUp 200ms var(--ease-decelerate)" }}
       >
         {/* 标题 */}

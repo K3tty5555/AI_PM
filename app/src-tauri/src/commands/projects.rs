@@ -1,6 +1,5 @@
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -119,45 +118,50 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
     let output_dir = state.projects_base().join(&args.name).to_string_lossy().to_string();
     let team_mode_int: i64 = if args.team_mode.unwrap_or(false) { 1 } else { 0 };
 
-    // Create project directory
+    // Phase 1: Create project directory (no lock needed)
     fs::create_dir_all(&output_dir).map_err(|e| e.to_string())?;
 
-    let db = state.db.lock().map_err(|e| e.to_string())?;
+    // Phase 2: DB operations under the lock
+    let phases = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
 
-    // Insert project
-    db.execute(
-        "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode)
-         VALUES (?1, ?2, NULL, 'requirement', ?3, ?4, ?4, ?5)",
-        params![&id, &args.name, &output_dir, &now, &team_mode_int],
-    )
-    .map_err(|e| e.to_string())?;
-
-    // Insert 7 phase records
-    let mut phases = Vec::new();
-    for (idx, &phase) in PHASES.iter().enumerate() {
-        let phase_id = Uuid::new_v4().to_string();
-        let status = if idx == 0 { "in_progress" } else { "pending" };
-        let started_at: Option<&str> = if idx == 0 { Some(&now) } else { None };
-
+        // Insert project
         db.execute(
-            "INSERT INTO project_phases (id, project_id, phase, status, started_at)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![&phase_id, &id, phase, status, started_at],
+            "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode)
+             VALUES (?1, ?2, NULL, 'requirement', ?3, ?4, ?4, ?5)",
+            params![&id, &args.name, &output_dir, &now, &team_mode_int],
         )
         .map_err(|e| e.to_string())?;
 
-        phases.push(ProjectPhase {
-            id: phase_id,
-            project_id: id.clone(),
-            phase: phase.to_string(),
-            status: status.to_string(),
-            output_file: None,
-            started_at: started_at.map(|s| s.to_string()),
-            completed_at: None,
-        });
-    }
+        // Insert phase records
+        let mut phases = Vec::new();
+        for (idx, &phase) in PHASES.iter().enumerate() {
+            let phase_id = Uuid::new_v4().to_string();
+            let status = if idx == 0 { "in_progress" } else { "pending" };
+            let started_at: Option<&str> = if idx == 0 { Some(&now) } else { None };
 
-    // Write _status.json for CLI skill compatibility
+            db.execute(
+                "INSERT INTO project_phases (id, project_id, phase, status, started_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![&phase_id, &id, phase, status, started_at],
+            )
+            .map_err(|e| e.to_string())?;
+
+            phases.push(ProjectPhase {
+                id: phase_id,
+                project_id: id.clone(),
+                phase: phase.to_string(),
+                status: status.to_string(),
+                output_file: None,
+                started_at: started_at.map(|s| s.to_string()),
+                completed_at: None,
+            });
+        }
+        phases
+        // db guard drops here
+    };
+
+    // Phase 3: Write _status.json for CLI skill compatibility (no lock held)
     write_status_json(&output_dir, &phases, "requirement");
 
     Ok(ProjectDetail {
@@ -176,47 +180,54 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
 
 #[tauri::command]
 pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectDetail>, String> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
+    // Phase 1: query DB under the lock
+    let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, phases) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
 
-    let result: rusqlite::Result<(String, String, Option<String>, String, String, String, String, i64, String)> =
-        db.query_row(
-            "SELECT id, name, description, current_phase, output_dir, created_at, updated_at, COALESCE(team_mode, 0), COALESCE(status, 'active')
-             FROM projects WHERE id = ?1",
-            params![&id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?, row.get(8)?)),
-        );
+        let result: rusqlite::Result<(String, String, Option<String>, String, String, String, String, i64, String)> =
+            db.query_row(
+                "SELECT id, name, description, current_phase, output_dir, created_at, updated_at, COALESCE(team_mode, 0), COALESCE(status, 'active')
+                 FROM projects WHERE id = ?1",
+                params![&id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?, row.get(8)?)),
+            );
 
-    let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status) = match result {
-        Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
-        Err(e) => return Err(e.to_string()),
-        Ok(row) => row,
+        let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status) = match result {
+            Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
+            Err(e) => return Err(e.to_string()),
+            Ok(row) => row,
+        };
+
+        let mut stmt = db
+            .prepare(
+                "SELECT id, project_id, phase, status, output_file, started_at, completed_at
+                 FROM project_phases WHERE project_id = ?1 ORDER BY rowid",
+            )
+            .map_err(|e| e.to_string())?;
+
+        let phases: Vec<ProjectPhase> = stmt
+            .query_map(params![&pid], |row| {
+                Ok(ProjectPhase {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    phase: row.get(2)?,
+                    status: row.get(3)?,
+                    output_file: row.get(4)?,
+                    started_at: row.get(5)?,
+                    completed_at: row.get(6)?,
+                })
+            })
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, phases)
+        // db guard drops here
     };
 
+    // Phase 2: file I/O outside the lock
     // Auto-migrate legacy review file (07 → 08)
     migrate_review_file(&output_dir);
-
-    let mut stmt = db
-        .prepare(
-            "SELECT id, project_id, phase, status, output_file, started_at, completed_at
-             FROM project_phases WHERE project_id = ?1 ORDER BY rowid",
-        )
-        .map_err(|e| e.to_string())?;
-
-    let phases: Vec<ProjectPhase> = stmt
-        .query_map(params![&pid], |row| {
-            Ok(ProjectPhase {
-                id: row.get(0)?,
-                project_id: row.get(1)?,
-                phase: row.get(2)?,
-                status: row.get(3)?,
-                output_file: row.get(4)?,
-                started_at: row.get(5)?,
-                completed_at: row.get(6)?,
-            })
-        })
-        .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
 
     Ok(Some(ProjectDetail {
         id: pid,
@@ -234,21 +245,26 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
 
 #[tauri::command]
 pub fn delete_project(state: State<AppState>, id: String) -> Result<(), String> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
+    // Phase 1: query + delete from DB under the lock
+    let output_dir: Option<String> = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
 
-    // Get output_dir before deleting
-    let output_dir: Option<String> = db
-        .query_row(
-            "SELECT output_dir FROM projects WHERE id = ?1",
-            params![&id],
-            |row| row.get(0),
-        )
-        .ok();
+        let dir: Option<String> = db
+            .query_row(
+                "SELECT output_dir FROM projects WHERE id = ?1",
+                params![&id],
+                |row| row.get(0),
+            )
+            .ok();
 
-    db.execute("DELETE FROM projects WHERE id = ?1", params![&id])
-        .map_err(|e| e.to_string())?;
+        db.execute("DELETE FROM projects WHERE id = ?1", params![&id])
+            .map_err(|e| e.to_string())?;
 
-    // Delete project files from disk
+        dir
+        // db guard drops here
+    };
+
+    // Phase 2: delete project files from disk (no lock held)
     if let Some(dir) = output_dir {
         if Path::new(&dir).exists() {
             fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -274,60 +290,72 @@ pub fn rename_project(
         return Err(format!("无效的项目名称: {}", new_name));
     }
 
-    let db = state.db.lock().map_err(|e| e.to_string())?;
-    let now = Utc::now().to_rfc3339();
+    // Phase 1: query DB under the lock
+    let (old_name, old_output_dir, new_output_dir) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
 
-    // Get current name and output_dir
-    let (old_name, old_output_dir): (String, String) = db
-        .query_row(
-            "SELECT name, output_dir FROM projects WHERE id = ?1",
-            params![&id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        )
-        .map_err(|_| "项目不存在".to_string())?;
+        let (old_name, old_output_dir): (String, String) = db
+            .query_row(
+                "SELECT name, output_dir FROM projects WHERE id = ?1",
+                params![&id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .map_err(|_| "项目不存在".to_string())?;
+
+        if old_name == new_name {
+            return Ok(());
+        }
+
+        // Check new name not used by another project
+        let count: i64 = db
+            .query_row(
+                "SELECT COUNT(*) FROM projects WHERE name = ?1 AND id != ?2",
+                params![&new_name, &id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if count > 0 {
+            return Err(format!("名称「{}」已存在", new_name));
+        }
+
+        let new_output_dir = Path::new(&old_output_dir)
+            .parent()
+            .ok_or("无法解析项目路径")?
+            .join(&new_name)
+            .to_string_lossy()
+            .to_string();
+
+        (old_name, old_output_dir, new_output_dir)
+        // db guard drops here
+    };
 
     if old_name == new_name {
         return Ok(());
     }
 
-    // Check new name not used by another project
-    let count: i64 = db
-        .query_row(
-            "SELECT COUNT(*) FROM projects WHERE name = ?1 AND id != ?2",
-            params![&new_name, &id],
-            |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?;
-    if count > 0 {
-        return Err(format!("名称「{}」已存在", new_name));
-    }
-
-    // Build new output_dir
-    let new_output_dir = Path::new(&old_output_dir)
-        .parent()
-        .ok_or("无法解析项目路径")?
-        .join(&new_name)
-        .to_string_lossy()
-        .to_string();
-
     if Path::new(&new_output_dir).exists() {
         return Err(format!("目录「{}」已存在", new_name));
     }
 
-    // Phase 1: rename filesystem directory
+    // Phase 2: rename filesystem directory (no lock held)
     fs::rename(&old_output_dir, &new_output_dir).map_err(|e| e.to_string())?;
 
-    // Phase 2: update DB (rollback filesystem on failure)
-    let db_result = db.execute(
-        "UPDATE projects SET name = ?1, output_dir = ?2, updated_at = ?3 WHERE id = ?4",
-        params![&new_name, &new_output_dir, &now, &id],
-    );
-    if let Err(e) = db_result {
-        let _ = fs::rename(&new_output_dir, &old_output_dir); // rollback
-        return Err(e.to_string());
+    // Phase 3: update DB under the lock (rollback filesystem on failure)
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let now = Utc::now().to_rfc3339();
+        let db_result = db.execute(
+            "UPDATE projects SET name = ?1, output_dir = ?2, updated_at = ?3 WHERE id = ?4",
+            params![&new_name, &new_output_dir, &now, &id],
+        );
+        if let Err(e) = db_result {
+            let _ = fs::rename(&new_output_dir, &old_output_dir); // rollback
+            return Err(e.to_string());
+        }
+        // db guard drops here
     }
 
-    // Phase 3: update _status.json project name (best-effort)
+    // Phase 4: update _status.json project name (best-effort, no lock needed)
     let status_path = Path::new(&new_output_dir).join("_status.json");
     if let Ok(raw) = fs::read_to_string(&status_path) {
         if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(&raw) {

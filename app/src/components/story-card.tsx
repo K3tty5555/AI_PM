@@ -123,7 +123,7 @@ function AcceptanceList({
               className={cn(
                 "flex-1 text-sm text-[var(--dark)] bg-transparent",
                 "border-b border-transparent",
-                "focus:border-[var(--yellow)] outline-none",
+                "focus:border-[var(--accent-color)] outline-none",
                 "transition-[border-color] duration-150",
               )}
             />
@@ -155,7 +155,7 @@ function AcceptanceList({
             "flex-1 text-sm text-[var(--dark)] bg-transparent",
             "border-b border-transparent",
             "placeholder:text-[var(--text-muted)]",
-            "focus:border-[var(--yellow)] outline-none",
+            "focus:border-[var(--accent-color)] outline-none",
             "transition-[border-color] duration-150",
           )}
         />
