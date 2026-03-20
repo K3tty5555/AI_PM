@@ -1,1 +1,19 @@
-{"version":"0.0.0"}
+{
+  "version": "0.1.0",
+  "notes": "更新至 v0.1.0",
+  "pub_date": "2026-03-20T10:58:41Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "",
+      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.0/AI.PM_universal.app.tar.gz"
+    },
+    "darwin-x86_64": {
+      "signature": "",
+      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.0/AI.PM_universal.app.tar.gz"
+    },
+    "windows-x86_64": {
+      "signature": "",
+      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.0/AI.PM_0.1.0_x64_en-US.msi.zip"
+    }
+  }
+}
