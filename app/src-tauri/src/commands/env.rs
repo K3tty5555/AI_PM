@@ -4,6 +4,34 @@ use std::fs;
 use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncReadExt;
 
+/// Build a PATH that includes common user binary locations (macOS .app has minimal PATH)
+fn enriched_path() -> String {
+    let home = dirs::home_dir().unwrap_or_default();
+    let extra: Vec<String> = [
+        ".local/bin",
+        ".local/share/claude",
+        ".npm-global/bin",
+        ".cargo/bin",
+    ]
+    .iter()
+    .map(|p| home.join(p).to_string_lossy().to_string())
+    .collect();
+
+    let nvm_current = home.join(".nvm/current/bin");
+    let mut paths = extra;
+    if nvm_current.exists() {
+        paths.push(nvm_current.to_string_lossy().to_string());
+    }
+
+    let sys_path = std::env::var("PATH").unwrap_or_default();
+    if sys_path.is_empty() {
+        paths.push("/usr/local/bin:/usr/bin:/bin".to_string());
+    } else {
+        paths.push(sys_path);
+    }
+    paths.join(":")
+}
+
 // ── Dependency descriptors ───────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Clone)]
@@ -155,6 +183,7 @@ fn check_claude_cli() -> DepStatus {
 fn run_sync(cmd: &str, args: &[&str]) -> Option<String> {
     Command::new(cmd)
         .args(args)
+        .env("PATH", enriched_path())
         .output()
         .ok()
         .filter(|o| o.status.success())
@@ -186,6 +215,7 @@ pub async fn install_dep(app: AppHandle, args: InstallDepArgs) -> Result<(), Str
 
     let mut child = tokio::process::Command::new(&program)
         .args(&cmd_args)
+        .env("PATH", enriched_path())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
