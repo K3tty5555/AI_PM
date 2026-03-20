@@ -8,12 +8,42 @@ pub struct ClaudeCliProvider {
     pub work_dir: String,
 }
 
+/// Build a PATH that includes common user binary locations (macOS .app has minimal PATH)
+fn enriched_path() -> String {
+    let home = dirs::home_dir().unwrap_or_default();
+    let extra: Vec<String> = [
+        ".local/bin",
+        ".local/share/claude",
+        ".npm-global/bin",
+        ".cargo/bin",
+    ]
+    .iter()
+    .map(|p| home.join(p).to_string_lossy().to_string())
+    .collect();
+
+    // nvm / fnm node paths
+    let nvm_current = home.join(".nvm/current/bin");
+    let mut paths = extra;
+    if nvm_current.exists() {
+        paths.push(nvm_current.to_string_lossy().to_string());
+    }
+
+    let sys_path = std::env::var("PATH").unwrap_or_default();
+    if sys_path.is_empty() {
+        paths.push("/usr/local/bin:/usr/bin:/bin".to_string());
+    } else {
+        paths.push(sys_path);
+    }
+    paths.join(":")
+}
+
 impl ClaudeCliProvider {
-    /// 检测 `claude` 是否在 PATH 中，返回版本行或错误信息
+    /// 检测 `claude` 是否可用，返回版本行或错误信息
     pub async fn check_available() -> Result<String, String> {
         let output = tokio::process::Command::new("claude")
             .arg("--version")
             .env_remove("CLAUDECODE")
+            .env("PATH", enriched_path())
             .output()
             .await
             .map_err(|_| "未找到 claude 命令，请先安装 Claude Code：https://claude.ai/code".to_string())?;
@@ -48,6 +78,7 @@ impl AiProvider for ClaudeCliProvider {
             .arg("--dangerously-skip-permissions")
             .current_dir(&self.work_dir)
             .env_remove("CLAUDECODE")
+            .env("PATH", enriched_path())
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
