@@ -40,7 +40,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQyNjBDMEY4MEIzMDQ1Q0YKUldUUFJUQUwrTUJnMGhrQkJNYStjOFZXaXdTaWNsbHYwdGYyb3VyTHltODhQV3pwQ2lkUkU2K1EK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ3Rjk3MTVFRDUwMDJCNEMKUldSTUt3RFZYbkg1UncvaUl5M2VuanRKT2sxLzVTa1p0V1E1VUVrMXRGTmlQSkRZWHZaejRaUksK",
       "endpoints": [
         "https://K3tty5555.github.io/AI_PM/latest.json"
       ]
