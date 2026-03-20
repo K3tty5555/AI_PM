@@ -5,6 +5,7 @@ import { SidebarShell } from "@/components/layout/SidebarShell"
 import { ActivityBar } from "@/components/layout/ActivityBar"
 import { CommandPalette } from "@/components/command-palette"
 import { checkUpdate, downloadAndInstallUpdate } from "@/lib/tauri-api"
+import { open as openUrl } from "@tauri-apps/plugin-shell"
 import type { UpdateInfo } from "@/lib/tauri-api"
 import { useTheme } from "@/hooks/use-theme"
 import { useHotkeys } from "@/hooks/use-hotkeys"
@@ -89,6 +90,7 @@ export function AppLayout() {
   const [cmdOpen, setCmdOpen] = useState(false)
   const [bannerState, setBannerState] = useState<BannerState>("idle")
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+  const [updateError, setUpdateError] = useState("")
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const checkDoneRef = useRef(false)
 
@@ -111,11 +113,14 @@ export function AppLayout() {
 
   const handleDownload = async () => {
     setBannerState("downloading")
+    setUpdateError("")
     try {
       await downloadAndInstallUpdate()
       setBannerState("ready")
     } catch (err) {
-      console.error("[Updater] download failed", err)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error("[Updater] download failed", msg)
+      setUpdateError(msg)
       setBannerState("error")
     }
   }
@@ -230,6 +235,77 @@ export function AppLayout() {
         onCycleTheme={cycleTheme}
       />
 
+      {/* Update notification — Toast style, fixed top-right per design spec */}
+      {showBanner && (
+        <div
+          className="pointer-events-auto fixed z-50 flex items-center gap-3 overflow-hidden rounded-lg bg-[var(--card)] shadow-[var(--shadow-lg)] border border-[var(--border)] min-w-[320px] max-w-[420px] animate-[slideInRight_300ms_ease_both]"
+          style={{ top: 56, right: 24 }}
+        >
+          {/* Left color bar */}
+          <div
+            className="absolute left-0 top-0 bottom-0 w-[3px]"
+            style={{
+              background:
+                bannerState === "error"
+                  ? "var(--destructive)"
+                  : bannerState === "ready"
+                    ? "var(--success)"
+                    : "var(--accent-color)",
+            }}
+          />
+
+          {/* Content */}
+          <div className="ml-4 flex-1 py-3">
+            <p className="text-sm text-[var(--text-primary)]">
+              {bannerState === "available" &&
+                `有新版本 v${updateInfo?.version} 可用`}
+              {bannerState === "downloading" && "正在下载更新…"}
+              {bannerState === "ready" && "更新已下载，下次启动时自动安装"}
+              {bannerState === "error" && (updateError || "更新下载失败")}
+            </p>
+            {bannerState === "error" && (
+              <button
+                onClick={() => openUrl("https://github.com/K3tty5555/AI_PM/releases/latest")}
+                className="text-xs text-[var(--accent-color)] hover:underline mt-0.5 inline-block cursor-pointer bg-transparent border-none p-0"
+              >
+                前往 GitHub 手动下载
+              </button>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 pr-3 shrink-0">
+            {bannerState === "available" && (
+              <button
+                onClick={handleDownload}
+                className="rounded-md bg-[var(--accent-color)] px-3 py-1 text-xs font-medium text-white hover:bg-[var(--accent-hover)] active:scale-[0.97] transition-all cursor-pointer"
+              >
+                下载更新
+              </button>
+            )}
+            {bannerState === "error" && (
+              <button
+                onClick={handleDownload}
+                className="rounded-md border border-[var(--border)] px-3 py-1 text-xs text-[var(--text-primary)] hover:bg-[var(--hover-bg)] active:scale-[0.97] transition-all cursor-pointer"
+              >
+                重试
+              </button>
+            )}
+            {bannerState !== "downloading" && (
+              <button
+                onClick={() => setBannerDismissed(true)}
+                className="rounded p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors cursor-pointer"
+                aria-label="关闭"
+              >
+                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <main
         className="min-h-0 flex-1 overflow-y-auto px-8 pb-8 relative"
         style={{
@@ -238,49 +314,6 @@ export function AppLayout() {
           transition: "margin-left 250ms cubic-bezier(0.4, 0, 0.2, 1)",
         } as CSSProperties}
       >
-        {/* Update banner */}
-        {showBanner && (
-          <div
-            className="flex items-center justify-between gap-4 px-4 py-2 text-sm"
-            style={{
-              background:
-                bannerState === "error"
-                  ? "var(--error-light, rgba(239, 68, 68, 0.12))"
-                  : "var(--accent-light, #DBEAFE)",
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
-            <span className="text-[var(--text-primary)]">
-              {bannerState === "available" &&
-                `有新版本 v${updateInfo?.version} 可用`}
-              {bannerState === "downloading" && "正在下载更新…"}
-              {bannerState === "ready" &&
-                "✅ 更新已下载，下次启动时自动安装"}
-              {bannerState === "error" && "更新下载失败，请稍后重试"}
-            </span>
-            <div className="flex items-center gap-3 shrink-0">
-              {bannerState === "available" && (
-                <button
-                  onClick={handleDownload}
-                  disabled={bannerState !== "available"}
-                  className="rounded-md bg-[var(--accent-color)] px-3 py-1 text-xs text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  下载更新
-                </button>
-              )}
-              {bannerState !== "downloading" && (
-                <button
-                  onClick={() => setBannerDismissed(true)}
-                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-base leading-none"
-                  aria-label="关闭"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
         <Outlet />
       </main>
 

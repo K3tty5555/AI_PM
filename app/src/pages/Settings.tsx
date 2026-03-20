@@ -1184,10 +1184,10 @@ export function SettingsPage() {
                   </span>
                 )}
                 {manualUpdateState === "check-error" && (
-                  <span className="text-sm text-red-500">检查失败，请重试</span>
+                  <span className="text-sm text-[var(--destructive)]">检查失败，请检查网络连接</span>
                 )}
                 {manualUpdateState === "download-error" && (
-                  <span className="text-sm text-red-500">下载失败，请重试</span>
+                  <span className="text-sm text-[var(--destructive)]">下载失败，请检查网络连接</span>
                 )}
               </div>
 
@@ -1199,6 +1199,24 @@ export function SettingsPage() {
                 >
                   下载并安装
                 </button>
+              )}
+              {manualUpdateState === "download-error" && (
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleManualDownload}
+                    className="w-fit rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)]"
+                  >
+                    重试
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openUrl("https://github.com/K3tty5555/AI_PM/releases/latest")}
+                    className="text-sm text-[var(--accent-color)] hover:underline"
+                  >
+                    前往 GitHub 手动下载
+                  </button>
+                </div>
               )}
             </div>
           </div>
