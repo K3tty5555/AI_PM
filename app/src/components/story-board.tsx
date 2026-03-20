@@ -70,7 +70,7 @@ function AddStoryForm({
     "placeholder:text-[var(--text-muted)]",
     "outline-none",
     "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
-    "focus:border-[var(--yellow)]",
+    "focus:border-[var(--accent-color)]",
   )
 
   return (

@@ -82,12 +82,13 @@ export function PrdPage() {
   const fromYolo = searchParams.get("yolo") === "1"
 
   // AI stream hook for initial generation
-  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, outputFile, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, start, reset } = useAiStream({
     projectId,
     phase: "prd",
   })
 
-  // AI stream hook for assist modifications
+  // AI stream hook for assist modifications (uses distinct phase key to avoid
+  // colliding with the primary "prd" stream in bgStore)
   const {
     text: assistText,
     isStreaming: assistStreaming,
@@ -96,7 +97,7 @@ export function PrdPage() {
     reset: assistReset,
   } = useAiStream({
     projectId,
-    phase: "prd",
+    phase: "prd-assist",
   })
 
   // Track assist streaming state
@@ -350,7 +351,7 @@ export function PrdPage() {
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, displayMarkdown, outputFile])
+  }, [projectId, displayMarkdown, navigate])
 
   // -------------------------------------------------------------------------
   // Loading state
@@ -657,7 +658,7 @@ export function PrdPage() {
                 "placeholder:text-[var(--text-secondary)]",
                 "outline-none",
                 "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
-                "focus:border-[var(--yellow)]",
+                "focus:border-[var(--accent-color)]",
               )}
             />
             <Button

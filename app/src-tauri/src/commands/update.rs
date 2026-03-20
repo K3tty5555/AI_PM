@@ -3,6 +3,7 @@ use tauri::AppHandle;
 use tauri_plugin_updater::UpdaterExt;
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateInfo {
     pub available: bool,
     pub version: String,

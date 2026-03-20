@@ -41,7 +41,7 @@ export function StoriesPage() {
   const startedRef = useRef(false)
 
   // AI stream hook
-  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, outputFile, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, start, reset } = useAiStream({
     projectId,
     phase: "stories",
   })
@@ -181,7 +181,7 @@ export function StoriesPage() {
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, stories, outputFile, navigate, isYolo])
+  }, [projectId, stories, navigate, isYolo])
 
   // -------------------------------------------------------------------------
   // Loading state
@@ -294,7 +294,7 @@ export function StoriesPage() {
             style={{ borderRadius: "50%" }}
           />
           <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
-            GENERATING STORIES...
+            正在生成用户故事...
           </span>
         </div>
       )}
@@ -429,7 +429,7 @@ function AddStoryInline({
     "placeholder:text-[var(--text-secondary)]",
     "outline-none",
     "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
-    "focus:border-[var(--yellow)]",
+    "focus:border-[var(--accent-color)]",
   )
 
   return (

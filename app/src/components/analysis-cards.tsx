@@ -183,7 +183,7 @@ const markdownComponents = {
   ),
   th: ({ children, ...props }: React.ComponentProps<"th">) => (
     <th
-      className="border border-[var(--border)] px-3 py-1.5 text-left text-xs font-semibold uppercase tracking-wider bg-[var(--secondary)]"
+      className="border border-[var(--border)] px-3 py-1.5 text-left text-xs font-semibold bg-[var(--secondary)]"
       {...props}
     >
       {children}
@@ -222,7 +222,7 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
           style={{ borderRadius: "50%" }}
         />
         <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
-          ANALYZING...
+          正在分析...
         </span>
       </div>
     )
