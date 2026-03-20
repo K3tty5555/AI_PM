@@ -7,7 +7,7 @@ import { PrdViewer } from "@/components/prd-viewer"
 import { ProjectSelector } from "@/components/project-selector"
 import { useToolStream } from "@/hooks/use-tool-stream"
 import { api } from "@/lib/tauri-api"
-import { cn } from "@/lib/utils"
+import { cn, FILE_MANAGER_LABEL } from "@/lib/utils"
 
 type DataMode = "数据洞察" | "指标设计" | "数据仪表盘"
 
@@ -304,7 +304,7 @@ export function ToolDataPage() {
                       size="sm"
                       onClick={() => api.revealFile(dashboardPath)}
                     >
-                      在 Finder 中显示
+                      在 {FILE_MANAGER_LABEL} 中显示
                     </Button>
                     <Button
                       variant="ghost"
@@ -332,7 +332,7 @@ export function ToolDataPage() {
               )}
               {dashboardPath && (
                 <div className="mt-4 flex justify-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => api.revealFile(dashboardPath)}>在 Finder 中显示</Button>
+                  <Button variant="ghost" size="sm" onClick={() => api.revealFile(dashboardPath)}>在 {FILE_MANAGER_LABEL} 中显示</Button>
                   <Button variant="primary" size="sm" onClick={() => api.openFile(dashboardPath)}>在浏览器中打开</Button>
                 </div>
               )}

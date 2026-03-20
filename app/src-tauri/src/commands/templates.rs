@@ -290,6 +290,21 @@ pub fn delete_ui_spec(
     fs::remove_dir_all(&spec_dir).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub fn delete_prd_style(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<(), String> {
+    if !is_safe_style_name(&name) {
+        return Err(format!("无效的风格名称: {}", name));
+    }
+    let style_dir = state.templates_base().join("prd-styles").join(&name);
+    if !style_dir.exists() {
+        return Err(format!("风格「{}」不存在", name));
+    }
+    fs::remove_dir_all(&style_dir).map_err(|e| e.to_string())
+}
+
 const KB_CATEGORIES: &[&str] = &["patterns", "decisions", "pitfalls", "metrics", "playbooks", "insights"];
 
 #[derive(Debug, Serialize)]

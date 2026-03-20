@@ -7,6 +7,24 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::state::AppState;
 use crate::commands::config::{read_config_internal, Backend};
 
+/// 解析打包后的 skills 目录路径。
+/// Tauri 的 `resources` 配置 `["resources/skills/**/*"]` 打包后会保留
+/// 源目录层级，实际路径为 `<resource_dir>/resources/skills/`。
+/// 为兼容开发/打包两种环境，优先尝试 `resources/skills`，回退 `skills`。
+pub fn resolve_skills_root(app: &AppHandle) -> Result<String, String> {
+    let base = app.path().resource_dir()
+        .map_err(|e| format!("无法获取资源目录：{}", e))?;
+    let primary = base.join("resources/skills");
+    if primary.is_dir() {
+        return Ok(primary.to_string_lossy().to_string());
+    }
+    let fallback = base.join("skills");
+    if fallback.is_dir() {
+        return Ok(fallback.to_string_lossy().to_string());
+    }
+    Err(format!("技能目录不存在：已尝试 {} 和 {}", primary.display(), fallback.display()))
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ChatMessage {
     pub role: String,
@@ -23,9 +41,9 @@ fn phase_config(phase: &str) -> Option<(&'static str, &'static [&'static str], &
         "prd"         => Some(("ai-pm-prd",        &["02-analysis-report.md",   "03-competitor-report.md", "04-user-stories.md"], "05-prd/05-PRD-v1.0.md",        &["Humanizer-zh"])),
         "analytics"   => Some(("ai-pm-data",       &["05-prd/05-PRD-v1.0.md"],                                                    "09-analytics-requirement.md",  &[])),
         "prototype"   => Some(("ai-pm-prototype",  &["05-prd/05-PRD-v1.0.md"],                                                    "06-prototype.html",            &["ui-ux-pro-max", "frontend-design"])),
-        "review"      => Some(("ai-pm-review",        &["05-prd/05-PRD-v1.0.md"],                                                    "07-review-report.md",          &[])),
-        "review-modify" => Some(("ai-pm-review-modify", &["07-review-report.md", "05-prd/05-PRD-v1.0.md"],                           "05-prd/05-PRD-v1.0.md",        &["Humanizer-zh"])),
-        "retrospective" => Some(("ai-pm-retrospective", &["01-requirement-draft.md", "02-analysis-report.md", "05-prd/05-PRD-v1.0.md", "07-review-report.md"], "10-retrospective.md",          &[])),
+        "review"      => Some(("ai-pm-review",        &["05-prd/05-PRD-v1.0.md"],                                                    "08-review-report.md",          &[])),
+        "review-modify" => Some(("ai-pm-review-modify", &["08-review-report.md", "05-prd/05-PRD-v1.0.md"],                           "05-prd/05-PRD-v1.0.md",        &["Humanizer-zh"])),
+        "retrospective" => Some(("ai-pm-retrospective", &["01-requirement-draft.md", "02-analysis-report.md", "05-prd/05-PRD-v1.0.md", "08-review-report.md"], "10-retrospective.md",          &[])),
         _ => None,
     }
 }
@@ -220,6 +238,8 @@ fn build_system_prompt(
     excluded_context: &[String],
     templates_base: std::path::PathBuf,
     style_id: Option<&str>,
+    is_cli: bool,
+    design_spec: Option<&str>,
 ) -> Result<String, String> {
     let mut skill_content = load_skill(skills_root, skill_name)?;
 
@@ -248,10 +268,103 @@ fn build_system_prompt(
         parts[0].push_str(&context_block);
     }
 
+    // Inject reference files from 07-references/
+    let refs_dir = Path::new(output_dir).join("07-references");
+    if refs_dir.exists() {
+        let mut ref_blocks: Vec<String> = Vec::new();
+        if let Ok(entries) = fs::read_dir(&refs_dir) {
+            let mut file_entries: Vec<_> = entries.filter_map(|e| e.ok()).collect();
+            file_entries.sort_by_key(|e| e.file_name());
+            for entry in file_entries {
+                let fp = entry.path();
+                if !fp.is_file() { continue; }
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.starts_with('.') { continue; }
+                let ext = fp.extension().and_then(|e| e.to_str()).unwrap_or("");
+                match ext {
+                    "md" | "txt" => {
+                        let file_size = fp.metadata().map(|m| m.len()).unwrap_or(0);
+                        if file_size > 50 * 1024 {
+                            // 超过 50KB 的文本文件只标注元信息
+                            ref_blocks.push(format!("#### {} (文本, {}KB, 内容过大已省略)", name, file_size / 1024));
+                        } else if let Ok(content) = fs::read_to_string(&fp) {
+                            let trimmed = content.trim().to_string();
+                            if !trimmed.is_empty() {
+                                ref_blocks.push(format!("#### {} (文本)\n\n{}", name, trimmed));
+                            }
+                        }
+                    }
+                    _ => {
+                        let size = fp.metadata().map(|m| m.len()).unwrap_or(0);
+                        ref_blocks.push(format!("#### {} ({}, {}KB)", name, ext.to_uppercase(), size / 1024));
+                    }
+                }
+            }
+        }
+        if !ref_blocks.is_empty() {
+            parts[0].push_str("\n\n---\n\n### 用户参考文件\n\n以下是用户上传的参考资料，请在生成时参考：\n\n");
+            parts[0].push_str(&ref_blocks.join("\n\n---\n\n"));
+        }
+    }
+
     // Inject active PRD style for prd and weekly phases
     if phase == "prd" || phase == "weekly" {
         if let Some(style) = crate::commands::templates::load_active_prd_style(&templates_base, style_id) {
             parts[0].push_str(&format!("\n\n---\n\n{}", style));
+        }
+    }
+
+    // Inject design spec for prototype phase
+    if phase == "prototype" {
+        if let Some(spec) = design_spec {
+            match spec {
+                "ai-contextual" | "" => {
+                    // 默认：AI 情境定制，不注入额外约束
+                }
+                "ant-design" => {
+                    parts[0].push_str("\n\n---\n\n## 设计规范：Ant Design\n\n");
+                    parts[0].push_str("使用 Ant Design 设计规范进行原型设计：\n");
+                    parts[0].push_str("- 主色：#1677FF，成功：#52C41A，警告：#FAAD14，错误：#FF4D4F\n");
+                    parts[0].push_str("- 圆角：6px（小）、8px（中）、12px（大）\n");
+                    parts[0].push_str("- 字体：-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto\n");
+                    parts[0].push_str("- 间距倍数：4px\n");
+                    parts[0].push_str("- 遵循 Ant Design 的组件样式和交互模式\n");
+                }
+                "material-design" => {
+                    parts[0].push_str("\n\n---\n\n## 设计规范：Material Design\n\n");
+                    parts[0].push_str("使用 Material Design 3 设计规范进行原型设计：\n");
+                    parts[0].push_str("- 主色：#6750A4，次色：#625B71，三级色：#7D5260\n");
+                    parts[0].push_str("- 圆角：12px（小）、16px（中）、28px（大/FAB）\n");
+                    parts[0].push_str("- 字体：Roboto, 'Noto Sans SC'\n");
+                    parts[0].push_str("- 使用 Material 的 elevation 和 surface tone 系统\n");
+                    parts[0].push_str("- 遵循 Material Design 3 的组件样式和交互模式\n");
+                }
+                "element-plus" => {
+                    parts[0].push_str("\n\n---\n\n## 设计规范：Element Plus\n\n");
+                    parts[0].push_str("使用 Element Plus 设计规范进行原型设计：\n");
+                    parts[0].push_str("- 主色：#409EFF，成功：#67C23A，警告：#E6A23C，危险：#F56C6C\n");
+                    parts[0].push_str("- 圆角：4px（小）、4px（中）、4px（大）\n");
+                    parts[0].push_str("- 字体：'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei'\n");
+                    parts[0].push_str("- 遵循 Element Plus 的组件样式和交互模式\n");
+                }
+                company_spec => {
+                    // 从 templates/ui-specs/{name}/ 加载公司规范
+                    let spec_dir = templates_base.join("ui-specs").join(company_spec);
+                    if spec_dir.exists() {
+                        let mut spec_content = format!("\n\n---\n\n## 设计规范：{}\n\n", company_spec);
+                        if let Ok(readme) = fs::read_to_string(spec_dir.join("README.md")) {
+                            spec_content.push_str(&readme);
+                            spec_content.push('\n');
+                        }
+                        if let Ok(tokens) = fs::read_to_string(spec_dir.join("design-tokens.json")) {
+                            spec_content.push_str("\n### Design Tokens\n\n```json\n");
+                            spec_content.push_str(&tokens);
+                            spec_content.push_str("\n```\n");
+                        }
+                        parts[0].push_str(&spec_content);
+                    }
+                }
+            }
         }
     }
 
@@ -312,14 +425,30 @@ fn build_system_prompt(
     ctx.push(String::new());
     ctx.push("**强制规则（逐条执行）：**".to_string());
 
-    if phase == "prototype" {
+    if phase == "prototype" && is_cli {
+        // CLI mode: Claude uses Write tool to create prototype files on disk,
+        // supporting multi-file prototypes with manifest navigation.
+        let proto_dir = Path::new(output_dir).join("06-prototype");
+        ctx.push(format!("1. **使用 Write 工具**在 `{}/` 目录下创建原型文件", proto_dir.display()));
+        ctx.push("2. **必须生成 manifest.json**（放在同一目录），格式如下：".to_string());
+        ctx.push("   ```json".to_string());
+        ctx.push("   { \"project\": \"项目名\", \"sections\": [{ \"id\": \"01\", \"label\": \"页面名\", \"file\": \"01-xxx.html\" }] }".to_string());
+        ctx.push("   ```".to_string());
+        ctx.push("3. 每个 HTML 页面须完整独立（含 `<!DOCTYPE html>`、`<style>`、`<script>`），可单独用浏览器打开".to_string());
+        ctx.push("4. 简单原型可用单个 `index.html`；复杂原型按功能模块拆分为多个 HTML 文件".to_string());
+        ctx.push("5. 写完所有文件后仅输出一行「✓ 原型已生成」，**不要再输出其他任何内容**".to_string());
+        ctx.push("6. **禁止输出元信息**：不输出步骤说明、截图要求等".to_string());
+        ctx.push("7. **禁止提问或确认**：设计规范已由用户选定，直接生成".to_string());
+        ctx.push("8. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等".to_string());
+    } else if phase == "prototype" {
+        // API mode: output full HTML to stdout (API has higher output limits)
         ctx.push("1. **你的整个输出就是 HTML 文件本身**：第一行必须是 `<!DOCTYPE html>`，最后一行必须是 `</html>`，中间是完整的单文件 HTML+CSS+JS，不要任何前言或后记".to_string());
         ctx.push("2. **禁止输出元信息**：「已生成」「文件已保存」「截图」「manifest」「步骤」等一律不输出".to_string());
         ctx.push("3. **严禁调用任何工具**：Write、Edit、Bash、AskUserQuestion、Read 在此环境中不存在且无法执行。\
             你不需要用 Write 保存文件——后端会自动把你的输出流保存为 HTML 文件。\
             **如果你想调用工具，请直接跳过，把文件内容输出到 stdout 即可。**\
             绝对不要输出「需要您批准」「请批准 Write 工具」「等待权限」等字样。".to_string());
-        ctx.push("4. **禁止提问或确认**：设计规范默认 AI 情境定制，直接生成完整 HTML 原型。".to_string());
+        ctx.push("4. **禁止提问或确认**：设计规范已由用户选定，直接生成完整 HTML 原型。".to_string());
         ctx.push("5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从 `<!DOCTYPE html>` 开始。".to_string());
     } else {
         ctx.push("1. **第一行就是文档标题**（如 `# PRD：产品名`），最后一行是文档结尾，不要有任何前言或后记".to_string());
@@ -344,6 +473,7 @@ pub struct StartStreamArgs {
     pub messages: Vec<ChatMessage>,
     pub excluded_context: Option<Vec<String>>,
     pub style_id: Option<String>,
+    pub design_spec: Option<String>,
 }
 
 #[tauri::command]
@@ -373,15 +503,20 @@ pub async fn start_stream(
         .map(|m| m.content.as_str());
 
     // Resolve bundled skills directory from app resources
-    let skills_root = app.path().resource_dir()
+    let skills_root = resolve_skills_root(&app)
         .map_err(|e| {
-            let msg = format!("无法获取资源目录：{}", e);
+            let _ = app.emit("stream_error", &e);
+            e
+        })?;
+
+    let config = read_config_internal(&state.config_dir)
+        .ok_or_else(|| {
+            let msg = "未配置 AI 后端 — 请前往「设置」页面完成配置后重试。".to_string();
             let _ = app.emit("stream_error", &msg);
             msg
-        })?
-        .join("skills")
-        .to_string_lossy()
-        .to_string();
+        })?;
+
+    let is_cli = matches!(config.backend, Backend::ClaudeCli);
 
     let templates_base = state.templates_base();
     let system_prompt = build_system_prompt(
@@ -398,17 +533,12 @@ pub async fn start_stream(
         &excluded_context,
         templates_base,
         args.style_id.as_deref(),
+        is_cli,
+        args.design_spec.as_deref(),
     ).map_err(|e| {
         let _ = app.emit("stream_error", &e);
         e
     })?;
-
-    let config = read_config_internal(&state.config_dir)
-        .ok_or_else(|| {
-            let msg = "未配置 AI 后端 — 请前往「设置」页面完成配置后重试。".to_string();
-            let _ = app.emit("stream_error", &msg);
-            msg
-        })?;
 
     let stream_start = Instant::now();
 
@@ -441,35 +571,66 @@ pub async fn start_stream(
         }
     };
 
+    // For CLI prototype: clear old files so disk fallback won't pick up stale content
+    if is_cli && args.phase == "prototype" {
+        let _ = fs::remove_file(Path::new(&output_dir).join("06-prototype.html"));
+        let proto_dir = Path::new(&output_dir).join("06-prototype");
+        if proto_dir.exists() {
+            let _ = fs::remove_dir_all(&proto_dir);
+        }
+    }
+
     // 调用 provider，处理结果
     match provider.stream(&system_prompt, &args.messages, &app).await {
         Ok(result) => {
             let duration_ms = stream_start.elapsed().as_millis() as u64;
-            let file_path = Path::new(&output_dir).join(output_file);
-            if let Some(parent) = file_path.parent() {
-                let _ = fs::create_dir_all(parent);
-            }
 
-            // In CLI mode, the AI may use Write tool to write the document directly to
-            // disk while only outputting a short confirmation message to stdout.
-            // Detect this: if stdout is short but disk already has substantial content,
-            // preserve the disk file and use it as the final text for the frontend.
-            let final_text = if result.full_text.trim().len() < 400 {
+            // For prototype phase: check multi-file manifest first
+            let manifest_path = Path::new(&output_dir).join("06-prototype/manifest.json");
+            let (effective_output, final_text) = if args.phase == "prototype" && manifest_path.exists() {
+                // Multi-file prototype: manifest-driven — don't write stdout to disk
+                let manifest = fs::read_to_string(&manifest_path).unwrap_or_default();
+                ("06-prototype/manifest.json".to_string(), manifest)
+            } else {
+                // Standard single-file logic
+                let file_path = Path::new(&output_dir).join(output_file);
+                if let Some(parent) = file_path.parent() {
+                    let _ = fs::create_dir_all(parent);
+                }
+
                 let disk_content = fs::read_to_string(&file_path).unwrap_or_default();
-                if disk_content.trim().len() > result.full_text.trim().len() + 200 {
-                    // AI wrote real content via Write tool — keep it as-is on disk
+                let stdout_len = result.full_text.trim().len();
+                let disk_len = disk_content.trim().len();
+
+                // For prototype: also check the directory variant (index.html)
+                let (disk_content, disk_len) = if args.phase == "prototype" && disk_len < 100 {
+                    let alt = Path::new(&output_dir).join("06-prototype/index.html");
+                    if let Ok(alt_content) = fs::read_to_string(&alt) {
+                        let alt_len = alt_content.trim().len();
+                        if alt_len > disk_len { (alt_content, alt_len) }
+                        else { (disk_content, disk_len) }
+                    } else {
+                        (disk_content, disk_len)
+                    }
+                } else {
+                    (disk_content, disk_len)
+                };
+
+                let ft = if disk_len > stdout_len && disk_len > 100 {
                     disk_content
                 } else {
-                    let _ = fs::write(&file_path, &result.full_text);
+                    // Only write stdout to disk if it's substantial (not a short confirmation)
+                    if stdout_len > disk_len && (args.phase != "prototype" || stdout_len > 500) {
+                        let _ = fs::write(&file_path, &result.full_text);
+                    }
                     result.full_text
-                }
-            } else {
-                let _ = fs::write(&file_path, &result.full_text);
-                result.full_text
+                };
+
+                (output_file.to_string(), ft)
             };
 
             let done_payload = serde_json::json!({
-                "outputFile": output_file,
+                "outputFile": effective_output,
                 "durationMs": duration_ms,
                 "inputTokens": result.input_tokens,
                 "outputTokens": result.output_tokens,

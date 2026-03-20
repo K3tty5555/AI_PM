@@ -6,11 +6,12 @@ import { PrdViewer } from "@/components/prd-viewer"
 import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api, type PrdStyleEntry, type KnowledgeEntry } from "@/lib/tauri-api"
-import { cn, extractStreamStatus } from "@/lib/utils"
+import { cn, extractStreamStatus, FILE_MANAGER_LABEL } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
+import { ReferenceFiles } from "@/components/reference-files"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -53,6 +54,7 @@ export function PrdPage() {
   const [editedMarkdown, setEditedMarkdown] = useState<string | null>(null)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
   const [reviewContent, setReviewContent] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportResult, setExportResult] = useState<{ path: string } | { error: string } | null>(null)
 
@@ -199,7 +201,7 @@ export function PrdPage() {
 
     async function loadExisting() {
       // Check for review report (non-blocking)
-      api.readProjectFile(projectId, "07-review-report.md").then((r) => {
+      api.readProjectFile(projectId, "08-review-report.md").then((r) => {
         if (!cancelled && r) setReviewContent(r)
       }).catch((err) => console.error("[Prd]", err))
 
@@ -303,7 +305,11 @@ export function PrdPage() {
   }, [navigate, projectId])
 
   const handleCopyMarkdown = useCallback(() => {
-    if (displayMarkdown) navigator.clipboard.writeText(displayMarkdown)
+    if (displayMarkdown) {
+      navigator.clipboard.writeText(displayMarkdown)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }, [displayMarkdown])
 
   const handleExportDocx = useCallback(async () => {
@@ -334,15 +340,7 @@ export function PrdPage() {
       })
       setSaving(false)
 
-      // Mark phase as completed
-      await api.updatePhase({
-        projectId,
-        phase: "prd",
-        status: "completed",
-        outputFile: outputFile ?? PRD_FILE,
-      })
-
-      // Advance to next phase
+      // Advance to next phase (advancePhase marks current phase as completed)
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
@@ -390,6 +388,7 @@ export function PrdPage() {
           onExcludeChange={setExcludedContext}
           className="border-b border-[var(--border)]"
         />
+        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
         {prdStyles.length > 0 && (
           <div className="flex items-center gap-2 px-1 py-3 border-b border-[var(--border)]">
             <span className="text-xs text-[var(--text-secondary)] shrink-0">写作风格</span>
@@ -474,8 +473,8 @@ export function PrdPage() {
         <div className="prd-actions flex items-center gap-1">
           {hasContent && !currentStreaming && (
             <>
-              <Button variant="ghost" size="sm" onClick={handleCopyMarkdown} title="复制 Markdown 源文本">
-                复制 MD
+              <Button variant="ghost" size="sm" onClick={handleCopyMarkdown} disabled={copied} title="复制 Markdown 源文本">
+                {copied ? "已复制 ✓" : "复制 MD"}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => window.print()} title="打印或存储为 PDF">
                 打印 / PDF
@@ -509,6 +508,7 @@ export function PrdPage() {
         onExcludeChange={setExcludedContext}
         className="border-b border-[var(--border)]"
       />
+      <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
 
       {/* Streaming progress */}
       {currentStreaming && (
@@ -591,7 +591,7 @@ export function PrdPage() {
               onClick={() => api.revealFile(exportResult.path)}
               className="shrink-0 text-[13px] text-[var(--accent-color)] hover:opacity-70 transition-opacity"
             >
-              在 Finder 中显示
+              在 {FILE_MANAGER_LABEL} 中显示
             </button>
             <button onClick={() => setExportResult(null)} className="shrink-0 text-[12px] text-[var(--text-tertiary)] hover:opacity-70">×</button>
           </div>

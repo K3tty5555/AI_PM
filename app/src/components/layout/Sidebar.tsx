@@ -2,7 +2,7 @@ import type { CSSProperties } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import {
   Plus, ChevronLeft,
-  Sun, Moon, Monitor,
+  Sun, Moon,
   Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone,
   Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette,
   CheckCircle2,
@@ -24,7 +24,7 @@ export interface SidebarProject {
 export interface SidebarPhase {
   id: string
   label: string
-  status: "completed" | "current" | "pending"
+  status: "completed" | "in-progress" | "current" | "pending"
 }
 
 interface SidebarProps {
@@ -41,7 +41,7 @@ interface SidebarProps {
   // Project context
   projectName?: string
   projectPhases?: SidebarPhase[]
-  activePhase?: string  // kept for caller convenience; phase highlight driven by phase.status
+  activePhase?: string  // current URL phase — drives row highlight
   onPhaseClick?: (phaseId: string) => void
   // Project status
   projectStatus?: 'active' | 'completed'
@@ -62,6 +62,13 @@ const PHASE_LABELS: Record<string, string> = {
   prototype: "原型设计",
   review: "需求评审",
   retrospective: "项目复盘（可选）",
+}
+
+const VALID_PHASES = new Set(Object.keys(PHASE_LABELS))
+
+/** Sanitize currentPhase from backend — fall back to "requirement" for unknown values */
+function safePhase(phase: string): string {
+  return VALID_PHASES.has(phase) ? phase : "requirement"
 }
 
 const PHASE_ICONS: Record<string, React.ElementType> = {
@@ -99,6 +106,14 @@ function PhaseIcon({ phaseId, status }: { phaseId: string; status: SidebarPhase[
       />
     )
   }
+  if (status === "in-progress") {
+    return (
+      <svg className="size-4 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none" style={{ color: "var(--accent-color)" }}>
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+    )
+  }
   const Icon = PHASE_ICONS[phaseId] ?? Inbox
   return (
     <Icon
@@ -120,7 +135,7 @@ function Sidebar({
   onToggleFavorite,
   projectName,
   projectPhases,
-  activePhase: _activePhase,
+  activePhase,
   onPhaseClick,
   projectStatus,
   onStatusChange,
@@ -156,8 +171,15 @@ function Sidebar({
         visibility: open ? "visible" : "hidden",
       } as CSSProperties}
     >
+      {/* Top drag zone — matches 44px title bar height */}
+      <div
+        data-tauri-drag-region
+        className="h-[44px] shrink-0"
+        style={{ WebkitAppRegion: "drag" } as CSSProperties}
+      />
+
       {/* Main nav area */}
-      <nav className="flex-1 overflow-y-auto px-2 pt-3 pb-2" style={{ WebkitAppRegion: "no-drag" } as CSSProperties}>
+      <nav className="flex-1 overflow-y-auto px-2 pb-2" style={{ WebkitAppRegion: "no-drag" } as CSSProperties}>
         {/* Project back button */}
         {isInProjectContext && (
           <button
@@ -195,13 +217,13 @@ function Sidebar({
                     className={cn(
                       "group relative flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left",
                       "transition-colors duration-[var(--dur-base)]",
-                      phase.status === "current"
+                      activePhase === phase.id
                         ? "bg-[var(--active-bg)]"
                         : "hover:bg-[var(--hover-bg)]",
                     )}
                   >
-                    {/* Left accent bar for current phase */}
-                    {phase.status === "current" && (
+                    {/* Left accent bar for currently viewed phase */}
+                    {activePhase === phase.id && (
                       <span
                         className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--accent-color)]"
                         style={{ animation: "slideInLeft 200ms var(--ease-decelerate)" }}
@@ -211,7 +233,7 @@ function Sidebar({
                     <span
                       className={cn(
                         "text-sm",
-                        phase.status === "current"
+                        activePhase === phase.id
                           ? "font-medium text-[var(--text-primary)]"
                           : phase.status === "completed"
                             ? "text-[var(--text-secondary)]"
@@ -270,7 +292,7 @@ function Sidebar({
                         <li key={project.id}>
                           <button
                             type="button"
-                            onClick={() => navigate(`/project/${project.id}/${project.currentPhase}`)}
+                            onClick={() => navigate(`/project/${project.id}/${safePhase(project.currentPhase)}`)}
                             className={cn(
                               "group relative flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left",
                               "transition-colors duration-[var(--dur-base)]",
@@ -309,7 +331,7 @@ function Sidebar({
                 const isFav = favorites.includes(project.id)
                 const projectCtxItems: ContextMenuItem[] = [
                   { label: isFav ? "取消收藏" : "收藏", icon: Star, action: () => onToggleFavorite(project.id) },
-                  { label: "打开项目", icon: FolderOpen, action: () => navigate(`/project/${project.id}/${project.currentPhase}`) },
+                  { label: "打开项目", icon: FolderOpen, action: () => navigate(`/project/${project.id}/${safePhase(project.currentPhase)}`) },
                   { label: "重命名", icon: Pencil, action: () => onRenameProject?.(project.id), hidden: !onRenameProject, separator: true },
                   { label: "删除", icon: Trash2, action: () => onDeleteProject?.(project.id), variant: "destructive", hidden: !onDeleteProject },
                 ]
@@ -318,7 +340,7 @@ function Sidebar({
                     <ContextMenu items={projectCtxItems}>
                     <button
                       type="button"
-                      onClick={() => navigate(`/project/${project.id}/${project.currentPhase}`)}
+                      onClick={() => navigate(`/project/${project.id}/${safePhase(project.currentPhase)}`)}
                       className={cn(
                         "group relative flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left",
                         "transition-colors duration-[var(--dur-base)]",
@@ -442,21 +464,13 @@ function Sidebar({
           <button
             type="button"
             onClick={onCycleTheme}
-            title={
-              themePreference === "light" ? "切换深色" :
-              themePreference === "dark" ? "跟随系统" : "切换浅色"
-            }
+            title={themePreference === "light" ? "切换深色" : "切换浅色"}
             className="flex size-8 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors duration-150"
           >
-            {themePreference === "light" && (
-              <Moon className="size-3.5 transition-transform duration-300 ease-out" strokeWidth={1.75} />
-            )}
-            {themePreference === "dark" && (
-              <Sun className="size-3.5 transition-transform duration-300 ease-out" strokeWidth={1.75} />
-            )}
-            {themePreference === "system" && (
-              <Monitor className="size-3.5 transition-transform duration-300 ease-out" strokeWidth={1.75} />
-            )}
+            {themePreference === "dark"
+              ? <Sun className="size-3.5 transition-transform duration-300 ease-out" strokeWidth={1.75} />
+              : <Moon className="size-3.5 transition-transform duration-300 ease-out" strokeWidth={1.75} />
+            }
           </button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
+import { ReferenceFiles } from "@/components/reference-files"
 import { api } from "@/lib/tauri-api"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
@@ -281,23 +282,11 @@ export function AnalysisPage() {
       }
       setSaving(false)
 
-      // Mark analysis phase as completed and advance
-      await api.updatePhase({
-        projectId,
-        phase: "analysis",
-        status: "completed",
-        outputFile: outputFile ?? ANALYSIS_FILE,
-      })
-
-      // Advance to next phase
+      // Advance to next phase (advancePhase marks current phase as completed)
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
-      if (isTeam) {
-        navigate(`/project/${projectId}/research?autostart=1${isYolo ? "&yolo=1" : ""}&team=1`)
-      } else {
-        navigate(`/project/${projectId}/stories?autostart=1${isYolo ? "&yolo=1" : ""}`)
-      }
+      navigate(`/project/${projectId}/research?autostart=1${isYolo ? "&yolo=1" : ""}${isTeam ? "&team=1" : ""}`)
     } catch (err) {
       console.error("Failed to advance:", err)
       setAdvancing(false)
@@ -330,6 +319,7 @@ export function AnalysisPage() {
           onExcludeChange={setExcludedContext}
           className="border-b border-[var(--border)]"
         />
+        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
         <PhaseEmptyState
           phaseLabel="ANALYSIS"
           description="需求分析报告"
@@ -368,6 +358,7 @@ export function AnalysisPage() {
         onExcludeChange={setExcludedContext}
         className="border-b border-[var(--border)]"
       />
+      <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
 
       {/* Streaming progress */}
       {isStreaming && (

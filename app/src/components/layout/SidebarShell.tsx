@@ -48,12 +48,12 @@ function SidebarShell({
     ? location.pathname.split("/").pop()
     : undefined
 
-  // Load project list
+  // Load project list — on mount and when returning to dashboard
   useEffect(() => {
     api.listProjects()
       .then(setProjects)
       .catch((err) => console.error("Failed to load projects:", err))
-  }, [])
+  }, [activeProjectId])
 
   // Load current project phases when inside a project
   const loadProjectPhases = useCallback((projectId: string, currentPhase: string | undefined) => {
@@ -63,16 +63,16 @@ function SidebarShell({
         setProjectName(project.name)
         setProjectStatus(project.status === 'completed' ? 'completed' : 'active')
 
-        const completedPhases = new Set(
-          project.phases
-            .filter((p: any) => p.status === "completed")
-            .map((p: any) => p.phase)
+        const phaseStatusMap = new Map<string, string>(
+          project.phases.map((p: any) => [p.phase, p.status])
         )
 
         const phases: SidebarPhase[] = PHASE_ORDER.map((id) => {
+          const backendStatus = phaseStatusMap.get(id)
           let status: SidebarPhase["status"] = "pending"
-          if (completedPhases.has(id)) status = "completed"
-          else if (id === currentPhase) status = "current"  // URL wins only if not completed
+          if (backendStatus === "completed") status = "completed"
+          else if (backendStatus === "in_progress") status = "in-progress"
+          else if (id === currentPhase) status = "current"
           return { id, label: PHASE_LABELS[id] ?? id, status }
         })
 

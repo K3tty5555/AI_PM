@@ -5,6 +5,7 @@ import { RichEditor } from "@/components/rich-editor"
 import { FileUpload } from "@/components/file-upload"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
+import { ReferenceFiles } from "@/components/reference-files"
 
 interface ProjectData {
   id: string
@@ -164,6 +165,7 @@ export function RequirementPage() {
       </div>
 
       <div className="h-px bg-[var(--border)]" />
+      <ReferenceFiles projectId={projectId} className="px-1 py-2 border-b border-[var(--border)]" />
 
       {/* Requirement description — Rich Editor */}
       <div className="mt-8 mb-6">

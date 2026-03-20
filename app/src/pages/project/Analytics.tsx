@@ -6,6 +6,7 @@ import { PrdViewer } from "@/components/prd-viewer"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
+import { ReferenceFiles } from "@/components/reference-files"
 import { api } from "@/lib/tauri-api"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
@@ -98,6 +99,18 @@ export function AnalyticsPage() {
     start([{ role: "user", content: "请基于项目PRD设计指标体系和埋点方案" }], { excludedContext })
   }, [reset, start, excludedContext])
 
+  const handleSkip = useCallback(async () => {
+    if (!projectId) return
+    try {
+      await api.updatePhase({ projectId, phase: "analytics", status: "completed" })
+      await api.advancePhase(projectId)
+      invalidateProject(projectId)
+      navigate(`/project/${projectId}/prototype?autostart=1`)
+    } catch (err) {
+      console.error("Failed to skip:", err)
+    }
+  }, [projectId, navigate])
+
   const handleBack = useCallback(() => {
     navigate(`/project/${projectId}/prd`)
   }, [navigate, projectId])
@@ -116,13 +129,6 @@ export function AnalyticsPage() {
         })
       }
       setSaving(false)
-
-      await api.updatePhase({
-        projectId,
-        phase: "analytics",
-        status: "completed",
-        outputFile: outputFile ?? ANALYTICS_FILE,
-      })
 
       await api.advancePhase(projectId)
       invalidateProject(projectId)
@@ -155,10 +161,12 @@ export function AnalyticsPage() {
           onExcludeChange={setExcludedContext}
           className="border-b border-[var(--border)]"
         />
+        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
         <PhaseEmptyState
           phaseLabel="ANALYTICS"
           description="指标体系和埋点方案"
           onGenerate={handleGenerate}
+          onSkip={handleSkip}
         />
       </div>
     )
@@ -189,6 +197,7 @@ export function AnalyticsPage() {
         onExcludeChange={setExcludedContext}
         className="border-b border-[var(--border)]"
       />
+      <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
 
       {/* Streaming progress */}
       {isStreaming && (
