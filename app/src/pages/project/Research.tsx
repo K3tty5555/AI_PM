@@ -8,6 +8,7 @@ import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
+import { ReferenceFiles } from "@/components/reference-files"
 import { api } from "@/lib/tauri-api"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
@@ -259,6 +260,18 @@ export function ResearchPage() {
     start(initialMessages, { excludedContext })
   }, [reset, start, excludedContext, urls])
 
+  const handleSkip = useCallback(async () => {
+    if (!projectId) return
+    try {
+      await api.updatePhase({ projectId, phase: "research", status: "completed" })
+      await api.advancePhase(projectId)
+      invalidateProject(projectId)
+      navigate(`/project/${projectId}/stories?autostart=1`)
+    } catch (err) {
+      console.error("Failed to skip:", err)
+    }
+  }, [projectId, navigate])
+
   const handleBack = useCallback(() => {
     navigate(`/project/${projectId}/analysis`)
   }, [navigate, projectId])
@@ -277,13 +290,6 @@ export function ResearchPage() {
         })
       }
       setSaving(false)
-
-      await api.updatePhase({
-        projectId,
-        phase: "research",
-        status: "completed",
-        outputFile: outputFile ?? RESEARCH_FILE,
-      })
 
       await api.advancePhase(projectId)
       invalidateProject(projectId)
@@ -342,10 +348,12 @@ export function ResearchPage() {
           onExcludeChange={setExcludedContext}
           className="border-b border-[var(--border)]"
         />
+        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
         <PhaseEmptyState
           phaseLabel="RESEARCH"
           description="竞品研究报告"
           onGenerate={handleGenerate}
+          onSkip={handleSkip}
         />
         {/* URL reference input */}
         <div className="mt-4">
@@ -426,6 +434,7 @@ export function ResearchPage() {
         onExcludeChange={setExcludedContext}
         className="border-b border-[var(--border)]"
       />
+      <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
 
       {/* Streaming progress */}
       {isStreaming && (

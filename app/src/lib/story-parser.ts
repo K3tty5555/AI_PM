@@ -47,7 +47,7 @@ function extractStoryFields(block: string): {
 } | null {
   // Try bold-delimited format first
   const boldPattern =
-    /\*{0,2}作为\*{0,2}\s*(.+?)[，,]\s*\*{0,2}我想要?\*{0,2}\s*(.+?)[，,]\s*\*{0,2}以便\*{0,2}\s*(.+?)(?:[。.；;]|$)/
+    /\*{0,2}作为\*{0,2}\s*(.+?)[，,]\s*\*{0,2}(?:我想要?|我希望)\*{0,2}\s*(.+?)[，,]\s*\*{0,2}以便\*{0,2}\s*(.+?)(?:[。.；;]|$)/
   const match = block.match(boldPattern)
   if (match) {
     return {
@@ -59,7 +59,7 @@ function extractStoryFields(block: string): {
 
   // Fallback: try plain text format
   const plainPattern =
-    /作为\s*(.+?)[，,]\s*我想要?\s*(.+?)[，,]\s*以便\s*(.+?)(?:[。.；;]|$)/
+    /作为\s*(.+?)[，,]\s*(?:我想要?|我希望)\s*(.+?)[，,]\s*以便\s*(.+?)(?:[。.；;]|$)/
   const plainMatch = block.match(plainPattern)
   if (plainMatch) {
     return {
@@ -224,7 +224,7 @@ export function parseStories(markdown: string): Story[] {
       }
 
       // Accumulate lines that might contain a story
-      if (trimmed.includes("作为") && trimmed.includes("想要")) {
+      if (trimmed.includes("作为") && (trimmed.includes("想要") || trimmed.includes("希望"))) {
         // Process any pending block first
         if (currentBlock) {
           const fields = extractStoryFields(currentBlock)

@@ -35,7 +35,7 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
             type="button"
             onClick={onToggleSidebar}
             style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
-            className="flex size-8 items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-all duration-150 active:scale-95"
+            className="flex size-8 items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-all duration-[var(--dur-base)] active:scale-[0.97] active:duration-[var(--dur-fast)]"
           >
             {sidebarOpen
               ? <PanelLeftClose className="size-[15px]" strokeWidth={1.75} />
@@ -51,9 +51,9 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
             onClick={() => navigate("/")}
             style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
             className={cn(
-              "flex size-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
+              "flex size-8 items-center justify-center rounded-lg transition-all duration-[var(--dur-base)] active:scale-[0.97] active:duration-[var(--dur-fast)]",
               location.pathname === "/"
-                ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
+                ? "bg-[var(--accent-light)] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/15"
                 : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
             )}
           >
@@ -70,9 +70,9 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
             onClick={() => navigate("/settings")}
             style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
             className={cn(
-              "flex size-8 items-center justify-center rounded-lg transition-all duration-150 active:scale-95",
+              "flex size-8 items-center justify-center rounded-lg transition-all duration-[var(--dur-base)] active:scale-[0.97] active:duration-[var(--dur-fast)]",
               isSettings
-                ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
+                ? "bg-[var(--accent-light)] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/15"
                 : "text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
             )}
           >

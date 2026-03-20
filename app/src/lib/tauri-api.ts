@@ -114,6 +114,11 @@ export interface UiSpecContent {
   tokensRaw: string | null
 }
 
+export interface ReferenceFileEntry {
+  name: string
+  size: number
+}
+
 export interface DepStatus {
   name: string
   label: string
@@ -159,7 +164,7 @@ export const api = {
     invoke<{ ok: boolean; version?: string; error?: string }>("test_cli_config"),
 
   // Stream (fire-and-forget — results come via events)
-  startStream: (args: { projectId: string; phase: string; messages: ChatMessage[]; excludedContext?: string[]; styleId?: string }) =>
+  startStream: (args: { projectId: string; phase: string; messages: ChatMessage[]; excludedContext?: string[]; styleId?: string; designSpec?: string }) =>
     invoke<void>("start_stream", { args }),
   runTool: (args: { toolName: string; userInput: string; filePath?: string; projectId?: string; mode?: string }) =>
     invoke<void>("run_tool", { args }),
@@ -177,6 +182,14 @@ export const api = {
   searchKnowledge: (query: string) => invoke<KnowledgeEntry[]>("search_knowledge", { query }),
   getKnowledgeContent: (category: string, id: string) =>
     invoke<string>("get_knowledge_content", { category, id }),
+
+  // Reference files (07-references/)
+  uploadReferenceFile: (projectId: string, sourcePath: string) =>
+    invoke<string>("upload_reference_file", { projectId, sourcePath }),
+  listReferenceFiles: (projectId: string) =>
+    invoke<ReferenceFileEntry[]>("list_reference_files", { projectId }),
+  deleteReferenceFile: (projectId: string, fileName: string) =>
+    invoke<void>("delete_reference_file", { projectId, fileName }),
 
   // Context files
   listProjectContext: (projectId: string) => invoke<ContextFile[]>("list_project_context", { projectId }),
@@ -234,8 +247,16 @@ export const api = {
     invoke<void>("rename_ui_spec", { oldName, newName }),
   deleteUiSpec: (name: string) =>
     invoke<void>("delete_ui_spec", { name }),
+  deletePrdStyle: (name: string) =>
+    invoke<void>("delete_prd_style", { name }),
   renameProject: (id: string, newName: string) =>
     invoke<void>("rename_project", { id, newName }),
+
+  // Project design spec
+  getProjectDesignSpec: (projectId: string) =>
+    invoke<string | null>("get_project_design_spec", { projectId }),
+  setProjectDesignSpec: (projectId: string, specId: string) =>
+    invoke<void>("set_project_design_spec", { projectId, specId }),
 }
 
 // ─── Updater ────────────────────────────────────────────────────────────────

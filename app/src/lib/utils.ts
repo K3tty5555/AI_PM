@@ -5,6 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Platform-aware file manager label: Finder (macOS) / 资源管理器 (Windows) / 文件管理器 (Linux) */
+export const FILE_MANAGER_LABEL = navigator.userAgent.includes("Macintosh") || navigator.userAgent.includes("Mac OS")
+  ? "Finder"
+  : navigator.userAgent.includes("Windows")
+    ? "资源管理器"
+    : "文件管理器"
+
 /**
  * Extract a short status hint from streaming AI output.
  * Returns the last non-empty line that contains meaningful content,

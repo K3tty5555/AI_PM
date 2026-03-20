@@ -11,6 +11,7 @@ import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
+import { ReferenceFiles } from "@/components/reference-files"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -131,6 +132,19 @@ export function StoriesPage() {
     start([{ role: "user", content: "请重新生成用户故事" }], { excludedContext })
   }, [reset, start, excludedContext])
 
+  /** Skip this phase */
+  const handleSkip = useCallback(async () => {
+    if (!projectId) return
+    try {
+      await api.updatePhase({ projectId, phase: "stories", status: "completed" })
+      await api.advancePhase(projectId)
+      invalidateProject(projectId)
+      navigate(`/project/${projectId}/prd?autostart=1`)
+    } catch (err) {
+      console.error("Failed to skip:", err)
+    }
+  }, [projectId, navigate])
+
   /** Go back to analysis */
   const handleBack = useCallback(() => {
     navigate(`/project/${projectId}/analysis`)
@@ -157,15 +171,7 @@ export function StoriesPage() {
       })
       setSaving(false)
 
-      // Mark stories phase as completed
-      await api.updatePhase({
-        projectId,
-        phase: "stories",
-        status: "completed",
-        outputFile: outputFile ?? STORIES_FILE,
-      })
-
-      // Advance to next phase
+      // Advance to next phase (advancePhase marks current phase as completed)
       await api.advancePhase(projectId)
       invalidateProject(projectId)
 
@@ -205,10 +211,12 @@ export function StoriesPage() {
           onExcludeChange={setExcludedContext}
           className="border-b border-[var(--border)]"
         />
+        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
         <PhaseEmptyState
           phaseLabel="STORIES"
           description="用户故事"
           onGenerate={handleGenerate}
+          onSkip={handleSkip}
         />
       </div>
     )
@@ -255,6 +263,7 @@ export function StoriesPage() {
         onExcludeChange={setExcludedContext}
         className="border-b border-[var(--border)]"
       />
+      <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
 
       {/* Streaming progress */}
       {isStreaming && (

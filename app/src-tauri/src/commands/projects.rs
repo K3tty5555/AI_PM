@@ -10,9 +10,18 @@ use chrono::Utc;
 use crate::state::AppState;
 
 const PHASES: &[&str] = &[
-    "requirement", "analysis", "research", "stories", "prd", "prototype", "review",
-    "analytics", "review-modify", "retrospective",
+    "requirement", "analysis", "research", "stories", "prd",
+    "analytics", "prototype", "review", "retrospective",
 ];
+
+/// Sanitize legacy phase names. Falls back to "requirement" for unknown values.
+fn sanitize_phase(phase: &str) -> &str {
+    match phase {
+        "review-modify" => "review",
+        p if PHASES.contains(&p) => p,
+        _ => "requirement",
+    }
+}
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -76,11 +85,12 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
 
     let projects: Vec<ProjectSummary> = stmt
         .query_map([], |row| {
+            let raw_phase: String = row.get(3)?;
             Ok(ProjectSummary {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 description: row.get(2)?,
-                current_phase: row.get(3)?,
+                current_phase: sanitize_phase(&raw_phase).to_string(),
                 output_dir: row.get(4)?,
                 created_at: row.get(5)?,
                 updated_at: row.get(6)?,
@@ -182,6 +192,9 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
         Ok(row) => row,
     };
 
+    // Auto-migrate legacy review file (07 → 08)
+    migrate_review_file(&output_dir);
+
     let mut stmt = db
         .prepare(
             "SELECT id, project_id, phase, status, output_file, started_at, completed_at
@@ -209,7 +222,7 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
         id: pid,
         name,
         description,
-        current_phase,
+        current_phase: sanitize_phase(&current_phase).to_string(),
         output_dir,
         created_at,
         updated_at,
@@ -397,7 +410,9 @@ pub fn advance_phase(state: State<AppState>, id: String) -> Result<Option<String
             )
             .map_err(|e| e.to_string())?;
 
-        let Some(idx) = PHASES.iter().position(|&p| p == current_phase.as_str()) else {
+        let effective_phase = sanitize_phase(&current_phase);
+
+        let Some(idx) = PHASES.iter().position(|&p| p == effective_phase) else {
             return Ok(None);
         };
 
@@ -645,8 +660,17 @@ fn phase_output_file(phase: &str) -> Option<&'static str> {
         "stories"     => Some("04-user-stories.md"),
         "prd"         => Some("05-prd"),
         "prototype"   => Some("06-prototype"),
-        "review"      => Some("07-review-report.md"),
+        "review"      => Some("08-review-report.md"),
         _ => None,
+    }
+}
+
+/// Migrate legacy 07-review-report.md → 08-review-report.md
+fn migrate_review_file(output_dir: &str) {
+    let old_path = std::path::Path::new(output_dir).join("07-review-report.md");
+    let new_path = std::path::Path::new(output_dir).join("08-review-report.md");
+    if old_path.exists() && !new_path.exists() {
+        let _ = std::fs::rename(&old_path, &new_path);
     }
 }
 
