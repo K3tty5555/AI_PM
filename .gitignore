@@ -96,6 +96,7 @@ templates/ui-specs/*/
 # Node.js
 node_modules/
 package-lock.json
+!app/package-lock.json
 yarn.lock
 
 # Tauri app
