@@ -61,7 +61,7 @@ interface UseAiStreamReturn {
   error: string | null
   outputFile: string | null
   streamMeta: StreamMeta | null
-  start: (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[]; styleId?: string }) => void
+  start: (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[]; styleId?: string; designSpec?: string }) => void
   reset: () => void
 }
 
@@ -140,7 +140,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
   }, [key])
 
   const start = useCallback(
-    (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[]; styleId?: string }) => {
+    (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[]; styleId?: string; designSpec?: string }) => {
       // Guard: if this key is already streaming in the background, skip.
       // This prevents duplicate generation when the component remounts
       // (e.g. user navigated away and back while generation was in progress).
@@ -158,6 +158,13 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
       setOutputFile(null)
       setStreamMeta(null)
       setIsStreaming(true)
+
+      // Mark phase as in-progress when streaming starts and notify sidebar
+      if (phase !== "review-modify") {
+        api.updatePhase({ projectId, phase, status: "in_progress" })
+          .catch((err) => console.error("[AiStream] failed to mark in_progress:", err))
+        window.dispatchEvent(new CustomEvent("project-phase-updated", { detail: { projectId } }))
+      }
 
       // Create background stream entry
       const bg: BgStream = {
@@ -193,11 +200,16 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           }
 
           // CLI mode: if AI wrote content directly to disk via Write tool, finalText
-          // will be substantially longer than what stdout streamed. Replace the short
-          // confirmation summary with the actual document content.
-          if (finalText && finalText.trim().length > bg.text.trim().length + 100) {
-            bg.text = finalText
-            patch.textReplace = finalText
+          // (read from disk by the backend) may be the authoritative content. Accept it
+          // whenever it's meaningfully longer than accumulated stdout, OR when stdout is
+          // suspiciously short (< 500 chars) and finalText is substantial — this handles
+          // the common case where Claude outputs only a brief confirmation to stdout.
+          if (finalText && finalText.trim().length > 100) {
+            const streamLen = bg.text.trim().length
+            if (finalText.trim().length > streamLen + 100 || streamLen < 500) {
+              bg.text = finalText
+              patch.textReplace = finalText
+            }
           }
 
           bg.notify?.(patch)
@@ -225,7 +237,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
       ]).then((unlisteners) => {
         bg.unlisteners = unlisteners
 
-        api.startStream({ projectId, phase, messages, excludedContext: options?.excludedContext, styleId: options?.styleId }).catch((err: unknown) => {
+        api.startStream({ projectId, phase, messages, excludedContext: options?.excludedContext, styleId: options?.styleId, designSpec: options?.designSpec }).catch((err: unknown) => {
           bg.error = String(err)
           bg.isStreaming = false
           bg.unlisteners.forEach((fn) => fn())

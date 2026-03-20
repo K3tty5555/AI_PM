@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { open as openDialog } from "@tauri-apps/plugin-dialog"
-import { Pencil } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -121,6 +121,25 @@ export function ToolPersonaPage() {
       setRenamingStyle(null)
     }
   }, [renameInput, activeStyle, cancelRename])
+
+  const [deletingStyle, setDeletingStyle] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  const handleDelete = useCallback(async (name: string) => {
+    setDeletingStyle(name)
+    try {
+      await api.deletePrdStyle(name)
+      setStyles(prev => prev.filter(s => s.name !== name))
+      if (activeStyle === name) setActiveStyle(null)
+      setExpandedStyles(prev => { const n = new Set(prev); n.delete(name); return n })
+      setStyleContents(prev => { const n = { ...prev }; delete n[name]; return n })
+    } catch (err) {
+      console.error("Failed to delete style:", err)
+    } finally {
+      setDeletingStyle(null)
+      setDeleteConfirm(null)
+    }
+  }, [activeStyle])
 
   const [filePath, setFilePath] = useState("")
   const [fileContent, setFileContent] = useState("")
@@ -309,6 +328,15 @@ export function ToolPersonaPage() {
                           >
                             <Pencil className="h-3 w-3" />
                           </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setDeleteConfirm(s.name) }}
+                            title="删除风格"
+                            disabled={deletingStyle === s.name}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center rounded p-1 text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
                         </>
                       )}
                       {editingStyle !== s.name && s.hasPersona && (
@@ -353,12 +381,38 @@ export function ToolPersonaPage() {
                         <p className="text-xs text-[var(--text-secondary)]">加载中···</p>
                       ) : styleContents[s.name] ? (() => {
                         const c = styleContents[s.name]
-                        const markdown = c.sample ?? c.profile ?? `\`\`\`json\n${c.config}\n\`\`\``
-                        const label = c.sample ? '风格示例' : c.profile ? '风格档案' : '风格配置'
+                        if (c.sample) {
+                          return (
+                            <div>
+                              <p className="mb-2 text-[10px] text-[var(--text-tertiary)]">风格示例</p>
+                              <PrdViewer markdown={c.sample} isStreaming={false} />
+                            </div>
+                          )
+                        }
+                        // Format profile or config JSON into readable summary
+                        const jsonStr = c.profile ?? c.config
+                        const label = c.profile ? '风格档案' : '风格配置'
+                        let parsed: Record<string, unknown> | null = null
+                        try { parsed = JSON.parse(jsonStr) } catch { /* not valid JSON */ }
+                        if (parsed) {
+                          const rows = Object.entries(parsed)
+                            .filter(([, v]) => v !== null && v !== undefined && v !== "")
+                            .map(([k, v]) => {
+                              const val = typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)
+                              return `| ${k} | ${val.replace(/\n/g, ' ')} |`
+                            })
+                          const md = `| 属性 | 值 |\n|---|---|\n${rows.join('\n')}`
+                          return (
+                            <div>
+                              <p className="mb-2 text-[10px] text-[var(--text-tertiary)]">{label}</p>
+                              <PrdViewer markdown={md} isStreaming={false} />
+                            </div>
+                          )
+                        }
                         return (
                           <div>
                             <p className="mb-2 text-[10px] text-[var(--text-tertiary)]">{label}</p>
-                            <PrdViewer markdown={markdown} isStreaming={false} />
+                            <PrdViewer markdown={`\`\`\`json\n${jsonStr}\n\`\`\``} isStreaming={false} />
                           </div>
                         )
                       })() : null}
@@ -368,6 +422,27 @@ export function ToolPersonaPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setDeleteConfirm(null)}>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-xl w-80" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-medium text-[var(--text-primary)]">删除「{deleteConfirm}」？</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">风格目录将被永久删除，无法恢复。</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setDeleteConfirm(null)} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--hover-bg)]">
+                取消
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                disabled={deletingStyle === deleteConfirm}
+                className="rounded-lg bg-[var(--destructive)] px-3 py-1.5 text-xs text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {deletingStyle === deleteConfirm ? "删除中…" : "确认删除"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

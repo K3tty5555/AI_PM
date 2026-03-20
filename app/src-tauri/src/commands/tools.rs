@@ -43,15 +43,11 @@ pub async fn run_tool(
     }
 
     // Load skill from bundled resources — I1: use shared load_skill (reads all sub-files)
-    let skills_root = app.path().resource_dir()
+    let skills_root = crate::commands::stream::resolve_skills_root(&app)
         .map_err(|e| {
-            let msg = format!("无法获取资源目录：{}", e);
-            let _ = app.emit("stream_error", &msg);
-            msg
-        })?
-        .join("skills")
-        .to_string_lossy()
-        .to_string();
+            let _ = app.emit("stream_error", &e);
+            e
+        })?;
 
     // I1: Replace manual SKILL.md read with shared load_skill that also loads sub-files.
     // I3: map_err emits stream_error before returning, satisfying Fix I3.

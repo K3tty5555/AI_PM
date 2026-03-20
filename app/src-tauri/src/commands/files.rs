@@ -171,9 +171,8 @@ pub async fn export_prd_docx(
     let docx_path = Path::new(&output_dir).join("05-prd").join("05-PRD-v1.0.docx");
 
     // Bundled script path from app resources
-    let script_path = app.path().resource_dir()
-        .map_err(|e| format!("无法获取资源目录：{}", e))?
-        .join("skills")
+    let skills_root = crate::commands::stream::resolve_skills_root(&app)?;
+    let script_path = Path::new(&skills_root)
         .join("ai-pm-prd")
         .join("md2docx.py");
 
@@ -253,4 +252,187 @@ pub fn write_file(path: String, content: String) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     fs::write(&path, content).map_err(|e| e.to_string())
+}
+
+// ── Reference files (07-references/) ────────────────────────────────
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReferenceFileEntry {
+    pub name: String,
+    pub size: u64,
+}
+
+/// Upload (copy) a local file into the project's 07-references/ directory.
+/// Returns the destination file name on success.
+#[tauri::command]
+pub fn upload_reference_file(
+    state: State<AppState>,
+    project_id: String,
+    source_path: String,
+) -> Result<String, String> {
+    // Reject path traversal
+    if source_path.contains("..") {
+        return Err("路径包含非法字符".to_string());
+    }
+
+    // Phase 1: lock DB → query output_dir
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("项目不存在：{}", e))?
+        // db guard drops here
+    };
+
+    // Phase 2: file I/O without holding the lock
+    let src = Path::new(&source_path);
+    if !src.exists() || !src.is_file() {
+        return Err("源文件不存在".to_string());
+    }
+    let file_name = src
+        .file_name()
+        .ok_or_else(|| "无法获取文件名".to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    let refs_dir = Path::new(&output_dir).join("07-references");
+    fs::create_dir_all(&refs_dir).map_err(|e| format!("创建目录失败：{}", e))?;
+
+    let dest = refs_dir.join(&file_name);
+    fs::copy(&src, &dest).map_err(|e| format!("复制文件失败：{}", e))?;
+
+    Ok(file_name)
+}
+
+/// List all non-hidden files in the project's 07-references/ directory.
+#[tauri::command]
+pub fn list_reference_files(
+    state: State<AppState>,
+    project_id: String,
+) -> Result<Vec<ReferenceFileEntry>, String> {
+    // Phase 1: lock DB → query output_dir
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        match db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ) {
+            Ok(dir) => dir,
+            Err(_) => return Ok(vec![]),
+        }
+        // db guard drops here
+    };
+
+    // Phase 2: read directory without holding the lock
+    let refs_dir = Path::new(&output_dir).join("07-references");
+    if !refs_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut entries: Vec<ReferenceFileEntry> = fs::read_dir(&refs_dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let path = e.path();
+            path.is_file()
+                && !e
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with('.')
+        })
+        .map(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            let size = e.metadata().map(|m| m.len()).unwrap_or(0);
+            ReferenceFileEntry { name, size }
+        })
+        .collect();
+
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(entries)
+}
+
+/// Delete a single file from the project's 07-references/ directory.
+#[tauri::command]
+pub fn delete_reference_file(
+    state: State<AppState>,
+    project_id: String,
+    file_name: String,
+) -> Result<(), String> {
+    // Reject path traversal
+    if file_name.contains("..") || file_name.contains('/') || file_name.contains('\\') {
+        return Err("文件名包含非法字符".to_string());
+    }
+
+    // Phase 1: lock DB → query output_dir
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("项目不存在：{}", e))?
+        // db guard drops here
+    };
+
+    // Phase 2: delete file without holding the lock
+    let file_path = Path::new(&output_dir).join("07-references").join(&file_name);
+    if file_path.exists() {
+        fs::remove_file(&file_path).map_err(|e| format!("删除文件失败：{}", e))?;
+    }
+
+    Ok(())
+}
+
+/// Get the project's selected design spec.
+#[tauri::command]
+pub fn get_project_design_spec(
+    state: State<AppState>,
+    project_id: String,
+) -> Result<Option<String>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        match db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ) {
+            Ok(dir) => dir,
+            Err(_) => return Ok(None),
+        }
+    };
+
+    let spec_file = Path::new(&output_dir).join(".design-spec");
+    match fs::read_to_string(&spec_file) {
+        Ok(s) => {
+            let trimmed = s.trim().to_string();
+            if trimmed.is_empty() { Ok(None) } else { Ok(Some(trimmed)) }
+        }
+        Err(_) => Ok(None),
+    }
+}
+
+/// Set the project's selected design spec.
+#[tauri::command]
+pub fn set_project_design_spec(
+    state: State<AppState>,
+    project_id: String,
+    spec_id: String,
+) -> Result<(), String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ).map_err(|e| e.to_string())?
+    };
+
+    let spec_file = Path::new(&output_dir).join(".design-spec");
+    fs::write(&spec_file, &spec_id).map_err(|e| e.to_string())
 }
