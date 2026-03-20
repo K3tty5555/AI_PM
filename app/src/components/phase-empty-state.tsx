@@ -8,6 +8,8 @@ interface PhaseEmptyStateProps {
   description: string
   /** Called when user clicks the generate button */
   onGenerate: () => void
+  /** If provided, shows a "skip this step" link */
+  onSkip?: () => void
   disabled?: boolean
   className?: string
 }
@@ -16,6 +18,7 @@ export function PhaseEmptyState({
   phaseLabel: _phaseLabel,
   description,
   onGenerate,
+  onSkip,
   disabled,
   className,
 }: PhaseEmptyStateProps) {
@@ -43,14 +46,25 @@ export function PhaseEmptyState({
       </div>
 
       {/* CTA */}
-      <Button
-        variant="primary"
-        onClick={onGenerate}
-        disabled={disabled}
-        className="mt-1"
-      >
-        开始生成
-      </Button>
+      <div className="mt-1 flex flex-col items-center gap-2">
+        <Button
+          variant="primary"
+          onClick={onGenerate}
+          disabled={disabled}
+        >
+          开始生成
+        </Button>
+        {onSkip && (
+          <button
+            type="button"
+            onClick={onSkip}
+            disabled={disabled}
+            className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50"
+          >
+            跳过此步 →
+          </button>
+        )}
+      </div>
     </div>
   )
 }

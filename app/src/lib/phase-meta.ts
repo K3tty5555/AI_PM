@@ -16,8 +16,8 @@ export const PHASE_META: Record<string, PhaseMeta> = {
     backLabel: "← 返回需求分析",
   },
   analysis: {
-    nextLabel: "进入用户故事",
-    nextDescription: "拆解功能场景和验收标准",
+    nextLabel: "进入竞品研究",
+    nextDescription: "分析竞品，找到差异化机会",
     backLabel: "← 返回修改需求",
   },
   stories: {

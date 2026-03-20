@@ -1,7 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -12,12 +10,18 @@ import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
+import { ReferenceFiles } from "@/components/reference-files"
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const REVIEW_FILE = "07-review-report.md"
+const REVIEW_FILE = "08-review-report.md"
+const REVIEW_FILE_FALLBACKS = [
+  "07-review-report.md",
+  "07-review-report-v1.md",
+  "08-review-report-v1.md",
+]
 
 const REVIEW_ROLES = [
   { key: "product", label: "产品经理",   icon: "📋", heading: "## 产品经理视角" },
@@ -109,8 +113,9 @@ export function ReviewPage() {
 
   const displayContent = existingContent ?? text
 
-  // Compute role-filtered content
-  const sections = !isStreaming && displayContent ? parseReviewSections(displayContent) : null
+  // Compute role-filtered content — fallback to null when no roles matched (legacy format)
+  const rawSections = !isStreaming && displayContent ? parseReviewSections(displayContent) : null
+  const sections = rawSections && Object.keys(rawSections).length > 0 ? rawSections : null
 
   const progressValue = isStreaming
     ? Math.min(90, Math.floor(text.length / 20))
@@ -125,7 +130,13 @@ export function ReviewPage() {
 
     async function loadExisting() {
       try {
-        const content = await api.readProjectFile(projectId, REVIEW_FILE)
+        let content = await api.readProjectFile(projectId, REVIEW_FILE)
+        if (!content) {
+          for (const fallback of REVIEW_FILE_FALLBACKS) {
+            content = await api.readProjectFile(projectId, fallback)
+            if (content) break
+          }
+        }
         if (!cancelled) {
           if (content) {
             setExistingContent(content)
@@ -195,6 +206,18 @@ export function ReviewPage() {
     start([{ role: "user", content: "请从以下六个专业视角评审 PRD，每个视角单独输出，严格使用以下标题（不要修改标题文字）：\n\n## 产品经理视角\n## 技术架构师视角\n## UX 设计视角\n## 运营视角\n## 商务视角\n## 用户代表视角\n\n每个视角包含：核心关注点、主要问题（标注 Critical / Major / Minor 等级）、具体改进建议。" }], { excludedContext })
   }, [reset, resetModify, start, excludedContext])
 
+  const handleSkip = useCallback(async () => {
+    if (!projectId) return
+    try {
+      await api.updatePhase({ projectId, phase: "review", status: "completed" })
+      await api.advancePhase(projectId)
+      invalidateProject(projectId)
+      setCompleted(true)
+    } catch (err) {
+      console.error("Failed to skip:", err)
+    }
+  }, [projectId])
+
   const handleBack = useCallback(() => {
     navigate(`/project/${projectId}/prototype`)
   }, [navigate, projectId])
@@ -248,13 +271,6 @@ export function ReviewPage() {
       }
       setSaving(false)
 
-      await api.updatePhase({
-        projectId,
-        phase: "review",
-        status: "completed",
-        outputFile: outputFile ?? REVIEW_FILE,
-      })
-
       await api.advancePhase(projectId)
       invalidateProject(projectId)
       setCompleted(true)
@@ -285,10 +301,12 @@ export function ReviewPage() {
           onExcludeChange={setExcludedContext}
           className="border-b border-[var(--border)]"
         />
+        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
         <PhaseEmptyState
           phaseLabel="REVIEW"
           description="需求评审报告"
           onGenerate={handleGenerate}
+          onSkip={handleSkip}
         />
         {relevantKnowledge.length > 0 && (
           <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--secondary)]">
@@ -342,6 +360,7 @@ export function ReviewPage() {
         onExcludeChange={setExcludedContext}
         className="border-b border-[var(--border)]"
       />
+      <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
 
       {/* Streaming progress */}
       {isStreaming && (
@@ -384,8 +403,8 @@ export function ReviewPage() {
         </div>
       )}
 
-      {/* Role tabs — only after streaming completes */}
-      {!isStreaming && hasContent && (
+      {/* Role tabs — only when sections parsed successfully */}
+      {!isStreaming && sections && (
         <div className="flex gap-0 border-b border-[var(--border)] overflow-x-auto mt-4">
           {REVIEW_ROLES.map(role => (
             <button
@@ -406,7 +425,7 @@ export function ReviewPage() {
       )}
 
       {/* Strategy selection — shown once review is done and no strategy chosen yet */}
-      {!isStreaming && hasContent && !strategyChosen && !isModifying && (
+      {!isStreaming && sections && !strategyChosen && !isModifying && (
         <div className="mt-4 p-4 rounded-lg border border-[var(--border)] bg-[var(--secondary)]">
           <p className="text-[13px] font-medium text-[var(--text-primary)] mb-3">选择修改策略</p>
           <div className="flex flex-wrap gap-2">
@@ -500,9 +519,10 @@ export function ReviewPage() {
         ) : sections ? (
           <>
             {sections[activeRole] ? (
-              <div className="prose prose-sm max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{sections[activeRole]!}</ReactMarkdown>
-              </div>
+              <PrdViewer
+                markdown={sections[activeRole]!}
+                isStreaming={false}
+              />
             ) : (
               <p className="text-sm text-[var(--text-tertiary)] py-6 text-center">该视角暂无内容</p>
             )}

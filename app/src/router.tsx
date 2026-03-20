@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom"
+import { createBrowserRouter, Navigate } from "react-router-dom"
 import { AppLayout } from "./layouts/AppLayout"
 import { DashboardPage } from "./pages/Dashboard"
 import { SettingsPage } from "./pages/Settings"
@@ -41,6 +41,7 @@ export const router = createBrowserRouter([
       { path: "/tools/data",              element: <ToolDataPage /> },
       { path: "/tools/interview",         element: <ToolInterviewPage /> },
       { path: "/tools/design-spec",       element: <ToolDesignSpecPage /> },
+      { path: "*",                         element: <Navigate to="/" replace /> },
     ],
   },
 ])

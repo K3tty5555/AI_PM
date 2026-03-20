@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus, Trash2, CheckCircle2, RotateCcw, Pencil, FolderOpen, ExternalLink, GripVertical, Clock, Star, ArrowRight } from "lucide-react"
+import { Plus, Trash2, CheckCircle2, RotateCcw, Pencil, FolderOpen, ExternalLink, Clock, Star, ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
@@ -10,7 +10,7 @@ import { ContextMenu, type ContextMenuItem } from "@/components/ui/context-menu"
 import { useFavorites } from "@/hooks/use-favorites"
 import { useRecent } from "@/hooks/use-recent"
 import { api } from "@/lib/tauri-api"
-import { cn } from "@/lib/utils"
+import { cn, FILE_MANAGER_LABEL } from "@/lib/utils"
 
 interface DashboardProject {
   id: string
@@ -39,7 +39,6 @@ const PHASE_LABELS: Record<string, string> = {
 
 const PHASE_ORDER = ["requirement", "analysis", "research", "stories", "prd", "analytics", "prototype", "review"] as const
 
-const SORT_ORDER_KEY = "project-sort-order"
 
 function PhaseMiniMap({ completedPhases }: { completedPhases: string[] }) {
   return (
@@ -91,99 +90,6 @@ export function DashboardPage() {
   const [renameError, setRenameError] = useState<string>("")
   const isConfirmingRef = useRef(false)
 
-  // Drag-to-reorder state
-  const [draggedId, setDraggedId] = useState<string | null>(null)
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null)
-  const dragCounterRef = useRef(0)
-
-  const getCustomOrder = useCallback((): Record<string, number> => {
-    try {
-      const raw = localStorage.getItem(SORT_ORDER_KEY)
-      return raw ? JSON.parse(raw) : {}
-    } catch {
-      return {}
-    }
-  }, [])
-
-  const saveCustomOrder = useCallback((order: Record<string, number>) => {
-    localStorage.setItem(SORT_ORDER_KEY, JSON.stringify(order))
-  }, [])
-
-  const [customOrder, setCustomOrder] = useState<Record<string, number>>(() => {
-    try {
-      const raw = localStorage.getItem("project-sort-order")
-      return raw ? JSON.parse(raw) : {}
-    } catch {
-      return {}
-    }
-  })
-
-  const handleDragStart = useCallback((e: React.DragEvent, projectId: string) => {
-    e.dataTransfer.effectAllowed = "move"
-    e.dataTransfer.setData("text/plain", projectId)
-    setDraggedId(projectId)
-  }, [])
-
-  const handleDragEnd = useCallback(() => {
-    setDraggedId(null)
-    setDropTargetId(null)
-    dragCounterRef.current = 0
-  }, [])
-
-  const handleDragEnter = useCallback((e: React.DragEvent, projectId: string) => {
-    e.preventDefault()
-    dragCounterRef.current++
-    setDropTargetId(projectId)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    dragCounterRef.current--
-    if (dragCounterRef.current <= 0) {
-      setDropTargetId(null)
-      dragCounterRef.current = 0
-    }
-  }, [])
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
-  }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent, targetId: string) => {
-    e.preventDefault()
-    dragCounterRef.current = 0
-    const sourceId = e.dataTransfer.getData("text/plain")
-    if (!sourceId || sourceId === targetId) {
-      setDraggedId(null)
-      setDropTargetId(null)
-      return
-    }
-
-    // Reorder the filtered list: move sourceId before targetId
-    setProjects(prev => {
-      const arr = [...prev]
-      const srcIdx = arr.findIndex(p => p.id === sourceId)
-      const tgtIdx = arr.findIndex(p => p.id === targetId)
-      if (srcIdx === -1 || tgtIdx === -1) return prev
-
-      const [moved] = arr.splice(srcIdx, 1)
-      const insertIdx = tgtIdx > srcIdx ? tgtIdx - 1 : tgtIdx
-      arr.splice(insertIdx, 0, moved)
-
-      // Persist new order
-      const newOrder: Record<string, number> = {}
-      arr.forEach((p, i) => { newOrder[p.id] = i })
-      saveCustomOrder(newOrder)
-      setCustomOrder(newOrder)
-
-      return arr
-    })
-
-    setDraggedId(null)
-    setDropTargetId(null)
-  }, [saveCustomOrder])
-
   const filteredProjects = projects
     .filter((p) => {
       const matchSearch = !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
@@ -191,18 +97,8 @@ export function DashboardPage() {
       return matchSearch && matchStatus
     })
     .sort((a, b) => {
-      // If both items have a custom sort order, use that first
-      const aOrder = customOrder[a.id]
-      const bOrder = customOrder[b.id]
-      if (aOrder !== undefined && bOrder !== undefined) {
-        return aOrder - bOrder
-      }
-      // Items with custom order come before those without
-      if (aOrder !== undefined) return -1
-      if (bOrder !== undefined) return 1
-      // Fallback to date-based sort
-      const key = sortOrder === 'updatedAt' ? 'updatedAt' : 'createdAt'
-      return b[key].localeCompare(a[key])
+      if (sortOrder === 'updatedAt') return b.updatedAt.localeCompare(a.updatedAt)
+      return a.createdAt.localeCompare(b.createdAt) // 最早创建 → 升序
     })
 
   const startRename = useCallback((project: DashboardProject, e: React.MouseEvent) => {
@@ -252,25 +148,13 @@ export function DashboardPage() {
   const fetchProjects = useCallback(async () => {
     try {
       const data = await api.listProjects()
-      // Apply saved custom order on initial load
-      const order = getCustomOrder()
-      if (Object.keys(order).length > 0) {
-        data.sort((a: DashboardProject, b: DashboardProject) => {
-          const aO = order[a.id]
-          const bO = order[b.id]
-          if (aO !== undefined && bO !== undefined) return aO - bO
-          if (aO !== undefined) return -1
-          if (bO !== undefined) return 1
-          return b.updatedAt.localeCompare(a.updatedAt)
-        })
-      }
       setProjects(data)
     } catch (err) {
       console.error("Failed to load projects:", err)
     } finally {
       setLoading(false)
     }
-  }, [getCustomOrder])
+  }, [])
 
   useEffect(() => {
     fetchProjects()
@@ -529,42 +413,24 @@ export function DashboardPage() {
               { label: isFav ? "取消收藏" : "收藏", icon: Star, action: () => toggleFavorite(project.id) },
               { label: "打开项目", icon: FolderOpen, action: () => navigate(`/project/${project.id}/requirement`) },
               { label: "重命名", icon: Pencil, action: () => { setEditingProjectId(project.id); setRenameInput(project.name); setRenameError(""); isConfirmingRef.current = false }, separator: true },
-              { label: "在 Finder 中显示", icon: ExternalLink, action: () => api.revealFile(project.outputDir).catch(console.error) },
+              { label: `在 ${FILE_MANAGER_LABEL} 中显示`, icon: ExternalLink, action: () => api.revealFile(project.outputDir).catch(console.error) },
               { label: "删除项目", icon: Trash2, action: () => setConfirmId(project.id), variant: "destructive" as const },
             ]
-
-            const isDragged = draggedId === project.id
-            const isDropTarget = dropTargetId === project.id && draggedId !== project.id
 
             return (
               <ContextMenu key={project.id} items={contextItems}>
               <div
-                draggable
-                onDragStart={(e) => handleDragStart(e, project.id)}
-                onDragEnd={handleDragEnd}
-                onDragEnter={(e) => handleDragEnter(e, project.id)}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, project.id)}
                 className={cn(
-                  "group/card relative rounded-xl border bg-[var(--card)] p-5 cursor-pointer",
+                  "group/card relative rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 cursor-pointer",
                   "transition-all duration-200",
                   "hover:shadow-[var(--shadow-md)] hover:-translate-y-[1px]",
                   "active:scale-[0.99] active:shadow-none",
-                  isDragged && "opacity-50",
-                  isDropTarget && "border-[var(--accent-color)] shadow-[0_0_0_1px_var(--accent-color)]",
-                  !isDropTarget && "border-[var(--border)]"
                 )}
                 onClick={() => navigate(`/project/${project.id}/${project.currentPhase}`)}
                 style={{
                   animation: `fadeInUp 0.4s cubic-bezier(0.16,1,0.3,1) ${index * 0.08}s both`,
                 }}
               >
-                {/* Drag grip — top-left, revealed on hover */}
-                <div className="absolute top-3 left-3 opacity-0 group-hover/card:opacity-100 transition-opacity duration-150 cursor-grab active:cursor-grabbing">
-                  <GripVertical className="size-4 text-[var(--text-tertiary)]" strokeWidth={1.5} />
-                </div>
-
                 {/* Card action buttons — top-right, revealed on hover */}
                 <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity duration-150">
                   <button

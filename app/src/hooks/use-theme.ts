@@ -48,11 +48,9 @@ export function useTheme() {
     setPreference(next)
   }, [])
 
-  // Cycle: light → dark → system → light
+  // Toggle: light ↔ dark
   const cycleTheme = useCallback(() => {
-    setTheme(
-      preference === "light" ? "dark" : preference === "dark" ? "system" : "light"
-    )
+    setTheme(preference === "dark" ? "light" : "dark")
   }, [preference, setTheme])
 
   return { preference, resolved, setTheme, cycleTheme }
