@@ -87,48 +87,60 @@ jobs:
         with:
           ref: main
 
-      - name: Download release assets and generate latest.json
+      - name: Generate and deploy latest.json
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.ref_name }}"
           VERSION="${TAG#v}"
-
-          mkdir -p /tmp/deploy
-
-          # Download .sig files
-          gh release download "$TAG" --pattern "*.sig" --dir /tmp/sigs
-
-          # Read signatures
-          SIG_MAC_UNIVERSAL=$(cat /tmp/sigs/*.dmg.tar.gz.sig 2>/dev/null || echo "")
-          SIG_MAC_ARM="$SIG_MAC_UNIVERSAL"
-          SIG_MAC_X64="$SIG_MAC_UNIVERSAL"
-          SIG_WIN=$(cat /tmp/sigs/*.msi.zip.sig 2>/dev/null || echo "")
-
           REPO="${{ github.repository }}"
           PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          cat > /tmp/deploy/latest.json <<EOF
+          mkdir -p /tmp/deploy /tmp/sigs
+
+          # Download .sig files (non-fatal if missing)
+          gh release download "$TAG" --pattern "*.sig" --dir /tmp/sigs 2>/dev/null || true
+
+          # Read signatures (empty string if not found)
+          SIG_MAC=$(cat /tmp/sigs/*app.tar.gz.sig 2>/dev/null || echo "")
+          SIG_WIN=$(cat /tmp/sigs/*msi.zip.sig 2>/dev/null || echo "")
+
+          # Determine macOS updater asset name
+          MAC_ASSET=$(gh release view "$TAG" --json assets -q '.assets[].name' | grep '\.app\.tar\.gz$' | head -1)
+          WIN_ASSET=$(gh release view "$TAG" --json assets -q '.assets[].name' | grep '\.msi\.zip$' | head -1)
+
+          # Fallback asset names
+          MAC_ASSET="${MAC_ASSET:-AI.PM_universal.app.tar.gz}"
+          WIN_ASSET="${WIN_ASSET:-AI.PM_${VERSION}_x64_en-US.msi.zip}"
+
+          cat > /tmp/deploy/latest.json <<ENDJSON
           {
             "version": "${VERSION}",
             "notes": "更新至 ${TAG}",
             "pub_date": "${PUB_DATE}",
             "platforms": {
               "darwin-aarch64": {
-                "signature": "${SIG_MAC_ARM}",
-                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_universal.dmg.tar.gz"
+                "signature": "${SIG_MAC}",
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/${MAC_ASSET}"
               },
               "darwin-x86_64": {
-                "signature": "${SIG_MAC_X64}",
-                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_universal.dmg.tar.gz"
+                "signature": "${SIG_MAC}",
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/${MAC_ASSET}"
               },
               "windows-x86_64": {
                 "signature": "${SIG_WIN}",
-                "url": "https://github.com/${REPO}/releases/download/${TAG}/AI.PM_${VERSION}_x64_en-US.msi.zip"
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/${WIN_ASSET}"
               }
             }
           }
-          EOF
+          ENDJSON
+
+          echo "Generated latest.json:"
+          cat /tmp/deploy/latest.json
+
+          if [ -z "$SIG_MAC" ] && [ -z "$SIG_WIN" ]; then
+            echo "⚠️  No signatures found. Auto-updater will not work until signing is configured."
+          fi
 
       - name: Deploy latest.json to gh-pages
         uses: peaceiris/actions-gh-pages@v4
