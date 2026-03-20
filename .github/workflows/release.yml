@@ -30,6 +30,23 @@ jobs:
         run: npm ci
         working-directory: app
 
+      - name: Verify signing key
+        run: |
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "✅ TAURI_SIGNING_PRIVATE_KEY is set (${#TAURI_SIGNING_PRIVATE_KEY} chars)"
+          else
+            echo "❌ TAURI_SIGNING_PRIVATE_KEY is NOT set"
+            exit 1
+          fi
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" ]; then
+            echo "✅ TAURI_SIGNING_PRIVATE_KEY_PASSWORD is set"
+          else
+            echo "⚠️  TAURI_SIGNING_PRIVATE_KEY_PASSWORD is empty"
+          fi
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
       - name: Build and release (macOS universal)
         uses: tauri-apps/tauri-action@v0
         env:
@@ -44,6 +61,26 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: --target universal-apple-darwin
+          includeUpdaterJson: true
+
+      - name: Check generated artifacts
+        if: always()
+        run: |
+          echo "=== Searching for .sig files ==="
+          find app/src-tauri/target -name "*.sig" 2>/dev/null || echo "No .sig files found"
+          echo "=== Updater bundles ==="
+          find app/src-tauri/target -name "*.tar.gz" -o -name "*.zip" 2>/dev/null | head -20
+
+      - name: Upload .sig files if missed
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          for sig in $(find app/src-tauri/target -name "*.sig" 2>/dev/null); do
+            echo "Uploading $(basename $sig)..."
+            gh release upload "$TAG" "$sig" --clobber || true
+          done
 
   build-windows:
     needs: [build-macos]
@@ -65,6 +102,19 @@ jobs:
         run: npm ci
         working-directory: app
 
+      - name: Verify signing key
+        shell: bash
+        run: |
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "✅ TAURI_SIGNING_PRIVATE_KEY is set (${#TAURI_SIGNING_PRIVATE_KEY} chars)"
+          else
+            echo "❌ TAURI_SIGNING_PRIVATE_KEY is NOT set"
+            exit 1
+          fi
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
       - name: Build and release (Windows x64)
         uses: tauri-apps/tauri-action@v0
         env:
@@ -78,6 +128,19 @@ jobs:
           releaseBody: '请查看 CHANGELOG 了解此版本变更。'
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true
+
+      - name: Upload .sig files if missed
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          find app/src-tauri/target -name "*.sig" 2>/dev/null | while read sig; do
+            echo "Uploading $(basename $sig)..."
+            gh release upload "$TAG" "$sig" --clobber || true
+          done
 
   update-manifest:
     needs: [build-macos, build-windows]
