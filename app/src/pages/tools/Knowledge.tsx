@@ -260,7 +260,7 @@ export function ToolKnowledgePage() {
             onClick={() => setDrawerEntry(null)}
           />
           {/* Panel */}
-          <div className="w-[480px] max-w-[90vw] bg-[var(--background)] border-l border-[var(--border)] flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+          <div className="w-[480px] max-w-[90vw] bg-[var(--background)] border-l border-[var(--border)] flex flex-col shadow-[var(--shadow-xl)] animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
               <div className="min-w-0 flex-1">
                 <h2 className="text-[15px] font-semibold text-[var(--text-primary)] truncate">

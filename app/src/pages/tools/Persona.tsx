@@ -427,17 +427,17 @@ export function ToolPersonaPage() {
 
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setDeleteConfirm(null)}>
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-xl w-80" onClick={e => e.stopPropagation()}>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-[var(--shadow-xl)] w-80" onClick={e => e.stopPropagation()}>
             <p className="text-sm font-medium text-[var(--text-primary)]">删除「{deleteConfirm}」？</p>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">风格目录将被永久删除，无法恢复。</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setDeleteConfirm(null)} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--hover-bg)]">
+              <button onClick={() => setDeleteConfirm(null)} className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-all duration-150 active:scale-[0.97]">
                 取消
               </button>
               <button
                 onClick={() => handleDelete(deleteConfirm)}
                 disabled={deletingStyle === deleteConfirm}
-                className="rounded-lg bg-[var(--destructive)] px-3 py-1.5 text-xs text-white hover:opacity-90 disabled:opacity-50"
+                className="rounded-lg bg-[var(--destructive)] px-3 py-1.5 text-xs text-white hover:opacity-90 disabled:opacity-50 transition-all duration-150 active:scale-[0.97]"
               >
                 {deletingStyle === deleteConfirm ? "删除中…" : "确认删除"}
               </button>

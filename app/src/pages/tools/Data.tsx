@@ -149,7 +149,7 @@ export function ToolDataPage() {
             className={cn(
               "flex-1 rounded-md px-3 py-1.5 text-[13px] transition-colors",
               mode === m
-                ? "bg-[var(--surface)] text-[var(--text-primary)] shadow-sm"
+                ? "bg-[var(--card)] text-[var(--text-primary)] shadow-sm"
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             )}
           >

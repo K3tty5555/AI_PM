@@ -94,7 +94,6 @@ function StageNav({
                 <span
                   className={cn(
                     "relative z-10 text-xs font-bold",
-                    "font-terminal",
                     status === "completed" && "text-[var(--dark)]",
                     status === "current" && "text-[var(--dark)]",
                     status === "locked" && "text-[var(--text-muted)]",
@@ -117,7 +116,6 @@ function StageNav({
               <span
                 className={cn(
                   "text-[11px] text-center whitespace-nowrap leading-tight",
-                  "font-terminal",
                   status === "completed" && "text-[var(--dark)] font-medium",
                   status === "current" && "text-[var(--dark)] font-semibold",
                   status === "locked" && "text-[var(--text-muted)]",

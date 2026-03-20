@@ -35,7 +35,7 @@ export function AnalyticsPage() {
 
   const startedRef = useRef(false)
 
-  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, outputFile, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, start, reset } = useAiStream({
     projectId,
     phase: "analytics",
   })
@@ -138,7 +138,7 @@ export function AnalyticsPage() {
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate])
+  }, [projectId, existingContent, text, navigate])
 
   if (loading) {
     return (

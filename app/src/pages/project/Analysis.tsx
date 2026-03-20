@@ -116,7 +116,7 @@ export function AnalysisPage() {
   const startedRef = useRef(false)
 
   // AI stream hook
-  const { text, isStreaming, isThinking, elapsedSeconds, error, outputFile, streamMeta, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, start, reset } = useAiStream({
     projectId,
     phase: "analysis",
   })
@@ -236,7 +236,7 @@ export function AnalysisPage() {
       startedRef.current = true
       start(newMessages)
     },
-    [chatHistory, messages, text, questionInfo.question, projectId, start]
+    [chatHistory, messages, text, existingContent, questionInfo.question, projectId, start]
   )
 
   /** Generate analysis for the first time (called from empty state) */
@@ -292,7 +292,7 @@ export function AnalysisPage() {
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate, isYolo, isTeam])
+  }, [projectId, existingContent, text, navigate, isYolo, isTeam])
 
   // -------------------------------------------------------------------------
   // Loading state

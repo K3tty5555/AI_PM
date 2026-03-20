@@ -68,7 +68,7 @@ function RichEditor({
         "focus-within:border-[var(--border)] focus-within:shadow-none",
         "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:content-['']",
         "before:bg-transparent before:transition-colors before:duration-[var(--duration-terminal)] before:ease-[var(--ease-terminal)]",
-        "focus-within:before:bg-[var(--yellow)]",
+        "focus-within:before:bg-[var(--accent-color)]",
         className
       )}
     >

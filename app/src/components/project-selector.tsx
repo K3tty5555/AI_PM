@@ -44,7 +44,7 @@ export function ProjectSelector({ toolKey, value, onChange, className }: Project
         className={cn(
           "flex-1 h-8 px-2 text-sm bg-transparent border border-[var(--border)]",
           "text-[var(--dark)] outline-none",
-          "focus:border-[var(--yellow)] transition-colors duration-[var(--duration-terminal)]"
+          "focus:border-[var(--accent-color)] transition-colors duration-[var(--duration-terminal)]"
         )}
       >
         <option value="">— 不绑定 —</option>

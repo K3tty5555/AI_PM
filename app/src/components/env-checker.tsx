@@ -259,7 +259,7 @@ export function EnvChecker({ backend = "api" }: EnvCheckerProps) {
             {cliDeps.length > 0 && (
               <>
                 <div className="mt-3 mb-1 flex items-center gap-2">
-                  <span className="text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+                  <span className="text-[11px] font-medium text-[var(--text-tertiary)]">
                     CLI 模式专属
                   </span>
                   {backend === "api" && (
