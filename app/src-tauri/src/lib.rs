@@ -6,6 +6,7 @@ mod state;
 use db::init_db;
 use state::AppState;
 use std::fs;
+use tauri::Manager;
 
 #[cfg(desktop)]
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
