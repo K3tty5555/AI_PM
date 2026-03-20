@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use crate::state::AppState;
 use crate::commands::config::{read_config_internal, Backend};
 use crate::commands::stream::ChatMessage;

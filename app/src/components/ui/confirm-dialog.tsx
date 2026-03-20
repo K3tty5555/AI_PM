@@ -47,7 +47,7 @@ function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
-        className="w-full max-w-[400px] rounded-xl bg-[var(--background)] p-6 shadow-xl"
+        className="w-full max-w-[400px] rounded-xl bg-[var(--background)] p-6 shadow-[var(--shadow-xl)]"
         style={{ animation: "fadeInUp 200ms var(--ease-decelerate)" }}
       >
         {/* 标题 */}

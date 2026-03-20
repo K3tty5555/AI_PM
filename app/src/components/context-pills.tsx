@@ -28,10 +28,16 @@ export function ContextPills({ projectId, onExcludeChange, className }: ContextP
   const [tooltip, setTooltip] = useState<{ name: string; preview: string } | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     setExcluded([])
     onExcludeChange([])
-    api.listProjectContext(projectId).then(setContextFiles).catch(console.error)
-    api.listKnowledge().then((entries) => setKnowledgeCount(entries.length)).catch(console.error)
+    api.listProjectContext(projectId).then((files) => {
+      if (!cancelled) setContextFiles(files)
+    }).catch(console.error)
+    api.listKnowledge().then((entries) => {
+      if (!cancelled) setKnowledgeCount(entries.length)
+    }).catch(console.error)
+    return () => { cancelled = true }
   }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = (name: string) => {

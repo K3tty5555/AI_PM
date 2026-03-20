@@ -116,7 +116,7 @@ export function ResearchPage() {
 
   const startedRef = useRef(false)
 
-  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, outputFile, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, start, reset } = useAiStream({
     projectId,
     phase: "research",
   })
@@ -197,7 +197,7 @@ export function ResearchPage() {
       startedRef.current = true
       start(newMessages)
     },
-    [messages, text, questionInfo.question, start]
+    [messages, text, existingContent, questionInfo.question, start]
   )
 
   const handleGenerate = useCallback(async () => {
@@ -299,7 +299,7 @@ export function ResearchPage() {
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate, isYolo, isTeam])
+  }, [projectId, existingContent, text, navigate, isYolo, isTeam])
 
   if (loading) {
     return (
