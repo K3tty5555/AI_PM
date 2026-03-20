@@ -63,34 +63,25 @@ jobs:
           args: --target universal-apple-darwin
           includeUpdaterJson: true
 
-      - name: Sign updater bundle manually
+      - name: Sign and upload updater bundle
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          cargo install tauri-cli --version "^2"
-          echo "=== Looking for updater bundles ==="
-          find app/src-tauri/target -name "*.app.tar.gz" -o -name "*.app.tar.gz.sig" 2>/dev/null
-          BUNDLE=$(find app/src-tauri/target -name "*.app.tar.gz" -not -name "*.sig" | head -1)
-          if [ -n "$BUNDLE" ]; then
-            echo "Signing: $BUNDLE"
-            cargo tauri signer sign "$BUNDLE" --ci
-            echo "✅ Signature generated: ${BUNDLE}.sig"
-          else
-            echo "❌ No .app.tar.gz bundle found"
-            find app/src-tauri/target/release/bundle -type f 2>/dev/null | head -30
-          fi
-
-      - name: Upload .sig files
-        if: success()
-        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.ref_name }}"
-          for sig in $(find app/src-tauri/target -name "*.sig" 2>/dev/null); do
-            echo "Uploading $(basename $sig)..."
-            gh release upload "$TAG" "$sig" --clobber || true
-          done
+          echo "=== All bundle files ==="
+          find app/src-tauri/target/release/bundle -type f 2>/dev/null | head -30
+          echo "=== Looking for .app.tar.gz ==="
+          BUNDLE=$(find app/src-tauri/target -name "*.app.tar.gz" -not -name "*.sig" | head -1)
+          if [ -n "$BUNDLE" ]; then
+            echo "Signing: $BUNDLE"
+            npx @tauri-apps/cli signer sign "$BUNDLE" --ci
+            echo "✅ Signature generated"
+            gh release upload "$TAG" "${BUNDLE}.sig" --clobber
+          else
+            echo "❌ No .app.tar.gz bundle found"
+          fi
 
   build-windows:
     needs: [build-macos]
@@ -140,39 +131,30 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
 
-      - name: Sign updater bundle manually
+      - name: Sign and upload updater bundle
         shell: bash
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          cargo install tauri-cli --version "^2"
-          echo "=== Looking for updater bundles ==="
-          find app/src-tauri/target -name "*.msi.zip" -o -name "*.nsis.zip" -o -name "*.sig" 2>/dev/null
-          BUNDLE=$(find app/src-tauri/target -name "*.msi.zip" -not -name "*.sig" | head -1)
-          if [ -z "$BUNDLE" ]; then
-            BUNDLE=$(find app/src-tauri/target -name "*.nsis.zip" -not -name "*.sig" | head -1)
-          fi
-          if [ -n "$BUNDLE" ]; then
-            echo "Signing: $BUNDLE"
-            cargo tauri signer sign "$BUNDLE" --ci
-            echo "✅ Signature generated: ${BUNDLE}.sig"
-          else
-            echo "⚠️  No Windows updater bundle found"
-            find app/src-tauri/target/release/bundle -type f 2>/dev/null | head -30
-          fi
-
-      - name: Upload .sig and updater bundles
-        if: success()
-        shell: bash
-        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.ref_name }}"
-          for f in $(find app/src-tauri/target -name "*.sig" -o -name "*.msi.zip" -o -name "*.nsis.zip" 2>/dev/null); do
-            echo "Uploading $(basename $f)..."
-            gh release upload "$TAG" "$f" --clobber || true
-          done
+          echo "=== All bundle files ==="
+          find app/src-tauri/target/release/bundle -type f 2>/dev/null | head -30
+          echo "=== Looking for updater bundles ==="
+          BUNDLE=$(find app/src-tauri/target -name "*.nsis.zip" -not -name "*.sig" | head -1)
+          if [ -z "$BUNDLE" ]; then
+            BUNDLE=$(find app/src-tauri/target -name "*.msi.zip" -not -name "*.sig" | head -1)
+          fi
+          if [ -n "$BUNDLE" ]; then
+            echo "Signing: $BUNDLE"
+            npx @tauri-apps/cli signer sign "$BUNDLE" --ci
+            echo "✅ Signature generated"
+            gh release upload "$TAG" "$BUNDLE" "${BUNDLE}.sig" --clobber
+          else
+            echo "⚠️  No Windows updater bundle found, listing all artifacts:"
+            find app/src-tauri/target -type f -name "*.msi*" -o -name "*.nsis*" -o -name "*.exe" 2>/dev/null
+          fi
 
   update-manifest:
     needs: [build-macos, build-windows]
