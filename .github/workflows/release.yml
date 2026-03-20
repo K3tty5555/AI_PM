@@ -68,7 +68,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          cargo install tauri-cli --version "^2" --locked
+          cargo install tauri-cli --version "^2"
           echo "=== Looking for updater bundles ==="
           find app/src-tauri/target -name "*.app.tar.gz" -o -name "*.app.tar.gz.sig" 2>/dev/null
           BUNDLE=$(find app/src-tauri/target -name "*.app.tar.gz" -not -name "*.sig" | head -1)
@@ -146,7 +146,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          cargo install tauri-cli --version "^2" --locked
+          cargo install tauri-cli --version "^2"
           echo "=== Looking for updater bundles ==="
           find app/src-tauri/target -name "*.msi.zip" -o -name "*.nsis.zip" -o -name "*.sig" 2>/dev/null
           BUNDLE=$(find app/src-tauri/target -name "*.msi.zip" -not -name "*.sig" | head -1)
