@@ -52,6 +52,13 @@ export interface KnowledgeEntry {
   content: string
 }
 
+export interface KnowledgeCandidate {
+  category: string
+  title: string
+  content: string
+  source: string
+}
+
 export interface ContextFile {
   name: string
   preview: string
@@ -182,6 +189,10 @@ export const api = {
   searchKnowledge: (query: string) => invoke<KnowledgeEntry[]>("search_knowledge", { query }),
   getKnowledgeContent: (category: string, id: string) =>
     invoke<string>("get_knowledge_content", { category, id }),
+  recommendKnowledge: (args: { projectId: string; timing: "before_prd" | "before_review" }) =>
+    invoke<KnowledgeEntry[]>("recommend_knowledge", { args }),
+  extractKnowledgeCandidates: (projectId: string) =>
+    invoke<KnowledgeCandidate[]>("extract_knowledge_candidates", { projectId }),
 
   // Reference files (07-references/)
   uploadReferenceFile: (projectId: string, sourcePath: string) =>
