@@ -188,6 +188,7 @@ pub fn run() {
             commands::knowledge::search_knowledge,
             commands::knowledge::get_knowledge_content,
             commands::knowledge::recommend_knowledge,
+            commands::knowledge::extract_knowledge_candidates,
             commands::config::get_projects_dir,
             commands::config::save_projects_dir,
             commands::config::test_cli_config,
