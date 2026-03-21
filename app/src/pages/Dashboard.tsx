@@ -11,6 +11,7 @@ import { useFavorites } from "@/hooks/use-favorites"
 import { useRecent } from "@/hooks/use-recent"
 import { api } from "@/lib/tauri-api"
 import { cn, FILE_MANAGER_LABEL } from "@/lib/utils"
+import { PHASE_ORDER, PHASE_LABELS } from "@/lib/phase-meta"
 
 interface DashboardProject {
   id: string
@@ -25,19 +26,6 @@ interface DashboardProject {
   status: 'active' | 'completed'
   outputDir: string
 }
-
-const PHASE_LABELS: Record<string, string> = {
-  requirement: "需求收集",
-  analysis: "需求分析",
-  research: "竞品研究",
-  stories: "用户故事",
-  prd: "PRD 撰写",
-  analytics: "埋点设计",
-  prototype: "原型设计",
-  review: "评审",
-}
-
-const PHASE_ORDER = ["requirement", "analysis", "research", "stories", "prd", "analytics", "prototype", "review"] as const
 
 
 function PhaseMiniMap({ completedPhases }: { completedPhases: string[] }) {
