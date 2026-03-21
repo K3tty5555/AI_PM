@@ -47,6 +47,12 @@ README.md                  项目介绍
 | `/ai-pm design-spec` | 设计规范（加载公司/团队 UI 规范） |
 | `/ai-pm knowledge` | 知识库管理 |
 
+## 设计与研发自动审视
+
+- **brainstorming 产出设计方案后**，在写入设计文档之前，必须调用 `multi-perspective-review` 技能进行多视角审视
+- **writing-plans 产出实施计划后**，在开始执行之前，必须调用 `multi-perspective-review` 技能进行多视角审视
+- 审视结果呈现给用户后，由用户决定修订哪些问题，不自动修订
+
 ## 强制规范（Claude 必须遵守）
 
 - UI/HTML 输出设计规范三档可选，**首次生成 HTML 时询问用户并记住项目偏好**：①公司/团队规范（已上传后自动生效）②AI 情境定制（frontend-design 根据产品场景自主设计）③主流组件库（Ant Design / Material / Element Plus 等）
