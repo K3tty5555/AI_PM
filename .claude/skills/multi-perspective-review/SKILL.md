@@ -1,212 +1,201 @@
 ---
 name: multi-perspective-review
 description: >
-  Multi-perspective expert review for design proposals and implementation plans.
-  Automatically dispatches reviewers with appropriate expert personas based on
-  what the document touches (frontend, backend, or both).
-  Use this skill after completing brainstorming (design proposals) or writing-plans
-  (implementation plans), before finalizing the document. Also use when the user says
-  "review this design", "check my plan", "audit this proposal", or asks for expert
-  feedback on architecture or UI decisions.
+  多视角专家审视，用于设计方案和实施计划的质量把关。
+  根据文档涉及的层（前端/后端/全栈）自动选择合适的专家视角并行审查。
+  在 brainstorming（设计方案）或 writing-plans（实施计划）完成后、定稿前使用。
+  当用户说「审视一下」「帮我审查」「检查这个设计」「review 一下」「看看有没有问题」
+  「多视角审视」「专家审查」时触发。
 ---
 
-# Multi-Perspective Review
+# 多视角专家审视
 
-Dispatch parallel expert reviewers to audit a design proposal or implementation plan,
-then consolidate findings into an actionable issue list for the user to decide on.
+并行派发多个专家视角审查设计方案或实施计划，汇总问题清单供用户决策。
+所有审视输出必须使用简体中文。
 
-## When This Runs
+## 触发时机
 
-This skill is invoked automatically at two points (configured in CLAUDE.md):
+1. **brainstorming 之后** — 设计方案就绪、写入设计文档之前
+2. **writing-plans 之后** — 实施计划写完、开始执行之前
+3. 用户随时手动调用
 
-1. **After brainstorming** — when a design proposal is ready but before writing the design doc
-2. **After writing-plans** — when an implementation plan is written but before execution
-
-It can also be invoked manually at any time on any document.
-
-## Process
+## 流程
 
 ```
-Input document (design or plan)
-  -> Detect scope (frontend / backend / both)
-  -> Select reviewer personas
-  -> Dispatch reviewers in parallel (one Agent per persona)
-  -> Consolidate findings
-  -> Present issue list to user
-  -> User decides which issues to address
+输入文档（设计方案或实施计划）
+  -> 检测范围（前端 / 后端 / 全栈）
+  -> 选择审视视角
+  -> 并行派发审视者（每个视角一个 Agent）
+  -> 汇总去重
+  -> 呈现问题清单
+  -> 用户决定修订哪些
 ```
 
-## Step 1: Detect Scope
+## 第一步：检测范围
 
-Read the document and classify which layers it touches. Look for these signals:
+读取文档内容，判断涉及哪些层。识别信号：
 
-**Frontend signals**: component, page, UI, UX, CSS, styling, layout, dialog, modal,
+**前端信号**：component, page, UI, UX, CSS, styling, layout, dialog, modal,
 button, input, form, animation, responsive, Toast, Badge, sidebar, Tailwind, React,
-tsx, useState, useEffect, onClick
+tsx, useState, useEffect, onClick, 组件, 页面, 弹窗, 样式, 交互
 
-**Backend signals**: API, database, SQL, Rust, command, endpoint, reqwest, struct,
-Cargo, migration, schema, query, invoke, Tauri command, provider, stream
+**后端信号**：API, database, SQL, Rust, command, endpoint, reqwest, struct,
+Cargo, migration, schema, query, invoke, Tauri command, provider, stream,
+数据库, 命令, 接口, 查询
 
-**Classification**:
-- Both frontend and backend signals present -> `full-stack`
-- Only frontend signals -> `frontend-only`
-- Only backend signals -> `backend-only`
-- Neither (pure docs/process change) -> `backend-only` (default to architecture review)
+**判定**：
+- 同时有前端和后端信号 -> `全栈`
+- 只有前端信号 -> `纯前端`
+- 只有后端信号 -> `纯后端`
+- 都没有（纯文档/流程变更）-> `纯后端`（默认走架构审视）
 
-## Step 2: Select Reviewer Personas
+## 第二步：选择审视视角
 
-| Scope | Reviewers |
-|-------|-----------|
-| `full-stack` | Architecture, Frontend, Backend, UI/UX |
-| `frontend-only` | Frontend, UI/UX |
-| `backend-only` | Architecture, Backend |
+| 范围 | 审视者 |
+|------|--------|
+| 全栈 | 架构师、后端、前端、UI/UX |
+| 纯前端 | 前端、UI/UX |
+| 纯后端 | 架构师、后端 |
 
-## Step 3: Dispatch Reviewers
+## 第三步：派发审视者
 
-Use the Agent tool to dispatch reviewers **in parallel** (all in one message).
-Each reviewer gets the full document plus a persona-specific prompt.
+用 Agent 工具**并行**派发所有审视者（一条消息中发出所有 Agent 调用）。
+每个审视者拿到完整文档 + 视角专属 prompt。
 
-### Architecture Reviewer
+### 架构师审视
 
 ```
-You are a senior software architect reviewing a design/plan.
+你是一位资深软件架构师，正在审视一份设计方案/实施计划。请用简体中文输出。
 
-Focus on:
-- Responsibility boundaries: are modules/commands well-separated?
-- Data flow: is the data path clear and minimal?
-- Integration with existing system: does it conflict with or duplicate existing code?
-- Over-engineering: is anything unnecessarily complex?
-- Missing edge cases: error handling, failure modes, concurrency
-- API design: are interfaces clean and consistent?
+审视重点：
+- 职责边界：模块/命令的划分是否清晰？
+- 数据流：数据路径是否简洁明了？
+- 与现有系统的集成：是否与现有代码冲突或重复？
+- 过度设计：是否有不必要的复杂性？
+- 遗漏的边界情况：错误处理、失败模式、并发问题
+- API 设计：接口是否干净一致？
 
-Review the following document and output a list of issues.
-For each issue, state: severity (Critical / Important / Suggestion),
-what the problem is, and a concrete recommendation.
+输出问题清单。每个问题标注：严重程度（严重 / 重要 / 建议），
+问题描述，具体改进建议。
 
-If everything looks good, say "No issues found."
+如果没有发现问题，回复"未发现问题"。
 
-Document:
+文档内容：
 {document_content}
 ```
 
-### Backend Reviewer
+### 后端审视
 
 ```
-You are a senior backend engineer reviewing a design/plan.
+你是一位资深后端工程师，正在审视一份设计方案/实施计划。请用简体中文输出。
 
-Focus on:
-- Technical feasibility: can this actually be built as described?
-- Performance: any obvious bottlenecks (N+1 queries, unbounded loops, missing pagination)?
-- Security: path traversal, injection, auth bypass
-- Error handling: are failure cases covered with meaningful messages?
-- Dependencies: are new dependencies justified? Version compatibility?
-- Testing: is the approach testable?
+审视重点：
+- 技术可行性：按描述能否实际构建？
+- 性能：是否有明显瓶颈（N+1 查询、无界循环、缺少分页）？
+- 安全：路径遍历、注入、鉴权绕过
+- 错误处理：失败场景是否有有意义的错误信息？
+- 依赖：新增依赖是否合理？版本兼容性？
+- 可测试性：方案是否易于测试？
 
-Review the following document and output a list of issues.
-For each issue, state: severity (Critical / Important / Suggestion),
-what the problem is, and a concrete recommendation.
+输出问题清单。每个问题标注：严重程度（严重 / 重要 / 建议），
+问题描述，具体改进建议。
 
-If everything looks good, say "No issues found."
+如果没有发现问题，回复"未发现问题"。
 
-Document:
+文档内容：
 {document_content}
 ```
 
-### Frontend Reviewer
+### 前端审视
 
 ```
-You are a senior frontend engineer reviewing a design/plan.
+你是一位资深前端工程师，正在审视一份设计方案/实施计划。请用简体中文输出。
 
-Focus on:
-- Component design: are components reusable and well-scoped?
-- State management: is state lifted appropriately? Any unnecessary re-renders?
-- Accessibility: keyboard navigation, ARIA labels, screen reader support
-- Performance: large lists without virtualization? Heavy computations in render?
-- Type safety: are TypeScript types correct and complete?
-- Consistency with existing patterns in the codebase
+审视重点：
+- 组件设计：组件是否可复用、职责是否单一？
+- 状态管理：state 提升是否合理？是否有不必要的重渲染？
+- 可访问性：键盘导航、ARIA 标签、屏幕阅读器支持
+- 性能：大列表是否缺少虚拟化？渲染中是否有重计算？
+- 类型安全：TypeScript 类型是否正确完整？
+- 与代码库现有模式的一致性
 
-Review the following document and output a list of issues.
-For each issue, state: severity (Critical / Important / Suggestion),
-what the problem is, and a concrete recommendation.
+输出问题清单。每个问题标注：严重程度（严重 / 重要 / 建议），
+问题描述，具体改进建议。
 
-If everything looks good, say "No issues found."
+如果没有发现问题，回复"未发现问题"。
 
-Document:
+文档内容：
 {document_content}
 ```
 
-### UI/UX Reviewer
+### UI/UX 审视
 
 ```
-You are a senior UI/UX designer reviewing a design/plan.
+你是一位资深 UI/UX 设计师，正在审视一份设计方案/实施计划。请用简体中文输出。
 
-The project follows Apple HIG + Bauhaus design principles. Reference:
-docs/design-system.md for the full design system specification.
+如果项目有设计规范文件（如 docs/design-system.md），请先读取作为参考基准。
 
-Focus on:
-- Cognitive load: is the user asked to make too many decisions at once?
-- Information hierarchy: is the most important content most prominent?
-- Consistency: does it match existing patterns in the app?
-- Feedback: does every user action have clear visual feedback?
-- Edge states: empty state, loading state, error state all handled?
-- Dismissibility: can users close/hide things they don't need?
-- Copy/microcopy: is the language clear and non-technical for the target user?
+审视重点：
+- 认知负荷：是否要求用户一次做太多决策？
+- 信息层级：最重要的内容是否最突出？
+- 一致性：是否与应用现有模式匹配？
+- 反馈：每个用户操作是否有清晰的视觉反馈？
+- 边界状态：空状态、加载态、错误态是否都已处理？
+- 可关闭性：用户能否关闭/隐藏不需要的内容？
+- 文案：语言是否清晰、对目标用户友好？
 
-Review the following document and output a list of issues.
-For each issue, state: severity (Critical / Important / Suggestion),
-what the problem is, and a concrete recommendation.
+输出问题清单。每个问题标注：严重程度（严重 / 重要 / 建议），
+问题描述，具体改进建议。
 
-If everything looks good, say "No issues found."
+如果没有发现问题，回复"未发现问题"。
 
-Document:
+文档内容：
 {document_content}
 ```
 
-## Step 4: Consolidate and Present
+## 第四步：汇总呈现
 
-After all reviewers return, consolidate into a single issue list:
+所有审视者返回后，汇总为统一的问题清单：
 
-1. Deduplicate: if multiple reviewers flag the same issue, merge into one entry
-   and note which perspectives flagged it
-2. Sort by severity: Critical first, then Important, then Suggestion
-3. Present to user in this format:
+1. 去重：多个视角指出相同问题的，合并为一条，标注来源视角
+2. 按严重程度排序：严重 > 重要 > 建议
+3. 用以下格式呈现：
 
 ```
-## Multi-Perspective Review Results
+## 多视角审视结果
 
-Scope: {full-stack / frontend-only / backend-only}
-Reviewers: {list of personas that reviewed}
+范围：{全栈 / 纯前端 / 纯后端}
+审视视角：{参与审视的视角列表}
 
-### Critical Issues
-- **[Architecture] Issue title**: description. Recommendation: ...
-- **[UI/UX + Frontend] Issue title**: description (flagged by 2 reviewers). Recommendation: ...
+### 严重问题
+- **[架构师] 问题标题**：描述。建议：...
+- **[UI/UX + 前端] 问题标题**：描述（2 个视角同时指出）。建议：...
 
-### Important Issues
+### 重要问题
 - ...
 
-### Suggestions
+### 建议
 - ...
 
-### No Issues Found By
-- {Reviewer name} (if a reviewer found no issues, list them here)
+### 未发现问题的视角
+- {视角名称}
 
 ---
-{N} issues found. Which ones should I address?
+共发现 {N} 个问题。需要修订哪些？
 ```
 
-## What Happens Next
+## 后续处理
 
-After presenting the issue list:
-- Wait for the user to decide which issues to fix
-- The user may say "fix all", "fix Critical + Important", "skip suggestions", or pick specific ones
-- Address the selected issues by revising the design/plan document
-- Do NOT re-run the review after fixes (avoid infinite loops) unless the user explicitly asks
+呈现问题清单后：
+- 等用户决定修订哪些问题
+- 用户可能说"全部修"、"只修严重和重要的"、"跳过建议"或指定某几条
+- 按用户选择修订设计/计划文档
+- 修订后不自动重新审视（避免死循环），除非用户明确要求
 
-## Important Notes
+## 注意事项
 
-- Reviewers run in parallel for speed — dispatch all Agents in one message
-- Each reviewer is an independent Agent with no shared context
-- The design system file (docs/design-system.md) should be read by the UI/UX reviewer,
-  not injected into all reviewers
-- Keep review output concise — issues only, no praise or summary of what the document does well
-- If the document is very short (< 20 lines), it may not warrant a full review — ask the user
+- 审视者并行派发以提高速度——一条消息中发出所有 Agent 调用
+- 每个审视者是独立 Agent，无共享上下文
+- 设计规范文件（docs/design-system.md）由 UI/UX 审视者自行读取，不注入其他审视者
+- 审视输出保持简洁——只列问题，不表扬、不复述文档内容
+- 文档过短（< 20 行）时可能不值得全面审视——先询问用户
