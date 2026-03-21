@@ -9,7 +9,7 @@ pub struct ClaudeCliProvider {
 }
 
 /// Build a PATH that includes common user binary locations (macOS .app has minimal PATH)
-fn enriched_path() -> String {
+pub fn enriched_path() -> String {
     let home = dirs::home_dir().unwrap_or_default();
     let mut paths: Vec<String> = [
         ".local/bin",
@@ -49,7 +49,7 @@ fn enriched_path() -> String {
 /// Resolve the full path to `claude` binary by searching enriched PATH.
 /// `Command::new("claude")` uses the parent process PATH for lookup, which is
 /// minimal in macOS .app — so we must resolve the path ourselves.
-fn resolve_claude_binary() -> String {
+pub fn resolve_claude_binary() -> String {
     let path = enriched_path();
     for dir in path.split(':') {
         let candidate = std::path::Path::new(dir).join("claude");
