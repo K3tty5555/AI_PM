@@ -147,7 +147,10 @@ jobs:
           if [ -n "$NSIS_EXE" ]; then
             NSIS_ZIP="${NSIS_EXE%.exe}.nsis.zip"
             echo "Creating updater bundle: $NSIS_ZIP"
-            powershell -Command "Compress-Archive -Path '$NSIS_EXE' -DestinationPath '$NSIS_ZIP' -Force"
+            # Convert Git Bash path (/d/a/...) to Windows path (D:\a\...) for PowerShell
+            WIN_EXE=$(cygpath -w "$NSIS_EXE")
+            WIN_ZIP=$(cygpath -w "$NSIS_ZIP")
+            powershell -Command "Compress-Archive -Path '$WIN_EXE' -DestinationPath '$WIN_ZIP' -Force"
             echo "Signing: $NSIS_ZIP"
             cd app && npx tauri signer sign -- "$NSIS_ZIP"
             gh release upload "$TAG" "$NSIS_ZIP" "${NSIS_ZIP}.sig" --clobber
