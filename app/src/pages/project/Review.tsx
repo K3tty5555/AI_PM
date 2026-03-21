@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useAiStream } from "@/hooks/use-ai-stream"
-import { api, type KnowledgeEntry } from "@/lib/tauri-api"
+import { api } from "@/lib/tauri-api"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
+import { KnowledgeRecommendPanel } from "@/components/knowledge-recommend-panel"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -75,10 +76,8 @@ export function ReviewPage() {
   // Strategy + modification state
   const [strategyChosen, setStrategyChosen] = useState<string | null>(null)
 
-  // Knowledge recommendation (empty state only)
+  // Project name for knowledge modal
   const [projectName, setProjectName] = useState<string>("")
-  const [relevantKnowledge, setRelevantKnowledge] = useState<KnowledgeEntry[]>([])
-  const [knowledgeExpanded, setKnowledgeExpanded] = useState(false)
 
   // Quick-record knowledge modal state
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false)
@@ -170,14 +169,6 @@ export function ReviewPage() {
       if (project) setProjectName(project.name)
     }).catch(() => {})
   }, [projectId])
-
-  // Fetch relevant knowledge for empty state recommendation
-  useEffect(() => {
-    if (!projectName || existingContent) return
-    api.searchKnowledge(projectName).then((entries) => {
-      if (entries.length > 0) setRelevantKnowledge(entries.slice(0, 3))
-    }).catch(() => {})
-  }, [projectName, existingContent])
 
   // Strategy selection — triggers second stream (except "跳过修改")
   const handleStrategySelect = useCallback((strategy: string) => {
@@ -302,35 +293,13 @@ export function ReviewPage() {
           className="border-b border-[var(--border)]"
         />
         <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
+        <KnowledgeRecommendPanel projectId={projectId!} timing="before_review" visible={!existingContent} />
         <PhaseEmptyState
           phaseLabel="REVIEW"
           description="需求评审报告"
           onGenerate={handleGenerate}
           onSkip={handleSkip}
         />
-        {relevantKnowledge.length > 0 && (
-          <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--secondary)]">
-            <button
-              className="w-full flex items-center justify-between px-4 py-3 text-[13px] text-[var(--text-secondary)]"
-              onClick={() => setKnowledgeExpanded((v) => !v)}
-            >
-              <span>发现 {relevantKnowledge.length} 条相关经验</span>
-              <span>{knowledgeExpanded ? "▲" : "▼"}</span>
-            </button>
-            {knowledgeExpanded && (
-              <div className="px-4 pb-3 space-y-2 border-t border-[var(--border)]">
-                {relevantKnowledge.map((entry) => (
-                  <div key={entry.id} className="py-2">
-                    <p className="text-[12px] font-medium text-[var(--text-primary)]">{entry.title}</p>
-                    <p className="text-[12px] text-[var(--text-secondary)] line-clamp-2">
-                      {entry.content.replace(/^#[^\n]+\n+/, "").slice(0, 120)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     )
   }
