@@ -311,7 +311,11 @@ async fn call_ai_via_api(
     model: &str,
     prompt: &str,
 ) -> Result<String, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(|e| format!("HTTP 客户端初始化失败: {e}"))?;
 
     if is_anthropic(base_url, model) {
         let url = format!("{}/v1/messages", base_url.trim_end_matches('/'));
@@ -388,7 +392,8 @@ async fn call_ai_via_cli(prompt: &str) -> Result<String, String> {
 
     let mut child = tokio::process::Command::new(&binary)
         .arg("--print")
-        .arg("--dangerously-skip-permissions")
+        .arg("--allowedTools")
+        .arg("Read")
         .env_remove("CLAUDECODE")
         .env("PATH", &path_env)
         .stdin(std::process::Stdio::piped())

@@ -29,7 +29,11 @@ impl AiProvider for AnthropicProvider {
             "messages": messages_json,
         });
 
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(600))
+            .build()
+            .map_err(|e| format!("HTTP 客户端初始化失败: {e}"))?;
         let mut resp = client
             .post(&url)
             .header("x-api-key", &self.api_key)
