@@ -11,7 +11,7 @@ pub struct ClaudeCliProvider {
 /// Build a PATH that includes common user binary locations (macOS .app has minimal PATH)
 fn enriched_path() -> String {
     let home = dirs::home_dir().unwrap_or_default();
-    let extra: Vec<String> = [
+    let mut paths: Vec<String> = [
         ".local/bin",
         ".local/share/claude",
         ".npm-global/bin",
@@ -21,11 +21,20 @@ fn enriched_path() -> String {
     .map(|p| home.join(p).to_string_lossy().to_string())
     .collect();
 
-    // nvm / fnm node paths
-    let nvm_current = home.join(".nvm/current/bin");
-    let mut paths = extra;
-    if nvm_current.exists() {
-        paths.push(nvm_current.to_string_lossy().to_string());
+    // nvm: scan all installed node versions
+    let nvm_versions = home.join(".nvm/versions/node");
+    if let Ok(entries) = std::fs::read_dir(&nvm_versions) {
+        for entry in entries.flatten() {
+            let bin = entry.path().join("bin");
+            if bin.exists() {
+                paths.push(bin.to_string_lossy().to_string());
+            }
+        }
+    }
+    // fnm
+    let fnm_current = home.join(".local/share/fnm/aliases/default/bin");
+    if fnm_current.exists() {
+        paths.push(fnm_current.to_string_lossy().to_string());
     }
 
     let sys_path = std::env::var("PATH").unwrap_or_default();
@@ -37,10 +46,24 @@ fn enriched_path() -> String {
     paths.join(":")
 }
 
+/// Resolve the full path to `claude` binary by searching enriched PATH.
+/// `Command::new("claude")` uses the parent process PATH for lookup, which is
+/// minimal in macOS .app — so we must resolve the path ourselves.
+fn resolve_claude_binary() -> String {
+    let path = enriched_path();
+    for dir in path.split(':') {
+        let candidate = std::path::Path::new(dir).join("claude");
+        if candidate.exists() {
+            return candidate.to_string_lossy().to_string();
+        }
+    }
+    "claude".to_string() // fallback: let OS try
+}
+
 impl ClaudeCliProvider {
     /// 检测 `claude` 是否可用，返回版本行或错误信息
     pub async fn check_available() -> Result<String, String> {
-        let output = tokio::process::Command::new("claude")
+        let output = tokio::process::Command::new(resolve_claude_binary())
             .arg("--version")
             .env_remove("CLAUDECODE")
             .env("PATH", enriched_path())
@@ -73,7 +96,7 @@ impl AiProvider for ClaudeCliProvider {
         // 合并 system prompt 和用户输入，通过 stdin 传入（避免命令行长度限制）
         let combined = format!("{}\n\n---\n\n用户输入：{}", system_prompt, last_user);
 
-        let mut child = tokio::process::Command::new("claude")
+        let mut child = tokio::process::Command::new(resolve_claude_binary())
             .arg("--print")
             .arg("--dangerously-skip-permissions")
             .current_dir(&self.work_dir)
