@@ -6,6 +6,7 @@ import { PrdViewer } from "@/components/prd-viewer"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
+import { KnowledgeExtractDialog } from "@/components/knowledge-extract-dialog"
 import { api } from "@/lib/tauri-api"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
@@ -31,6 +32,7 @@ export function RetrospectivePage() {
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
+  const [showExtractDialog, setShowExtractDialog] = useState(false)
 
   const startedRef = useRef(false)
 
@@ -124,13 +126,18 @@ export function RetrospectivePage() {
         outputFile: outputFile ?? RETRO_FILE,
       })
       invalidateProject(projectId)
-      navigate("/")
+      setShowExtractDialog(true)
     } catch (err) {
       console.error("Failed to complete:", err)
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, outputFile, navigate])
+  }, [projectId, existingContent, text, outputFile])
+
+  const handleExtractClose = () => {
+    setShowExtractDialog(false)
+    navigate("/")
+  }
 
   if (loading) {
     return (
@@ -278,6 +285,12 @@ export function RetrospectivePage() {
           )}
         </div>
       </div>
+
+      <KnowledgeExtractDialog
+        projectId={projectId!}
+        open={showExtractDialog}
+        onClose={handleExtractClose}
+      />
     </div>
   )
 }
