@@ -142,21 +142,19 @@ jobs:
           if [ -z "$BUNDLE" ]; then
             BUNDLE=$(find "$PWD/app/src-tauri/target" -name "*.msi.zip" -not -name "*.sig" | head -1)
           fi
-          echo "=== All bundle files ==="
-          find app/src-tauri/target/release/bundle -type f 2>/dev/null | head -50
-          find app/src-tauri/target -name "*.sig" -o -name "*.zip" -o -name "*.nsis*" 2>/dev/null | head -20
-          if [ -n "$BUNDLE" ]; then
-            echo "Signing: $BUNDLE"
-            cd app && npx tauri signer sign -- "$BUNDLE"
-            gh release upload "$TAG" "$BUNDLE" "${BUNDLE}.sig" --clobber
+          # Tauri v2 doesn't auto-generate .nsis.zip — create it from .exe
+          NSIS_EXE=$(find app/src-tauri/target/release/bundle/nsis -name "*.exe" | head -1)
+          if [ -n "$NSIS_EXE" ]; then
+            NSIS_ZIP="${NSIS_EXE%.exe}.nsis.zip"
+            echo "Creating updater bundle: $NSIS_ZIP"
+            powershell -Command "Compress-Archive -Path '$NSIS_EXE' -DestinationPath '$NSIS_ZIP' -Force"
+            echo "Signing: $NSIS_ZIP"
+            cd app && npx tauri signer sign -- "$NSIS_ZIP"
+            cd ..
+            gh release upload "$TAG" "$NSIS_ZIP" "${NSIS_ZIP}.sig" --clobber
           else
-            echo "⚠️  No .nsis.zip or .msi.zip found — checking if tauri already signed"
-            # tauri-action may have already generated and uploaded .sig files
-            SIG=$(find app/src-tauri/target -name "*.nsis.zip.sig" -o -name "*.msi.zip.sig" 2>/dev/null | head -1)
-            if [ -n "$SIG" ]; then
-              echo "Found pre-generated sig: $SIG"
-              gh release upload "$TAG" "$SIG" --clobber
-            fi
+            echo "❌ No NSIS .exe found"
+            exit 1
           fi
 
   update-manifest:
@@ -183,15 +181,18 @@ jobs:
 
           # Read signatures (empty string if not found)
           SIG_MAC=$(cat /tmp/sigs/*app.tar.gz.sig 2>/dev/null || echo "")
-          SIG_WIN=$(cat /tmp/sigs/*msi.zip.sig 2>/dev/null || echo "")
+          SIG_WIN=$(cat /tmp/sigs/*nsis.zip.sig 2>/dev/null || cat /tmp/sigs/*msi.zip.sig 2>/dev/null || echo "")
 
-          # Determine macOS updater asset name
+          # Determine updater asset names
           MAC_ASSET=$(gh release view "$TAG" --json assets -q '.assets[].name' | grep '\.app\.tar\.gz$' | head -1)
-          WIN_ASSET=$(gh release view "$TAG" --json assets -q '.assets[].name' | grep '\.msi\.zip$' | head -1)
+          WIN_ASSET=$(gh release view "$TAG" --json assets -q '.assets[].name' | grep '\.nsis\.zip$' | head -1)
+          if [ -z "$WIN_ASSET" ]; then
+            WIN_ASSET=$(gh release view "$TAG" --json assets -q '.assets[].name' | grep '\.msi\.zip$' | head -1)
+          fi
 
           # Fallback asset names
           MAC_ASSET="${MAC_ASSET:-AI.PM_universal.app.tar.gz}"
-          WIN_ASSET="${WIN_ASSET:-AI.PM_${VERSION}_x64_en-US.msi.zip}"
+          WIN_ASSET="${WIN_ASSET:-AI.PM_${VERSION}_x64-setup.nsis.zip}"
 
           cat > /tmp/deploy/latest.json <<ENDJSON
           {
