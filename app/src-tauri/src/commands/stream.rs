@@ -125,8 +125,8 @@ pub fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String>
     Ok(sections.join("\n"))
 }
 
-fn load_knowledge(config_dir: &str) -> String {
-    let kb_dir = Path::new(config_dir).join("knowledge");
+fn load_knowledge(templates_base: &Path) -> String {
+    let kb_dir = templates_base.join("knowledge-base");
     if !kb_dir.exists() {
         return String::new();
     }
@@ -256,7 +256,7 @@ fn build_system_prompt(
     let mut parts = vec![skill_content];
 
     // Inject knowledge base entries (if any)
-    let knowledge = load_knowledge(config_dir);
+    let knowledge = load_knowledge(&templates_base);
     if !knowledge.is_empty() {
         parts[0].push_str(&knowledge);
     }
