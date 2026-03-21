@@ -1,3 +1,4 @@
+use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use tauri::State;
@@ -13,8 +14,7 @@ pub struct KnowledgeEntry {
     pub content: String,
 }
 
-#[tauri::command]
-pub fn list_knowledge(state: State<'_, AppState>) -> Vec<KnowledgeEntry> {
+fn list_knowledge_internal(state: &AppState) -> Vec<KnowledgeEntry> {
     let kb_root = state.templates_base().join("knowledge-base");
     let mut entries = Vec::new();
 
@@ -35,6 +35,11 @@ pub fn list_knowledge(state: State<'_, AppState>) -> Vec<KnowledgeEntry> {
         }
     }
     entries
+}
+
+#[tauri::command]
+pub fn list_knowledge(state: State<'_, AppState>) -> Vec<KnowledgeEntry> {
+    list_knowledge_internal(&state)
 }
 
 #[derive(Debug, Deserialize)]
@@ -156,4 +161,82 @@ pub async fn get_knowledge_content(
         .join(&category)
         .join(format!("{}.md", id));
     std::fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecommendKnowledgeArgs {
+    pub project_id: String,
+    pub timing: String, // "before_prd" | "before_review"
+}
+
+#[tauri::command]
+pub fn recommend_knowledge(
+    state: State<'_, AppState>,
+    args: RecommendKnowledgeArgs,
+) -> Result<Vec<KnowledgeEntry>, String> {
+    // 1. Query project output_dir from database
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&args.project_id],
+            |row| row.get(0),
+        ).map_err(|e| format!("项目不存在: {}", e))?
+    };
+
+    // 2. Read analysis report and extract headings as keywords
+    let analysis_path = std::path::Path::new(&output_dir).join("02-analysis-report.md");
+    let keywords: Vec<String> = match fs::read_to_string(&analysis_path) {
+        Ok(content) => content
+            .lines()
+            .filter(|l| l.starts_with('#'))
+            .map(|l| l.trim_start_matches('#').trim().to_lowercase())
+            .filter(|k| !k.is_empty())
+            .collect(),
+        Err(_) => return Ok(Vec::new()), // graceful degradation
+    };
+
+    if keywords.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // 3. Score each knowledge entry by keyword matching
+    let entries = list_knowledge_internal(&state);
+    let mut scored: Vec<(KnowledgeEntry, i32)> = entries
+        .into_iter()
+        .filter_map(|entry| {
+            let title_lower = entry.title.to_lowercase();
+            let content_lower = entry.content.to_lowercase();
+            let mut score: i32 = 0;
+
+            for kw in &keywords {
+                if title_lower.contains(kw.as_str()) {
+                    score += 3;
+                }
+                if content_lower.contains(kw.as_str()) {
+                    score += 1;
+                }
+            }
+
+            if score == 0 {
+                return None;
+            }
+
+            // 4. Boost pitfalls and decisions when timing is before_review
+            if args.timing == "before_review"
+                && (entry.category == "pitfalls" || entry.category == "decisions")
+            {
+                score *= 2;
+            }
+
+            Some((entry, score))
+        })
+        .collect();
+
+    // 5. Sort descending by score, return top 10
+    scored.sort_by(|a, b| b.1.cmp(&a.1));
+    let result: Vec<KnowledgeEntry> = scored.into_iter().take(10).map(|(e, _)| e).collect();
+
+    Ok(result)
 }
