@@ -212,11 +212,11 @@ pub fn save_config(
     }
 
     // Write back
-    fs::create_dir_all(Path::new(&config_path).parent().unwrap())
+    fs::create_dir_all(Path::new(&config_path).parent().ok_or("无效的配置路径".to_string())?)
         .map_err(|e| e.to_string())?;
     fs::write(
         &config_path,
-        serde_json::to_string_pretty(&existing).unwrap(),
+        serde_json::to_string_pretty(&existing).map_err(|e| e.to_string())?,
     )
     .map_err(|e| e.to_string())?;
 
@@ -319,11 +319,11 @@ pub fn save_projects_dir(
 
     existing["projectsDir"] = serde_json::Value::String(path.clone());
 
-    fs::create_dir_all(Path::new(&config_path).parent().unwrap())
+    fs::create_dir_all(Path::new(&config_path).parent().ok_or("无效的配置路径".to_string())?)
         .map_err(|e| e.to_string())?;
     fs::write(
         &config_path,
-        serde_json::to_string_pretty(&existing).unwrap(),
+        serde_json::to_string_pretty(&existing).map_err(|e| e.to_string())?,
     )
     .map_err(|e| e.to_string())?;
 

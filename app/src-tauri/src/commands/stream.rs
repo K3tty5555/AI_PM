@@ -234,7 +234,6 @@ fn build_system_prompt(
     user_input: Option<&str>,
     team_mode: bool,
     phase: &str,
-    config_dir: &str,
     excluded_context: &[String],
     templates_base: std::path::PathBuf,
     style_id: Option<&str>,
@@ -492,7 +491,6 @@ pub async fn start_stream(
         result
     };
     let team_mode = team_mode != 0;
-    let config_dir = state.config_dir.clone();
     let excluded_context = args.excluded_context.unwrap_or_default();
 
     let (skill_name, input_files, output_file, companion_skills) = phase_config(&args.phase)
@@ -529,7 +527,6 @@ pub async fn start_stream(
         last_user_msg,
         team_mode,
         &args.phase,
-        &config_dir,
         &excluded_context,
         templates_base,
         args.style_id.as_deref(),
