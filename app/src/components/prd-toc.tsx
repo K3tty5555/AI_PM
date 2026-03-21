@@ -104,13 +104,13 @@ function PrdToc({ markdown, activeSection, onSectionClick }: PrdTocProps) {
                   "text-xs leading-relaxed",
                   "transition-all duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
                   "cursor-pointer",
-                  "hover:bg-[var(--yellow-bg)]",
+                  "hover:bg-[var(--accent-light)]",
                   item.level === 3 && "pl-7",
                   // Active state: yellow left bar
                   isActive && [
-                    "bg-[var(--yellow-bg)]",
+                    "bg-[var(--accent-light)]",
                     "before:absolute before:left-0 before:top-0 before:bottom-0",
-                    "before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
+                    "before:w-[3px] before:bg-[var(--accent-color)] before:content-['']",
                   ],
                 )}
               >

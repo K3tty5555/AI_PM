@@ -332,7 +332,7 @@ export function ResearchPage() {
           </div>
         ) : !hasPlaywrightMcp ? (
           <div className="mt-4 flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
-            <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[var(--yellow)]" />
+            <span className="mt-0.5 size-1.5 shrink-0 rounded-full bg-[var(--accent-color)]" />
             <div className="min-w-0 flex-1">
               <p className="text-[13px] text-[var(--text-secondary)]">
                 未检测到 Playwright MCP，深度分析（自动登录截图）不可用。普通竞品分析仍可正常运行。
