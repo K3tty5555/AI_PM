@@ -5,13 +5,14 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
-import { api, type PrdStyleEntry, type KnowledgeEntry } from "@/lib/tauri-api"
+import { api, type PrdStyleEntry } from "@/lib/tauri-api"
 import { cn, extractStreamStatus, FILE_MANAGER_LABEL } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
+import { KnowledgeRecommendPanel } from "@/components/knowledge-recommend-panel"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -61,11 +62,6 @@ export function PrdPage() {
   // PRD style selector
   const [prdStyles, setPrdStyles] = useState<PrdStyleEntry[]>([])
   const [selectedStyle, setSelectedStyle] = useState<string>("")
-
-  // Knowledge recommendation (empty state only)
-  const [projectName, setProjectName] = useState<string>("")
-  const [relevantKnowledge, setRelevantKnowledge] = useState<KnowledgeEntry[]>([])
-  const [knowledgeExpanded, setKnowledgeExpanded] = useState(false)
 
   // AI assist input
   const [assistInput, setAssistInput] = useState("")
@@ -175,22 +171,6 @@ export function PrdPage() {
       setSelectedStyle(active ?? "")
     }).catch((err) => console.error("[Prd]", err))
   }, [])
-
-  // Load project name for knowledge recommendation
-  useEffect(() => {
-    if (!projectId) return
-    api.getProject(projectId).then((project) => {
-      if (project) setProjectName(project.name)
-    }).catch((err) => console.error("[Prd]", err))
-  }, [projectId])
-
-  // Fetch relevant knowledge for empty state recommendation
-  useEffect(() => {
-    if (!projectName || existingMarkdown) return
-    api.searchKnowledge(projectName).then((entries) => {
-      if (entries.length > 0) setRelevantKnowledge(entries.slice(0, 3))
-    }).catch((err) => console.error("[Prd]", err))
-  }, [projectName, existingMarkdown])
 
   // -------------------------------------------------------------------------
   // Load existing PRD on mount
@@ -416,6 +396,7 @@ export function PrdPage() {
             </select>
           </div>
         )}
+        <KnowledgeRecommendPanel projectId={projectId!} timing="before_prd" visible={!existingMarkdown} />
         <PhaseEmptyState
           phaseLabel="PRD"
           description="产品需求文档"
@@ -430,29 +411,6 @@ export function PrdPage() {
             ⚡ 跳过分析，直接生成 PRD
           </button>
         </div>
-        {relevantKnowledge.length > 0 && (
-          <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--secondary)]">
-            <button
-              className="w-full flex items-center justify-between px-4 py-3 text-[13px] text-[var(--text-secondary)]"
-              onClick={() => setKnowledgeExpanded((v) => !v)}
-            >
-              <span>发现 {relevantKnowledge.length} 条相关经验</span>
-              <span>{knowledgeExpanded ? "▲" : "▼"}</span>
-            </button>
-            {knowledgeExpanded && (
-              <div className="px-4 pb-3 space-y-2 border-t border-[var(--border)]">
-                {relevantKnowledge.map((entry) => (
-                  <div key={entry.id} className="py-2">
-                    <p className="text-[12px] font-medium text-[var(--text-primary)]">{entry.title}</p>
-                    <p className="text-[12px] text-[var(--text-secondary)] line-clamp-2">
-                      {entry.content.replace(/^#[^\n]+\n+/, "").slice(0, 120)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     )
   }
