@@ -143,14 +143,13 @@ jobs:
             BUNDLE=$(find "$PWD/app/src-tauri/target" -name "*.msi.zip" -not -name "*.sig" | head -1)
           fi
           # Tauri v2 doesn't auto-generate .nsis.zip — create it from .exe
-          NSIS_EXE=$(find app/src-tauri/target/release/bundle/nsis -name "*.exe" | head -1)
+          NSIS_EXE=$(find "$PWD/app/src-tauri/target/release/bundle/nsis" -name "*.exe" | head -1)
           if [ -n "$NSIS_EXE" ]; then
             NSIS_ZIP="${NSIS_EXE%.exe}.nsis.zip"
             echo "Creating updater bundle: $NSIS_ZIP"
             powershell -Command "Compress-Archive -Path '$NSIS_EXE' -DestinationPath '$NSIS_ZIP' -Force"
             echo "Signing: $NSIS_ZIP"
             cd app && npx tauri signer sign -- "$NSIS_ZIP"
-            cd ..
             gh release upload "$TAG" "$NSIS_ZIP" "${NSIS_ZIP}.sig" --clobber
           else
             echo "❌ No NSIS .exe found"
