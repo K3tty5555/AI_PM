@@ -1,8 +1,12 @@
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::Path;
 use tauri::State;
+use tokio::io::AsyncWriteExt;
 use crate::state::AppState;
+use crate::commands::config::{read_config_internal, is_anthropic, Backend};
+use crate::providers::claude_cli::{resolve_claude_binary, enriched_path};
 
 const CATEGORIES: &[&str] = &["patterns", "decisions", "pitfalls", "metrics", "playbooks", "insights"];
 
@@ -239,4 +243,274 @@ pub fn recommend_knowledge(
     let result: Vec<KnowledgeEntry> = scored.into_iter().take(10).map(|(e, _)| e).collect();
 
     Ok(result)
+}
+
+// ── extract_knowledge_candidates ─────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct KnowledgeCandidate {
+    pub category: String,
+    pub title: String,
+    pub content: String,
+    pub source: String,
+}
+
+/// Truncate a string to at most `max` characters, respecting UTF-8 char boundaries.
+fn truncate_to_chars(s: &str, max: usize) -> &str {
+    if s.chars().count() <= max {
+        return s;
+    }
+    let mut end = 0;
+    for (i, (byte_idx, _)) in s.char_indices().enumerate() {
+        if i >= max {
+            break;
+        }
+        end = byte_idx;
+    }
+    // end points to the start of the last included char; advance past it
+    if end < s.len() {
+        let ch_len = s[end..].chars().next().map(|c| c.len_utf8()).unwrap_or(0);
+        &s[..end + ch_len]
+    } else {
+        s
+    }
+}
+
+/// Parse AI response into KnowledgeCandidate vec with fallback extraction.
+fn parse_candidates_json(raw: &str) -> Result<Vec<KnowledgeCandidate>, String> {
+    let trimmed = raw.trim();
+
+    // Attempt 1: direct parse
+    if let Ok(candidates) = serde_json::from_str::<Vec<KnowledgeCandidate>>(trimmed) {
+        return Ok(candidates);
+    }
+
+    // Attempt 2: extract content between first '[' and last ']'
+    if let Some(start) = trimmed.find('[') {
+        if let Some(end) = trimmed.rfind(']') {
+            if end > start {
+                let slice = &trimmed[start..=end];
+                if let Ok(candidates) = serde_json::from_str::<Vec<KnowledgeCandidate>>(slice) {
+                    return Ok(candidates);
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "AI 返回的内容无法解析为 JSON 数组，原始内容前 200 字符：{}",
+        trimmed.chars().take(200).collect::<String>()
+    ))
+}
+
+/// Call AI via Anthropic or OpenAI-compatible API (non-streaming).
+async fn call_ai_via_api(
+    api_key: &str,
+    base_url: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<String, String> {
+    let client = reqwest::Client::new();
+
+    if is_anthropic(base_url, model) {
+        let url = format!("{}/v1/messages", base_url.trim_end_matches('/'));
+        let body = serde_json::json!({
+            "model": model,
+            "max_tokens": 2048,
+            "stream": false,
+            "messages": [{"role": "user", "content": prompt}],
+        });
+
+        let resp = client
+            .post(&url)
+            .header("x-api-key", api_key)
+            .header("anthropic-version", "2023-06-01")
+            .header("content-type", "application/json")
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("HTTP 请求失败：{}", e))?;
+
+        if !resp.status().is_success() {
+            let err_body = resp.text().await.unwrap_or_default();
+            return Err(format!("Anthropic API 错误：{}", err_body));
+        }
+
+        let json: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("解析响应失败：{}", e))?;
+
+        json["content"][0]["text"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Anthropic 响应中未找到 content[0].text".to_string())
+    } else {
+        let url = format!("{}/v1/chat/completions", base_url.trim_end_matches('/'));
+        let body = serde_json::json!({
+            "model": model,
+            "max_tokens": 2048,
+            "stream": false,
+            "messages": [{"role": "user", "content": prompt}],
+        });
+
+        let resp = client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .header("content-type", "application/json")
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("HTTP 请求失败：{}", e))?;
+
+        if !resp.status().is_success() {
+            let err_body = resp.text().await.unwrap_or_default();
+            return Err(format!("OpenAI API 错误：{}", err_body));
+        }
+
+        let json: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("解析响应失败：{}", e))?;
+
+        json["choices"][0]["message"]["content"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| "OpenAI 响应中未找到 choices[0].message.content".to_string())
+    }
+}
+
+/// Call AI via Claude CLI (non-streaming, wait for full output).
+async fn call_ai_via_cli(prompt: &str) -> Result<String, String> {
+    let binary = resolve_claude_binary();
+    let path_env = enriched_path();
+
+    let mut child = tokio::process::Command::new(&binary)
+        .arg("--print")
+        .arg("--dangerously-skip-permissions")
+        .env_remove("CLAUDECODE")
+        .env("PATH", &path_env)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("无法启动 claude 命令：{}", e))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(prompt.as_bytes())
+            .await
+            .map_err(|e| format!("写入 stdin 失败：{}", e))?;
+        // drop stdin to close pipe
+    }
+
+    let output = child
+        .wait_with_output()
+        .await
+        .map_err(|e| format!("等待 claude 进程失败：{}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!(
+            "claude 进程异常退出（exit code: {:?}）：{}",
+            output.status.code(),
+            stderr.chars().take(300).collect::<String>()
+        ));
+    }
+
+    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if text.is_empty() {
+        return Err("claude 返回了空响应".to_string());
+    }
+
+    Ok(text)
+}
+
+/// Unified non-streaming AI call — picks API or CLI based on config.
+async fn call_ai_non_streaming(config_dir: &str, prompt: &str) -> Result<String, String> {
+    let config = read_config_internal(config_dir)
+        .ok_or_else(|| "未找到 AI 配置，请先在设置中配置 API Key 或 Claude CLI".to_string())?;
+
+    match config.backend {
+        Backend::ClaudeCli => call_ai_via_cli(prompt).await,
+        Backend::Api => {
+            let api_key = config
+                .api_key
+                .filter(|k| !k.is_empty())
+                .ok_or_else(|| "API Key 未配置".to_string())?;
+            let base_url = config
+                .base_url
+                .filter(|u| !u.is_empty())
+                .unwrap_or_else(|| "https://api.anthropic.com".to_string());
+            call_ai_via_api(&api_key, &base_url, &config.model, prompt).await
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn extract_knowledge_candidates(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<Vec<KnowledgeCandidate>, String> {
+    // 1. Query project output_dir from database
+    let (output_dir, config_dir) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let dir: String = db
+            .query_row(
+                "SELECT output_dir FROM projects WHERE id = ?1",
+                params![&project_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("项目不存在：{}", e))?;
+        (dir, state.config_dir.clone())
+    };
+
+    let base = Path::new(&output_dir);
+
+    // 2. Read artifacts — PRD is required (try two possible paths)
+    let prd_path = base.join("05-prd").join("05-PRD-v1.0.md");
+    let prd_fallback = base.join("05-PRD-v1.0.md");
+    let prd_content = fs::read_to_string(&prd_path)
+        .or_else(|_| fs::read_to_string(&prd_fallback))
+        .map_err(|_| "未找到 PRD 文件（05-prd/05-PRD-v1.0.md），请先完成 PRD 阶段".to_string())?;
+
+    let review_content = fs::read_to_string(base.join("08-review-report.md")).ok();
+    let retro_content = fs::read_to_string(base.join("10-retrospective.md")).ok();
+
+    // 3. Build prompt with truncated artifacts
+    let mut artifacts = String::new();
+    artifacts.push_str("## PRD 文档\n\n");
+    artifacts.push_str(truncate_to_chars(&prd_content, 6000));
+    artifacts.push('\n');
+
+    if let Some(ref review) = review_content {
+        artifacts.push_str("\n## 评审报告\n\n");
+        artifacts.push_str(truncate_to_chars(review, 4000));
+        artifacts.push('\n');
+    }
+
+    if let Some(ref retro) = retro_content {
+        artifacts.push_str("\n## 复盘总结\n\n");
+        artifacts.push_str(truncate_to_chars(retro, 3000));
+        artifacts.push('\n');
+    }
+
+    let prompt = format!(
+        "你是一位产品知识管理专家。请分析以下项目产出物，提取 3-5 条值得沉淀的经验知识。\n\n\
+         每条知识必须包含：\n\
+         - category: 分类，只能是 patterns / decisions / pitfalls / metrics / playbooks / insights 之一\n\
+         - title: 简短标题（10-20字）\n\
+         - content: 具体内容（50-150字，包含背景、结论、适用场景）\n\
+         - source: 提取来源，只能是 \"PRD\" / \"评审报告\" / \"复盘总结\" 之一\n\n\
+         请直接输出 JSON 数组，不要输出任何其他内容。\n\n\
+         {}",
+        artifacts
+    );
+
+    // 4. Call AI (non-streaming)
+    let raw = call_ai_non_streaming(&config_dir, &prompt).await?;
+
+    // 5. Parse response
+    parse_candidates_json(&raw)
 }
