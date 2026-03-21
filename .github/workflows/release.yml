@@ -142,13 +142,21 @@ jobs:
           if [ -z "$BUNDLE" ]; then
             BUNDLE=$(find "$PWD/app/src-tauri/target" -name "*.msi.zip" -not -name "*.sig" | head -1)
           fi
+          echo "=== All bundle files ==="
+          find app/src-tauri/target/release/bundle -type f 2>/dev/null | head -50
+          find app/src-tauri/target -name "*.sig" -o -name "*.zip" -o -name "*.nsis*" 2>/dev/null | head -20
           if [ -n "$BUNDLE" ]; then
             echo "Signing: $BUNDLE"
             cd app && npx tauri signer sign -- "$BUNDLE"
             gh release upload "$TAG" "$BUNDLE" "${BUNDLE}.sig" --clobber
           else
-            echo "⚠️  No Windows updater bundle found"
-            find app/src-tauri/target -type f \( -name "*.msi*" -o -name "*.nsis*" -o -name "*.exe" \) 2>/dev/null
+            echo "⚠️  No .nsis.zip or .msi.zip found — checking if tauri already signed"
+            # tauri-action may have already generated and uploaded .sig files
+            SIG=$(find app/src-tauri/target -name "*.nsis.zip.sig" -o -name "*.msi.zip.sig" 2>/dev/null | head -1)
+            if [ -n "$SIG" ]; then
+              echo "Found pre-generated sig: $SIG"
+              gh release upload "$TAG" "$SIG" --clobber
+            fi
           fi
 
   update-manifest:
