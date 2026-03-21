@@ -130,8 +130,8 @@ function AddStoryForm({
                 "px-3 py-1 text-xs font-medium border cursor-pointer",
                 "transition-all duration-150",
                 priority === p
-                  ? "border-[var(--yellow)] bg-[var(--yellow)] text-[var(--dark)]"
-                  : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--yellow)]",
+                  ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-[var(--dark)]"
+                  : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent-color)]",
               )}
             >
               {p}

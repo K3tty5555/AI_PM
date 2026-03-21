@@ -56,8 +56,8 @@ function StageNav({
                   // Hexagon clip-path
                   "[clip-path:polygon(50%_0%,100%_25%,100%_75%,50%_100%,0%_75%,0%_25%)]",
                   status === "completed" && [
-                    "bg-[var(--yellow)] text-white",
-                    "cursor-pointer hover:shadow-[var(--yellow-glow)]",
+                    "bg-[var(--accent-color)] text-white",
+                    "cursor-pointer",
                   ],
                   status === "current" && [
                     "bg-transparent",
@@ -76,8 +76,8 @@ function StageNav({
                   className={cn(
                     "absolute inset-0",
                     "[clip-path:polygon(50%_0%,100%_25%,100%_75%,50%_100%,0%_75%,0%_25%)]",
-                    status === "completed" && "bg-[var(--yellow)]",
-                    status === "current" && "bg-[var(--yellow)]",
+                    status === "completed" && "bg-[var(--accent-color)]",
+                    status === "current" && "bg-[var(--accent-color)]",
                     status === "locked" && "bg-[var(--border)]",
                   )}
                 />
@@ -85,7 +85,7 @@ function StageNav({
                   className={cn(
                     "absolute inset-[2px]",
                     "[clip-path:polygon(50%_0%,100%_25%,100%_75%,50%_100%,0%_75%,0%_25%)]",
-                    status === "completed" && "bg-[var(--yellow)]",
+                    status === "completed" && "bg-[var(--accent-color)]",
                     status === "current" && "bg-[var(--background)]",
                     status === "locked" && "bg-[var(--background)]",
                   )}
@@ -133,7 +133,7 @@ function StageNav({
                     "w-8 h-[2px]",
                     "transition-colors duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
                     isLineActive(index)
-                      ? "bg-[var(--yellow)]"
+                      ? "bg-[var(--accent-color)]"
                       : "bg-[var(--border)]"
                   )}
                 />

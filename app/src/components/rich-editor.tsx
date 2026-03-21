@@ -63,11 +63,11 @@ function RichEditor({
       className={cn(
         "group/editor relative",
         "border border-[var(--border)] bg-[var(--background)]",
-        "transition-all duration-[var(--duration-terminal)] ease-[var(--ease-terminal)]",
+        "transition-all duration-[var(--dur-base)] ease-[var(--ease-standard)]",
         // Focus state: yellow left stripe
         "focus-within:border-[var(--border)] focus-within:shadow-none",
         "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:content-['']",
-        "before:bg-transparent before:transition-colors before:duration-[var(--duration-terminal)] before:ease-[var(--ease-terminal)]",
+        "before:bg-transparent before:transition-colors before:duration-[var(--dur-base)] before:ease-[var(--ease-standard)]",
         "focus-within:before:bg-[var(--accent-color)]",
         className
       )}

@@ -69,7 +69,7 @@ function TypingCursor() {
     <span
       className={cn(
         "inline-block w-2 h-4 ml-0.5 align-middle",
-        "bg-[var(--yellow)]",
+        "bg-[var(--accent-color)]",
         "animate-[blink_1s_step-end_infinite]",
       )}
       aria-hidden
@@ -141,8 +141,8 @@ function EditableBlock({
           }}
           className={cn(
             "w-full min-h-[60px] p-3 text-sm",
-            "bg-[var(--yellow-bg)] text-[var(--dark)]",
-            "border border-[var(--yellow)]",
+            "bg-[var(--accent-light)] text-[var(--dark)]",
+            "border border-[var(--accent-color)]",
             "font-mono",
             "outline-none resize-none",
             "leading-relaxed",
@@ -165,7 +165,7 @@ function EditableBlock({
         }
       }}
       className={cn(
-        editable && "cursor-text hover:bg-[var(--yellow-bg)] transition-colors duration-150",
+        editable && "cursor-text hover:bg-[var(--accent-light)] transition-colors duration-150",
       )}
     >
       {children}
@@ -202,7 +202,7 @@ function createMarkdownComponents(
             "relative text-base font-semibold text-[var(--dark)]",
             "mt-8 mb-3 pl-4",
             "before:absolute before:left-0 before:top-0 before:bottom-0",
-            "before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
+            "before:w-[3px] before:bg-[var(--accent-color)] before:content-['']",
           )}
           {...props}
         >
@@ -306,7 +306,7 @@ function createMarkdownComponents(
       ...props
     }: React.ComponentProps<"blockquote">) => (
       <blockquote
-        className="border-l-2 border-[var(--yellow)] pl-3 my-3 text-sm text-[var(--text-muted)] italic"
+        className="border-l-2 border-[var(--accent-color)] pl-3 my-3 text-sm text-[var(--text-muted)] italic"
         {...props}
       >
         {children}
@@ -360,7 +360,7 @@ function createMarkdownComponents(
         className={cn(
           "overflow-x-auto p-4 my-3 text-xs",
           "bg-[var(--secondary)] text-[var(--text-primary)]",
-          "border-l-3 border-l-[var(--yellow)]",
+          "border-l-3 border-l-[var(--accent-color)]",
           "font-mono",
         )}
         {...props}
@@ -402,7 +402,7 @@ function createMarkdownComponents(
 
     tr: ({ children, ...props }: React.ComponentProps<"tr">) => (
       <tr
-        className="even:bg-[var(--yellow-bg)] transition-colors duration-150"
+        className="even:bg-[var(--accent-light)] transition-colors duration-150"
         {...props}
       >
         {children}
@@ -424,7 +424,7 @@ function createMarkdownComponents(
 
     a: ({ children, ...props }: React.ComponentProps<"a">) => (
       <a
-        className="text-[var(--dark)] underline underline-offset-2 decoration-[var(--yellow)] hover:bg-[var(--yellow-bg)] transition-colors duration-150"
+        className="text-[var(--dark)] underline underline-offset-2 decoration-[var(--accent-color)] hover:bg-[var(--accent-light)] transition-colors duration-150"
         target="_blank"
         rel="noopener noreferrer"
         {...props}
@@ -460,7 +460,7 @@ function PrdViewer({ markdown, isStreaming, onEdit }: PrdViewerProps) {
       <div className="flex items-center gap-3 py-8">
         <span
           className={cn(
-            "inline-block w-2 h-2 bg-[var(--yellow)]",
+            "inline-block w-2 h-2 bg-[var(--accent-color)]",
             "animate-[dotPulse_2s_ease-in-out_infinite]",
           )}
           style={{ borderRadius: "50%" }}

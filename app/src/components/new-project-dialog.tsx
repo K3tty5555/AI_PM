@@ -110,7 +110,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
                 if (error) setError("")
               }}
               placeholder="输入项目名称"
-              className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)] placeholder:text-[var(--text-secondary)]/50 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+              className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-[var(--dur-base)] ease-[var(--ease-standard)] placeholder:text-[var(--text-secondary)]/50 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
             />
             {error && (
               <p className="mt-1.5 text-xs text-[var(--destructive)]">
@@ -127,7 +127,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
               className="flex items-center gap-3 cursor-pointer group"
             >
               <span className={cn(
-                "inline-flex h-4 w-4 shrink-0 items-center justify-center border transition-colors duration-[var(--duration-terminal)]",
+                "inline-flex h-4 w-4 shrink-0 items-center justify-center border transition-colors duration-[var(--dur-base)]",
                 teamMode
                   ? "border-[var(--accent-color)] bg-[var(--accent-color)]"
                   : "border-[var(--border)] bg-transparent group-hover:border-[var(--accent-color)]"

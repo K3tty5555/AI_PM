@@ -96,9 +96,9 @@ function FileUpload({
         className={cn(
           "flex cursor-pointer flex-col items-center justify-center gap-2",
           "border-2 border-dashed px-4 py-8",
-          "transition-colors duration-[var(--duration-terminal)] ease-[var(--ease-terminal)]",
+          "transition-colors duration-[var(--dur-base)] ease-[var(--ease-standard)]",
           isDragOver
-            ? "border-[var(--yellow)] bg-[var(--yellow-bg)]"
+            ? "border-[var(--accent-color)] bg-[var(--accent-light)]"
             : "border-[var(--border)] bg-transparent hover:border-[var(--text-muted)]/30"
         )}
       >
@@ -167,7 +167,7 @@ function FileUpload({
                 className={cn(
                   "ml-2 shrink-0 px-1.5 py-0.5",
                   "text-xs text-[var(--text-muted)] hover:text-[var(--destructive)]",
-                  "transition-colors duration-[var(--duration-terminal)]",
+                  "transition-colors duration-[var(--dur-base)]",
                   "opacity-0 group-hover/file:opacity-100"
                 )}
                 aria-label={`删除 ${file.name}`}

@@ -288,7 +288,7 @@ export function StoriesPage() {
         <div className="mt-6 flex items-center gap-3 py-8">
           <span
             className={cn(
-              "inline-block w-2 h-2 bg-[var(--yellow)]",
+              "inline-block w-2 h-2 bg-[var(--accent-color)]",
               "animate-[dotPulse_2s_ease-in-out_infinite]",
             )}
             style={{ borderRadius: "50%" }}
@@ -489,7 +489,7 @@ function AddStoryInline({
                 "px-3 py-1 text-xs font-medium border cursor-pointer",
                 "transition-all duration-150",
                 priority === p
-                  ? "border-[var(--yellow)] bg-[var(--yellow)] text-[var(--dark)]"
+                  ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-[var(--dark)]"
                   : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent-color)]",
               )}
             >

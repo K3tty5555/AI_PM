@@ -78,7 +78,7 @@ function TypingCursor() {
     <span
       className={cn(
         "inline-block w-2 h-4 ml-0.5 align-middle",
-        "bg-[var(--yellow)]",
+        "bg-[var(--accent-color)]",
         "animate-[blink_1s_step-end_infinite]",
       )}
       aria-hidden
@@ -216,7 +216,7 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
       <div className="flex items-center gap-3 py-8">
         <span
           className={cn(
-            "inline-block w-2 h-2 bg-[var(--yellow)]",
+            "inline-block w-2 h-2 bg-[var(--accent-color)]",
             "animate-[dotPulse_2s_ease-in-out_infinite]",
           )}
           style={{ borderRadius: "50%" }}
