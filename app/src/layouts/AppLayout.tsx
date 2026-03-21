@@ -15,34 +15,9 @@ import { listen } from "@tauri-apps/api/event"
 
 export type { ThemePreference, ResolvedTheme } from "@/hooks/use-theme"
 
+import { PHASE_ORDER, PHASE_LABELS, TOOL_LABELS } from "@/lib/phase-meta"
+
 type BannerState = "idle" | "available" | "downloading" | "ready" | "error"
-
-const PHASE_ORDER = [
-  "requirement", "analysis", "research", "stories", "prd",
-  "analytics", "prototype", "review", "retrospective",
-]
-
-const PHASE_LABELS: Record<string, string> = {
-  requirement: "需求收集",
-  analysis: "需求分析",
-  research: "竞品研究",
-  stories: "用户故事",
-  prd: "PRD 撰写",
-  analytics: "埋点设计",
-  prototype: "原型设计",
-  review: "需求评审",
-  retrospective: "项目复盘",
-}
-
-const TOOL_LABELS: Record<string, string> = {
-  priority: "优先级评估",
-  weekly: "工作周报",
-  data: "数据洞察",
-  interview: "调研访谈",
-  knowledge: "知识库",
-  persona: "产品分身",
-  "design-spec": "设计规范",
-}
 
 export function AppLayout() {
   const navigate = useNavigate()
