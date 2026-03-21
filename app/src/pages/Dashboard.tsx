@@ -475,10 +475,11 @@ export function DashboardPage() {
                           onBlur={() => confirmRename(project)}
                           disabled={renamingProjectId === project.id}
                           className={cn(
-                            "h-8 px-2 text-[15px] font-semibold rounded border bg-transparent outline-none w-full",
+                            "h-9 px-2.5 text-[15px] font-semibold rounded-lg border outline-none w-full transition-colors duration-200",
+                            "bg-[var(--card)] text-[var(--text-primary)]",
                             renameError
-                              ? "border-[var(--destructive)] text-[var(--destructive)]"
-                              : "border-[var(--accent-color)] text-[var(--text-primary)]"
+                              ? "border-[var(--destructive)] focus:ring-2 focus:ring-[rgba(220,38,38,0.15)]"
+                              : "border-[rgba(0,0,0,0.12)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
                           )}
                         />
                         {renamingProjectId === project.id && (
