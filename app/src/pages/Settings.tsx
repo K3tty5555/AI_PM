@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info, ChevronLeft, FolderOpen, ExternalLink } from "lucide-react"
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
 import { open as openUrl } from "@tauri-apps/plugin-shell"
+import { getVersion } from "@tauri-apps/api/app"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
@@ -91,6 +92,10 @@ export function SettingsPage() {
     ok: boolean
     message: string
   } | null>(null)
+
+  // App version
+  const [appVersion, setAppVersion] = useState("")
+  useEffect(() => { getVersion().then(setAppVersion) }, [])
 
   // Manual update check state
   const [checkingUpdate, setCheckingUpdate] = useState(false)
@@ -1137,7 +1142,7 @@ export function SettingsPage() {
         <CardContent>
           <div className="flex flex-col gap-3">
             <p className="text-sm text-[var(--text-primary)]">
-              AI PM Desktop v0.1.0
+              AI PM Desktop v{appVersion || "..."}
             </p>
             <p className="text-sm text-[var(--text-secondary)]">
               基于 Claude API 的产品经理工作台
