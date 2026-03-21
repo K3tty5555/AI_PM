@@ -15,7 +15,7 @@ const rarityStripeCardVariants = cva(
     variants: {
       rarity: {
         gold: "before:bg-[var(--accent-color)]",
-        teal: "before:bg-[var(--teal)]",
+        teal: "before:bg-[var(--success)]",
         gray: "before:bg-[var(--text-tertiary)]",
       },
     },

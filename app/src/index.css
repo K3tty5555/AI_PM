@@ -137,14 +137,9 @@
   --active-bg: rgba(0, 0, 0, 0.07);
 
   /* --- Compat aliases --- */
-  --yellow: #1D4ED8;
   --green: #16A34A;
-  --teal: #4ECDC4;
   --dark: #0F172A;
-  --dark2: #1E293B;
   --text-muted: #64748B;
-  --yellow-glow: 0 0 16px rgba(29, 78, 216, 0.25);
-  --yellow-bg: rgba(29, 78, 216, 0.08);
 
   /* --- Tooltip --- */
   --tooltip-bg: #1E293B;
@@ -158,11 +153,9 @@
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.16);
 
   /* --- Transitions --- */
-  --ease-terminal: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --duration-terminal: 0.2s;
   --dur-fast: 100ms;
   --dur-base: 200ms;
   --dur-slow: 300ms;
@@ -247,13 +240,9 @@ html.theme-dark {
   --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.45);
 
   /* Compat aliases */
-  --yellow: #4F8EF7;
   --green: #4ADE80;
   --dark: oklch(94% 0.005 250);
-  --dark2: oklch(80% 0.01 250);
   --text-muted: oklch(62% 0.01 250);
-  --yellow-bg: rgba(79, 142, 247, 0.12);
-  --yellow-glow: 0 0 16px rgba(79, 142, 247, 0.25);
 }
 
 /* ============================================================

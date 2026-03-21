@@ -598,7 +598,7 @@ export function PrdPage() {
             "mt-6",
             "relative pl-5",
             "before:absolute before:left-0 before:top-0 before:bottom-0",
-            "before:w-[3px] before:bg-[var(--yellow)] before:content-['']",
+            "before:w-[3px] before:bg-[var(--accent-color)] before:content-['']",
             "animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]",
           )}
         >

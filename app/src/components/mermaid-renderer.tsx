@@ -78,7 +78,7 @@ function MermaidRenderer({ chart }: MermaidRendererProps) {
           className={cn(
             "overflow-x-auto p-4 text-xs",
             "bg-[var(--secondary)] text-[var(--text-primary)]",
-            "border-l-3 border-l-[var(--yellow)]",
+            "border-l-3 border-l-[var(--accent-color)]",
             "font-mono",
           )}
         >
@@ -95,7 +95,7 @@ function MermaidRenderer({ chart }: MermaidRendererProps) {
         <div className="flex items-center gap-2 py-4">
           <span
             className={cn(
-              "inline-block w-2 h-2 bg-[var(--yellow)]",
+              "inline-block w-2 h-2 bg-[var(--accent-color)]",
               "animate-[dotPulse_2s_ease-in-out_infinite]",
             )}
             style={{ borderRadius: "50%" }}

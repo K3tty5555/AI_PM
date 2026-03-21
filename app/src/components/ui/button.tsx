@@ -18,7 +18,7 @@ const buttonVariants = cva(
       variant: {
         primary: [
           "bg-[var(--accent-color)] text-white border-transparent font-semibold",
-          "hover:brightness-105 hover:shadow-[var(--yellow-glow)]",
+          "hover:brightness-105",
           "duration-[var(--dur-base)] ease-[var(--ease-standard)]",
         ].join(" "),
         ghost: [
@@ -28,7 +28,7 @@ const buttonVariants = cva(
         ].join(" "),
         default: [
           "bg-[var(--accent-color)] text-white border-transparent font-semibold",
-          "hover:brightness-105 hover:shadow-[var(--yellow-glow)]",
+          "hover:brightness-105",
           "duration-[var(--dur-base)] ease-[var(--ease-standard)]",
         ].join(" "),
         outline: [
