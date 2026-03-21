@@ -10,6 +10,7 @@ import {
   Star,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { PHASE_LABELS } from "@/lib/phase-meta"
 import { ContextMenu, type ContextMenuItem } from "@/components/ui/context-menu"
 
 export interface SidebarProject {
@@ -50,18 +51,6 @@ interface SidebarProps {
   themePreference: "light" | "dark" | "system"
   resolvedTheme: "light" | "dark"
   onCycleTheme: () => void
-}
-
-const PHASE_LABELS: Record<string, string> = {
-  requirement: "需求收集",
-  analysis: "需求分析",
-  research: "竞品研究",
-  stories: "用户故事",
-  prd: "PRD 撰写",
-  analytics: "埋点设计",
-  prototype: "原型设计",
-  review: "需求评审",
-  retrospective: "项目复盘（可选）",
 }
 
 const VALID_PHASES = new Set(Object.keys(PHASE_LABELS))

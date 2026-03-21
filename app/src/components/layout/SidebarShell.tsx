@@ -4,22 +4,7 @@ import { Sidebar, type SidebarProject, type SidebarPhase } from "./Sidebar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { useFavorites } from "@/hooks/use-favorites"
 import { api } from "@/lib/tauri-api"
-
-const PHASE_ORDER = [
-  "requirement", "analysis", "research", "stories", "prd", "analytics", "prototype", "review", "retrospective",
-]
-
-const PHASE_LABELS: Record<string, string> = {
-  requirement: "需求收集",
-  research: "竞品研究",
-  analysis: "需求分析",
-  stories: "用户故事",
-  prd: "PRD 撰写",
-  analytics: "埋点设计",
-  prototype: "原型设计",
-  review: "需求评审",
-  retrospective: "项目复盘（可选）",
-}
+import { PHASE_ORDER, PHASE_LABELS } from "@/lib/phase-meta"
 
 function SidebarShell({
   open,

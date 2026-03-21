@@ -4,29 +4,11 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { PanelLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/tauri-api"
+import { PHASE_LABELS, TOOL_LABELS } from "@/lib/phase-meta"
 
 interface TitleBarProps {
   sidebarOpen: boolean
   onToggleSidebar: () => void
-}
-
-const PHASE_LABELS: Record<string, string> = {
-  requirement: "需求收集",
-  analysis:    "需求分析",
-  research:    "竞品研究",
-  stories:     "用户故事",
-  prd:         "PRD 撰写",
-  prototype:   "原型设计",
-  review:      "需求评审",
-}
-
-const TOOL_LABELS: Record<string, string> = {
-  priority:  "需求优先级",
-  weekly:    "工作周报",
-  knowledge: "知识库",
-  persona:   "产品分身",
-  data:      "数据洞察",
-  interview: "调研访谈",
 }
 
 export function TitleBar({ sidebarOpen, onToggleSidebar }: TitleBarProps) {
