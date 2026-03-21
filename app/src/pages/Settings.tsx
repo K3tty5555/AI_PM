@@ -457,7 +457,7 @@ export function SettingsPage() {
               </>
             ) : (
               <>
-                <Info className="mt-0.5 size-4 shrink-0 text-[var(--yellow)]" />
+                <Info className="mt-0.5 size-4 shrink-0 text-[var(--accent-color)]" />
                 <span className="text-sm text-[var(--text-primary)]">
                   未检测到配置，请手动填写
                 </span>
