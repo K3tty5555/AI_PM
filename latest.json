@@ -1,19 +1,19 @@
 {
   "version": "0.1.3",
   "notes": "更新至 v0.1.3",
-  "pub_date": "2026-03-21T01:29:49Z",
+  "pub_date": "2026-03-21T02:52:00Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbDVtWUdxUzFIV0hPVVFLS2pGQVhhaEF2ODVOamdLMXJaald1Zng1N2svRWsrc2ZvZHVaRXZWaE1XSDgweUpzRW04RW4vd0NaK2VxeFpSV3dmd1BmcGdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MDU2MDE0CWZpbGU6QUkgUE0uYXBwLnRhci5negpQMWExVklTdURXcGxURmJNYUNjaTNjbE5kSE5ZckRsanNrTXVmQlZXK1JRVXBuQU5HOGhqSXNQYVRGbldIU1lBOGlxWk1rTkFwczl5QWo5anF3ZXdDZz09Cg==",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbDZPaDEvV3JSZmFKYU9iQzRaVER6SmhLV2ExS20rQ3B0b3ZISHR3eE1rcnljdGE5STJIcTZJUE5mYVlJREVNMDBNZzlWemQ5OGQxYzA0OUNWWkFvMndBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MDYwOTY3CWZpbGU6QUkgUE0uYXBwLnRhci5negpTS2dEbjhPNmZSbnJOQnBJdC9jdmZSVXN2dHBSSktjT1c0SW0xWDIxOU92b3p4cDlJYndzNGpLN21UQnk0bU13aVBBeTZqSTBUK2VKb0ZBanVzaVdCdz09Cg==",
       "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.3/AI.PM_universal.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbDVtWUdxUzFIV0hPVVFLS2pGQVhhaEF2ODVOamdLMXJaald1Zng1N2svRWsrc2ZvZHVaRXZWaE1XSDgweUpzRW04RW4vd0NaK2VxeFpSV3dmd1BmcGdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MDU2MDE0CWZpbGU6QUkgUE0uYXBwLnRhci5negpQMWExVklTdURXcGxURmJNYUNjaTNjbE5kSE5ZckRsanNrTXVmQlZXK1JRVXBuQU5HOGhqSXNQYVRGbldIU1lBOGlxWk1rTkFwczl5QWo5anF3ZXdDZz09Cg==",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbDZPaDEvV3JSZmFKYU9iQzRaVER6SmhLV2ExS20rQ3B0b3ZISHR3eE1rcnljdGE5STJIcTZJUE5mYVlJREVNMDBNZzlWemQ5OGQxYzA0OUNWWkFvMndBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MDYwOTY3CWZpbGU6QUkgUE0uYXBwLnRhci5negpTS2dEbjhPNmZSbnJOQnBJdC9jdmZSVXN2dHBSSktjT1c0SW0xWDIxOU92b3p4cDlJYndzNGpLN21UQnk0bU13aVBBeTZqSTBUK2VKb0ZBanVzaVdCdz09Cg==",
       "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.3/AI.PM_universal.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "",
-      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.3/AI.PM_0.1.3_x64_en-US.msi.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbDd5eWRiRC9OZTVKMzdid0JLWEpnbmlMaHN4V2dJMlNvajNtdGU0Y1BBL1JOdjZ0OE1vM0lQc0FOT0QyQjdFNGljR21zeXNMMTNZelU4NStIR3k1ZGdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MDYxNTAzCWZpbGU6QUkgUE1fMC4xLjNfeDY0LXNldHVwLm5zaXMuemlwCnFhYlNCN2lORVNqSG14blRDcDJ3b010THFRa0Z4N0RJQjdnUTZKWXlRWkt5SVB1em9pbjZNbUNBalNmV1h4SmRDWGRVM1JxZnFKNERxRlFmNHhFY0JBPT0K",
+      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.3/AI.PM_0.1.3_x64-setup.nsis.zip"
     }
   }
 }
