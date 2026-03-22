@@ -44,6 +44,7 @@ export function BrainstormChat({ projectId, phase, phaseLabel, onGenerate }: Bra
     streaming,
     streamingText,
     sendMessage,
+    clearMessages,
   } = useBrainstorm(projectId, phase)
 
   const [input, setInput] = useState("")
@@ -129,6 +130,18 @@ export function BrainstormChat({ projectId, phase, phaseLabel, onGenerate }: Bra
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {/* Header with clear button */}
+      {hasMessages && !streaming && (
+        <div className="flex justify-end px-2 py-1">
+          <button
+            onClick={clearMessages}
+            className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--destructive)] transition-colors"
+          >
+            清空对话
+          </button>
+        </div>
+      )}
+
       {/* Message list */}
       <div
         ref={scrollContainerRef}
