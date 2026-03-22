@@ -204,12 +204,14 @@ export function BrainstormChat({ projectId, phase, phaseLabel, onGenerate }: Bra
 
             {/* Streaming text */}
             {streaming && streamingText && (
-              <div className="flex gap-3">
-                <div className="relative min-w-0 flex-1 pl-4">
-                  <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-full bg-[var(--accent-color)] animate-[streamPulse_2s_ease-in-out_infinite]" />
-                  <p className="font-serif text-[15px] leading-[1.8] text-[var(--text-primary)] whitespace-pre-wrap break-words">
+              <div className="flex gap-2.5">
+                <div className="size-8 shrink-0 rounded-full bg-[var(--accent-light)] flex items-center justify-center mt-0.5">
+                  <span className="text-[12px] font-semibold text-[var(--accent-color)]">AI</span>
+                </div>
+                <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-[var(--card)] border border-[var(--border)] px-4 py-2.5">
+                  <p className="text-[14px] leading-[1.7] text-[var(--text-primary)] whitespace-pre-wrap break-words">
                     {streamingText}
-                    <span className="inline-block w-[2px] h-[1em] ml-0.5 bg-[var(--text-primary)] align-middle animate-[blink_500ms_infinite]" />
+                    <span className="inline-block w-[2px] h-[1em] ml-0.5 bg-[var(--accent-color)] align-middle animate-[blink_500ms_infinite]" />
                   </p>
                 </div>
               </div>
@@ -217,12 +219,14 @@ export function BrainstormChat({ projectId, phase, phaseLabel, onGenerate }: Bra
 
             {/* Thinking indicator */}
             {streaming && !streamingText && (
-              <div className="flex gap-3">
-                <div className="relative min-w-0 flex-1 pl-4">
-                  <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-full bg-[var(--accent-color)] animate-[streamPulse_2s_ease-in-out_infinite]" />
-                  <p className="text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">
+              <div className="flex gap-2.5">
+                <div className="size-8 shrink-0 rounded-full bg-[var(--accent-light)] flex items-center justify-center mt-0.5">
+                  <span className="text-[12px] font-semibold text-[var(--accent-color)]">AI</span>
+                </div>
+                <div className="rounded-2xl rounded-tl-sm bg-[var(--card)] border border-[var(--border)] px-4 py-2.5">
+                  <span className="text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">
                     思考中...
-                  </p>
+                  </span>
                 </div>
               </div>
             )}
@@ -327,9 +331,9 @@ function MessageBubble({
 }) {
   if (role === "user") {
     return (
-      <div className="flex justify-end" aria-label="你的消息">
-        <div className="max-w-[85%] rounded-lg bg-[var(--secondary)] px-3 py-2">
-          <p className="font-sans text-[14px] text-[var(--text-primary)] whitespace-pre-wrap break-words">
+      <div className="flex justify-end gap-2" aria-label="你的消息">
+        <div className="max-w-[75%] rounded-2xl rounded-tr-sm bg-[var(--accent-color)] px-4 py-2.5">
+          <p className="text-[14px] leading-relaxed text-white whitespace-pre-wrap break-words">
             {content}
           </p>
         </div>
@@ -341,10 +345,12 @@ function MessageBubble({
   const { text, hasSuggest } = splitSuggestGenerate(content)
 
   return (
-    <div className="flex gap-3" aria-label="AI 回复">
-      <div className="relative min-w-0 flex-1 pl-4">
-        <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-full bg-[var(--accent-color)]" />
-        <p className="font-serif text-[15px] leading-[1.8] text-[var(--text-primary)] whitespace-pre-wrap break-words">
+    <div className="flex gap-2.5" aria-label="AI 回复">
+      <div className="size-8 shrink-0 rounded-full bg-[var(--accent-light)] flex items-center justify-center mt-0.5">
+        <span className="text-[12px] font-semibold text-[var(--accent-color)]">AI</span>
+      </div>
+      <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-[var(--card)] border border-[var(--border)] px-4 py-2.5">
+        <p className="text-[14px] leading-[1.7] text-[var(--text-primary)] whitespace-pre-wrap break-words">
           {text}
         </p>
         {hasSuggest && (
