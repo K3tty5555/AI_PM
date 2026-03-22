@@ -65,7 +65,7 @@ function InlineChat({
         >
           <span
             className={cn(
-              "inline-block w-2 h-2 bg-[var(--green)]",
+              "inline-block w-2 h-2 bg-[var(--success)]",
               "animate-[dotPulse_2s_ease-in-out_infinite]",
             )}
             style={{ borderRadius: "50%" }}
@@ -86,7 +86,7 @@ function InlineChat({
         <div className="flex items-start gap-2">
           <span
             className={cn(
-              "inline-block w-2 h-2 mt-1.5 shrink-0 bg-[var(--green)]",
+              "inline-block w-2 h-2 mt-1.5 shrink-0 bg-[var(--success)]",
               "animate-[dotPulse_2s_ease-in-out_infinite]",
             )}
             style={{ borderRadius: "50%" }}
