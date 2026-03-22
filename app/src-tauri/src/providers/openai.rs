@@ -16,6 +16,7 @@ impl AiProvider for OpenAIProvider {
         system_prompt: &str,
         messages: &[ChatMessage],
         app: &AppHandle,
+        stream_key: &str,
     ) -> Result<StreamResult, String> {
         let url = format!("{}/v1/chat/completions", self.base_url.trim_end_matches('/'));
         let mut messages_json: Vec<serde_json::Value> = vec![
@@ -72,7 +73,7 @@ impl AiProvider for OpenAIProvider {
                                         if let Some(text) = choice["delta"]["content"].as_str() {
                                             if !text.is_empty() {
                                                 full_text.push_str(text);
-                                                let _ = app.emit("stream_chunk", text);
+                                                let _ = app.emit("stream_chunk", serde_json::json!({ "streamKey": stream_key, "text": text }));
                                             }
                                         }
                                     }
