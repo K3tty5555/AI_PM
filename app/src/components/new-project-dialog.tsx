@@ -83,13 +83,16 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
       onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[4px]"
       style={{ animation: "fadeIn 150ms var(--ease-decelerate)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialog-title-new-project"
     >
       <div
         className="w-full max-w-[480px] rounded-xl bg-[var(--background)] p-6 shadow-[var(--shadow-xl)]"
         style={{ animation: "fadeInUp 200ms var(--ease-decelerate)" }}
       >
         {/* 标题 */}
-        <h2 className="mb-6 text-base font-semibold text-[var(--text-primary)]">新建项目</h2>
+        <h2 id="dialog-title-new-project" className="mb-6 text-base font-semibold text-[var(--text-primary)]">新建项目</h2>
 
         <form onSubmit={handleSubmit}>
           {/* Project name */}

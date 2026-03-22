@@ -393,6 +393,7 @@ export function ResearchPage() {
                   <button
                     onClick={() => setUrls((prev) => prev.filter((_, idx) => idx !== i))}
                     className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                    aria-label="删除网址"
                   >×</button>
                 </span>
               ))}

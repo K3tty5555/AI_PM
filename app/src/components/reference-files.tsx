@@ -102,6 +102,7 @@ export function ReferenceFiles({ projectId, className }: ReferenceFilesProps) {
             onClick={() => handleDelete(f.name)}
             className="ml-0.5 text-[var(--text-tertiary)] hover:text-[var(--destructive)] transition-colors"
             title="删除"
+            aria-label={`删除 ${f.name}`}
           >
             ×
           </button>
