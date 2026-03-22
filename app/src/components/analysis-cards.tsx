@@ -161,7 +161,7 @@ const markdownComponents = {
     if (isInline) {
       return (
         <code
-          className="px-1 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] rounded font-mono"
+          className="px-1 py-0.5 text-xs bg-[var(--secondary)] border border-[var(--border)] rounded font-sans"
           {...props}
         >
           {children}

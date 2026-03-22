@@ -381,7 +381,7 @@ export function PrdPage() {
                 if (val) api.setActivePrdStyle(val).catch((err) => console.error("[Prd]", err))
               }}
               className={cn(
-                "h-7 px-2 text-xs rounded",
+                "h-7 px-2 text-xs rounded-lg",
                 "bg-[var(--secondary)] border border-[var(--border)]",
                 "text-[var(--text-primary)]",
                 "outline-none cursor-pointer",
