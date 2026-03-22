@@ -30,6 +30,8 @@ interface UseBrainstormReturn {
   streaming: boolean
   streamingText: string
   messageCount: number
+  roundCount: number
+  isMaxRounds: boolean
   sendMessage: (content: string) => Promise<void>
   clearMessages: () => Promise<void>
 }
@@ -91,12 +93,12 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
 
   // ── Set up stream event listeners ─────────────────────────────────────
 
-  const setupListeners = useCallback(() => {
+  const setupListeners = useCallback(async () => {
     // Clean up previous listeners
     unlistenersRef.current.forEach((fn) => fn())
     unlistenersRef.current = []
 
-    Promise.all([
+    const fns = await Promise.all([
       listen<StreamChunkPayload>("stream_chunk", (event) => {
         const { streamKey, text } = event.payload
         if (streamKey !== expectedStreamKey) return
@@ -148,7 +150,10 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
         if (streamKey !== expectedStreamKey) return
 
         if (mountedRef.current) {
-          toast(message || "AI 回复出错", "error")
+          // ROUND_LIMIT_EXCEEDED is handled by the frontend status card — skip toast
+          if (message !== "ROUND_LIMIT_EXCEEDED") {
+            toast(message || "AI 回复出错", "error")
+          }
           streamingTextRef.current = ""
           setStreamingText("")
           setStreaming(false)
@@ -159,9 +164,8 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
         unlistenersRef.current.forEach((fn) => fn())
         unlistenersRef.current = []
       }),
-    ]).then((fns) => {
-      unlistenersRef.current = fns
-    })
+    ])
+    unlistenersRef.current = fns
   }, [projectId, phase, expectedStreamKey, toast])
 
   // ── Send a message ────────────────────────────────────────────────────
@@ -200,7 +204,7 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
         setStreaming(true)
 
         // Set up event listeners before calling the API
-        setupListeners()
+        await setupListeners()
 
         // Fire the brainstorm chat request
         await api.brainstormChat({
@@ -234,12 +238,17 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
     }
   }, [projectId, phase, toast])
 
+  const roundCount = messages.filter((m) => m.role === "user").length
+  const isMaxRounds = roundCount >= 15
+
   return {
     messages,
     loading,
     streaming,
     streamingText,
     messageCount,
+    roundCount,
+    isMaxRounds,
     sendMessage,
     clearMessages,
   }

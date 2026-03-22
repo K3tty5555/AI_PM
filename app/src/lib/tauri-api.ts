@@ -63,7 +63,7 @@ export interface BrainstormMessage {
   id: string
   projectId: string
   phase: string
-  role: string
+  role: "user" | "assistant"
   content: string
   createdAt: string
   seq: number
@@ -153,13 +153,13 @@ export const api = {
   // Brainstorm
   loadBrainstormMessages: (projectId: string, phase: string) =>
     invoke<BrainstormMessage[]>("load_brainstorm_messages", { projectId, phase }),
-  saveBrainstormMessage: (args: { projectId: string; phase: string; role: string; content: string }) =>
+  saveBrainstormMessage: (args: { projectId: string; phase: string; role: "user" | "assistant"; content: string }) =>
     invoke<BrainstormMessage>("save_brainstorm_message", { args }),
   clearBrainstorm: (projectId: string, phase: string) =>
     invoke<void>("clear_brainstorm", { projectId, phase }),
   brainstormMessageCount: (projectId: string, phase: string) =>
     invoke<number>("brainstorm_message_count", { projectId, phase }),
-  brainstormChat: (args: { projectId: string; phase: string; messages: Array<{ role: string; content: string }> }) =>
+  brainstormChat: (args: { projectId: string; phase: string; messages: Array<{ role: "user" | "assistant"; content: string }> }) =>
     invoke<void>("brainstorm_chat", { args }),
 
   // Projects
