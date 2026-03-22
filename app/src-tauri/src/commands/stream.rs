@@ -182,6 +182,59 @@ pub fn load_knowledge(templates_base: &Path) -> String {
     )
 }
 
+/// 加载头脑风暴对话记录，用于注入到生成 prompt 中
+fn load_brainstorm_for_prompt(db: &rusqlite::Connection, project_id: &str, phase: &str) -> String {
+    let mut stmt = match db.prepare(
+        "SELECT role, content FROM brainstorm_messages \
+         WHERE project_id = ?1 AND phase = ?2 ORDER BY seq ASC",
+    ) {
+        Ok(s) => s,
+        Err(_) => return String::new(),
+    };
+
+    let messages: Vec<(String, String)> = stmt
+        .query_map(params![project_id, phase], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .ok()
+        .map(|rows| rows.filter_map(|r| r.ok()).collect())
+        .unwrap_or_default();
+
+    if messages.is_empty() {
+        return String::new();
+    }
+
+    let total = messages.len();
+    let mut result = String::from(
+        "\n\n### 头脑风暴讨论记录\n\n\
+         以下是用户在生成前与 AI 进行的讨论，请参考其中达成的共识来生成产出物：\n\n",
+    );
+
+    if total <= 20 {
+        // 短对话：全部保留
+        for (role, content) in &messages {
+            let label = if role == "user" { "用户" } else { "AI" };
+            result.push_str(&format!("**{}**：{}\n\n", label, content));
+        }
+    } else {
+        // 长对话：首 4 条 + 省略标注 + 最后 10 条
+        for (role, content) in messages.iter().take(4) {
+            let label = if role == "user" { "用户" } else { "AI" };
+            result.push_str(&format!("**{}**：{}\n\n", label, content));
+        }
+        result.push_str(&format!(
+            "*[... 省略中间 {} 条讨论 ...]*\n\n",
+            total - 14
+        ));
+        for (role, content) in messages.iter().skip(total - 10) {
+            let label = if role == "user" { "用户" } else { "AI" };
+            result.push_str(&format!("**{}**：{}\n\n", label, content));
+        }
+    }
+
+    result
+}
+
 fn load_context_files(output_dir: &str, excluded: &[String]) -> String {
     let context_dir = Path::new(output_dir).join("context");
     if !context_dir.exists() {
@@ -239,6 +292,7 @@ fn build_system_prompt(
     style_id: Option<&str>,
     is_cli: bool,
     design_spec: Option<&str>,
+    brainstorm_context: &str,
 ) -> Result<String, String> {
     let mut skill_content = load_skill(skills_root, skill_name)?;
 
@@ -406,6 +460,12 @@ fn build_system_prompt(
         ctx.push(input.to_string());
     }
 
+    // Inject brainstorm discussion record (if any)
+    if !brainstorm_context.is_empty() {
+        ctx.push(String::new());
+        ctx.push(brainstorm_context.to_string());
+    }
+
     // Team mode: inject --team marker before non-interactive block
     if team_mode {
         ctx.push(String::new());
@@ -483,14 +543,15 @@ pub async fn start_stream(
 ) -> Result<(), String> {
     let stream_key = format!("generate:{}:{}", args.project_id, args.phase);
 
-    let (project_name, output_dir, team_mode) = {
+    let (project_name, output_dir, team_mode, brainstorm_context) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let result = db.query_row(
             "SELECT name, output_dir, COALESCE(team_mode, 0) FROM projects WHERE id = ?1",
             params![&args.project_id],
             |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)?)),
         ).map_err(|e| format!("Project not found: {}", e))?;
-        result
+        let bs = load_brainstorm_for_prompt(&db, &args.project_id, &args.phase);
+        (result.0, result.1, result.2, bs)
     };
     let team_mode = team_mode != 0;
     let excluded_context = args.excluded_context.unwrap_or_default();
@@ -534,6 +595,7 @@ pub async fn start_stream(
         args.style_id.as_deref(),
         is_cli,
         args.design_spec.as_deref(),
+        &brainstorm_context,
     ).map_err(|e| {
         let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
         e
