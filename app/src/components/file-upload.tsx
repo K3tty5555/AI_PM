@@ -99,18 +99,18 @@ function FileUpload({
           "transition-colors duration-[var(--dur-base)] ease-[var(--ease-standard)]",
           isDragOver
             ? "border-[var(--accent-color)] bg-[var(--accent-light)]"
-            : "border-[var(--border)] bg-transparent hover:border-[var(--text-muted)]/30"
+            : "border-[var(--border)] bg-transparent hover:border-[var(--text-secondary)]/30"
         )}
       >
         <span
           className={cn(
             "text-[12px] font-medium",
-            isDragOver ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"
+            isDragOver ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"
           )}
         >
           {isDragOver ? "松手放置" : "拖拽或点击上传"}
         </span>
-        <span className="text-xs text-[var(--text-muted)]/60">
+        <span className="text-xs text-[var(--text-secondary)]/60">
           支持 PDF, Word, Excel, 图片
         </span>
       </div>
@@ -166,7 +166,7 @@ function FileUpload({
                 }}
                 className={cn(
                   "ml-2 shrink-0 px-1.5 py-0.5",
-                  "text-xs text-[var(--text-muted)] hover:text-[var(--destructive)]",
+                  "text-xs text-[var(--text-secondary)] hover:text-[var(--destructive)]",
                   "transition-colors duration-[var(--dur-base)]",
                   "opacity-0 group-hover/file:opacity-100"
                 )}
