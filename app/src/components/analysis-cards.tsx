@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { RarityStripeCard } from "@/components/rarity-stripe-card"
+import { AccentStripeCard } from "@/components/accent-stripe-card"
 import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
@@ -16,14 +16,14 @@ interface AnalysisCardsProps {
 interface Section {
   title: string
   content: string
-  rarity: "gold" | "teal" | "gray"
+  accent: "gold" | "teal" | "gray"
 }
 
 // ---------------------------------------------------------------------------
 // Section parsing
 // ---------------------------------------------------------------------------
 
-function classifyRarity(title: string): "gold" | "teal" | "gray" {
+function classifyAccent(title: string): "gold" | "teal" | "gray" {
   const t = title.toLowerCase()
 
   // Teal: user/persona related
@@ -54,14 +54,14 @@ function parseSections(markdown: string): Section[] {
       sections.push({
         title,
         content,
-        rarity: classifyRarity(title),
+        accent: classifyAccent(title),
       })
     } else {
       // Content before the first ## heading — treat as overview
       sections.push({
         title: "概述",
         content: trimmed,
-        rarity: "gray",
+        accent: "gray",
       })
     }
   }
@@ -234,7 +234,7 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
         const isLast = index === sections.length - 1
 
         return (
-          <RarityStripeCard key={`${section.title}-${index}`} rarity={section.rarity}>
+          <AccentStripeCard key={`${section.title}-${index}`} accent={section.accent}>
             {/* Card title */}
             <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
               {section.title}
@@ -252,7 +252,7 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
 
             {/* Typing cursor on last card during streaming */}
             {isStreaming && isLast && <TypingCursor />}
-          </RarityStripeCard>
+          </AccentStripeCard>
         )
       })}
     </div>
