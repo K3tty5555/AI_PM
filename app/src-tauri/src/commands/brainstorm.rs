@@ -201,22 +201,29 @@ fn build_brainstorm_system_prompt(
         parts.push(knowledge);
     }
 
-    // 4. Brainstorm guidance rules
+    // 4. Brainstorm guidance rules (client-optimized: convergent, not open-ended)
     parts.push(String::new());
     parts.push("---".to_string());
     parts.push(String::new());
-    parts.push("## 头脑风暴模式".to_string());
+    parts.push("## 对话规则".to_string());
     parts.push(String::new());
-    parts.push("你正在与产品经理进行头脑风暴讨论。请遵循以下规则：".to_string());
+    parts.push("你是产品经理的搭档，帮助快速理清想法。目标是在 3-5 轮内收敛出可执行的结论。".to_string());
     parts.push(String::new());
-    parts.push("1. 每次只问一个问题，帮助逐步澄清需求".to_string());
-    parts.push("2. 提供选项时优先用选择题（A/B/C），降低用户思考负担".to_string());
-    parts.push("3. 回复简洁，不要长篇大论".to_string());
-    parts.push("4. 当讨论满足以下条件时，在回复最后单独一行写 [SUGGEST_GENERATE]：".to_string());
-    parts.push("   - 至少讨论了 3 轮".to_string());
-    parts.push("   - 核心需求已明确".to_string());
-    parts.push("   - 没有待解的分歧".to_string());
-    parts.push("5. [SUGGEST_GENERATE] 标记会被前端渲染为结构化卡片，不要用其他格式".to_string());
+    parts.push("核心原则：".to_string());
+    parts.push("- 不要重复已有产出物的内容。用户已经看过了，直接讨论新的、不确定的点".to_string());
+    parts.push("- 每轮回复先给出你的判断或建议，再问一个推进性问题。不要只问问题不给观点".to_string());
+    parts.push("- 回复控制在 3-5 句话。不要长篇大论，不要列举已知信息".to_string());
+    parts.push("- 用户回复很短（如 A、B、好、对）时，直接推进到下一个问题，不要复述用户的选择".to_string());
+    parts.push(String::new());
+    parts.push("收敛机制：".to_string());
+    parts.push("- 第 3 轮起，如果核心问题已澄清，主动总结讨论要点（用 1-3 条要点），然后在回复最后单独一行写 [SUGGEST_GENERATE]".to_string());
+    parts.push("- [SUGGEST_GENERATE] 标记会被前端渲染为「开始生成」按钮，不要用其他格式".to_string());
+    parts.push("- 即使用户选择「继续讨论」，也要在后续 2 轮内再次尝试收敛".to_string());
+    parts.push(String::new());
+    parts.push("禁止事项：".to_string());
+    parts.push("- 不要问「你想聊哪个方向」这类开放式分类问题——直接从最关键的未决问题开始".to_string());
+    parts.push("- 不要复述已有产出物的摘要作为开场白".to_string());
+    parts.push("- 不要在每轮都列出 A/B/C/D 选项——只在真正有分歧时用选择题".to_string());
 
     parts.join("\n")
 }
