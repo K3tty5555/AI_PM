@@ -276,16 +276,26 @@ fn truncate_to_chars(s: &str, max: usize) -> &str {
 fn parse_candidates_json(raw: &str) -> Result<Vec<KnowledgeCandidate>, String> {
     let trimmed = raw.trim();
 
+    // Strip markdown code fences: ```json ... ``` or ``` ... ```
+    let stripped = if trimmed.starts_with("```") {
+        let inner = trimmed
+            .trim_start_matches("```json")
+            .trim_start_matches("```");
+        inner.trim_end_matches("```").trim()
+    } else {
+        trimmed
+    };
+
     // Attempt 1: direct parse
-    if let Ok(candidates) = serde_json::from_str::<Vec<KnowledgeCandidate>>(trimmed) {
+    if let Ok(candidates) = serde_json::from_str::<Vec<KnowledgeCandidate>>(stripped) {
         return Ok(candidates);
     }
 
     // Attempt 2: extract content between first '[' and last ']'
-    if let Some(start) = trimmed.find('[') {
-        if let Some(end) = trimmed.rfind(']') {
+    if let Some(start) = stripped.find('[') {
+        if let Some(end) = stripped.rfind(']') {
             if end > start {
-                let slice = &trimmed[start..=end];
+                let slice = &stripped[start..=end];
                 if let Ok(candidates) = serde_json::from_str::<Vec<KnowledgeCandidate>>(slice) {
                     return Ok(candidates);
                 }
@@ -294,8 +304,8 @@ fn parse_candidates_json(raw: &str) -> Result<Vec<KnowledgeCandidate>, String> {
     }
 
     Err(format!(
-        "AI 返回的内容无法解析为 JSON 数组，原始内容前 200 字符：{}",
-        trimmed.chars().take(200).collect::<String>()
+        "AI 返回的内容无法解析为知识点列表，原始内容前 200 字符：{}",
+        stripped.chars().take(200).collect::<String>()
     ))
 }
 
