@@ -53,9 +53,9 @@ function DragHandle(props: any) {
       )}
       aria-label="拖拽排序"
     >
-      <span className="block w-3 h-[2px] bg-[var(--text-muted)]" />
-      <span className="block w-3 h-[2px] bg-[var(--text-muted)]" />
-      <span className="block w-3 h-[2px] bg-[var(--text-muted)]" />
+      <span className="block w-3 h-[2px] bg-[var(--text-secondary)]" />
+      <span className="block w-3 h-[2px] bg-[var(--text-secondary)]" />
+      <span className="block w-3 h-[2px] bg-[var(--text-secondary)]" />
     </div>
   )
 }
@@ -131,7 +131,7 @@ function AcceptanceList({
               type="button"
               onClick={() => handleRemoveItem(index)}
               className={cn(
-                "text-xs text-[var(--text-muted)] opacity-0 group-hover/item:opacity-100",
+                "text-xs text-[var(--text-secondary)] opacity-0 group-hover/item:opacity-100",
                 "hover:text-[var(--destructive)] transition-all duration-150",
                 "cursor-pointer",
               )}
@@ -154,7 +154,7 @@ function AcceptanceList({
           className={cn(
             "flex-1 text-sm text-[var(--text-primary)] bg-transparent",
             "border-b border-transparent",
-            "placeholder:text-[var(--text-muted)]",
+            "placeholder:text-[var(--text-secondary)]",
             "focus:border-[var(--accent-color)] outline-none",
             "transition-[border-color] duration-150",
           )}
@@ -237,7 +237,7 @@ function StoryCard({
                 type="button"
                 onClick={onDelete}
                 className={cn(
-                  "text-xs text-[var(--text-muted)]",
+                  "text-xs text-[var(--text-secondary)]",
                   "opacity-0 group-hover/card:opacity-100",
                   "hover:text-[var(--destructive)]",
                   "transition-all duration-150",
@@ -256,7 +256,7 @@ function StoryCard({
               type="button"
               onClick={onToggle}
               className={cn(
-                "mt-1 text-xs text-[var(--text-muted)]",
+                "mt-1 text-xs text-[var(--text-secondary)]",
                 "hover:text-[var(--text-primary)] transition-colors duration-150",
                 "cursor-pointer",
               )}
