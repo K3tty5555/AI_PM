@@ -154,6 +154,10 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
         .invoke_handler(tauri::generate_handler![
+            commands::brainstorm::load_brainstorm_messages,
+            commands::brainstorm::save_brainstorm_message,
+            commands::brainstorm::clear_brainstorm,
+            commands::brainstorm::brainstorm_message_count,
             commands::config::get_config,
             commands::config::save_config,
             commands::config::test_config,
