@@ -25,9 +25,21 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
             completed_at TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS brainstorm_messages (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            phase TEXT NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            seq INTEGER NOT NULL
+        );
+
         PRAGMA journal_mode=WAL;
         PRAGMA foreign_keys=ON;
     ")?;
+
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_bs_proj_phase ON brainstorm_messages(project_id, phase, seq)", []);
 
     // Migration: add team_mode if not exists (for existing databases)
     let _ = conn.execute("ALTER TABLE projects ADD COLUMN team_mode INTEGER NOT NULL DEFAULT 0", []);
