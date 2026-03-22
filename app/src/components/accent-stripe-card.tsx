@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
-const rarityStripeCardVariants = cva(
+const accentStripeCardVariants = cva(
   [
     "relative",
     "bg-[var(--card)] text-[var(--card-foreground)]",
@@ -13,35 +13,35 @@ const rarityStripeCardVariants = cva(
   ].join(" "),
   {
     variants: {
-      rarity: {
+      accent: {
         gold: "before:bg-[var(--accent-color)]",
         teal: "before:bg-[var(--success)]",
         gray: "before:bg-[var(--text-tertiary)]",
       },
     },
     defaultVariants: {
-      rarity: "gold",
+      accent: "gold",
     },
   }
 )
 
-interface RarityStripeCardProps
+interface AccentStripeCardProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof rarityStripeCardVariants> {
+    VariantProps<typeof accentStripeCardVariants> {
   children: React.ReactNode
 }
 
-function RarityStripeCard({
-  rarity,
+function AccentStripeCard({
+  accent,
   className,
   children,
   ...props
-}: RarityStripeCardProps) {
+}: AccentStripeCardProps) {
   return (
     <div
-      data-slot="rarity-stripe-card"
+      data-slot="accent-stripe-card"
       className={cn(
-        rarityStripeCardVariants({ rarity, className }),
+        accentStripeCardVariants({ accent, className }),
         // The left stripe via pseudo-element
         "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:content-['']"
       )}
@@ -52,4 +52,4 @@ function RarityStripeCard({
   )
 }
 
-export { RarityStripeCard, rarityStripeCardVariants }
+export { AccentStripeCard, accentStripeCardVariants }
