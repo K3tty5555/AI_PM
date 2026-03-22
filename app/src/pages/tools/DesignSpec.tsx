@@ -226,7 +226,7 @@ export function ToolDesignSpecPage() {
       )}
 
       {loading ? (
-        <p className="mt-8 text-center text-sm text-[var(--text-secondary)]">加载中···</p>
+        <p className="mt-8 text-center text-sm text-[var(--text-secondary)]">加载中...</p>
       ) : specs.length === 0 ? (
         <div className="mt-12 flex flex-col items-center gap-3 text-center">
           <p className="text-sm text-[var(--text-secondary)]">尚未上传任何 UI 规范</p>
@@ -317,7 +317,7 @@ export function ToolDesignSpecPage() {
               {expandedSpecs.has(spec.name) && (
                 <div className="border-t border-[var(--border)] px-4 py-4 space-y-5">
                   {loadingContent.has(spec.name) ? (
-                    <p className="text-xs text-[var(--text-secondary)]">加载中···</p>
+                    <p className="text-xs text-[var(--text-secondary)]">加载中...</p>
                   ) : specContents[spec.name] ? (() => {
                     const sc = specContents[spec.name]
                     const colorGroups = sc.tokensRaw ? parseColorGroups(sc.tokensRaw) : []
@@ -483,7 +483,7 @@ export function ToolDesignSpecPage() {
                 disabled={deletingSpec === deleteConfirm}
                 className="rounded-lg bg-[var(--destructive)] px-3 py-1.5 text-xs text-white hover:opacity-90 disabled:opacity-50 transition-all duration-150 active:scale-[0.97]"
               >
-                {deletingSpec === deleteConfirm ? "删除中…" : "确认删除"}
+                {deletingSpec === deleteConfirm ? "删除中..." : "确认删除"}
               </button>
             </div>
           </div>

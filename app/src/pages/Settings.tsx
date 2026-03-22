@@ -512,7 +512,7 @@ export function SettingsPage() {
                           </span>
                           <span className={`absolute inset-0 flex items-center justify-center gap-1.5 transition-opacity duration-150 ${cliChecking ? "opacity-100" : "opacity-0"}`}>
                             <Loader2 className="size-3 animate-spin" />
-                            检测中…
+                            检测中...
                           </span>
                         </Button>
                         {cliStatus && (
@@ -851,7 +851,7 @@ export function SettingsPage() {
                   {importResult.skipped > 0
                     ? `，跳过 ${importResult.skipped} 个（已存在）`
                     : ""}
-                  ，正在跳转…
+                  ，跳转中...
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -1165,7 +1165,7 @@ export function SettingsPage() {
                   disabled={checkingUpdate || manualUpdateState === "downloading"}
                   className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-50"
                 >
-                  {checkingUpdate ? "检查中…" : "检查更新"}
+                  {checkingUpdate ? "检查中..." : "检查更新"}
                 </button>
 
                 {manualUpdateState === "none" && (
@@ -1180,7 +1180,7 @@ export function SettingsPage() {
                 )}
                 {manualUpdateState === "downloading" && (
                   <span className="text-sm text-[var(--text-secondary)]">
-                    正在下载…
+                    下载中...
                   </span>
                 )}
                 {manualUpdateState === "ready" && (

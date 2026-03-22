@@ -140,7 +140,7 @@ export function RequirementPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中...</span>
       </div>
     )
   }
@@ -314,7 +314,7 @@ export function RequirementPage() {
               onClick={handleStart}
               disabled={!canSubmit || advancing}
             >
-              {advancing ? "正在启动分析..." : "开始分析 →"}
+              {advancing ? "启动分析中..." : "开始分析 →"}
             </Button>
           </div>
         </div>
