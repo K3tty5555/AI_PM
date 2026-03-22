@@ -4,7 +4,7 @@ import { Outlet, useNavigate, useParams, useLocation } from "react-router-dom"
 import { SidebarShell } from "@/components/layout/SidebarShell"
 import { ActivityBar } from "@/components/layout/ActivityBar"
 import { CommandPalette } from "@/components/command-palette"
-import { checkUpdate, downloadAndInstallUpdate } from "@/lib/tauri-api"
+import { api, checkUpdate, downloadAndInstallUpdate } from "@/lib/tauri-api"
 import { open as openUrl } from "@tauri-apps/plugin-shell"
 import type { UpdateInfo } from "@/lib/tauri-api"
 import { useTheme } from "@/hooks/use-theme"
@@ -39,12 +39,11 @@ export function AppLayout() {
     // Project pages: /project/:id/:phase
     const projectMatch = path.match(/^\/project\/([^/]+)\/([^/]+)$/)
     if (projectMatch) {
-      const [, , phase] = projectMatch
+      const [, id, phase] = projectMatch
       const phaseLabel = PHASE_LABELS[phase]
       if (phaseLabel) {
-        requestAnimationFrame(() => {
-          const sidebarNameEl = document.querySelector('[data-slot="sidebar"] button span.truncate')
-          const projectName = sidebarNameEl?.textContent ?? "项目"
+        api.getProject(id).then((project) => {
+          const projectName = project?.name ?? "项目"
           recordVisit(path, `${projectName} \u203A ${phaseLabel}`)
         })
       }
