@@ -202,7 +202,7 @@ export function ToolDataPage() {
             </div>
           )}
           {isMetrics && prdLoading && (
-            <p className="text-[12px] text-[var(--text-tertiary)]">正在加载项目 PRD···</p>
+            <p className="text-[12px] text-[var(--text-tertiary)]">加载项目 PRD 中...</p>
           )}
           {isMetrics && prdContext && (
             <div className="flex items-start gap-3 rounded-lg border border-[var(--accent-color)]/20 bg-[var(--accent-color)]/5 px-4 py-3">
@@ -274,7 +274,7 @@ export function ToolDataPage() {
       {isStreaming && (
         <div className="mt-6">
           <ProgressBar value={progressValue} animated />
-          {isThinking && <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>}
+          {isThinking && <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>}
           <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
             {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
           </p>
@@ -328,7 +328,7 @@ export function ToolDataPage() {
               {dashboardPath ? (
                 <p className="mt-1 text-[12px] text-[var(--text-tertiary)] break-all">{dashboardPath}</p>
               ) : (
-                <p className="mt-1 text-[12px] text-[var(--text-tertiary)]">正在保存文件…</p>
+                <p className="mt-1 text-[12px] text-[var(--text-tertiary)]">保存文件中...</p>
               )}
               {dashboardPath && (
                 <div className="mt-4 flex justify-center gap-2">

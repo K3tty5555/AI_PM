@@ -233,7 +233,7 @@ export function AppLayout() {
             <p className="text-sm text-[var(--text-primary)]">
               {bannerState === "available" &&
                 `有新版本 v${updateInfo?.version} 可用`}
-              {bannerState === "downloading" && "正在下载更新…"}
+              {bannerState === "downloading" && "下载更新中..."}
               {bannerState === "ready" && "更新已下载，下次启动时自动安装"}
               {bannerState === "error" && (updateError || "更新下载失败")}
             </p>

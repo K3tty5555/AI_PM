@@ -292,7 +292,7 @@ export function DashboardPage() {
                   onClick={goToSettings}
                   className="rounded-lg bg-[var(--accent-color)] px-4 py-1.5 text-sm text-white hover:opacity-90 transition-all duration-150 active:scale-[0.97]"
                 >
-                  去设置
+                  前往设置
                 </button>
               </div>
             </div>
@@ -571,7 +571,7 @@ export function DashboardPage() {
                 onClick={goToSettings}
                 className="rounded-lg bg-[var(--accent-color)] px-4 py-1.5 text-sm text-white hover:opacity-90"
               >
-                去设置
+                前往设置
               </button>
             </div>
           </div>

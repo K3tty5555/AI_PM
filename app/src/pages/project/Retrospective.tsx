@@ -142,7 +142,7 @@ export function RetrospectivePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中...</span>
       </div>
     )
   }
@@ -202,7 +202,7 @@ export function RetrospectivePage() {
           {(() => {
             const status = !isThinking ? extractStreamStatus(text) : ""
             return isThinking
-              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
+              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>
               : status
                 ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
@@ -275,7 +275,7 @@ export function RetrospectivePage() {
             {saving
               ? "保存中..."
               : advancing
-                ? "正在推进..."
+                ? "推进中..."
                 : PHASE_META.retrospective.nextLabel + " →"}
           </Button>
           {!advancing && !saving && (

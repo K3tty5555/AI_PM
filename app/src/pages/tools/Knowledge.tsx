@@ -99,7 +99,7 @@ export function ToolKnowledgePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="text-[13px] text-[var(--text-secondary)]">加载中···</span>
+        <span className="text-[13px] text-[var(--text-secondary)]">加载中...</span>
       </div>
     )
   }
