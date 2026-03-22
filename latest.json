@@ -1,19 +1,19 @@
 {
-  "version": "0.1.4",
-  "notes": "更新至 v0.1.4",
-  "pub_date": "2026-03-21T03:36:40Z",
+  "version": "0.1.5",
+  "notes": "更新至 v0.1.5",
+  "pub_date": "2026-03-22T09:36:24Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbC9wNE8rS1kyMkE1Q2FnQklEdTJueVdnS2lhV0ViYlZXbCtHaWZSYWxaTnNROWVBUDdvVFBZeERReWVHUmZiK1QyOHBZY1JaY0NJSnFTRENLMEY5SWc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MDYzNjU4CWZpbGU6QUkgUE0uYXBwLnRhci5negpFckt4ZzlZSFhFSlkwcWFNd3FINWVTT2UzZlZ4NkJNTjMwMEsxRkx5Uk8vZXc0TGluNTlVSFFsckNYWHlMMTJNQUVaRXlZc1o0RzVhdTlDeG9PaVJDdz09Cg==",
-      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.4/AI.PM_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbDc4VitYMXk2dFByRDRWV09GbGxXWmprNlBvbjc2MnpMNERUcVg0UERQL0dZSnpmSjd1WE1mVmdncWgrOEx5ZUY1bDZCdXhZQVlvOHFVMkNnUmh1bEFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MTcxNTc5CWZpbGU6QUkgUE0uYXBwLnRhci5negpTZEk1L3llTXNGZWlSNnNnMGYrdlFXYWpnd2pUVFEvRWtEK0tGNlZMOUpPNlVCN1NpMDFuOVpsMlF0WWFNN0xpVmNTeEViczJCRGMyRE9BWEp2aUZDQT09Cg==",
+      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.5/AI.PM_universal.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbC9wNE8rS1kyMkE1Q2FnQklEdTJueVdnS2lhV0ViYlZXbCtHaWZSYWxaTnNROWVBUDdvVFBZeERReWVHUmZiK1QyOHBZY1JaY0NJSnFTRENLMEY5SWc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MDYzNjU4CWZpbGU6QUkgUE0uYXBwLnRhci5negpFckt4ZzlZSFhFSlkwcWFNd3FINWVTT2UzZlZ4NkJNTjMwMEsxRkx5Uk8vZXc0TGluNTlVSFFsckNYWHlMMTJNQUVaRXlZc1o0RzVhdTlDeG9PaVJDdz09Cg==",
-      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.4/AI.PM_universal.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbDc4VitYMXk2dFByRDRWV09GbGxXWmprNlBvbjc2MnpMNERUcVg0UERQL0dZSnpmSjd1WE1mVmdncWgrOEx5ZUY1bDZCdXhZQVlvOHFVMkNnUmh1bEFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MTcxNTc5CWZpbGU6QUkgUE0uYXBwLnRhci5negpTZEk1L3llTXNGZWlSNnNnMGYrdlFXYWpnd2pUVFEvRWtEK0tGNlZMOUpPNlVCN1NpMDFuOVpsMlF0WWFNN0xpVmNTeEViczJCRGMyRE9BWEp2aUZDQT09Cg==",
+      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.5/AI.PM_universal.app.tar.gz"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbDZ2LzBzdm5pazBuRGFKclFHWjFlU1VWK1VNQ1B3Q3Z6THBHYlpBNkZjTFI3S3VCTUZaOUhxWk1pb2RRTlZua1NIb2pDRHB1WWNQSzVua0xCck5KZHdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MDY0MTg3CWZpbGU6QUkgUE1fMC4xLjRfeDY0LXNldHVwLm5zaXMuemlwCmNYaFFpbXB6LytXNnVva04vOHhCTVZXWE45UzhUbWxVczB3VlRHTlhrZ0RtRTQzZjROY2p1bjFNWHI5Q0FLRHk5RVBGbU1ueGJ2ZXpBaFFvTTkwQkFBPT0K",
-      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.4/AI.PM_0.1.4_x64-setup.nsis.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSOEtIVGdETm1zbDRZTVdQYXNTN0dZNSt3dU55MXdLZGNPQTJCWjVpcWZUUDV4ZUg1L2MzTUlWVDYvMUZBMnQwZXU0dmorWXJiSXE5Mk9IZnQxcXJYY1F3czJxZTVGU2dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0MTcyMTY0CWZpbGU6QUkgUE1fMC4xLjVfeDY0LXNldHVwLm5zaXMuemlwCk5rdWdVSFdXL29SRnZkbHMxeDdWVUVSOVdrNFBRWjZmaG9FNEhwclpTWUtKK21mTTkzU1NWbnMzcER1b1lKdmx4RjVkVEd6WVNpbXJadmtlZmlxT0JRPT0K",
+      "url": "https://github.com/K3tty5555/AI_PM/releases/download/v0.1.5/AI.PM_0.1.5_x64-setup.nsis.zip"
     }
   }
 }
