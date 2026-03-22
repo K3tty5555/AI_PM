@@ -1,103 +1,125 @@
-# 剩余修复项完整实施计划
+# 剩余修复项完整实施计划（v2 — 经多视角审视修订）
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 完成审计中识别的全部 16 项未修复问题。
+**Goal:** 完成审计中识别的全部未修复问题。
 
-**Architecture:** 按优先级分 4 个 Phase：安全加固 → 知识库验证 → 前端质量 → 重构清理。每个 Phase 内部可并行的任务标注。
+**Architecture:** 按优先级分 4 个 Phase。Phase 3 执行顺序经审视调整为 T14→T11→T10→T9（先替换 CSS 变量名再验证暗色模式，避免重复工作）。
 
 **Tech Stack:** Rust (Tauri v2), React/TypeScript, Tailwind CSS
 
 ---
 
-## Phase 1：后端安全与代码质量（6 项）
+## Phase 1：后端安全与代码质量
 
-### Task 1: delete_project 外键级联防护
+### Task 1: ~~delete_project 外键级联防护~~ → 已移除
 
-**Files:**
-- Modify: `app/src-tauri/src/commands/projects.rs` — `delete_project` 函数
-
-**Step 1:** 找到 `delete_project` 函数中的 `DELETE FROM projects WHERE id = ?1`。在它之前加一行显式删除关联记录：
-
-```rust
-db.execute("DELETE FROM project_phases WHERE project_id = ?1", params![id])?;
-db.execute("DELETE FROM projects WHERE id = ?1", params![id])?;
-```
-
-**Step 2:** 验证 `cargo check`
-
-**Step 3:** 提交 `git commit -m "fix: explicit cascade delete for project_phases"`
+ON DELETE CASCADE + PRAGMA foreign_keys=ON 已正确配置（db.rs 第 20/29 行），手动 DELETE 冗余。无需修改。
 
 ---
 
-### Task 2: read_project_file / save_project_file 路径遍历防护
+### Task 2: 路径遍历防护（统一方案）
 
 **Files:**
-- Modify: `app/src-tauri/src/commands/files.rs` — `read_project_file` 和 `save_project_file`
+- Modify: `app/src-tauri/src/commands/files.rs`
 
-**Step 1:** 读取 files.rs，找到现有的 `file_name.contains("..")` 检查。
+**Step 1: 提取公共路径校验函数**
 
-**Step 2:** 替换为规范化路径验证：
+在 files.rs 中新增公共函数，供 `read_project_file`、`save_project_file`、`write_file` 复用：
 
 ```rust
-// 替换现有的 contains("..") 检查
-let full_path = std::path::Path::new(&output_dir).join(&file_name);
-let canonical_base = std::fs::canonicalize(&output_dir)
-    .map_err(|e| format!("无法解析项目目录: {e}"))?;
-let canonical_path = if full_path.exists() {
-    std::fs::canonicalize(&full_path)
-        .map_err(|e| format!("无法解析文件路径: {e}"))?
-} else {
-    // 文件不存在时，规范化父目录 + 文件名
-    let parent = full_path.parent()
-        .ok_or("无效的文件路径".to_string())?;
-    let canonical_parent = std::fs::canonicalize(parent)
-        .map_err(|e| format!("无法解析父目录: {e}"))?;
-    canonical_parent.join(full_path.file_name().unwrap_or_default())
-};
+/// 校验文件路径在指定基础目录内，防止路径遍历
+fn validate_path_within(file_name: &str, base_dir: &str) -> Result<std::path::PathBuf, String> {
+    // 1. 拦截绝对路径
+    if file_name.starts_with('/') || file_name.starts_with('\\') {
+        return Err("文件名不能是绝对路径".to_string());
+    }
 
-if !canonical_path.starts_with(&canonical_base) {
-    return Err("文件路径超出项目目录范围".to_string());
+    let base = std::path::Path::new(base_dir);
+    let full_path = base.join(file_name);
+
+    // 2. canonicalize 基础目录
+    let canonical_base = std::fs::canonicalize(base)
+        .map_err(|e| format!("无法解析基础目录: {e}"))?;
+
+    // 3. 对目标路径 canonicalize（处理不存在的文件/目录）
+    let canonical_path = if full_path.exists() {
+        std::fs::canonicalize(&full_path)
+            .map_err(|e| format!("无法解析文件路径: {e}"))?
+    } else {
+        // 向上找到第一个已存在的祖先目录
+        let mut ancestor = full_path.parent();
+        while let Some(a) = ancestor {
+            if a.exists() { break; }
+            ancestor = a.parent();
+        }
+        let canonical_ancestor = std::fs::canonicalize(
+            ancestor.unwrap_or(base)
+        ).map_err(|e| format!("无法解析父目录: {e}"))?;
+
+        // 拼接剩余的相对路径部分
+        let remaining = full_path.strip_prefix(ancestor.unwrap_or(base)).unwrap_or(full_path.as_path());
+        canonical_ancestor.join(remaining)
+    };
+
+    // 4. 验证在基础目录内
+    if !canonical_path.starts_with(&canonical_base) {
+        return Err("文件路径超出允许范围".to_string());
+    }
+
+    Ok(canonical_path)
 }
 ```
 
-注意：`read_project_file` 需要允许子路径（如 `05-prd/05-PRD-v1.0.md`），所以不能简单拒绝 `/`。关键是验证最终路径仍在 output_dir 下。
+**Step 2:** 替换 `read_project_file` 和 `save_project_file` 中的 `contains("..")` 检查为调用 `validate_path_within(file_name, output_dir)`。
 
-**Step 3:** 对 `save_project_file` 做同样的修改。
+**Step 3:** `write_file` 也改用 `validate_path_within(file_name, home_dir)`，保持一致。
 
 **Step 4:** 验证 `cargo check`
 
-**Step 5:** 提交 `git commit -m "security: canonicalize path validation for file read/write"`
+**Step 5:** 提交 `git commit -m "security: unified path traversal validation with canonicalize"`
 
 ---
 
 ### Task 3: open_file / reveal_file 路径校验
 
 **Files:**
-- Modify: `app/src-tauri/src/commands/files.rs` — `open_file` 和 `reveal_file`
+- Modify: `app/src-tauri/src/commands/files.rs`
 
-**Step 1:** 找到这两个函数。添加路径校验——限制只能打开 projects_dir 或用户主目录下的文件：
+**Step 1:** 添加 canonicalize + starts_with 校验 + 文件类型限制：
 
 ```rust
-let home = dirs::home_dir().unwrap_or_default();
-let path = std::path::Path::new(&file_path);
-if !path.starts_with(&home) {
+let canonical = std::fs::canonicalize(&file_path)
+    .map_err(|e| format!("路径无效: {e}"))?;
+let home = dirs::home_dir()
+    .ok_or("无法获取用户主目录".to_string())?;
+if !canonical.starts_with(&home) {
     return Err("只能打开用户目录下的文件".to_string());
+}
+
+// 限制可打开的文件类型（防止执行 .app/.command 等）
+let allowed_exts = ["md", "pdf", "docx", "html", "txt", "json", "csv", "xlsx", "png", "jpg"];
+if let Some(ext) = canonical.extension().and_then(|e| e.to_str()) {
+    if !allowed_exts.contains(&ext.to_lowercase().as_str()) {
+        return Err(format!("不支持打开 .{ext} 类型的文件"));
+    }
 }
 ```
 
+注意：`reveal_file`（在 Finder 中显示）只需要 canonicalize + starts_with 校验，不需要限制扩展名（显示目录是安全的）。
+
 **Step 2:** 验证 `cargo check`
 
-**Step 3:** 提交 `git commit -m "security: restrict open_file/reveal_file to user home directory"`
+**Step 3:** 提交 `git commit -m "security: canonicalize + extension whitelist for open_file/reveal_file"`
 
 ---
 
 ### Task 4: truncate_to_chars 优化
 
 **Files:**
-- Modify: `app/src-tauri/src/commands/knowledge.rs` — `truncate_to_chars` 函数
+- Modify: `app/src-tauri/src/commands/knowledge.rs`
 
-**Step 1:** 找到 `truncate_to_chars` 函数，替换为更简洁的实现：
+**Step 1:** 替换为简洁实现：
 
 ```rust
 fn truncate_to_chars(s: &str, max: usize) -> &str {
@@ -106,309 +128,298 @@ fn truncate_to_chars(s: &str, max: usize) -> &str {
         None => s,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_ascii() {
+        assert_eq!(truncate_to_chars("hello world", 5), "hello");
+    }
+    #[test]
+    fn test_truncate_cjk() {
+        assert_eq!(truncate_to_chars("你好世界测试", 4), "你好世界");
+    }
+    #[test]
+    fn test_truncate_shorter_than_max() {
+        assert_eq!(truncate_to_chars("hi", 10), "hi");
+    }
+    #[test]
+    fn test_truncate_zero() {
+        assert_eq!(truncate_to_chars("hello", 0), "");
+    }
+    #[test]
+    fn test_truncate_empty() {
+        assert_eq!(truncate_to_chars("", 5), "");
+    }
+}
 ```
 
-**Step 2:** 验证 `cargo check`
+**Step 2:** 验证 `cargo test --manifest-path app/src-tauri/Cargo.toml`
 
-**Step 3:** 提交 `git commit -m "refactor: simplify truncate_to_chars to single-pass"`
+**Step 3:** 提交 `git commit -m "refactor: simplify truncate_to_chars with unit tests"`
 
 ---
 
-### Task 5: --dangerously-skip-permissions 评估与限制
+### Task 5: ~~--dangerously-skip-permissions 白名单~~ → 暂缓
 
-**Files:**
-- Modify: `app/src-tauri/src/providers/claude_cli.rs` — `ClaudeCliProvider::stream()`
+审视发现以下风险，需先做 spike 验证：
+1. `--print` 模式下 `--allowedTools` 是否生效待确认
+2. `ClaudeCliProvider::stream()` 无法获取当前 phase，无法按阶段区分白名单
+3. prototype 阶段需要 Write 工具，全局限只读会断裂
 
-**Step 1:** 读取 claude_cli.rs 的 stream 函数，理解各阶段的工具需求。
-
-**Step 2:** 将 `--dangerously-skip-permissions` 改为按阶段白名单：
-
-```rust
-// 所有阶段都需要读文件，但不需要写文件或执行命令
-.arg("--allowedTools")
-.arg("Read,Grep,Glob")
-```
-
-注意：如果某些阶段（如原型生成）确实需要写文件能力，需要在 stream 函数中根据 phase 参数区分。先检查 stream 函数是否能获取到当前 phase 信息。如果拿不到 phase，就保持一个通用的安全白名单。
-
-**Step 3:** 验证 `cargo check`，然后手动测试一个 PRD 生成流程确认不影响功能。
-
-**Step 4:** 提交 `git commit -m "security: replace --dangerously-skip-permissions with allowedTools whitelist"`
+**暂缓执行**，后续单独做 spike 验证后再决定方案。
 
 ---
 
 ### Task 6: 知识库搜索性能注释
 
 **Files:**
-- Modify: `app/src-tauri/src/commands/knowledge.rs` — `search_knowledge` 和 `list_knowledge_internal`
+- Modify: `app/src-tauri/src/commands/knowledge.rs`
 
-**Step 1:** 目前知识条目少，不需要改架构。在函数上方添加性能注释：
+在 `search_knowledge` 和 `list_knowledge_internal` 上方添加：
 
 ```rust
-/// 全量扫描文件系统搜索知识条目。
-/// 当前适用于 <500 条的小规模知识库。
-/// 如果知识库增长到千级规模，应迁移到 SQLite 索引。
+/// 全量遍历文件系统 + 内存子串匹配。
+/// 适用规模：<500 条（冷启动 <100ms）。
+/// 迁移方案：500+ 条时，将 title/content 索引到 SQLite FTS5 虚拟表，
+/// 复用现有 db.rs 的 Connection。参考：https://www.sqlite.org/fts5.html
 ```
 
-**Step 2:** 提交 `git commit -m "docs: add performance notes to knowledge search functions"`
+提交 `git commit -m "docs: add performance notes and migration plan to knowledge search"`
 
 ---
 
-## Phase 2：知识库功能验证（1 项）
+## Phase 2：知识库功能验证
 
 ### Task 7: 知识库三大功能端到端验证
 
-**Files:** 无代码修改，纯验证
+与原计划相同，启动 `npx tauri dev` 手动验证：
+1. 知识库路径修复（UI 添加知识后 AI prompt 中是否包含）
+2. 推荐功能（PRD 页面相关知识面板 + 评审页面踩坑提醒面板）
+3. 自动沉淀弹窗（复盘完成后弹窗 → 候选列表 → 保存）
 
-**Step 1:** 启动开发环境：`cd app && npx tauri dev`
-
-**Step 2: 验证知识库路径修复**
-1. 在知识库页面添加一条测试知识
-2. 进入任意项目的 PRD 阶段，触发 AI 生成
-3. 观察 console 日志，确认 AI prompt 中包含刚添加的知识条目
-
-**Step 3: 验证推荐功能**
-1. 确保知识库中有几条知识
-2. 创建或进入一个已完成需求分析的项目
-3. 进入 PRD 页面（未生成状态），检查「相关知识」面板是否出现
-4. 进入评审页面（未生成状态），检查「历史踩坑提醒」面板是否出现
-5. 验证可折叠、折叠状态刷新后保持
-
-**Step 4: 验证自动沉淀**
-1. 进入一个已完成 PRD + 评审 + 复盘的项目
-2. 在复盘页面点完成
-3. 检查沉淀弹窗是否弹出
-4. 验证候选列表展示、默认全选、可取消、可编辑
-5. 保存后检查知识库页面是否有新增条目
-
-**Step 5:** 记录发现的问题，创建修复 commit（如有）。
+记录发现的问题，创建修复 commit。
 
 ---
 
-## Phase 3：前端质量（5 项）
+## Phase 3：前端质量（执行顺序：T14→T11→T10→T9→T8→T12）
 
-### Task 8: aria-label 补充（剩余 29 文件）
+> 顺序调整原因：先替换 CSS 变量名（T14），再验证暗色模式（T11），避免重复工作。
+
+### Task 14: CSS 变量语义优化（原 Phase 4，前移）
 
 **Files:**
-- 所有包含纯图标 `<button>` 的 .tsx 文件（排除已修复的 Dashboard/Sidebar/AppLayout/ActivityBar）
+- Modify: `app/src/index.css`
+- Modify: 所有引用 `--green`/`--dark`/`--text-muted` 的文件
 
-**Step 1:** 生成待补充文件列表：
+**分三个独立 commit，逐变量替换：**
 
+**Commit 1: --green → --success**
 ```bash
-grep -rn '<button' app/src/ --include="*.tsx" -l | sort
+# 预览影响
+grep -rn 'var(--green)' app/src/ --include="*.tsx" --include="*.css"
+# 批量替换
+find app/src -name "*.tsx" -o -name "*.css" | xargs sed -i '' 's/var(--green)/var(--success)/g'
+# 删除 index.css 中 --green 定义（light + dark 两处）
+# 验证
+cd app && npx tsc --noEmit
+git commit -am "refactor: rename --green to --success"
 ```
 
-对比已修复的 4 个文件，逐文件检查：
-- 按钮内部只有图标（SVG/lucide 组件），无文字
-- 没有 `aria-label` 或 `title`
+**Commit 2: --dark → --text-primary**
+```bash
+grep -rn 'var(--dark)' app/src/ --include="*.tsx" --include="*.css"
+find app/src -name "*.tsx" -o -name "*.css" | xargs sed -i '' 's/var(--dark)/var(--text-primary)/g'
+# 注意：index.css 中 --dark 与 --text-primary 已有同值定义，删除 --dark 定义即可
+cd app && npx tsc --noEmit
+git commit -am "refactor: rename --dark to --text-primary"
+```
 
-**Step 2:** 逐文件补充 aria-label。命名规则：用简短中文描述功能（"关闭"、"删除"、"展开"、"收起"等）。
+**Commit 3: --text-muted → --text-secondary**
+```bash
+grep -rn 'var(--text-muted)' app/src/ --include="*.tsx" --include="*.css"
+find app/src -name "*.tsx" -o -name "*.css" | xargs sed -i '' 's/var(--text-muted)/var(--text-secondary)/g'
+cd app && npx tsc --noEmit
+git commit -am "refactor: rename --text-muted to --text-secondary"
+```
 
-**Step 3:** 验证 `tsc --noEmit`
-
-**Step 4:** 提交 `git commit -m "a11y: add aria-labels to remaining icon buttons"`
+每个 commit 后立即 `tsc --noEmit` 验证。三个全部完成后删除 index.css 中残留的别名定义。
 
 ---
 
-### Task 9: 边界状态审计
+### Task 11: 响应式布局 + 暗色模式验证（调到 T14 之后）
 
-**Files:**
-- 审查所有页面级组件（`app/src/pages/` 和 `app/src/pages/project/`）
+**结构化检查清单**（行=页面，列=检查项）：
 
-**Step 1:** 逐页面检查以下三种状态是否有对应的 UI 处理：
+| 页面 | 900x600 | 1200x800 | 1600x900 | Dark 文字 | Dark 背景 | Dark 边框 |
+|------|---------|----------|----------|-----------|-----------|-----------|
+| Dashboard | | | | | | |
+| Settings | | | | | | |
+| Prd | | | | | | |
+| Review | | | | | | |
+| ... | | | | | | |
 
-| 状态 | 检查方法 | 缺失时的修复 |
-|------|----------|-------------|
-| Empty state | 搜索 `length === 0` 或空数组条件渲染 | 添加引导文案 + 图标 |
-| Loading state | 搜索 `loading` / `Loader2` / `Skeleton` | 添加 Skeleton 或 spinner |
-| Error state | 搜索 `error` / `catch` 后的 UI 反馈 | 添加 Toast 或内联错误提示 |
-
-**Step 2:** 整理问题清单，标注哪些页面缺少哪种状态处理。
-
-**Step 3:** 逐页补充缺失的状态处理。优先使用项目已有的组件：
-- Loading: `Skeleton` 组件（`components/ui/skeleton.tsx`）
-- Empty: 参考 `PhaseEmptyState` 组件的模式
-- Error: 使用 `useToast` hook
-
-**Step 4:** 验证 `tsc --noEmit`
-
-**Step 5:** 提交 `git commit -m "ux: add missing empty/loading/error states across pages"`
+**Step 1:** 启动 `npx tauri dev`
+**Step 2:** 三个断点逐页检查响应式（Compact 900 / Default 1200 / Wide 1600）
+**Step 3:** 暗色模式逐页检查。特别注意手写弹窗背景色应为 `var(--card)` 而非 `var(--background)`
+**Step 4:** 记录问题并修复
+**Step 5:** 提交 `git commit -m "fix: responsive layout and dark mode issues"`
 
 ---
 
 ### Task 10: 文案一致性审计
 
-**Step 1:** 提取所有按钮和操作文案：
-
-```bash
-grep -rn '>\(确定\|确认\|取消\|关闭\|保存\|删除\|返回\|完成\|提交\|跳过\|重试\)' app/src/ --include="*.tsx" | sort
-```
-
-**Step 2:** 统一为以下标准用词：
+**统一规则（扩展版）：**
 
 | 场景 | 统一用词 |
 |------|----------|
 | 确认操作 | 确认 |
-| 取消/关闭弹窗 | 取消（弹窗内）、关闭（独立面板） |
+| 取消弹窗 | 取消 |
+| 关闭面板 | 关闭 |
 | 保存数据 | 保存 |
-| 危险操作确认 | 删除（红色） |
-| 返回上一级 | 返回 |
+| 危险操作 | 删除（红色） |
+| 返回上级 | 返回 |
 | 完成阶段 | 完成 |
+| 进行态 | `{动作}中...`（保存中...、导出中...），不用"正在..." |
+| 省略号 | 统一用 `...`（三个英文点） |
+| 导航文案 | `前往设置` 而非 `去设置` |
 
-**Step 3:** 逐文件修正不一致的文案。
+**扫描范围：**
+- 按钮文案：`grep -rn '>确定\|>确认\|>取消\|>关闭' ...`
+- 进行态文案：`grep -rn '正在\|中\.\.\.\|中···' ...`
+- Placeholder 文案：`grep -rn 'placeholder' ...`
 
-**Step 4:** 提交 `git commit -m "copy: unify button labels and microcopy"`
+**附加步骤：** 文案修改后通过 Humanizer-zh 审查，避免 AI 味。
 
----
-
-### Task 11: 响应式布局 + 暗色模式验证
-
-**Step 1:** 启动 `npx tauri dev`
-
-**Step 2: 响应式验证**
-- 将窗口缩小到最小尺寸（900x600，tauri.conf.json 中配置的 minWidth/minHeight）
-- 逐页检查：
-  - 侧边栏是否正确折叠
-  - 内容区是否溢出
-  - 表格/列表是否有横向滚动条
-  - 文字是否截断（truncate 而非溢出）
-- 记录问题，修复布局溢出
-
-**Step 3: 暗色模式验证**
-- 切换到 dark theme（⌘D）
-- 逐页检查：
-  - 文字是否可读（对比度）
-  - 卡片/面板是否有正确的暗色背景
-  - 边框是否可见
-  - 图标颜色是否适配
-- 记录问题，修复样式缺失
-
-**Step 4:** 提交修复 `git commit -m "fix: responsive layout and dark mode issues"`
+提交 `git commit -m "copy: unify button labels, progress text, and microcopy"`
 
 ---
 
-### Task 12: DesignSpec.tsx fallback 默认值优化
+### Task 9: 边界状态审计
+
+**审计范围：** `pages/` + `pages/project/` + `pages/tools/`（扩展）
+
+**验收标准：** 每个页面级组件必须包含：
+- 至少一个 Loading skeleton（用项目已有的 Skeleton 组件变体）
+- 至少一个 Empty state 占位（区分首次空/搜索空/操作后空）
+- Error 状态有用户可感知反馈
+
+**错误反馈规则：**
+- 流式/生成操作失败：内联错误条（红色左条 + 重试按钮）
+- 非阻断异步操作失败（删除、保存）：Toast 提示
+- 不允许静默 `console.error`（catch 块必须有用户反馈）
+
+**Skeleton 变体指引：**
+- 项目阶段页（Analysis/Research/Prd/Review 等）：`SkeletonText`
+- Dashboard 项目列表：`SkeletonCard`
+- 工具页列表（Knowledge/Persona）：`SkeletonList`
+
+提交 `git commit -m "ux: add missing empty/loading/error states across all pages"`
+
+---
+
+### Task 8: aria-label + 模态框可访问性
 
 **Files:**
-- Modify: `app/src/pages/tools/DesignSpec.tsx` — `extractPlaygroundTokens` 函数（约行 56-69）
+- 所有含图标按钮的 .tsx 文件
+- 所有手写模态框（Dashboard onboarding×2、DesignSpec 删除确认、Review 知识记录、Persona 删除确认）
 
-**Step 1:** 将 fallback 硬编码色值改为从 CSS 变量读取：
+**Part 1:** 补图标按钮 aria-label（剩余 29 文件中的纯图标按钮）
 
-```typescript
-const getVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+**Part 2:** 所有手写 `fixed inset-0` 弹窗统一添加：
+- `role="dialog"`
+- `aria-modal="true"`
+- `aria-labelledby`（指向标题元素的 id）
 
-const primary   = ... ?? getVar('--accent-color') || '#1D4ED8'
-const success   = ... ?? getVar('--success') || '#16a34a'
-const warning   = ... ?? getVar('--warning') || '#d97706'
-const error     = ... ?? getVar('--destructive') || '#dc2626'
-```
+**Part 3（可选）：** 评估是否提取通用 `<Modal>` 组件替代手写弹窗（含焦点陷阱）。如工作量过大可后续单独做。
 
-保留硬编码值作为最终 fallback（getComputedStyle 可能在 SSR 或测试中不可用），但优先使用 CSS 变量。
-
-Playground 渲染区（行 385-453）的 `#fff`、`#374151` 等保持不变（用户规范预览，不受客户端规范约束）。
-
-**Step 2:** 验证 `tsc --noEmit`
-
-**Step 3:** 提交 `git commit -m "refactor: DesignSpec fallback defaults prefer CSS variables"`
+提交 `git commit -m "a11y: aria-labels, dialog roles, and modal accessibility"`
 
 ---
 
-## Phase 4：重构清理（3 项）
+### Task 12: ~~DesignSpec.tsx fallback 优化~~ → 已移除
+
+审视结论：`extractPlaygroundTokens` 是纯解析函数，不应引入 DOM 依赖。Playground 色值不应跟随客户端主题。当前硬编码 fallback 与 design-system.md 一致，无需修改。
+
+---
+
+## Phase 4：重构清理
 
 ### Task 13: rarity-stripe-card 重命名
 
-**Files:**
-- Rename: `app/src/components/rarity-stripe-card.tsx` → `app/src/components/accent-stripe-card.tsx`
-- Modify: 所有 import 该组件的文件
+**改名方案（修订后）：**
+- 文件：`rarity-stripe-card.tsx` → `accent-stripe-card.tsx`
+- 组件：`RarityStripeCard` → `AccentStripeCard`
+- Prop：`rarity` → `accent`（避免与 CVA 的 `variant` 概念冲突）
+- CVA key：`variants.rarity` → `variants.accent`
 
-**Step 1:** 搜索所有引用：
-```bash
-grep -rn "rarity-stripe-card\|RarityStripeCard" app/src/ --include="*.tsx" --include="*.ts"
-```
+**关联标识符全量搜索替换：**
+- `classifyRarity` → `classifyAccent`
+- `PRIORITY_RARITY` → `PRIORITY_ACCENT`
+- `Section` 接口的 `rarity` 字段 → `accent`
+- `data-slot="rarity-stripe-card"` → `data-slot="accent-stripe-card"`
 
-**Step 2:** 重命名文件，组件名 `RarityStripeCard` → `AccentStripeCard`，prop `rarity` → `variant`。
-
-**Step 3:** 更新所有 import 和使用处。
-
-**Step 4:** 验证 `tsc --noEmit`
-
-**Step 5:** 提交 `git commit -m "refactor: rename RarityStripeCard to AccentStripeCard"`
-
----
-
-### Task 14: CSS 变量语义优化（--green/--dark/--text-muted）
-
-**Files:**
-- Modify: `app/src/index.css`
-- Modify: 所有引用这三个变量的 .tsx 文件
-
-**Step 1:** 评估替换映射：
-
-```bash
-grep -c 'var(--green)' app/src/ -r --include="*.tsx" --include="*.css"
-grep -c 'var(--dark)' app/src/ -r --include="*.tsx" --include="*.css"
-grep -c 'var(--text-muted)' app/src/ -r --include="*.tsx" --include="*.css"
-```
-
-替换映射：
-- `--green` → `--success`（如果语义一致）
-- `--dark` → `--text-primary`（如果语义一致）
-- `--text-muted` → `--text-secondary`（design-system.md 中的标准名）
-
-**Step 2:** 确认语义一致后全量替换。如果 `--green` 和 `--success` 的值完全相同，可以直接替换并删除 `--green` 定义。
-
+**Step 1:** 搜索所有 `rarity` 在 `app/src/` 中的出现
+**Step 2:** 全量重命名
 **Step 3:** 验证 `tsc --noEmit`
-
-**Step 4:** 提交 `git commit -m "refactor: rename --green/--dark/--text-muted to semantic CSS variable names"`
-
----
-
-### Task 15: 大组件拆分
-
-**Files:**
-- Refactor: `app/src/pages/project/Review.tsx` (639 行)
-- Refactor: `app/src/pages/project/Prd.tsx` (671 行)
-- Refactor: `app/src/pages/Dashboard.tsx` (594 行)
-
-**Step 1:** 对每个大组件，识别可提取的子组件：
-
-Review.tsx 候选：
-- `ReviewContent` — 评审结果渲染区
-- `KnowledgeRecordModal` — 记录经验弹窗
-
-Prd.tsx 候选：
-- `PrdToolbar` — 顶部操作栏（生成/重新生成/导出按钮）
-- `PrdTocSidebar` — 目录侧边栏（已有 prd-toc.tsx，确认是否已提取）
-
-Dashboard.tsx 候选：
-- `ProjectCard` — 项目卡片（含重命名、收藏、右键菜单逻辑）
-- `DashboardToolbar` — 顶部筛选/排序栏
-
-**Step 2:** 逐个提取，每个子组件一个 commit。提取原则：
-- 子组件放在同目录或 `components/` 下
-- Props 接口清晰，不传整个 parent state
-- 保持功能不变，纯结构重构
-
-**Step 3:** 每次提取后验证 `tsc --noEmit`
-
-**Step 4:** 每个子组件单独提交
+**Step 4:** 提交 `git commit -m "refactor: rename RarityStripeCard to AccentStripeCard"`
 
 ---
 
-### Task 16: 未发版功能汇总发版
+### Task 15: 大组件拆分（修订后）
 
-**Step 1:** 确认所有修复已提交且编译通过
+**前置工作：**
+- Dashboard.tsx 先合并两处重复的 onboarding 弹窗代码
 
-**Step 2:** 版本号 bump 到 v0.1.5：
-- `app/src-tauri/tauri.conf.json`
-- `app/package.json`
-- `app/src-tauri/Cargo.toml`
+**拆分方案：**
 
-**Step 3:** 提交并打 tag：
-```bash
-git commit -m "chore: bump version to 0.1.5"
-git tag v0.1.5
-git push origin main && git push origin v0.1.5
-```
+**Dashboard.tsx:**
+1. 提取 `useProjectActions` hook — 封装 rename/delete/toggleStatus 的 state 和 handler（约 8 个 state + 3 个 handler）
+2. 提取 `ProjectCard` 组件 — 接收 `project` + `actions` props（props 不超过 8 个）
+3. 提取 `OnboardingDialog` 组件 — 消除重复代码
 
-等用户确认要发版时再执行此 Task。
+**Review.tsx:**
+1. 提取 `KnowledgeRecordModal` 组件 — 参考已有的 `KnowledgeExtractDialog` 模式，所有知识记录 state（9 个）下沉到子组件，只暴露 `open/onClose/projectName/sections` 4 个 props
+
+**Prd.tsx:**
+1. ~~PrdTocSidebar~~ 已存在（`prd-toc.tsx`），跳过
+2. 提取 `PrdToolbar` — 顶部操作栏（生成/重新生成/导出按钮），如 props 过多可先不拆
+
+**跨页面通用组件（高收益）：**
+- 评估提取 `PhaseStreamingLayout` 通用壳组件 — 封装流式进度条 + 思考状态 + 错误展示 + 底部操作栏，6+ 个阶段页面可共用。如工作量大可列为后续任务。
+
+**每个子组件：**
+- 先设计 Props 接口（不超过 8 个 props）
+- 单独 commit
+- 每次 `tsc --noEmit` 验证
+
+---
+
+### Task 16: 汇总发版
+
+**Step 1:** 确认所有修复已提交且编译通过：`tsc --noEmit` + `cargo clippy`
+**Step 2:** 版本号 bump 到 v0.1.5（tauri.conf.json + package.json + Cargo.toml）
+**Step 3:** 提交 `git commit -m "chore: bump version to 0.1.5"`
+**Step 4:** 等用户确认后手动执行 `git tag v0.1.5 && git push origin main && git push origin v0.1.5`
+
+---
+
+## 变更摘要（v1 → v2）
+
+| 原 Task | 变更 | 原因 |
+|---------|------|------|
+| T1 外键级联 | **移除** | ON DELETE CASCADE 已生效 |
+| T2 路径遍历 | **重写**：提取公共函数 + 绝对路径拦截 + 祖先目录 canonicalize | canonicalize 对不存在目录会失败 |
+| T3 open/reveal | **加强**：canonicalize + 扩展名白名单 | 符号链接绕过 + open 可执行文件 |
+| T5 CLI 权限 | **暂缓** | 需 spike 验证，全局限只读会断裂 |
+| T8 aria | **扩展**：增加模态框 role/aria-modal | 6 处手写弹窗缺可访问性 |
+| T9 边界状态 | **扩展**：范围含 tools/，增加验收标准和错误反馈规则 | 原计划粒度不够 |
+| T10 文案 | **扩展**：增加进行态文案 + Humanizer-zh | 省略号/动词格式不统一 |
+| T11 响应式 | **加强**：3 断点 + 结构化清单 | 原只测最小尺寸 |
+| T12 DesignSpec | **移除** | 纯函数不应引入 DOM 调用 |
+| T13 重命名 | **修订**：prop 改名 accent，覆盖全部关联标识符 | 遗漏 classifyRarity 等 |
+| T14 CSS 变量 | **前移到 Phase 3 首位**，分 3 commit | 应在暗色模式验证前完成 |
+| T15 组件拆分 | **修订**：先设计 Props，合并重复代码，跳过已完成项 | 缺 Props 接口设计 |
+| T16 发版 | **修订**：移除自动 push | 违反 CLAUDE.md |
