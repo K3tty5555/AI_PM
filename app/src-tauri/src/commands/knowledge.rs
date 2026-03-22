@@ -18,6 +18,10 @@ pub struct KnowledgeEntry {
     pub content: String,
 }
 
+/// 全量遍历文件系统 + 内存子串匹配。
+/// 适用规模：<500 条（冷启动 <100ms）。
+/// 迁移方案：500+ 条时，将 title/content 索引到 SQLite FTS5 虚拟表，
+/// 复用现有 db.rs 的 Connection。参考：https://www.sqlite.org/fts5.html
 fn list_knowledge_internal(state: &AppState) -> Vec<KnowledgeEntry> {
     let kb_root = state.templates_base().join("knowledge-base");
     let mut entries = Vec::new();
@@ -97,6 +101,10 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
     Ok(KnowledgeEntry { id: final_slug, category: args.category, title: args.title, content: full_content })
 }
 
+/// 全量遍历文件系统 + 内存子串匹配。
+/// 适用规模：<500 条（冷启动 <100ms）。
+/// 迁移方案：500+ 条时，将 title/content 索引到 SQLite FTS5 虚拟表，
+/// 复用现有 db.rs 的 Connection。参考：https://www.sqlite.org/fts5.html
 #[tauri::command]
 pub fn search_knowledge(state: State<'_, AppState>, query: String) -> Vec<KnowledgeEntry> {
     let q = query.to_lowercase();
@@ -258,22 +266,9 @@ pub struct KnowledgeCandidate {
 
 /// Truncate a string to at most `max` characters, respecting UTF-8 char boundaries.
 fn truncate_to_chars(s: &str, max: usize) -> &str {
-    if s.chars().count() <= max {
-        return s;
-    }
-    let mut end = 0;
-    for (i, (byte_idx, _)) in s.char_indices().enumerate() {
-        if i >= max {
-            break;
-        }
-        end = byte_idx;
-    }
-    // end points to the start of the last included char; advance past it
-    if end < s.len() {
-        let ch_len = s[end..].chars().next().map(|c| c.len_utf8()).unwrap_or(0);
-        &s[..end + ch_len]
-    } else {
-        s
+    match s.char_indices().nth(max) {
+        Some((idx, _)) => &s[..idx],
+        None => s,
     }
 }
 
@@ -518,4 +513,30 @@ pub async fn extract_knowledge_candidates(
 
     // 5. Parse response
     parse_candidates_json(&raw)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_ascii() {
+        assert_eq!(truncate_to_chars("hello world", 5), "hello");
+    }
+    #[test]
+    fn test_truncate_cjk() {
+        assert_eq!(truncate_to_chars("你好世界测试", 4), "你好世界");
+    }
+    #[test]
+    fn test_truncate_shorter_than_max() {
+        assert_eq!(truncate_to_chars("hi", 10), "hi");
+    }
+    #[test]
+    fn test_truncate_zero() {
+        assert_eq!(truncate_to_chars("hello", 0), "");
+    }
+    #[test]
+    fn test_truncate_empty() {
+        assert_eq!(truncate_to_chars("", 5), "");
+    }
 }
