@@ -11,6 +11,7 @@ import { cn, extractStreamStatus, FILE_MANAGER_LABEL } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
+import { PhaseShell } from "@/components/phase-shell"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { KnowledgeRecommendPanel } from "@/components/knowledge-recommend-panel"
@@ -354,67 +355,75 @@ export function PrdPage() {
 
   if (!loading && !existingMarkdown && !text && !isStreaming && !error) {
     return (
-      <div className="mx-auto w-full max-w-[1080px]">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
-        </div>
-        <div className="h-px bg-[var(--border)]" />
-        {fromYolo && (
-          <div className="mt-4 flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
-            <span className="mt-0.5 shrink-0 text-[var(--accent-color)]">⚡</span>
-            <p className="text-[13px] text-[var(--text-secondary)]">
-              加急模式已完成前 4 阶段（需求分析、竞品研究、用户故事）。确认内容无误后点击生成 PRD。
-            </p>
+      <PhaseShell
+        projectId={projectId}
+        phase="prd"
+        phaseLabel="PRD"
+        brainstormEnabled={true}
+        onBrainstormGenerate={handleGenerate}
+      >
+        <div className="mx-auto w-full max-w-[1080px]">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
           </div>
-        )}
-        <ContextPills
-          projectId={projectId!}
-          onExcludeChange={setExcludedContext}
-          className="border-b border-[var(--border)]"
-        />
-        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
-        {prdStyles.length > 0 && (
-          <div className="flex items-center gap-2 px-1 py-3 border-b border-[var(--border)]">
-            <span className="text-xs text-[var(--text-secondary)] shrink-0">写作风格</span>
-            <select
-              value={selectedStyle}
-              onChange={(e) => {
-                const val = e.target.value
-                setSelectedStyle(val)
-                if (val) api.setActivePrdStyle(val).catch((err) => console.error("[Prd]", err))
-              }}
-              className={cn(
-                "h-7 px-2 text-xs rounded-lg",
-                "bg-[var(--secondary)] border border-[var(--border)]",
-                "text-[var(--text-primary)]",
-                "outline-none cursor-pointer",
-                "hover:border-[var(--accent-color)]/60 transition-colors",
-                "focus:border-[var(--accent-color)]",
-              )}
+          <div className="h-px bg-[var(--border)]" />
+          {fromYolo && (
+            <div className="mt-4 flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
+              <span className="mt-0.5 shrink-0 text-[var(--accent-color)]">⚡</span>
+              <p className="text-[13px] text-[var(--text-secondary)]">
+                加急模式已完成前 4 阶段（需求分析、竞品研究、用户故事）。确认内容无误后点击生成 PRD。
+              </p>
+            </div>
+          )}
+          <ContextPills
+            projectId={projectId!}
+            onExcludeChange={setExcludedContext}
+            className="border-b border-[var(--border)]"
+          />
+          <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
+          {prdStyles.length > 0 && (
+            <div className="flex items-center gap-2 px-1 py-3 border-b border-[var(--border)]">
+              <span className="text-xs text-[var(--text-secondary)] shrink-0">写作风格</span>
+              <select
+                value={selectedStyle}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setSelectedStyle(val)
+                  if (val) api.setActivePrdStyle(val).catch((err) => console.error("[Prd]", err))
+                }}
+                className={cn(
+                  "h-7 px-2 text-xs rounded-lg",
+                  "bg-[var(--secondary)] border border-[var(--border)]",
+                  "text-[var(--text-primary)]",
+                  "outline-none cursor-pointer",
+                  "hover:border-[var(--accent-color)]/60 transition-colors",
+                  "focus:border-[var(--accent-color)]",
+                )}
+              >
+                <option value="">（无）</option>
+                {prdStyles.map((s) => (
+                  <option key={s.name} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <KnowledgeRecommendPanel projectId={projectId!} timing="before_prd" visible={!existingMarkdown} />
+          <PhaseEmptyState
+            phaseLabel="PRD"
+            description="产品需求文档"
+            onGenerate={handleGenerate}
+          />
+          {/* Direct generation shortcut */}
+          <div className="mt-3 text-center">
+            <button
+              onClick={handleGenerate}
+              className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] underline underline-offset-2 transition-colors"
             >
-              <option value="">（无）</option>
-              {prdStyles.map((s) => (
-                <option key={s.name} value={s.name}>{s.name}</option>
-              ))}
-            </select>
+              跳过分析，直接生成 PRD
+            </button>
           </div>
-        )}
-        <KnowledgeRecommendPanel projectId={projectId!} timing="before_prd" visible={!existingMarkdown} />
-        <PhaseEmptyState
-          phaseLabel="PRD"
-          description="产品需求文档"
-          onGenerate={handleGenerate}
-        />
-        {/* Direct generation shortcut */}
-        <div className="mt-3 text-center">
-          <button
-            onClick={handleGenerate}
-            className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] underline underline-offset-2 transition-colors"
-          >
-            ⚡ 跳过分析，直接生成 PRD
-          </button>
         </div>
-      </div>
+      </PhaseShell>
     )
   }
 
@@ -426,6 +435,13 @@ export function PrdPage() {
   const canComplete = hasContent && !currentStreaming && !advancing
 
   return (
+    <PhaseShell
+      projectId={projectId}
+      phase="prd"
+      phaseLabel="PRD"
+      brainstormEnabled={true}
+      onBrainstormGenerate={handleGenerate}
+    >
     <div className="mx-auto w-full max-w-[1080px]">
       {/* Header */}
       <div className="prd-header mb-6 flex items-center justify-between">
@@ -670,5 +686,6 @@ export function PrdPage() {
         </div>
       </div>
     </div>
+    </PhaseShell>
   )
 }
