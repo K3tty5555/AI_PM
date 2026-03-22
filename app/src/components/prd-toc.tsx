@@ -118,7 +118,7 @@ function PrdToc({ markdown, activeSection, onSectionClick }: PrdTocProps) {
                   className={cn(
                     "inline-block w-8 mr-1.5 text-[10px]",
                     isActive
-                      ? "text-[var(--dark)] font-semibold"
+                      ? "text-[var(--text-primary)] font-semibold"
                       : "text-[var(--text-secondary)]",
                   )}
                 >
@@ -127,7 +127,7 @@ function PrdToc({ markdown, activeSection, onSectionClick }: PrdTocProps) {
                 <span
                   className={cn(
                     isActive
-                      ? "text-[var(--dark)] font-medium"
+                      ? "text-[var(--text-primary)] font-medium"
                       : "text-[var(--text-secondary)]",
                   )}
                 >

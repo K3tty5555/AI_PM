@@ -33,7 +33,7 @@ function RichEditor({
       attributes: {
         class: cn(
           "outline-none min-h-[200px] px-4 py-3",
-          "text-sm leading-relaxed text-[var(--dark)]",
+          "text-sm leading-relaxed text-[var(--text-primary)]",
           "font-[var(--font-geist-sans),_sans-serif]",
           "[&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
           "[&_.is-editor-empty:first-child::before]:text-[var(--text-muted)]/50",
