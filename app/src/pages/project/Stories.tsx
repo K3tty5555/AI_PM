@@ -6,6 +6,7 @@ import { StoryBoard } from "@/components/story-board"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { parseStories, storiesToMarkdown, type Story } from "@/lib/story-parser"
 import { api } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -26,6 +27,7 @@ const STORIES_FILE = "04-user-stories.md"
 export function StoriesPage() {
   const params = useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
   const projectId = params?.id as string
 
   // Page state
@@ -142,8 +144,9 @@ export function StoriesPage() {
       navigate(`/project/${projectId}/prd?autostart=1`)
     } catch (err) {
       console.error("Failed to skip:", err)
+      toast("跳过阶段失败", "error")
     }
-  }, [projectId, navigate])
+  }, [projectId, navigate, toast])
 
   /** Go back to analysis */
   const handleBack = useCallback(() => {
@@ -178,10 +181,11 @@ export function StoriesPage() {
       navigate(`/project/${projectId}/prd${isYolo ? "?yolo=1" : "?autostart=1"}`)
     } catch (err) {
       console.error("Failed to advance:", err)
+      toast("保存或推进阶段失败", "error")
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, stories, navigate, isYolo])
+  }, [projectId, stories, navigate, isYolo, toast])
 
   // -------------------------------------------------------------------------
   // Loading state

@@ -6,9 +6,11 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useToolStream } from "@/hooks/use-tool-stream"
 import { api, type PrdStyleEntry, type PrdStyleContent } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
 export function ToolPersonaPage() {
+  const { toast } = useToast()
   const [tab, setTab] = useState<"analyze" | "list">("analyze")
   const [styles, setStyles] = useState<PrdStyleEntry[]>([])
   const [stylesLoading, setStylesLoading] = useState(false)
@@ -135,6 +137,7 @@ export function ToolPersonaPage() {
       setStyleContents(prev => { const n = { ...prev }; delete n[name]; return n })
     } catch (err) {
       console.error("Failed to delete style:", err)
+      toast("删除风格失败", "error")
     } finally {
       setDeletingStyle(null)
       setDeleteConfirm(null)

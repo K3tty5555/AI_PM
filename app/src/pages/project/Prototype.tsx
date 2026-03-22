@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api, type UiSpecEntry } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
@@ -109,6 +110,7 @@ async function inlineExternalJs(
 export function PrototypePage() {
   const { id: projectId } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   const [loading, setLoading] = useState(true)
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
@@ -330,6 +332,7 @@ export function PrototypePage() {
       navigate(`/project/${projectId}/review?autostart=1`)
     } catch (err) {
       console.error("Failed to advance:", err)
+      toast("推进阶段失败，请重试", "error")
       setAdvancing(false)
     }
   }, [projectId, existingHtml, manifest, text, navigate])
