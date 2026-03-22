@@ -450,7 +450,7 @@ export function SettingsPage() {
           <div className="mt-3 flex items-start gap-2">
             {config?.hasConfig ? (
               <>
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[var(--green)]" />
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[var(--success)]" />
                 <span className="text-sm text-[var(--text-primary)]">
                   已自动检测到配置（来源：{SOURCE_LABELS[config.configSource] || config.configSource}）
                 </span>
@@ -516,7 +516,7 @@ export function SettingsPage() {
                           </span>
                         </Button>
                         {cliStatus && (
-                          <span className={`flex items-center gap-1 text-xs ${cliStatus.ok ? "text-[var(--green)]" : "text-[var(--destructive)]"}`}>
+                          <span className={`flex items-center gap-1 text-xs ${cliStatus.ok ? "text-[var(--success)]" : "text-[var(--destructive)]"}`}>
                             {cliStatus.ok
                               ? <CheckCircle2 className="size-3" />
                               : <XCircle className="size-3" />
@@ -666,14 +666,14 @@ export function SettingsPage() {
               style={{ animation: "fadeInUp 0.3s cubic-bezier(0.16,1,0.3,1)" }}
             >
               {testResult.ok ? (
-                <CheckCircle2 className="size-4 shrink-0 text-[var(--green)]" />
+                <CheckCircle2 className="size-4 shrink-0 text-[var(--success)]" />
               ) : (
                 <XCircle className="size-4 shrink-0 text-[var(--destructive)]" />
               )}
               <span
                 className={
                   testResult.ok
-                    ? "text-[var(--green)]"
+                    ? "text-[var(--success)]"
                     : "text-[var(--destructive)]"
                 }
               >
@@ -689,14 +689,14 @@ export function SettingsPage() {
               style={{ animation: "fadeInUp 0.3s cubic-bezier(0.16,1,0.3,1)" }}
             >
               {saveResult.ok ? (
-                <CheckCircle2 className="size-4 shrink-0 text-[var(--green)]" />
+                <CheckCircle2 className="size-4 shrink-0 text-[var(--success)]" />
               ) : (
                 <XCircle className="size-4 shrink-0 text-[var(--destructive)]" />
               )}
               <span
                 className={
                   saveResult.ok
-                    ? "text-[var(--green)]"
+                    ? "text-[var(--success)]"
                     : "text-[var(--destructive)]"
                 }
               >
@@ -763,11 +763,11 @@ export function SettingsPage() {
           {dirSaveResult && (
             <div className="flex items-center gap-2 text-sm">
               {dirSaveResult.ok ? (
-                <CheckCircle2 className="size-4 shrink-0 text-[var(--green)]" />
+                <CheckCircle2 className="size-4 shrink-0 text-[var(--success)]" />
               ) : (
                 <XCircle className="size-4 shrink-0 text-[var(--destructive)]" />
               )}
-              <span className={dirSaveResult.ok ? "text-[var(--green)]" : "text-[var(--destructive)]"}>
+              <span className={dirSaveResult.ok ? "text-[var(--success)]" : "text-[var(--destructive)]"}>
                 {dirSaveResult.message}
               </span>
             </div>
