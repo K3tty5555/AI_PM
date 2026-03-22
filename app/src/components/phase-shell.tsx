@@ -92,7 +92,11 @@ export function PhaseShell({
           projectId={projectId}
           phase={phase}
           phaseLabel={phaseLabel}
-          onGenerate={onBrainstormGenerate}
+          onGenerate={() => {
+            setMode("normal")
+            // 延迟一帧让模式切换完成、常规模式组件挂载后再触发生成
+            requestAnimationFrame(() => onBrainstormGenerate())
+          }}
         />
       )}
     </div>
