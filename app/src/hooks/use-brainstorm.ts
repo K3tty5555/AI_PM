@@ -45,10 +45,12 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
 
   const { toast } = useToast()
 
-  // Refs to keep callbacks stable
+  // Refs to keep callbacks stable and prevent dependency loops
   const streamingTextRef = useRef("")
   const unlistenersRef = useRef<UnlistenFn[]>([])
   const mountedRef = useRef(true)
+  const messagesRef = useRef<BrainstormMessage[]>([])
+  const sendingRef = useRef(false)
 
   const expectedStreamKey = `brainstorm:${projectId}:${phase}`
 
@@ -66,6 +68,7 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
         ])
         if (!cancelled) {
           setMessages(msgs)
+          messagesRef.current = msgs
           setMessageCount(count)
         }
       } catch (err) {
@@ -120,7 +123,9 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
             })
             .then((saved) => {
               if (mountedRef.current) {
-                setMessages((prev) => [...prev, saved])
+                const updated = [...messagesRef.current, saved]
+                setMessages(updated)
+                messagesRef.current = updated
                 setMessageCount((prev) => prev + 1)
               }
             })
@@ -132,6 +137,7 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
         streamingTextRef.current = ""
         setStreamingText("")
         setStreaming(false)
+        sendingRef.current = false
 
         // Clean up listeners
         unlistenersRef.current.forEach((fn) => fn())
@@ -146,6 +152,7 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
           streamingTextRef.current = ""
           setStreamingText("")
           setStreaming(false)
+          sendingRef.current = false
         }
 
         // Clean up listeners
@@ -161,7 +168,10 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!content.trim() || streaming) return
+      if (!content.trim()) return
+      // Double lock: React state + ref (ref survives across re-renders)
+      if (sendingRef.current) return
+      sendingRef.current = true
 
       try {
         // Save user message to DB
@@ -172,9 +182,10 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
           content: content.trim(),
         })
 
-        // Add to local messages
-        const updatedMessages = [...messages, saved]
+        // Add to local messages (use ref to avoid stale closure)
+        const updatedMessages = [...messagesRef.current, saved]
         setMessages(updatedMessages)
+        messagesRef.current = updatedMessages
         setMessageCount((prev) => prev + 1)
 
         // Prepare message history for the API call
@@ -202,8 +213,9 @@ export function useBrainstorm(projectId: string, phase: string): UseBrainstormRe
         toast("发送消息失败", "error")
         setStreaming(false)
       }
+      // Note: sendingRef is cleared in stream_done/stream_error handlers
     },
-    [projectId, phase, messages, streaming, setupListeners, toast]
+    [projectId, phase, setupListeners, toast]
   )
 
   // ── Clear all messages ────────────────────────────────────────────────
