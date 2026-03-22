@@ -145,7 +145,7 @@ const markdownComponents = {
   ),
   blockquote: ({ children, ...props }: React.ComponentProps<"blockquote">) => (
     <blockquote
-      className="border-l-2 border-[var(--accent-color)] pl-3 my-2 text-sm text-[var(--text-muted)] italic"
+      className="border-l-2 border-[var(--accent-color)] pl-3 my-2 text-sm text-[var(--text-secondary)] italic"
       {...props}
     >
       {children}
