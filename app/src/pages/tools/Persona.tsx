@@ -234,7 +234,7 @@ export function ToolPersonaPage() {
           {isStreaming && (
             <div className="mt-6">
               <ProgressBar value={progressValue} animated />
-              {isThinking && <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>}
+              {isThinking && <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>}
               <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
                 {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
               </p>
@@ -265,7 +265,7 @@ export function ToolPersonaPage() {
       {tab === "list" && (
         <div className="mt-6">
           {stylesLoading ? (
-            <p className="text-sm text-[var(--text-secondary)]">加载中···</p>
+            <p className="text-sm text-[var(--text-secondary)]">加载中...</p>
           ) : styles.length === 0 ? (
             <div className="flex flex-col gap-2">
               <p className="text-sm text-[var(--text-secondary)]">暂无已保存的风格档案</p>
@@ -378,7 +378,7 @@ export function ToolPersonaPage() {
                   {expandedStyles.has(s.name) && (
                     <div className="border-t border-[var(--border)] px-4 py-3">
                       {loadingContent.has(s.name) ? (
-                        <p className="text-xs text-[var(--text-secondary)]">加载中···</p>
+                        <p className="text-xs text-[var(--text-secondary)]">加载中...</p>
                       ) : styleContents[s.name] ? (() => {
                         const c = styleContents[s.name]
                         if (c.sample) {
@@ -439,7 +439,7 @@ export function ToolPersonaPage() {
                 disabled={deletingStyle === deleteConfirm}
                 className="rounded-lg bg-[var(--destructive)] px-3 py-1.5 text-xs text-white hover:opacity-90 disabled:opacity-50 transition-all duration-150 active:scale-[0.97]"
               >
-                {deletingStyle === deleteConfirm ? "删除中…" : "确认删除"}
+                {deletingStyle === deleteConfirm ? "删除中..." : "确认删除"}
               </button>
             </div>
           </div>
