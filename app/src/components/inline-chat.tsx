@@ -59,7 +59,7 @@ function InlineChat({
           className={cn(
             "flex items-center gap-2 w-full text-left",
             "text-sm text-[var(--text-secondary)]",
-            "hover:text-[var(--dark)] transition-colors duration-[0.28s]",
+            "hover:text-[var(--text-primary)] transition-colors duration-[0.28s]",
             "cursor-pointer",
           )}
         >
@@ -91,7 +91,7 @@ function InlineChat({
             )}
             style={{ borderRadius: "50%" }}
           />
-          <p className="text-sm text-[var(--dark)] leading-relaxed font-medium">
+          <p className="text-sm text-[var(--text-primary)] leading-relaxed font-medium">
             {question}
           </p>
         </div>
@@ -121,7 +121,7 @@ function InlineChat({
             placeholder="输入你的回答..."
             className={cn(
               "flex-1 h-8 px-3 rounded-lg",
-              "text-sm text-[var(--dark)]",
+              "text-sm text-[var(--text-primary)]",
               "bg-transparent border border-[var(--border)]",
               "placeholder:text-[var(--text-secondary)]",
               "outline-none",

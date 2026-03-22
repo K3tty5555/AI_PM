@@ -169,7 +169,7 @@ export function RequirementPage() {
 
       {/* Requirement description — Rich Editor */}
       <div className="mt-8 mb-6">
-        <label className="mb-2 block text-sm font-medium text-[var(--dark)]">
+        <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
           需求描述
         </label>
         {initialContent !== undefined ? (
@@ -190,7 +190,7 @@ export function RequirementPage() {
 
       {/* File upload */}
       <div className="mb-8">
-        <label className="mb-2 block text-sm font-medium text-[var(--dark)]">
+        <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
           参考文件
           <span className="ml-1 text-xs font-normal text-[var(--text-secondary)]">
             (可选)

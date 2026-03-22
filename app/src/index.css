@@ -137,7 +137,6 @@
   --active-bg: rgba(0, 0, 0, 0.07);
 
   /* --- Compat aliases --- */
-  --dark: #0F172A;
   --text-muted: #64748B;
 
   /* --- Tooltip --- */
@@ -239,7 +238,6 @@ html.theme-dark {
   --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.45);
 
   /* Compat aliases */
-  --dark: oklch(94% 0.005 250);
   --text-muted: oklch(62% 0.01 250);
 }
 
