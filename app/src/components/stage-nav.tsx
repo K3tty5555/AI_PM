@@ -96,7 +96,7 @@ function StageNav({
                     "relative z-10 text-xs font-bold",
                     status === "completed" && "text-[var(--text-primary)]",
                     status === "current" && "text-[var(--text-primary)]",
-                    status === "locked" && "text-[var(--text-muted)]",
+                    status === "locked" && "text-[var(--text-secondary)]",
                   )}
                 >
                   {index + 1}
@@ -118,7 +118,7 @@ function StageNav({
                   "text-[11px] text-center whitespace-nowrap leading-tight",
                   status === "completed" && "text-[var(--text-primary)] font-medium",
                   status === "current" && "text-[var(--text-primary)] font-semibold",
-                  status === "locked" && "text-[var(--text-muted)]",
+                  status === "locked" && "text-[var(--text-secondary)]",
                 )}
               >
                 {stage.label}

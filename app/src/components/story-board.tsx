@@ -67,7 +67,7 @@ function AddStoryForm({
   const inputClass = cn(
     "w-full px-3 py-1.5 text-sm text-[var(--text-primary)]",
     "bg-transparent border border-[var(--border)]",
-    "placeholder:text-[var(--text-muted)]",
+    "placeholder:text-[var(--text-secondary)]",
     "outline-none",
     "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
     "focus:border-[var(--accent-color)]",
@@ -131,7 +131,7 @@ function AddStoryForm({
                 "transition-all duration-150",
                 priority === p
                   ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-[var(--text-primary)]"
-                  : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent-color)]",
+                  : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent-color)]",
               )}
             >
               {p}
@@ -394,7 +394,7 @@ function StoryBoard({ stories, onStoriesChange, isStreaming }: StoryBoardProps) 
       {/* Empty state */}
       {stories.length === 0 && !isStreaming && (
         <div className="flex flex-col items-center justify-center py-12 gap-3">
-          <span className="text-sm text-[var(--text-muted)]">
+          <span className="text-sm text-[var(--text-secondary)]">
             暂无用户故事
           </span>
           <Button
@@ -412,7 +412,7 @@ function StoryBoard({ stories, onStoriesChange, isStreaming }: StoryBoardProps) 
         <div
           className={cn(
             "pt-3 border-t border-[var(--border)]",
-            "text-xs text-[var(--text-muted)]",
+            "text-xs text-[var(--text-secondary)]",
           )}
         >
           共 {stats.total} 个故事 | P0: {stats.p0} | P1: {stats.p1} | P2:{" "}
