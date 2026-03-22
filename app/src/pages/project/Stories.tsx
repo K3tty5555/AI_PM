@@ -11,6 +11,7 @@ import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
+import { PhaseShell } from "@/components/phase-shell"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 
@@ -205,24 +206,32 @@ export function StoriesPage() {
 
   if (!loading && !existingMarkdown && !text && !isStreaming && !error) {
     return (
-      <div className="layout-focus page-enter">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">用户故事</h1>
+      <PhaseShell
+        projectId={projectId}
+        phase="stories"
+        phaseLabel="用户故事"
+        brainstormEnabled={true}
+        onBrainstormGenerate={handleGenerate}
+      >
+        <div className="layout-focus page-enter">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">用户故事</h1>
+          </div>
+          <div className="h-px bg-[var(--border)]" />
+          <ContextPills
+            projectId={projectId!}
+            onExcludeChange={setExcludedContext}
+            className="border-b border-[var(--border)]"
+          />
+          <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
+          <PhaseEmptyState
+            phaseLabel="STORIES"
+            description="用户故事"
+            onGenerate={handleGenerate}
+            onSkip={handleSkip}
+          />
         </div>
-        <div className="h-px bg-[var(--border)]" />
-        <ContextPills
-          projectId={projectId!}
-          onExcludeChange={setExcludedContext}
-          className="border-b border-[var(--border)]"
-        />
-        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
-        <PhaseEmptyState
-          phaseLabel="STORIES"
-          description="用户故事"
-          onGenerate={handleGenerate}
-          onSkip={handleSkip}
-        />
-      </div>
+      </PhaseShell>
     )
   }
 
@@ -234,164 +243,172 @@ export function StoriesPage() {
   const canAdvance = hasStories && !isStreaming && !advancing
 
   return (
-    <div className="layout-focus page-enter">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">用户故事</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleToggleAdd}
-            disabled={isStreaming}
-          >
-            + 添加
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRegenerate}
-            disabled={isStreaming}
-          >
-            &#x21bb; 重新生成
-          </Button>
-        </div>
-      </div>
-
-      <div className="h-px bg-[var(--border)]" />
-
-      <ContextPills
-        projectId={projectId!}
-        onExcludeChange={setExcludedContext}
-        className="border-b border-[var(--border)]"
-      />
-      <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
-
-      {/* Streaming progress */}
-      {isStreaming && (
-        <div className="mt-4">
-          <ProgressBar value={progressValue} animated />
-          {(() => {
-            const status = !isThinking ? extractStreamStatus(text) : ""
-            return isThinking
-              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>
-              : status
-                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
-                : null
-          })()}
-          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
-            {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
-          </p>
-        </div>
-      )}
-
-      {/* Streaming placeholder */}
-      {isStreaming && stories.length === 0 && (
-        <div className="mt-6 flex items-center gap-3 py-8">
-          <span
-            className={cn(
-              "inline-block w-2 h-2 bg-[var(--accent-color)]",
-              "animate-[dotPulse_2s_ease-in-out_infinite]",
-            )}
-            style={{ borderRadius: "50%" }}
-          />
-          <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
-            生成用户故事中...
-          </span>
-        </div>
-      )}
-
-      {/* Error display */}
-      {error && (
-        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
-          <p className="text-sm text-[var(--destructive)]">{error}</p>
-          <div className="mt-2 flex items-center gap-2">
+    <PhaseShell
+      projectId={projectId}
+      phase="stories"
+      phaseLabel="用户故事"
+      brainstormEnabled={true}
+      onBrainstormGenerate={handleGenerate}
+    >
+      <div className="layout-focus page-enter">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">用户故事</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleAdd}
+              disabled={isStreaming}
+            >
+              + 添加
+            </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleRegenerate}
+              disabled={isStreaming}
             >
-              重试
+              &#x21bb; 重新生成
             </Button>
-            {error.includes("API") && error.includes("配置") && (
+          </div>
+        </div>
+
+        <div className="h-px bg-[var(--border)]" />
+
+        <ContextPills
+          projectId={projectId!}
+          onExcludeChange={setExcludedContext}
+          className="border-b border-[var(--border)]"
+        />
+        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
+
+        {/* Streaming progress */}
+        {isStreaming && (
+          <div className="mt-4">
+            <ProgressBar value={progressValue} animated />
+            {(() => {
+              const status = !isThinking ? extractStreamStatus(text) : ""
+              return isThinking
+                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>
+                : status
+                  ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
+                  : null
+            })()}
+            <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
+              {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
+            </p>
+          </div>
+        )}
+
+        {/* Streaming placeholder */}
+        {isStreaming && stories.length === 0 && (
+          <div className="mt-6 flex items-center gap-3 py-8">
+            <span
+              className={cn(
+                "inline-block w-2 h-2 bg-[var(--accent-color)]",
+                "animate-[dotPulse_2s_ease-in-out_infinite]",
+              )}
+              style={{ borderRadius: "50%" }}
+            />
+            <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
+              生成用户故事中...
+            </span>
+          </div>
+        )}
+
+        {/* Error display */}
+        {error && (
+          <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
+            <p className="text-sm text-[var(--destructive)]">{error}</p>
+            <div className="mt-2 flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/settings")}
+                onClick={handleRegenerate}
               >
-                前往设置
+                重试
               </Button>
-            )}
+              {error.includes("API") && error.includes("配置") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/settings")}
+                >
+                  前往设置
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Inline add form */}
-      {showAddForm && (
+        {/* Inline add form */}
+        {showAddForm && (
+          <div className="mt-6">
+            <AddStoryInline
+              onAdd={(story) => {
+                setStories((prev) => [...prev, story])
+                setShowAddForm(false)
+              }}
+              onCancel={() => setShowAddForm(false)}
+            />
+          </div>
+        )}
+
+        {/* Story board */}
         <div className="mt-6">
-          <AddStoryInline
-            onAdd={(story) => {
-              setStories((prev) => [...prev, story])
-              setShowAddForm(false)
-            }}
-            onCancel={() => setShowAddForm(false)}
+          <StoryBoard
+            stories={stories}
+            onStoriesChange={setStories}
+            isStreaming={isStreaming}
           />
-        </div>
-      )}
-
-      {/* Story board */}
-      <div className="mt-6">
-        <StoryBoard
-          stories={stories}
-          onStoriesChange={setStories}
-          isStreaming={isStreaming}
-        />
-        {!isStreaming && streamMeta !== null && (
-          <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
-            {streamMeta.inputTokens != null && streamMeta.outputTokens != null
-              ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
-              : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
-          </p>
-        )}
-      </div>
-
-      {/* Bottom action bar */}
-      <div
-        className={cn(
-          "mt-8 flex items-center justify-between",
-          "border-t border-[var(--border)] pt-6",
-        )}
-      >
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          disabled={isStreaming || advancing}
-        >
-          {PHASE_META.stories.backLabel}
-        </Button>
-
-        <div className="flex flex-col items-end gap-1">
-          <Button
-            variant="primary"
-            onClick={handleAdvance}
-            disabled={!canAdvance}
-          >
-            {saving
-              ? "保存中..."
-              : advancing
-                ? "推进中..."
-                : PHASE_META.stories.nextLabel + " →"}
-          </Button>
-          {!advancing && !saving && (
-            <p className="text-[11px] text-[var(--text-tertiary)]">
-              {PHASE_META.stories.nextDescription}
+          {!isStreaming && streamMeta !== null && (
+            <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
+              {streamMeta.inputTokens != null && streamMeta.outputTokens != null
+                ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
+                : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
             </p>
           )}
         </div>
+
+        {/* Bottom action bar */}
+        <div
+          className={cn(
+            "mt-8 flex items-center justify-between",
+            "border-t border-[var(--border)] pt-6",
+          )}
+        >
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            disabled={isStreaming || advancing}
+          >
+            {PHASE_META.stories.backLabel}
+          </Button>
+
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="primary"
+              onClick={handleAdvance}
+              disabled={!canAdvance}
+            >
+              {saving
+                ? "保存中..."
+                : advancing
+                  ? "推进中..."
+                  : PHASE_META.stories.nextLabel + " →"}
+            </Button>
+            {!advancing && !saving && (
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                {PHASE_META.stories.nextDescription}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </PhaseShell>
   )
 }
 
