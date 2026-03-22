@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react"
-import { RarityStripeCard } from "@/components/rarity-stripe-card"
+import { AccentStripeCard } from "@/components/accent-stripe-card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -20,10 +20,10 @@ export interface StoryCardProps {
 }
 
 // ---------------------------------------------------------------------------
-// Priority → rarity mapping
+// Priority → accent mapping
 // ---------------------------------------------------------------------------
 
-const PRIORITY_RARITY: Record<string, "gold" | "teal" | "gray"> = {
+const PRIORITY_ACCENT: Record<string, "gold" | "teal" | "gray"> = {
   P0: "gold",
   P1: "teal",
   P2: "gray",
@@ -184,7 +184,7 @@ function StoryCard({
   onDelete,
   dragHandleProps,
 }: StoryCardProps) {
-  const rarity = PRIORITY_RARITY[story.priority] ?? "gray"
+  const accent = PRIORITY_ACCENT[story.priority] ?? "gray"
 
   const handleAcceptanceChange = useCallback(
     (acceptance: string[]) => {
@@ -194,8 +194,8 @@ function StoryCard({
   )
 
   return (
-    <RarityStripeCard
-      rarity={rarity}
+    <AccentStripeCard
+      accent={accent}
       className={cn(
         "group/card",
         "animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]",
@@ -274,7 +274,7 @@ function StoryCard({
           )}
         </div>
       </div>
-    </RarityStripeCard>
+    </AccentStripeCard>
   )
 }
 
