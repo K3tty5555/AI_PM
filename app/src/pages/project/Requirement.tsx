@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { RichEditor } from "@/components/rich-editor"
 import { FileUpload } from "@/components/file-upload"
 import { api } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { ReferenceFiles } from "@/components/reference-files"
 
@@ -20,6 +21,7 @@ export function RequirementPage() {
   const params = useParams()
   const navigate = useNavigate()
   const projectId = params?.id as string
+  const { toast } = useToast()
 
   const [project, setProject] = useState<ProjectData | null>(null)
   const [content, setContent] = useState("")
@@ -118,6 +120,7 @@ export function RequirementPage() {
       navigate(`/project/${projectId}/analysis?autostart=1${teamMode ? "&team=1" : ""}`)
     } catch (err) {
       console.error("Failed to advance:", err)
+      toast("推进阶段失败，请重试", "error")
       setAdvancing(false)
     }
   }, [projectId, content, saveDraft, navigate, teamMode])
@@ -132,6 +135,7 @@ export function RequirementPage() {
       navigate(`/project/${projectId}/analysis?autostart=1&yolo=1${teamMode ? "&team=1" : ""}`)
     } catch (err) {
       console.error("Failed to start yolo:", err)
+      toast("启动一键直达失败，请重试", "error")
       setAdvancing(false)
     }
   }, [projectId, content, saveDraft, navigate, teamMode])

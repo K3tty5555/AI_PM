@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { api, type ReferenceFileEntry } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { open } from "@tauri-apps/plugin-dialog"
 import { cn } from "@/lib/utils"
 
@@ -17,6 +18,7 @@ function formatSize(bytes: number): string {
 }
 
 export function ReferenceFiles({ projectId, className }: ReferenceFilesProps) {
+  const { toast } = useToast()
   const [files, setFiles] = useState<ReferenceFileEntry[]>([])
   const [uploading, setUploading] = useState(false)
 
@@ -26,6 +28,7 @@ export function ReferenceFiles({ projectId, className }: ReferenceFilesProps) {
       setFiles(list)
     } catch (err) {
       console.error("[ReferenceFiles] list failed:", err)
+      toast("加载参考文件失败", "error")
     }
   }, [projectId])
 
@@ -49,6 +52,7 @@ export function ReferenceFiles({ projectId, className }: ReferenceFilesProps) {
           await api.uploadReferenceFile(projectId, filePath)
         } catch (err) {
           console.error("[ReferenceFiles] upload failed:", filePath, err)
+          toast("上传文件失败", "error")
         }
       }
       await loadFiles()
@@ -63,6 +67,7 @@ export function ReferenceFiles({ projectId, className }: ReferenceFilesProps) {
       setFiles((prev) => prev.filter((f) => f.name !== fileName))
     } catch (err) {
       console.error("[ReferenceFiles] delete failed:", err)
+      toast("删除文件失败", "error")
     }
   }, [projectId])
 

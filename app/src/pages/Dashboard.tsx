@@ -8,6 +8,7 @@ import { NewProjectDialog } from "@/components/new-project-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ContextMenu, type ContextMenuItem } from "@/components/ui/context-menu"
 import { useFavorites } from "@/hooks/use-favorites"
+import { useToast } from "@/hooks/use-toast"
 import { useRecent } from "@/hooks/use-recent"
 import { api } from "@/lib/tauri-api"
 import { cn, FILE_MANAGER_LABEL } from "@/lib/utils"
@@ -62,6 +63,7 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const { isFavorite, toggleFavorite } = useFavorites()
   const { recentItems } = useRecent()
+  const { toast } = useToast()
   const [projects, setProjects] = useState<DashboardProject[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -139,6 +141,7 @@ export function DashboardPage() {
       setProjects(data)
     } catch (err) {
       console.error("Failed to load projects:", err)
+      toast("项目列表加载失败", "error")
     } finally {
       setLoading(false)
     }
@@ -170,6 +173,7 @@ export function DashboardPage() {
       setProjects((prev) => prev.filter((p) => p.id !== id))
     } catch (err) {
       console.error("Failed to delete project:", err)
+      toast("删除项目失败", "error")
     }
   }
 
@@ -182,6 +186,7 @@ export function DashboardPage() {
       window.dispatchEvent(new Event("projects-updated"))
     } catch (err) {
       console.error("Failed to update project status:", err)
+      toast("更新项目状态失败", "error")
     }
   }, [])
 

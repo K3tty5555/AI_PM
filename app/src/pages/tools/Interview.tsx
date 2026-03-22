@@ -7,6 +7,7 @@ import { InlineChat } from "@/components/inline-chat"
 import { ProjectSelector } from "@/components/project-selector"
 import { useToolStream } from "@/hooks/use-tool-stream"
 import { api } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
 interface Message { role: string; content: string }
@@ -25,6 +26,7 @@ function detectQuestion(text: string): { hasQuestion: boolean; question: string 
 
 export function ToolInterviewPage() {
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [phase, setPhase] = useState<"setup" | "interview" | "done">("setup")
   const [context, setContext] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
@@ -85,6 +87,7 @@ export function ToolInterviewPage() {
       navigate(`/project/${boundProjectId}/prd?autostart=1`)
     } catch (err) {
       console.error("Failed to save requirement:", err)
+      toast("保存需求失败，请重试", "error")
       setSaving(false)
     }
   }, [text, boundProjectId, navigate])

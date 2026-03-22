@@ -3,6 +3,7 @@ import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
 import { Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api, type UiSpecEntry, type UiSpecContent } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { PrdViewer } from "@/components/prd-viewer"
 import { cn } from "@/lib/utils"
 
@@ -73,6 +74,7 @@ function extractPlaygroundTokens(tokensRaw: string) {
 }
 
 export function ToolDesignSpecPage() {
+  const { toast } = useToast()
   const [specs, setSpecs] = useState<UiSpecEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
@@ -154,6 +156,7 @@ export function ToolDesignSpecPage() {
       setSpecContents(prev => { const n = { ...prev }; delete n[name]; return n })
     } catch (err) {
       console.error("[DesignSpec] delete failed", err)
+      toast("删除设计规范失败", "error")
     } finally {
       setDeletingSpec(null)
       setDeleteConfirm(null)
