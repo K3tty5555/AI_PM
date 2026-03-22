@@ -141,7 +141,7 @@ function EditableBlock({
           }}
           className={cn(
             "w-full min-h-[60px] p-3 text-sm",
-            "bg-[var(--accent-light)] text-[var(--dark)]",
+            "bg-[var(--accent-light)] text-[var(--text-primary)]",
             "border border-[var(--accent-color)]",
             "font-mono",
             "outline-none resize-none",
@@ -199,7 +199,7 @@ function createMarkdownComponents(
         <h2
           id={id}
           className={cn(
-            "relative text-base font-semibold text-[var(--dark)]",
+            "relative text-base font-semibold text-[var(--text-primary)]",
             "mt-8 mb-3 pl-4",
             "before:absolute before:left-0 before:top-0 before:bottom-0",
             "before:w-[3px] before:bg-[var(--accent-color)] before:content-['']",
@@ -223,7 +223,7 @@ function createMarkdownComponents(
       return (
         <h3
           id={id}
-          className="text-sm font-semibold text-[var(--dark)] mt-5 mb-2"
+          className="text-sm font-semibold text-[var(--text-primary)] mt-5 mb-2"
           {...props}
         >
           {children}
@@ -233,7 +233,7 @@ function createMarkdownComponents(
 
     h4: ({ children, ...props }: React.ComponentProps<"h4">) => (
       <h4
-        className="text-sm font-semibold text-[var(--dark)] mt-4 mb-1"
+        className="text-sm font-semibold text-[var(--text-primary)] mt-4 mb-1"
         {...props}
       >
         {children}
@@ -262,7 +262,7 @@ function createMarkdownComponents(
           editable={editable}
         >
           <p
-            className="text-sm text-[var(--dark)] leading-relaxed mb-3 last:mb-0"
+            className="text-sm text-[var(--text-primary)] leading-relaxed mb-3 last:mb-0"
             {...props}
           >
             {children}
@@ -273,7 +273,7 @@ function createMarkdownComponents(
 
     ul: ({ children, ...props }: React.ComponentProps<"ul">) => (
       <ul
-        className="text-sm text-[var(--dark)] list-disc pl-5 mb-3 space-y-1"
+        className="text-sm text-[var(--text-primary)] list-disc pl-5 mb-3 space-y-1"
         {...props}
       >
         {children}
@@ -282,7 +282,7 @@ function createMarkdownComponents(
 
     ol: ({ children, ...props }: React.ComponentProps<"ol">) => (
       <ol
-        className="text-sm text-[var(--dark)] list-decimal pl-5 mb-3 space-y-1"
+        className="text-sm text-[var(--text-primary)] list-decimal pl-5 mb-3 space-y-1"
         {...props}
       >
         {children}
@@ -290,13 +290,13 @@ function createMarkdownComponents(
     ),
 
     li: ({ children, ...props }: React.ComponentProps<"li">) => (
-      <li className="text-sm text-[var(--dark)] leading-relaxed" {...props}>
+      <li className="text-sm text-[var(--text-primary)] leading-relaxed" {...props}>
         {children}
       </li>
     ),
 
     strong: ({ children, ...props }: React.ComponentProps<"strong">) => (
-      <strong className="font-semibold text-[var(--dark)]" {...props}>
+      <strong className="font-semibold text-[var(--text-primary)]" {...props}>
         {children}
       </strong>
     ),
@@ -424,7 +424,7 @@ function createMarkdownComponents(
 
     a: ({ children, ...props }: React.ComponentProps<"a">) => (
       <a
-        className="text-[var(--dark)] underline underline-offset-2 decoration-[var(--accent-color)] hover:bg-[var(--accent-light)] transition-colors duration-150"
+        className="text-[var(--text-primary)] underline underline-offset-2 decoration-[var(--accent-color)] hover:bg-[var(--accent-light)] transition-colors duration-150"
         target="_blank"
         rel="noopener noreferrer"
         {...props}

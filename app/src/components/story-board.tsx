@@ -65,7 +65,7 @@ function AddStoryForm({
   )
 
   const inputClass = cn(
-    "w-full px-3 py-1.5 text-sm text-[var(--dark)]",
+    "w-full px-3 py-1.5 text-sm text-[var(--text-primary)]",
     "bg-transparent border border-[var(--border)]",
     "placeholder:text-[var(--text-muted)]",
     "outline-none",
@@ -130,7 +130,7 @@ function AddStoryForm({
                 "px-3 py-1 text-xs font-medium border cursor-pointer",
                 "transition-all duration-150",
                 priority === p
-                  ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-[var(--dark)]"
+                  ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-[var(--text-primary)]"
                   : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent-color)]",
               )}
             >

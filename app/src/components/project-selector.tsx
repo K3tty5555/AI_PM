@@ -43,7 +43,7 @@ export function ProjectSelector({ toolKey, value, onChange, className }: Project
         onChange={handleChange}
         className={cn(
           "flex-1 h-8 px-2 text-sm bg-transparent border border-[var(--border)]",
-          "text-[var(--dark)] outline-none",
+          "text-[var(--text-primary)] outline-none",
           "focus:border-[var(--accent-color)] transition-colors duration-[var(--dur-base)]"
         )}
       >

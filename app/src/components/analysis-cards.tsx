@@ -93,7 +93,7 @@ function TypingCursor() {
 const markdownComponents = {
   h1: ({ children, ...props }: React.ComponentProps<"h1">) => (
     <h1
-      className="text-lg font-semibold text-[var(--dark)] mt-3 mb-2"
+      className="text-lg font-semibold text-[var(--text-primary)] mt-3 mb-2"
       {...props}
     >
       {children}
@@ -101,7 +101,7 @@ const markdownComponents = {
   ),
   h2: ({ children, ...props }: React.ComponentProps<"h2">) => (
     <h2
-      className="text-base font-semibold text-[var(--dark)] mt-3 mb-2"
+      className="text-base font-semibold text-[var(--text-primary)] mt-3 mb-2"
       {...props}
     >
       {children}
@@ -109,7 +109,7 @@ const markdownComponents = {
   ),
   h3: ({ children, ...props }: React.ComponentProps<"h3">) => (
     <h3
-      className="text-sm font-semibold text-[var(--dark)] mt-2 mb-1"
+      className="text-sm font-semibold text-[var(--text-primary)] mt-2 mb-1"
       {...props}
     >
       {children}
@@ -117,29 +117,29 @@ const markdownComponents = {
   ),
   p: ({ children, ...props }: React.ComponentProps<"p">) => (
     <p
-      className="text-sm text-[var(--dark)] leading-relaxed mb-2 last:mb-0"
+      className="text-sm text-[var(--text-primary)] leading-relaxed mb-2 last:mb-0"
       {...props}
     >
       {children}
     </p>
   ),
   ul: ({ children, ...props }: React.ComponentProps<"ul">) => (
-    <ul className="text-sm text-[var(--dark)] list-disc pl-5 mb-2 space-y-1" {...props}>
+    <ul className="text-sm text-[var(--text-primary)] list-disc pl-5 mb-2 space-y-1" {...props}>
       {children}
     </ul>
   ),
   ol: ({ children, ...props }: React.ComponentProps<"ol">) => (
-    <ol className="text-sm text-[var(--dark)] list-decimal pl-5 mb-2 space-y-1" {...props}>
+    <ol className="text-sm text-[var(--text-primary)] list-decimal pl-5 mb-2 space-y-1" {...props}>
       {children}
     </ol>
   ),
   li: ({ children, ...props }: React.ComponentProps<"li">) => (
-    <li className="text-sm text-[var(--dark)] leading-relaxed" {...props}>
+    <li className="text-sm text-[var(--text-primary)] leading-relaxed" {...props}>
       {children}
     </li>
   ),
   strong: ({ children, ...props }: React.ComponentProps<"strong">) => (
-    <strong className="font-semibold text-[var(--dark)]" {...props}>
+    <strong className="font-semibold text-[var(--text-primary)]" {...props}>
       {children}
     </strong>
   ),

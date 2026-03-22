@@ -611,7 +611,7 @@ export function PrdPage() {
               placeholder="输入修改指令，如「把权限配置这一段写详细些」"
               className={cn(
                 "flex-1 h-9 px-3",
-                "text-sm text-[var(--dark)]",
+                "text-sm text-[var(--text-primary)]",
                 "bg-transparent border border-[var(--border)]",
                 "placeholder:text-[var(--text-secondary)]",
                 "outline-none",
