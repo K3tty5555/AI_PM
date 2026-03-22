@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { BrainstormChat } from "@/components/brainstorm-chat"
-import { useBrainstorm } from "@/hooks/use-brainstorm"
+import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
 // ─── Props ─────────────────────────────────────────────────────────────────
@@ -25,7 +25,14 @@ export function PhaseShell({
   onBrainstormGenerate,
 }: PhaseShellProps) {
   const [mode, setMode] = useState<"normal" | "brainstorm">("normal")
-  const { messageCount } = useBrainstorm(projectId, phase)
+  const [messageCount, setMessageCount] = useState(0)
+
+  // Lightweight count query — no event listeners, no conflict with BrainstormChat's hook
+  const refreshCount = useCallback(() => {
+    api.brainstormMessageCount(projectId, phase).then(setMessageCount).catch(() => {})
+  }, [projectId, phase])
+
+  useEffect(() => { refreshCount() }, [refreshCount])
 
   // First-time onboarding hint
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -55,6 +62,7 @@ export function PhaseShell({
           mode={mode}
           onChange={(m) => {
             setMode(m)
+            if (m === "normal") refreshCount()
             if (showOnboarding) dismissOnboarding()
           }}
           messageCount={messageCount}
