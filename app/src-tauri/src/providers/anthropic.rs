@@ -16,6 +16,7 @@ impl AiProvider for AnthropicProvider {
         system_prompt: &str,
         messages: &[ChatMessage],
         app: &AppHandle,
+        stream_key: &str,
     ) -> Result<StreamResult, String> {
         let url = format!("{}/v1/messages", self.base_url.trim_end_matches('/'));
         let messages_json: Vec<serde_json::Value> = messages.iter().map(|m| {
@@ -77,7 +78,7 @@ impl AiProvider for AnthropicProvider {
                                 if event["type"] == "content_block_delta" {
                                     if let Some(text) = event["delta"]["text"].as_str() {
                                         full_text.push_str(text);
-                                        let _ = app.emit("stream_chunk", text);
+                                        let _ = app.emit("stream_chunk", serde_json::json!({ "streamKey": stream_key, "text": text }));
                                     }
                                 }
                             }

@@ -481,6 +481,8 @@ pub async fn start_stream(
     state: State<'_, AppState>,
     args: StartStreamArgs,
 ) -> Result<(), String> {
+    let stream_key = format!("generate:{}:{}", args.project_id, args.phase);
+
     let (project_name, output_dir, team_mode) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let result = db.query_row(
@@ -503,14 +505,14 @@ pub async fn start_stream(
     // Resolve bundled skills directory from app resources
     let skills_root = resolve_skills_root(&app)
         .map_err(|e| {
-            let _ = app.emit("stream_error", &e);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
             e
         })?;
 
     let config = read_config_internal(&state.config_dir)
         .ok_or_else(|| {
             let msg = "未配置 AI 后端 — 请前往「设置」页面完成配置后重试。".to_string();
-            let _ = app.emit("stream_error", &msg);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
             msg
         })?;
 
@@ -533,7 +535,7 @@ pub async fn start_stream(
         is_cli,
         args.design_spec.as_deref(),
     ).map_err(|e| {
-        let _ = app.emit("stream_error", &e);
+        let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
         e
     })?;
 
@@ -578,7 +580,7 @@ pub async fn start_stream(
     }
 
     // 调用 provider，处理结果
-    match provider.stream(&system_prompt, &args.messages, &app).await {
+    match provider.stream(&system_prompt, &args.messages, &app, &stream_key).await {
         Ok(result) => {
             let duration_ms = stream_start.elapsed().as_millis() as u64;
 
@@ -627,6 +629,7 @@ pub async fn start_stream(
             };
 
             let done_payload = serde_json::json!({
+                "streamKey": &stream_key,
                 "outputFile": effective_output,
                 "durationMs": duration_ms,
                 "inputTokens": result.input_tokens,
@@ -636,7 +639,7 @@ pub async fn start_stream(
             let _ = app.emit("stream_done", done_payload);
         }
         Err(e) => {
-            let _ = app.emit("stream_error", &e);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
         }
     }
 

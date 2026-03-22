@@ -35,17 +35,19 @@ pub async fn run_tool(
     state: State<'_, AppState>,
     args: RunToolArgs,
 ) -> Result<(), String> {
+    let stream_key = format!("tool:{}", args.tool_name);
+
     // C1: Reject unknown tool names before any path operations
     if !VALID_TOOLS.contains(&args.tool_name.as_str()) {
         let msg = format!("未知工具：{}", args.tool_name);
-        let _ = app.emit("stream_error", &msg);
+        let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
         return Err(msg);
     }
 
     // Load skill from bundled resources — I1: use shared load_skill (reads all sub-files)
     let skills_root = crate::commands::stream::resolve_skills_root(&app)
         .map_err(|e| {
-            let _ = app.emit("stream_error", &e);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
             e
         })?;
 
@@ -53,7 +55,7 @@ pub async fn run_tool(
     // I3: map_err emits stream_error before returning, satisfying Fix I3.
     let skill_content = crate::commands::stream::load_skill(&skills_root, &args.tool_name)
         .map_err(|e| {
-            let _ = app.emit("stream_error", &e);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
             e
         })?;
 
@@ -61,7 +63,7 @@ pub async fn run_tool(
     let config = read_config_internal(&state.config_dir)
         .ok_or_else(|| {
             let msg = "未配置 AI 后端 — 请前往「设置」页面完成配置后重试。".to_string();
-            let _ = app.emit("stream_error", &msg);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
             msg
         })?;
 
@@ -71,7 +73,7 @@ pub async fn run_tool(
         let canonical = std::fs::canonicalize(fpath)
             .map_err(|e| {
                 let msg = format!("无法解析文件路径 {}: {}", fpath, e);
-                let _ = app.emit("stream_error", &msg);
+                let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
                 msg
             })?;
 
@@ -80,7 +82,7 @@ pub async fn run_tool(
 
         if !canonical.starts_with(&projects_canonical) {
             let msg = format!("文件路径超出允许范围：{}", fpath);
-            let _ = app.emit("stream_error", &msg);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
             return Err(msg);
         }
 
@@ -93,7 +95,7 @@ pub async fn run_tool(
             match config.backend {
                 Backend::Api => {
                     let msg = "Excel 文件不支持 API 模式，请切换到「Claude CLI」后端，或将文件另存为 CSV 格式后重试。".to_string();
-                    let _ = app.emit("stream_error", &msg);
+                    let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
                     return Err(msg);
                 }
                 Backend::ClaudeCli => {
@@ -109,7 +111,7 @@ pub async fn run_tool(
                 Ok(content) => format!("{}\n\n---\n\n附件内容（{}）：\n\n{}", args.user_input, fpath, content),
                 Err(e) => {
                     let msg = format!("无法读取文件 {}: {}", fpath, e);
-                    let _ = app.emit("stream_error", &msg);
+                    let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
                     return Err(msg);
                 }
             }
@@ -174,7 +176,7 @@ pub async fn run_tool(
         content: user_input_full,
     }];
 
-    match provider.stream(&system_prompt, &messages, &app).await {
+    match provider.stream(&system_prompt, &messages, &app, &stream_key).await {
         Ok(result) => {
             let duration_ms = stream_start.elapsed().as_millis() as u64;
 
@@ -206,6 +208,7 @@ pub async fn run_tool(
             }
 
             let done_payload = serde_json::json!({
+                "streamKey": &stream_key,
                 "outputFile": out_path.to_string_lossy(),
                 "durationMs": duration_ms,
                 "inputTokens": result.input_tokens,
@@ -215,7 +218,7 @@ pub async fn run_tool(
             let _ = app.emit("stream_done", done_payload);
         }
         Err(e) => {
-            let _ = app.emit("stream_error", &e);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
         }
     }
 
