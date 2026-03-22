@@ -194,8 +194,8 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
       Promise.all([
         listen<StreamChunkPayload>("stream_chunk", (event) => {
           const { streamKey, text } = event.payload
-          const parts = streamKey.split(":")
-          const evtKey = parts.slice(1).join(":")
+          if (!streamKey.startsWith("generate:")) return  // ignore brainstorm/tool events
+          const evtKey = streamKey.slice("generate:".length)
           const target = bgStore.get(evtKey)
           if (!target) return
           target.text += text
@@ -203,8 +203,8 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
         }),
         listen<StreamDonePayload>("stream_done", (event) => {
           const { streamKey, outputFile: file, durationMs, inputTokens, outputTokens, finalText } = event.payload
-          const parts = streamKey.split(":")
-          const evtKey = parts.slice(1).join(":")
+          if (!streamKey.startsWith("generate:")) return  // ignore brainstorm/tool events
+          const evtKey = streamKey.slice("generate:".length)
           const target = bgStore.get(evtKey)
           if (!target) return
 
@@ -250,8 +250,8 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
         }),
         listen<StreamErrorPayload>("stream_error", (event) => {
           const { streamKey, message } = event.payload
-          const parts = streamKey.split(":")
-          const evtKey = parts.slice(1).join(":")
+          if (!streamKey.startsWith("generate:")) return
+          const evtKey = streamKey.slice("generate:".length)
           const target = bgStore.get(evtKey)
           if (!target) return
           target.error = message
