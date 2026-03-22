@@ -105,7 +105,7 @@ function FileUpload({
         <span
           className={cn(
             "text-[12px] font-medium",
-            isDragOver ? "text-[var(--dark)]" : "text-[var(--text-muted)]"
+            isDragOver ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"
           )}
         >
           {isDragOver ? "松手放置" : "拖拽或点击上传"}
@@ -146,7 +146,7 @@ function FileUpload({
                 >
                   文件
                 </span>
-                <span className="truncate text-sm text-[var(--dark)]">
+                <span className="truncate text-sm text-[var(--text-primary)]">
                   {file.name}
                 </span>
                 <span

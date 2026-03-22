@@ -121,7 +121,7 @@ function AcceptanceList({
               value={item}
               onChange={(e) => handleItemChange(index, e.target.value)}
               className={cn(
-                "flex-1 text-sm text-[var(--dark)] bg-transparent",
+                "flex-1 text-sm text-[var(--text-primary)] bg-transparent",
                 "border-b border-transparent",
                 "focus:border-[var(--accent-color)] outline-none",
                 "transition-[border-color] duration-150",
@@ -152,7 +152,7 @@ function AcceptanceList({
           onKeyDown={handleKeyDown}
           placeholder="添加验收标准..."
           className={cn(
-            "flex-1 text-sm text-[var(--dark)] bg-transparent",
+            "flex-1 text-sm text-[var(--text-primary)] bg-transparent",
             "border-b border-transparent",
             "placeholder:text-[var(--text-muted)]",
             "focus:border-[var(--accent-color)] outline-none",
@@ -218,13 +218,13 @@ function StoryCard({
               onClick={onToggle}
               className="flex-1 text-left cursor-pointer group/title"
             >
-              <p className="text-sm text-[var(--dark)] leading-relaxed">
+              <p className="text-sm text-[var(--text-primary)] leading-relaxed">
                 <span className="font-medium">作为</span>
-                <span className="text-[var(--dark)] font-semibold">{story.role}</span>
+                <span className="text-[var(--text-primary)] font-semibold">{story.role}</span>
                 <span className="font-medium">，我想要</span>
-                <span className="text-[var(--dark)] font-semibold">{story.want}</span>
+                <span className="text-[var(--text-primary)] font-semibold">{story.want}</span>
                 <span className="font-medium">，以便</span>
-                <span className="text-[var(--dark)] font-semibold">{story.benefit}</span>
+                <span className="text-[var(--text-primary)] font-semibold">{story.benefit}</span>
               </p>
             </button>
 
@@ -257,7 +257,7 @@ function StoryCard({
               onClick={onToggle}
               className={cn(
                 "mt-1 text-xs text-[var(--text-muted)]",
-                "hover:text-[var(--dark)] transition-colors duration-150",
+                "hover:text-[var(--text-primary)] transition-colors duration-150",
                 "cursor-pointer",
               )}
             >

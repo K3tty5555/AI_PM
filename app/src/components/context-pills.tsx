@@ -95,7 +95,7 @@ export function ContextPills({ projectId, onExcludeChange, className }: ContextP
                 <p className="text-[11px] font-medium text-[var(--text-tertiary)] mb-1">
                   {file.name}
                 </p>
-                <p className="text-xs text-[var(--dark)] leading-relaxed line-clamp-4">
+                <p className="text-xs text-[var(--text-primary)] leading-relaxed line-clamp-4">
                   {file.preview}
                 </p>
               </div>
