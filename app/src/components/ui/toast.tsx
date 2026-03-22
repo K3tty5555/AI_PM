@@ -79,6 +79,7 @@ function ToastItemComponent({
       {/* Close */}
       <button
         onClick={() => onDismiss(item.id)}
+        aria-label="关闭"
         className={cn(
           "mr-3 shrink-0 rounded p-1",
           "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",

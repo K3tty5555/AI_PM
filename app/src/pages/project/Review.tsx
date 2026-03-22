@@ -569,9 +569,9 @@ export function ReviewPage() {
 
       {/* Quick-record knowledge modal */}
       {showKnowledgeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="dialog-title-review-knowledge">
           <div className="w-[480px] bg-[var(--background)] rounded-xl border border-[var(--border)] shadow-[var(--shadow-xl)] p-5 flex flex-col gap-4">
-            <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">
+            <h3 id="dialog-title-review-knowledge" className="text-[15px] font-semibold text-[var(--text-primary)]">
               记录项目经验
             </h3>
 

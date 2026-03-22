@@ -552,7 +552,7 @@ export function PrdPage() {
             >
               在 {FILE_MANAGER_LABEL} 中显示
             </button>
-            <button onClick={() => setExportResult(null)} className="shrink-0 text-[12px] text-[var(--text-tertiary)] hover:opacity-70">×</button>
+            <button onClick={() => setExportResult(null)} className="shrink-0 text-[12px] text-[var(--text-tertiary)] hover:opacity-70" aria-label="关闭">×</button>
           </div>
         )
       )}
