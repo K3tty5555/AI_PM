@@ -13,6 +13,7 @@ import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { KnowledgeRecommendPanel } from "@/components/knowledge-recommend-panel"
+import { KnowledgeRecordModal } from "@/components/knowledge-record-modal"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -83,11 +84,6 @@ export function ReviewPage() {
 
   // Quick-record knowledge modal state
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false)
-  const [kTitle, setKTitle] = useState("")
-  const [kContent, setKContent] = useState("")
-  const [kCategory, setKCategory] = useState("pitfalls")
-  const [kSaving, setKSaving] = useState(false)
-  const [kError, setKError] = useState("")
 
   const startedRef = useRef(false)
 
@@ -216,38 +212,13 @@ export function ReviewPage() {
     navigate(`/project/${projectId}/prototype`)
   }, [navigate, projectId])
 
-  const handleOpenKnowledgeModal = useCallback(() => {
-    const name = projectName ?? "本项目"
-    setKTitle(`${name} 评审经验`)
-    const issues = REVIEW_ROLES.flatMap(role => {
-      const content = sections?.[role.key] ?? ""
-      return content
-        .split("\n")
-        .filter(l => l.includes("Critical") || l.includes("Major"))
-        .slice(0, 2)
-    }).join("\n")
-    setKContent(
-      issues
-        ? `## 主要问题\n\n${issues}\n\n## 经验教训\n\n`
-        : "## 主要问题\n\n## 改进建议\n\n## 经验教训\n\n"
-    )
-    setKError("")
-    setShowKnowledgeModal(true)
-  }, [projectName, sections])
-
-  const handleSaveKnowledge = useCallback(async () => {
-    if (!kTitle.trim()) return
-    setKSaving(true)
-    setKError("")
-    try {
-      await api.addKnowledge({ category: kCategory, title: kTitle, content: kContent })
-      setShowKnowledgeModal(false)
-    } catch (err) {
-      setKError(String(err))
-    } finally {
-      setKSaving(false)
-    }
-  }, [kTitle, kContent, kCategory])
+  // Extract Critical/Major issues from review sections for knowledge modal pre-fill
+  const knowledgeInitialContent = sections
+    ? REVIEW_ROLES.flatMap(role => {
+        const c = sections[role.key] ?? ""
+        return c.split("\n").filter(l => l.includes("Critical") || l.includes("Major")).slice(0, 2)
+      }).join("\n") || undefined
+    : undefined
 
   /** Complete the project — this is the final phase */
   const handleComplete = useCallback(async () => {
@@ -523,7 +494,7 @@ export function ReviewPage() {
             建议将本次项目经验存入知识库，方便下次参考。
           </p>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={handleOpenKnowledgeModal}>
+            <Button variant="ghost" size="sm" onClick={() => setShowKnowledgeModal(true)}>
               记录经验
             </Button>
             <Button
@@ -572,72 +543,12 @@ export function ReviewPage() {
       )}
 
       {/* Quick-record knowledge modal */}
-      {showKnowledgeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="dialog-title-review-knowledge">
-          <div className="w-[480px] bg-[var(--background)] rounded-xl border border-[var(--border)] shadow-[var(--shadow-xl)] p-5 flex flex-col gap-4">
-            <h3 id="dialog-title-review-knowledge" className="text-[15px] font-semibold text-[var(--text-primary)]">
-              记录项目经验
-            </h3>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-[var(--text-secondary)]">标题</label>
-              <input
-                value={kTitle}
-                onChange={e => setKTitle(e.target.value)}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-[var(--accent-color)]"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-[var(--text-secondary)]">分类</label>
-              <select
-                value={kCategory}
-                onChange={e => setKCategory(e.target.value)}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-2 text-sm"
-              >
-                <option value="pitfalls">踩坑经验</option>
-                <option value="patterns">最佳模式</option>
-                <option value="decisions">决策记录</option>
-                <option value="insights">产品洞察</option>
-                <option value="playbooks">打法手册</option>
-                <option value="metrics">指标设计</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-[var(--text-secondary)]">内容（Markdown）</label>
-              <textarea
-                value={kContent}
-                onChange={e => setKContent(e.target.value)}
-                rows={8}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-2 text-sm resize-none outline-none focus:ring-1 focus:ring-[var(--accent-color)]"
-              />
-            </div>
-
-            {kError && (
-              <p className="text-xs text-[var(--destructive)]">{kError}</p>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowKnowledgeModal(false)}
-                disabled={kSaving}
-              >
-                取消
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSaveKnowledge}
-                disabled={kSaving || !kTitle.trim()}
-              >
-                {kSaving ? "保存中..." : "保存"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <KnowledgeRecordModal
+        open={showKnowledgeModal}
+        onClose={() => setShowKnowledgeModal(false)}
+        projectName={projectName}
+        initialContent={knowledgeInitialContent}
+      />
     </div>
   )
 }
