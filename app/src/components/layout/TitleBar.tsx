@@ -94,6 +94,7 @@ export function TitleBar({ sidebarOpen, onToggleSidebar }: TitleBarProps) {
         <button
           onClick={onToggleSidebar}
           title={sidebarOpen ? "收起侧边栏" : "展开侧边栏"}
+          aria-label={sidebarOpen ? "收起侧边栏" : "展开侧边栏"}
           className={cn(
             "flex items-center justify-center size-6 rounded-md transition-colors duration-150",
             "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)]"

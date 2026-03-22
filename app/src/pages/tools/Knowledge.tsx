@@ -253,7 +253,7 @@ export function ToolKnowledgePage() {
 
       {/* Knowledge detail drawer */}
       {drawerEntry && (
-        <div className="fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-labelledby="dialog-title-knowledge-drawer">
           {/* Backdrop */}
           <div
             className="flex-1 bg-black/20 backdrop-blur-[2px]"
@@ -263,7 +263,7 @@ export function ToolKnowledgePage() {
           <div className="w-[480px] max-w-[90vw] bg-[var(--background)] border-l border-[var(--border)] flex flex-col shadow-[var(--shadow-xl)] animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
               <div className="min-w-0 flex-1">
-                <h2 className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
+                <h2 id="dialog-title-knowledge-drawer" className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
                   {drawerEntry.title}
                 </h2>
                 <span className="text-[12px] text-[var(--text-tertiary)]">
@@ -272,6 +272,7 @@ export function ToolKnowledgePage() {
               </div>
               <button
                 onClick={() => setDrawerEntry(null)}
+                aria-label="关闭"
                 className="ml-3 shrink-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
               >
                 <X className="size-4" />

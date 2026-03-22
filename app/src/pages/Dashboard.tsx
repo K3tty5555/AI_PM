@@ -274,9 +274,9 @@ export function DashboardPage() {
           onCancel={() => setConfirmId(null)}
         />
         {showOnboarding && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" role="dialog" aria-modal="true" aria-labelledby="dialog-title-onboarding-1">
             <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-[var(--shadow-xl)] w-96">
-              <p className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
+              <p id="dialog-title-onboarding-1" className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
               <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
                 使用 AI 功能前，需要先配置 Claude API Key。
                 前往设置页填写后，即可开始使用完整功能。
@@ -553,9 +553,9 @@ export function DashboardPage() {
         onCancel={() => setConfirmId(null)}
       />
       {showOnboarding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" role="dialog" aria-modal="true" aria-labelledby="dialog-title-onboarding-2">
           <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-[var(--shadow-xl)] w-96">
-            <p className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
+            <p id="dialog-title-onboarding-2" className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
             <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
               使用 AI 功能前，需要先配置 Claude API Key。
               前往设置页填写后，即可开始使用完整功能。
