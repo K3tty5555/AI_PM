@@ -6,6 +6,7 @@ import { AnalysisCards } from "@/components/analysis-cards"
 import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
+import { PhaseShell } from "@/components/phase-shell"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { api } from "@/lib/tauri-api"
@@ -312,23 +313,31 @@ export function AnalysisPage() {
   // Empty state — no file, no autostart, not currently streaming
   if (!loading && !existingContent && !text && !isStreaming && !error) {
     return (
-      <div className="layout-focus page-enter">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求分析</h1>
+      <PhaseShell
+        projectId={projectId}
+        phase="analysis"
+        phaseLabel="需求分析"
+        brainstormEnabled={true}
+        onBrainstormGenerate={handleGenerate}
+      >
+        <div className="layout-focus page-enter">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求分析</h1>
+          </div>
+          <div className="h-px bg-[var(--border)]" />
+          <ContextPills
+            projectId={projectId!}
+            onExcludeChange={setExcludedContext}
+            className="border-b border-[var(--border)]"
+          />
+          <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
+          <PhaseEmptyState
+            phaseLabel="ANALYSIS"
+            description="需求分析报告"
+            onGenerate={handleGenerate}
+          />
         </div>
-        <div className="h-px bg-[var(--border)]" />
-        <ContextPills
-          projectId={projectId!}
-          onExcludeChange={setExcludedContext}
-          className="border-b border-[var(--border)]"
-        />
-        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
-        <PhaseEmptyState
-          phaseLabel="ANALYSIS"
-          description="需求分析报告"
-          onGenerate={handleGenerate}
-        />
-      </div>
+      </PhaseShell>
     )
   }
 
@@ -340,164 +349,172 @@ export function AnalysisPage() {
   const canAdvance = hasContent && !isStreaming && !advancing
 
   return (
-    <div className="layout-focus page-enter">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求分析</h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRestart}
-          disabled={isStreaming}
-        >
-          &#x21bb; 重新分析
-        </Button>
-      </div>
-
-      <div className="h-px bg-[var(--border)]" />
-
-      <ContextPills
-        projectId={projectId!}
-        onExcludeChange={setExcludedContext}
-        className="border-b border-[var(--border)]"
-      />
-      <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
-
-      {/* Streaming progress */}
-      {isStreaming && (
-        <div className="mt-4">
-          <ProgressBar value={progressValue} animated />
-          {(() => {
-            const status = !isThinking ? extractStreamStatus(text) : ""
-            return isThinking
-              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>
-              : status
-                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
-                : null
-          })()}
-          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
-            {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
-          </p>
+    <PhaseShell
+      projectId={projectId}
+      phase="analysis"
+      phaseLabel="需求分析"
+      brainstormEnabled={true}
+      onBrainstormGenerate={handleGenerate}
+    >
+      <div className="layout-focus page-enter">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求分析</h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRestart}
+            disabled={isStreaming}
+          >
+            &#x21bb; 重新分析
+          </Button>
         </div>
-      )}
 
-      {/* Error display */}
-      {error && (
-        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
-          <p className="text-sm text-[var(--destructive)]">
-            {error}
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRestart}
-            >
-              重试
-            </Button>
-            {error.includes("API") && error.includes("配置") && (
+        <div className="h-px bg-[var(--border)]" />
+
+        <ContextPills
+          projectId={projectId!}
+          onExcludeChange={setExcludedContext}
+          className="border-b border-[var(--border)]"
+        />
+        <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
+
+        {/* Streaming progress */}
+        {isStreaming && (
+          <div className="mt-4">
+            <ProgressBar value={progressValue} animated />
+            {(() => {
+              const status = !isThinking ? extractStreamStatus(text) : ""
+              return isThinking
+                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>
+                : status
+                  ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
+                  : null
+            })()}
+            <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
+              {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
+            </p>
+          </div>
+        )}
+
+        {/* Error display */}
+        {error && (
+          <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
+            <p className="text-sm text-[var(--destructive)]">
+              {error}
+            </p>
+            <div className="mt-2 flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/settings")}
+                onClick={handleRestart}
               >
-                前往设置
+                重试
               </Button>
-            )}
+              {error.includes("API") && error.includes("配置") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/settings")}
+                >
+                  前往设置
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Analysis cards */}
-      <div className="mt-6">
-        <AnalysisCards
-          markdown={displayContent || ""}
-          isStreaming={isStreaming}
-        />
-
-        {/* Stream metadata bar — shown after streaming completes */}
-        {!isStreaming && streamMeta && (
-          <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
-            {streamMeta.inputTokens != null && streamMeta.outputTokens != null
-              ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
-              : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
-          </p>
         )}
-      </div>
 
-      {/* Chat history (collapsed previous rounds) */}
-      {chatHistory.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {chatHistory.map((round, i) => (
-            <InlineChat
-              key={`chat-${i}`}
-              question={round.question}
-              isCollapsed
-              collapsedSummary={`已回答：${round.answer}`}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Active AI question (follow-up) */}
-      {!isStreaming && hasContent && questionInfo.hasQuestion && (
+        {/* Analysis cards */}
         <div className="mt-6">
-          <InlineChat
-            question={questionInfo.question}
-            options={
-              questionInfo.options.length > 0
-                ? questionInfo.options
-                : undefined
-            }
-            onAnswer={handleAnswer}
+          <AnalysisCards
+            markdown={displayContent || ""}
+            isStreaming={isStreaming}
           />
-        </div>
-      )}
 
-      {/* Supplementary input — always show after analysis is complete if no question detected */}
-      {!isStreaming && hasContent && !questionInfo.hasQuestion && (
-        <div className="mt-6">
-          <InlineChat
-            question="分析已完成。如果需要补充信息或调整方向，可以在这里告诉我。"
-            onAnswer={handleAnswer}
-          />
-        </div>
-      )}
-
-      {/* Bottom action bar */}
-      <div
-        className={cn(
-          "mt-8 flex items-center justify-between",
-          "border-t border-[var(--border)] pt-6",
-        )}
-      >
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          disabled={isStreaming || advancing}
-        >
-          {PHASE_META.analysis.backLabel}
-        </Button>
-
-        <div className="flex flex-col items-end gap-1">
-          <Button
-            variant="primary"
-            onClick={handleAdvance}
-            disabled={!canAdvance}
-          >
-            {saving
-              ? "保存中..."
-              : advancing
-                ? "推进中..."
-                : PHASE_META.analysis.nextLabel + " →"}
-          </Button>
-          {!advancing && !saving && (
-            <p className="text-[11px] text-[var(--text-tertiary)]">
-              {PHASE_META.analysis.nextDescription}
+          {/* Stream metadata bar — shown after streaming completes */}
+          {!isStreaming && streamMeta && (
+            <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
+              {streamMeta.inputTokens != null && streamMeta.outputTokens != null
+                ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
+                : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
             </p>
           )}
         </div>
+
+        {/* Chat history (collapsed previous rounds) */}
+        {chatHistory.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {chatHistory.map((round, i) => (
+              <InlineChat
+                key={`chat-${i}`}
+                question={round.question}
+                isCollapsed
+                collapsedSummary={`已回答：${round.answer}`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Active AI question (follow-up) */}
+        {!isStreaming && hasContent && questionInfo.hasQuestion && (
+          <div className="mt-6">
+            <InlineChat
+              question={questionInfo.question}
+              options={
+                questionInfo.options.length > 0
+                  ? questionInfo.options
+                  : undefined
+              }
+              onAnswer={handleAnswer}
+            />
+          </div>
+        )}
+
+        {/* Supplementary input — always show after analysis is complete if no question detected */}
+        {!isStreaming && hasContent && !questionInfo.hasQuestion && (
+          <div className="mt-6">
+            <InlineChat
+              question="分析已完成。如果需要补充信息或调整方向，可以在这里告诉我。"
+              onAnswer={handleAnswer}
+            />
+          </div>
+        )}
+
+        {/* Bottom action bar */}
+        <div
+          className={cn(
+            "mt-8 flex items-center justify-between",
+            "border-t border-[var(--border)] pt-6",
+          )}
+        >
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            disabled={isStreaming || advancing}
+          >
+            {PHASE_META.analysis.backLabel}
+          </Button>
+
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="primary"
+              onClick={handleAdvance}
+              disabled={!canAdvance}
+            >
+              {saving
+                ? "保存中..."
+                : advancing
+                  ? "推进中..."
+                  : PHASE_META.analysis.nextLabel + " →"}
+            </Button>
+            {!advancing && !saving && (
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                {PHASE_META.analysis.nextDescription}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </PhaseShell>
   )
 }
