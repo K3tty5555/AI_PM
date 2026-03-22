@@ -34,6 +34,7 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
           <button
             type="button"
             onClick={onToggleSidebar}
+            aria-label="切换侧边栏"
             style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
             className="flex size-8 items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-all duration-[var(--dur-base)] active:scale-[0.97] active:duration-[var(--dur-fast)]"
           >
@@ -49,6 +50,7 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
           <button
             type="button"
             onClick={() => navigate("/")}
+            aria-label="首页"
             style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
             className={cn(
               "flex size-8 items-center justify-center rounded-lg transition-all duration-[var(--dur-base)] active:scale-[0.97] active:duration-[var(--dur-fast)]",
@@ -68,6 +70,7 @@ export function ActivityBar({ sidebarOpen, onToggleSidebar }: ActivityBarProps) 
           <button
             type="button"
             onClick={() => navigate("/settings")}
+            aria-label="设置"
             style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
             className={cn(
               "flex size-8 items-center justify-center rounded-lg transition-all duration-[var(--dur-base)] active:scale-[0.97] active:duration-[var(--dur-fast)]",
