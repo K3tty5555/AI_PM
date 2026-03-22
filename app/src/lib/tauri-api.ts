@@ -59,6 +59,16 @@ export interface KnowledgeCandidate {
   source: string
 }
 
+export interface BrainstormMessage {
+  id: string
+  projectId: string
+  phase: string
+  role: string
+  content: string
+  createdAt: string
+  seq: number
+}
+
 export interface ContextFile {
   name: string
   preview: string
@@ -140,6 +150,16 @@ export interface DepStatus {
 // ─── API functions ─────────────────────────────────────────────────────────
 
 export const api = {
+  // Brainstorm
+  loadBrainstormMessages: (projectId: string, phase: string) =>
+    invoke<BrainstormMessage[]>("load_brainstorm_messages", { projectId, phase }),
+  saveBrainstormMessage: (args: { projectId: string; phase: string; role: string; content: string }) =>
+    invoke<BrainstormMessage>("save_brainstorm_message", { args }),
+  clearBrainstorm: (projectId: string, phase: string) =>
+    invoke<void>("clear_brainstorm", { projectId, phase }),
+  brainstormMessageCount: (projectId: string, phase: string) =>
+    invoke<number>("brainstorm_message_count", { projectId, phase }),
+
   // Projects
   listProjects: () => invoke<ProjectSummary[]>("list_projects"),
   createProject: (name: string, teamMode?: boolean) =>
