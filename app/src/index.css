@@ -137,7 +137,6 @@
   --active-bg: rgba(0, 0, 0, 0.07);
 
   /* --- Compat aliases --- */
-  --green: #16A34A;
   --dark: #0F172A;
   --text-muted: #64748B;
 
@@ -240,7 +239,6 @@ html.theme-dark {
   --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.45);
 
   /* Compat aliases */
-  --green: #4ADE80;
   --dark: oklch(94% 0.005 250);
   --text-muted: oklch(62% 0.01 250);
 }
