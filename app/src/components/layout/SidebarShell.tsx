@@ -4,6 +4,7 @@ import { Sidebar, type SidebarProject, type SidebarPhase } from "./Sidebar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { useFavorites } from "@/hooks/use-favorites"
 import { api } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { PHASE_ORDER, PHASE_LABELS } from "@/lib/phase-meta"
 
 function SidebarShell({
@@ -19,6 +20,7 @@ function SidebarShell({
   resolvedTheme: "light" | "dark"
   onCycleTheme: () => void
 }) {
+  const { toast } = useToast()
   const [projects, setProjects] = useState<SidebarProject[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [projectName, setProjectName] = useState<string | undefined>()
@@ -137,6 +139,7 @@ function SidebarShell({
       setProjects(updated)
     } catch (err) {
       console.error("Failed to update project status:", err)
+      toast("更新项目状态失败", "error")
     }
   }, [activeProjectId])
 

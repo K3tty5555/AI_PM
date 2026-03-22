@@ -9,6 +9,7 @@ import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { api } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -101,6 +102,7 @@ const ANALYSIS_FILE = "02-analysis-report.md"
 export function AnalysisPage() {
   const params = useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
   const projectId = params?.id as string
 
   // Page state
@@ -289,10 +291,11 @@ export function AnalysisPage() {
       navigate(`/project/${projectId}/research?autostart=1${isYolo ? "&yolo=1" : ""}${isTeam ? "&team=1" : ""}`)
     } catch (err) {
       console.error("Failed to advance:", err)
+      toast("保存或推进阶段失败", "error")
       setAdvancing(false)
       setSaving(false)
     }
-  }, [projectId, existingContent, text, navigate, isYolo, isTeam])
+  }, [projectId, existingContent, text, navigate, isYolo, isTeam, toast])
 
   // -------------------------------------------------------------------------
   // Loading state

@@ -5,6 +5,7 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -62,6 +63,7 @@ export function ReviewPage() {
   const params = useParams()
   const navigate = useNavigate()
   const projectId = params?.id as string
+  const { toast } = useToast()
 
   const [loading, setLoading] = useState(true)
   const [existingContent, setExistingContent] = useState<string | null>(null)
@@ -206,6 +208,7 @@ export function ReviewPage() {
       setCompleted(true)
     } catch (err) {
       console.error("Failed to skip:", err)
+      toast("跳过阶段失败，请重试", "error")
     }
   }, [projectId])
 
@@ -267,6 +270,7 @@ export function ReviewPage() {
       setCompleted(true)
     } catch (err) {
       console.error("Failed to complete:", err)
+      toast("完成评审失败，请重试", "error")
       setAdvancing(false)
       setSaving(false)
     }
