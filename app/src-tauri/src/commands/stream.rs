@@ -125,7 +125,7 @@ pub fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String>
     Ok(sections.join("\n"))
 }
 
-fn load_knowledge(templates_base: &Path) -> String {
+pub fn load_knowledge(templates_base: &Path) -> String {
     let kb_dir = templates_base.join("knowledge-base");
     if !kb_dir.exists() {
         return String::new();

@@ -159,6 +159,8 @@ export const api = {
     invoke<void>("clear_brainstorm", { projectId, phase }),
   brainstormMessageCount: (projectId: string, phase: string) =>
     invoke<number>("brainstorm_message_count", { projectId, phase }),
+  brainstormChat: (args: { projectId: string; phase: string; messages: Array<{ role: string; content: string }> }) =>
+    invoke<void>("brainstorm_chat", { args }),
 
   // Projects
   listProjects: () => invoke<ProjectSummary[]>("list_projects"),
