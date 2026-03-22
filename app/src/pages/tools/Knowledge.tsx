@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { api, type KnowledgeEntry } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { X, Loader2 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
@@ -16,6 +17,7 @@ const CATEGORIES = [
 ]
 
 export function ToolKnowledgePage() {
+  const { toast } = useToast()
   const [entries, setEntries] = useState<KnowledgeEntry[]>([])
   const [activeCategory, setActiveCategory] = useState("pitfalls")
   const [showAdd, setShowAdd] = useState(false)
@@ -35,6 +37,7 @@ export function ToolKnowledgePage() {
       setEntries(data)
     } catch (err) {
       console.error(err)
+      toast("知识库加载失败", "error")
     } finally {
       setLoading(false)
     }
@@ -49,7 +52,7 @@ export function ToolKnowledgePage() {
       return
     }
     const timer = setTimeout(() => {
-      api.searchKnowledge(searchQuery).then(setSearchResults).catch((err) => console.error("[Knowledge]", err))
+      api.searchKnowledge(searchQuery).then(setSearchResults).catch((err) => { console.error("[Knowledge]", err); toast("搜索失败", "error") })
     }, 300)
     return () => clearTimeout(timer)
   }, [searchQuery])
@@ -67,6 +70,7 @@ export function ToolKnowledgePage() {
       await loadEntries()
     } catch (err) {
       console.error(err)
+      toast("添加知识条目失败", "error")
     } finally {
       setSaving(false)
     }
@@ -78,6 +82,7 @@ export function ToolKnowledgePage() {
       await loadEntries()
     } catch (err) {
       console.error("Failed to delete entry:", err)
+      toast("删除条目失败", "error")
     }
   }, [loadEntries])
 

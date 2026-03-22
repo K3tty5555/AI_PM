@@ -6,6 +6,7 @@ import { PrdViewer } from "@/components/prd-viewer"
 import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api, type PrdStyleEntry } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn, extractStreamStatus, FILE_MANAGER_LABEL } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -45,6 +46,7 @@ export function PrdPage() {
   const params = useParams()
   const navigate = useNavigate()
   const projectId = params?.id as string
+  const { toast } = useToast()
 
   // Page state
   const [loading, setLoading] = useState(true)
@@ -328,6 +330,7 @@ export function PrdPage() {
       navigate(`/project/${projectId}/analytics?autostart=1`)
     } catch (err) {
       console.error("Failed to complete PRD:", err)
+      toast("完成 PRD 失败，请重试", "error")
       setAdvancing(false)
       setSaving(false)
     }

@@ -8,6 +8,7 @@ import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { KnowledgeExtractDialog } from "@/components/knowledge-extract-dialog"
 import { api } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -26,6 +27,7 @@ export function RetrospectivePage() {
   const params = useParams()
   const navigate = useNavigate()
   const projectId = params?.id as string
+  const { toast } = useToast()
 
   const [loading, setLoading] = useState(true)
   const [existingContent, setExistingContent] = useState<string | null>(null)
@@ -129,6 +131,7 @@ export function RetrospectivePage() {
       setShowExtractDialog(true)
     } catch (err) {
       console.error("Failed to complete:", err)
+      toast("完成复盘失败，请重试", "error")
       setAdvancing(false)
       setSaving(false)
     }

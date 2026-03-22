@@ -8,6 +8,7 @@ import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { api } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -26,6 +27,7 @@ export function AnalyticsPage() {
   const params = useParams()
   const navigate = useNavigate()
   const projectId = params?.id as string
+  const { toast } = useToast()
 
   const [loading, setLoading] = useState(true)
   const [existingContent, setExistingContent] = useState<string | null>(null)
@@ -108,6 +110,7 @@ export function AnalyticsPage() {
       navigate(`/project/${projectId}/prototype?autostart=1`)
     } catch (err) {
       console.error("Failed to skip:", err)
+      toast("跳过阶段失败，请重试", "error")
     }
   }, [projectId, navigate])
 
@@ -135,6 +138,7 @@ export function AnalyticsPage() {
       navigate(`/project/${projectId}/prototype?autostart=1`)
     } catch (err) {
       console.error("Failed to advance:", err)
+      toast("保存或推进阶段失败，请重试", "error")
       setAdvancing(false)
       setSaving(false)
     }
