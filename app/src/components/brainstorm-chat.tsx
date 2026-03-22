@@ -45,6 +45,8 @@ export function BrainstormChat({ projectId, phase, phaseLabel, onGenerate }: Bra
     streamingText,
     sendMessage,
     clearMessages,
+    roundCount,
+    isMaxRounds,
   } = useBrainstorm(projectId, phase)
 
   const [input, setInput] = useState("")
@@ -103,6 +105,17 @@ export function BrainstormChat({ projectId, phase, phaseLabel, onGenerate }: Bra
     [sendMessage]
   )
 
+  const handleClear = useCallback(() => {
+    if (window.confirm("确定要清空所有对话记录吗？")) {
+      clearMessages()
+    }
+  }, [clearMessages])
+
+  const handleContinue = useCallback(() => {
+    textareaRef.current?.focus()
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [])
+
   // ── Auto-resize textarea ──────────────────────────────────────────────
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -134,7 +147,7 @@ export function BrainstormChat({ projectId, phase, phaseLabel, onGenerate }: Bra
       {hasMessages && !streaming && (
         <div className="flex justify-end px-2 py-1">
           <button
-            onClick={clearMessages}
+            onClick={handleClear}
             className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--destructive)] transition-colors"
           >
             清空对话
@@ -185,6 +198,7 @@ export function BrainstormChat({ projectId, phase, phaseLabel, onGenerate }: Bra
                 role={msg.role}
                 content={msg.content}
                 onGenerate={onGenerate}
+                onContinue={handleContinue}
               />
             ))}
 
@@ -218,55 +232,82 @@ export function BrainstormChat({ projectId, phase, phaseLabel, onGenerate }: Bra
         )}
       </div>
 
-      {/* Input area */}
-      <div className="border-t border-[var(--border)] px-1 pt-3 pb-1">
-        {streaming && (
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-[12px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">
-              AI 回复中...
-            </span>
-          </div>
-        )}
-        <div className="flex items-end gap-2">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="输入你的想法..."
-            rows={1}
-            className={cn(
-              "flex-1 min-h-[36px] max-h-[120px] resize-none px-3 py-2",
-              "text-sm text-[var(--text-primary)]",
-              "bg-[var(--secondary)] border border-[var(--border)] rounded-lg",
-              "placeholder:text-[var(--text-tertiary)]",
-              "outline-none",
-              "transition-[border-color] duration-200",
-              "focus:border-[var(--accent-color)]",
-            )}
-          />
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleSend}
-            disabled={streaming || !input.trim()}
-          >
-            发送
-          </Button>
+      {/* Round count hint */}
+      {roundCount >= 10 && !isMaxRounds && (
+        <div className="text-center py-1">
+          <span className="text-[12px] text-[var(--text-tertiary)]">
+            还剩 {15 - roundCount} 轮对话
+          </span>
         </div>
-      </div>
+      )}
 
-      {/* Bottom generate button */}
-      <div className="border-t border-[var(--border)] px-1 py-3">
-        <Button
-          variant="primary"
-          onClick={onGenerate}
-          disabled={streaming}
-          className="w-full"
-        >
-          生成{phaseLabel}
-        </Button>
-      </div>
+      {/* Input area / Max rounds status card */}
+      {isMaxRounds ? (
+        <div className="border-t border-[var(--border)] px-4 py-6 text-center">
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
+            需求信息已经很充分了，可以开始生成了
+          </p>
+          <div className="flex justify-center gap-3">
+            <Button variant="primary" onClick={onGenerate}>
+              生成{phaseLabel}
+            </Button>
+            <Button variant="ghost" onClick={handleClear}>
+              清空对话重新开始
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="border-t border-[var(--border)] px-1 pt-3 pb-1">
+            {streaming && (
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-[12px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">
+                  AI 回复中...
+                </span>
+              </div>
+            )}
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="输入你的想法..."
+                rows={1}
+                className={cn(
+                  "flex-1 min-h-[36px] max-h-[120px] resize-none px-3 py-2",
+                  "text-sm text-[var(--text-primary)]",
+                  "bg-[var(--secondary)] border border-[var(--border)] rounded-lg",
+                  "placeholder:text-[var(--text-tertiary)]",
+                  "outline-none",
+                  "transition-[border-color] duration-200",
+                  "focus:border-[var(--accent-color)]",
+                )}
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSend}
+                disabled={streaming || !input.trim()}
+              >
+                发送
+              </Button>
+            </div>
+          </div>
+
+          {/* Bottom generate button */}
+          <div className="border-t border-[var(--border)] px-1 py-3">
+            <Button
+              variant="primary"
+              onClick={onGenerate}
+              disabled={streaming}
+              className="w-full"
+            >
+              生成{phaseLabel}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -277,14 +318,16 @@ function MessageBubble({
   role,
   content,
   onGenerate,
+  onContinue,
 }: {
-  role: string
+  role: "user" | "assistant"
   content: string
   onGenerate: () => void
+  onContinue: () => void
 }) {
   if (role === "user") {
     return (
-      <div className="flex justify-end">
+      <div className="flex justify-end" aria-label="你的消息">
         <div className="max-w-[85%] rounded-lg bg-[var(--secondary)] px-3 py-2">
           <p className="font-sans text-[14px] text-[var(--text-primary)] whitespace-pre-wrap break-words">
             {content}
@@ -298,7 +341,7 @@ function MessageBubble({
   const { text, hasSuggest } = splitSuggestGenerate(content)
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3" aria-label="AI 回复">
       <div className="relative min-w-0 flex-1 pl-4">
         <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-full bg-[var(--accent-color)]" />
         <p className="font-serif text-[15px] leading-[1.8] text-[var(--text-primary)] whitespace-pre-wrap break-words">
@@ -309,7 +352,7 @@ function MessageBubble({
             <Button variant="primary" size="sm" onClick={onGenerate}>
               开始生成
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => { /* continue chatting — no-op, user types next message */ }}>
+            <Button variant="ghost" size="sm" onClick={onContinue}>
               继续讨论
             </Button>
           </div>
