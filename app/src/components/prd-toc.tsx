@@ -117,7 +117,6 @@ function PrdToc({ markdown, activeSection, onSectionClick }: PrdTocProps) {
                 <span
                   className={cn(
                     "inline-block w-8 mr-1.5 text-[10px]",
-                    "tracking-[0.5px]",
                     isActive
                       ? "text-[var(--dark)] font-semibold"
                       : "text-[var(--text-secondary)]",
