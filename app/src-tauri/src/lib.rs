@@ -158,6 +158,7 @@ pub fn run() {
             commands::brainstorm::save_brainstorm_message,
             commands::brainstorm::clear_brainstorm,
             commands::brainstorm::brainstorm_message_count,
+            commands::brainstorm::brainstorm_chat,
             commands::config::get_config,
             commands::config::save_config,
             commands::config::test_config,
