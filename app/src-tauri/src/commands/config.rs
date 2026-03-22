@@ -256,7 +256,11 @@ pub async fn test_config(
         .filter(|m| !m.is_empty())
         .unwrap_or_else(|| DEFAULT_MODEL.to_string());
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("HTTP 客户端初始化失败: {e}"))?;
     let anthropic = is_anthropic(&base_url, &model);
 
     let resp = if anthropic {
