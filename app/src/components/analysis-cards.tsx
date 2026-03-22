@@ -222,7 +222,7 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
           style={{ borderRadius: "50%" }}
         />
         <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
-          正在分析...
+          分析中...
         </span>
       </div>
     )

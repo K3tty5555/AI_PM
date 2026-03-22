@@ -340,7 +340,7 @@ export function PrdPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中...</span>
       </div>
     )
   }
@@ -476,7 +476,7 @@ export function PrdPage() {
           {(() => {
             const status = !isThinking ? extractStreamStatus(streamText) : ""
             return isThinking
-              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
+              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>
               : status
                 ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
@@ -656,7 +656,7 @@ export function PrdPage() {
             {saving
               ? "保存中..."
               : advancing
-                ? "正在完成..."
+                ? "完成中..."
                 : PHASE_META.prd.nextLabel + " →"}
           </Button>
           {!advancing && !saving && (

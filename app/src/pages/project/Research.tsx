@@ -304,7 +304,7 @@ export function ResearchPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="text-sm text-[var(--text-tertiary)]">加载中···</span>
+        <span className="text-sm text-[var(--text-tertiary)]">加载中...</span>
       </div>
     )
   }
@@ -327,7 +327,7 @@ export function ResearchPage() {
               onClick={() => navigate("/settings")}
               className="shrink-0 text-[13px] text-[var(--accent-color)] hover:opacity-70 transition-opacity"
             >
-              去设置
+              前往设置
             </button>
           </div>
         ) : !hasPlaywrightMcp ? (
@@ -401,7 +401,7 @@ export function ResearchPage() {
           {fetchingUrls && (
             <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] mt-1">
               <Loader2 className="size-3 animate-spin" />
-              正在抓取参考网页…
+              抓取参考网页中...
             </div>
           )}
         </div>
@@ -443,7 +443,7 @@ export function ResearchPage() {
           {(() => {
             const status = !isThinking ? extractStreamStatus(text) : ""
             return isThinking
-              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">正在思考···</p>
+              ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>
               : status
                 ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
@@ -555,7 +555,7 @@ export function ResearchPage() {
             {saving
               ? "保存中..."
               : advancing
-                ? "正在推进..."
+                ? "推进中..."
                 : PHASE_META.research.nextLabel + " →"}
           </Button>
           {!advancing && !saving && (

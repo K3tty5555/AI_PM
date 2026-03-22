@@ -230,7 +230,7 @@ function KnowledgeExtractDialog({ projectId, open, onClose }: Props) {
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="h-6 w-6 animate-spin text-[var(--accent-color)]" />
-              <p className="text-sm text-[var(--text-secondary)]">正在分析项目产出物...</p>
+              <p className="text-sm text-[var(--text-secondary)]">分析项目产出物中...</p>
             </div>
           )}
 
