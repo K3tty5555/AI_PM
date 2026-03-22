@@ -5,17 +5,53 @@ use std::path::Path;
 use tauri::{AppHandle, State};
 use crate::state::AppState;
 
+/// 校验文件路径在指定基础目录内，防止路径遍历
+fn validate_path_within(file_name: &str, base_dir: &str) -> Result<std::path::PathBuf, String> {
+    // 1. 拦截绝对路径
+    if file_name.starts_with('/') || file_name.starts_with('\\') {
+        return Err("文件名不能是绝对路径".to_string());
+    }
+
+    let base = std::path::Path::new(base_dir);
+    let full_path = base.join(file_name);
+
+    // 2. canonicalize 基础目录
+    let canonical_base = std::fs::canonicalize(base)
+        .map_err(|e| format!("无法解析基础目录: {e}"))?;
+
+    // 3. 对目标路径 canonicalize（处理不存在的文件/目录）
+    let canonical_path = if full_path.exists() {
+        std::fs::canonicalize(&full_path)
+            .map_err(|e| format!("无法解析文件路径: {e}"))?
+    } else {
+        // 向上找到第一个已存在的祖先目录
+        let mut ancestor = full_path.parent();
+        while let Some(a) = ancestor {
+            if a.exists() { break; }
+            ancestor = a.parent();
+        }
+        let canonical_ancestor = std::fs::canonicalize(
+            ancestor.unwrap_or(base)
+        ).map_err(|e| format!("无法解析父目录: {e}"))?;
+        let remaining = full_path.strip_prefix(ancestor.unwrap_or(base))
+            .unwrap_or(full_path.as_path());
+        canonical_ancestor.join(remaining)
+    };
+
+    // 4. 验证在基础目录内
+    if !canonical_path.starts_with(&canonical_base) {
+        return Err("文件路径超出允许范围".to_string());
+    }
+
+    Ok(canonical_path)
+}
+
 #[tauri::command]
 pub fn read_project_file(
     state: State<AppState>,
     project_id: String,
     file_name: String,
 ) -> Result<Option<String>, String> {
-    // Fix 4: Reject path traversal attempts
-    if file_name.contains("..") {
-        return Err("invalid file path".to_string());
-    }
-
     let output_dir: String = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         match db.query_row(
@@ -29,7 +65,7 @@ pub fn read_project_file(
         // db guard drops here
     };
 
-    let file_path = Path::new(&output_dir).join(&file_name);
+    let file_path = validate_path_within(&file_name, &output_dir)?;
 
     match fs::read_to_string(&file_path) {
         Ok(content) if !content.is_empty() => Ok(Some(content)),
@@ -47,11 +83,6 @@ pub struct SaveFileArgs {
 
 #[tauri::command]
 pub fn save_project_file(state: State<AppState>, args: SaveFileArgs) -> Result<(), String> {
-    // Fix 4: Reject path traversal attempts
-    if args.file_name.contains("..") {
-        return Err("invalid file path".to_string());
-    }
-
     // Fix 1: Drop mutex guard before file I/O
     let output_dir: String = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
@@ -64,7 +95,7 @@ pub fn save_project_file(state: State<AppState>, args: SaveFileArgs) -> Result<(
         // db guard drops here
     };
 
-    let file_path = Path::new(&output_dir).join(&args.file_name);
+    let file_path = validate_path_within(&args.file_name, &output_dir)?;
 
     // Ensure parent directory exists (for nested paths like 05-prd/05-PRD-v1.0.md)
     if let Some(parent) = file_path.parent() {
@@ -230,8 +261,17 @@ pub async fn export_prd_docx(
 /// Reveal a file in macOS Finder.
 #[tauri::command]
 pub fn reveal_file(path: String) -> Result<(), String> {
+    // canonicalize + 限制在用户主目录下
+    let canonical = std::fs::canonicalize(&path)
+        .map_err(|e| format!("路径无效: {e}"))?;
+    let home = dirs::home_dir()
+        .ok_or("无法获取用户主目录".to_string())?;
+    if !canonical.starts_with(&home) {
+        return Err("只能打开用户目录下的文件".to_string());
+    }
+
     std::process::Command::new("open")
-        .args(["-R", &path])
+        .args(["-R", &canonical.to_string_lossy()])
         .spawn()
         .map_err(|e| format!("无法打开 Finder：{}", e))?;
     Ok(())
@@ -240,8 +280,27 @@ pub fn reveal_file(path: String) -> Result<(), String> {
 /// Open a file with the system default program.
 #[tauri::command]
 pub fn open_file(path: String) -> Result<(), String> {
+    // canonicalize + 限制在用户主目录下
+    let canonical = std::fs::canonicalize(&path)
+        .map_err(|e| format!("路径无效: {e}"))?;
+    let home = dirs::home_dir()
+        .ok_or("无法获取用户主目录".to_string())?;
+    if !canonical.starts_with(&home) {
+        return Err("只能打开用户目录下的文件".to_string());
+    }
+
+    // 扩展名白名单
+    let allowed_exts = ["md", "pdf", "docx", "html", "txt", "json", "csv", "xlsx", "png", "jpg"];
+    if let Some(ext) = canonical.extension().and_then(|e| e.to_str()) {
+        if !allowed_exts.contains(&ext.to_lowercase().as_str()) {
+            return Err(format!("不支持打开 .{ext} 类型的文件"));
+        }
+    } else {
+        return Err("文件缺少扩展名，无法确定类型".to_string());
+    }
+
     std::process::Command::new("open")
-        .arg(&path)
+        .arg(&canonical.to_string_lossy().as_ref())
         .spawn()
         .map_err(|e| e.to_string())?;
     Ok(())
