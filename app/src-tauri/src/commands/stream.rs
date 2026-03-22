@@ -32,7 +32,7 @@ pub struct ChatMessage {
 }
 
 // Phase → (skill_name, input_files[], output_file, companion_skills[])
-fn phase_config(phase: &str) -> Option<(&'static str, &'static [&'static str], &'static str, &'static [&'static str])> {
+pub fn phase_config(phase: &str) -> Option<(&'static str, &'static [&'static str], &'static str, &'static [&'static str])> {
     match phase {
         "requirement" => Some(("ai-pm",           &[],                                                                           "01-requirement-draft.md",      &[])),
         "analysis"    => Some(("ai-pm-analyze",    &["01-requirement-draft.md"],                                                  "02-analysis-report.md",        &[])),
