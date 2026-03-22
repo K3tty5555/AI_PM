@@ -2,7 +2,18 @@ import { useState, useCallback, useRef, useEffect } from "react"
 import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import { api } from "@/lib/tauri-api"
 
+interface StreamChunkPayload {
+  streamKey: string
+  text: string
+}
+
+interface StreamErrorPayload {
+  streamKey: string
+  message: string
+}
+
 interface StreamDonePayload {
+  streamKey: string
   outputFile: string
   durationMs: number
   inputTokens?: number
@@ -64,12 +75,17 @@ export function useToolStream(toolName: string, projectId?: string): UseToolStre
       setStreamMeta(null)
       setIsStreaming(true)
 
+      const expectedKey = `tool:${toolName}`
+
       Promise.all([
-        listen<string>("stream_chunk", (event) => {
-          setText((prev) => prev + event.payload)
+        listen<StreamChunkPayload>("stream_chunk", (event) => {
+          const { streamKey, text } = event.payload
+          if (streamKey !== expectedKey) return
+          setText((prev) => prev + text)
         }),
         listen<StreamDonePayload>("stream_done", (event) => {
-          const { durationMs, inputTokens, outputTokens, finalText } = event.payload
+          const { streamKey, durationMs, inputTokens, outputTokens, finalText } = event.payload
+          if (streamKey !== expectedKey) return
           unlistenersRef.current.forEach((fn) => fn())
           unlistenersRef.current = []
           setIsStreaming(false)
@@ -83,11 +99,13 @@ export function useToolStream(toolName: string, projectId?: string): UseToolStre
             return current
           })
         }),
-        listen<string>("stream_error", (event) => {
+        listen<StreamErrorPayload>("stream_error", (event) => {
+          const { streamKey, message } = event.payload
+          if (streamKey !== expectedKey) return
           unlistenersRef.current.forEach((fn) => fn())
           unlistenersRef.current = []
           setIsStreaming(false)
-          setError(event.payload)
+          setError(message)
         }),
       ]).then((unlisteners) => {
         unlistenersRef.current = unlisteners

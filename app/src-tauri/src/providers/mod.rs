@@ -15,6 +15,7 @@ pub trait AiProvider: Send + Sync {
         system_prompt: &str,
         messages: &[ChatMessage],
         app: &AppHandle,
+        stream_key: &str,
     ) -> Result<StreamResult, String>;
 }
 

@@ -87,6 +87,7 @@ impl AiProvider for ClaudeCliProvider {
         system_prompt: &str,
         messages: &[ChatMessage],
         app: &AppHandle,
+        stream_key: &str,
     ) -> Result<StreamResult, String> {
         let last_user = messages.iter().rev()
             .find(|m| m.role == "user")
@@ -131,7 +132,7 @@ impl AiProvider for ClaudeCliProvider {
                 Ok(n) => {
                     let chunk = String::from_utf8_lossy(&buf[..n]);
                     full_text.push_str(&chunk);
-                    let _ = app.emit("stream_chunk", chunk.as_ref());
+                    let _ = app.emit("stream_chunk", serde_json::json!({ "streamKey": stream_key, "text": chunk.as_ref() }));
                 }
                 Err(e) => return Err(format!("读取 stdout 失败：{}", e)),
             }

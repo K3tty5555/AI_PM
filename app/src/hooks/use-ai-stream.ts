@@ -3,7 +3,18 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { api } from "@/lib/tauri-api"
 
+interface StreamChunkPayload {
+  streamKey: string
+  text: string
+}
+
+interface StreamErrorPayload {
+  streamKey: string
+  message: string
+}
+
 interface StreamDonePayload {
+  streamKey: string
   outputFile: string
   durationMs: number
   inputTokens?: number
@@ -181,17 +192,27 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
 
       // Set up listeners BEFORE invoking the backend
       Promise.all([
-        listen<string>("stream_chunk", (event) => {
-          bg.text += event.payload
-          bg.notify?.({ textChunk: event.payload })
+        listen<StreamChunkPayload>("stream_chunk", (event) => {
+          const { streamKey, text } = event.payload
+          const parts = streamKey.split(":")
+          const evtKey = parts.slice(1).join(":")
+          const target = bgStore.get(evtKey)
+          if (!target) return
+          target.text += text
+          target.notify?.({ textChunk: text })
         }),
         listen<StreamDonePayload>("stream_done", (event) => {
-          const { outputFile: file, durationMs, inputTokens, outputTokens, finalText } = event.payload
-          bg.outputFile = file
-          bg.streamMeta = { durationMs, inputTokens, outputTokens }
-          bg.isStreaming = false
-          bg.unlisteners.forEach((fn) => fn())
-          bg.unlisteners = []
+          const { streamKey, outputFile: file, durationMs, inputTokens, outputTokens, finalText } = event.payload
+          const parts = streamKey.split(":")
+          const evtKey = parts.slice(1).join(":")
+          const target = bgStore.get(evtKey)
+          if (!target) return
+
+          target.outputFile = file
+          target.streamMeta = { durationMs, inputTokens, outputTokens }
+          target.isStreaming = false
+          target.unlisteners.forEach((fn) => fn())
+          target.unlisteners = []
 
           const patch: BgPatch = {
             isStreaming: false,
@@ -205,14 +226,14 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           // suspiciously short (< 500 chars) and finalText is substantial — this handles
           // the common case where Claude outputs only a brief confirmation to stdout.
           if (finalText && finalText.trim().length > 100) {
-            const streamLen = bg.text.trim().length
+            const streamLen = target.text.trim().length
             if (finalText.trim().length > streamLen + 100 || streamLen < 500) {
-              bg.text = finalText
+              target.text = finalText
               patch.textReplace = finalText
             }
           }
 
-          bg.notify?.(patch)
+          target.notify?.(patch)
 
           // Dock bounce when AI completes and window is not focused (Task 25)
           getCurrentWindow().isFocused().then((focused) => {
@@ -227,12 +248,17 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
             .catch((err) => console.error("[AiStream]", err))
           window.dispatchEvent(new CustomEvent("project-phase-updated", { detail: { projectId } }))
         }),
-        listen<string>("stream_error", (event) => {
-          bg.error = event.payload
-          bg.isStreaming = false
-          bg.unlisteners.forEach((fn) => fn())
-          bg.unlisteners = []
-          bg.notify?.({ isStreaming: false, error: event.payload })
+        listen<StreamErrorPayload>("stream_error", (event) => {
+          const { streamKey, message } = event.payload
+          const parts = streamKey.split(":")
+          const evtKey = parts.slice(1).join(":")
+          const target = bgStore.get(evtKey)
+          if (!target) return
+          target.error = message
+          target.isStreaming = false
+          target.unlisteners.forEach((fn) => fn())
+          target.unlisteners = []
+          target.notify?.({ isStreaming: false, error: message })
         }),
       ]).then((unlisteners) => {
         bg.unlisteners = unlisteners
