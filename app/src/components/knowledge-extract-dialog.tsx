@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { api, type KnowledgeCandidate } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
@@ -190,18 +191,18 @@ function KnowledgeExtractDialog({ projectId, open, onClose }: Props) {
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[4px]"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-[4px]"
       style={{ animation: "fadeIn 150ms var(--ease-decelerate)" }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="knowledge-extract-title"
-        className="flex w-full max-w-[560px] max-h-[80vh] flex-col rounded-xl bg-[var(--background)] shadow-[var(--shadow-xl)]"
+        className="flex w-full max-w-[560px] max-h-[80vh] flex-col rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-xl)]"
         style={{ animation: "fadeInUp 200ms var(--ease-decelerate)" }}
       >
         {/* Header */}
@@ -378,7 +379,8 @@ function KnowledgeExtractDialog({ projectId, open, onClose }: Props) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
