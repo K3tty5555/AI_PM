@@ -1,18 +1,16 @@
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus, Trash2, CheckCircle2, RotateCcw, Pencil, FolderOpen, ExternalLink, Clock, Star, ArrowRight } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Plus, Clock, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ProgressBar } from "@/components/ui/progress-bar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { ContextMenu, type ContextMenuItem } from "@/components/ui/context-menu"
+import { ProjectCard } from "@/components/project-card"
 import { useFavorites } from "@/hooks/use-favorites"
 import { useToast } from "@/hooks/use-toast"
 import { useRecent } from "@/hooks/use-recent"
+import { useProjectActions } from "@/hooks/use-project-actions"
 import { api } from "@/lib/tauri-api"
-import { cn, FILE_MANAGER_LABEL } from "@/lib/utils"
-import { PHASE_ORDER, PHASE_LABELS } from "@/lib/phase-meta"
+import { cn } from "@/lib/utils"
 
 interface DashboardProject {
   id: string
@@ -28,35 +26,32 @@ interface DashboardProject {
   outputDir: string
 }
 
-
-function PhaseMiniMap({ completedPhases }: { completedPhases: string[] }) {
+function OnboardingDialog({ onDismiss, onGoSettings }: { onDismiss: () => void; onGoSettings: () => void }) {
   return (
-    <div className="flex items-center gap-[3px]">
-      {PHASE_ORDER.map((phase) => {
-        const done = completedPhases.includes(phase)
-        return (
-          <div
-            key={phase}
-            className="w-[6px] h-[6px] rounded-full"
-            style={{ background: done ? "var(--accent-color)" : "var(--border)" }}
-          />
-        )
-      })}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" role="dialog" aria-modal="true" aria-labelledby="dialog-title-onboarding">
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-[var(--shadow-xl)] w-96">
+        <p id="dialog-title-onboarding" className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
+        <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
+          使用 AI 功能前，需要先配置 Claude API Key。
+          前往设置页填写后，即可开始使用完整功能。
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onDismiss}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-all duration-150 active:scale-[0.97]"
+          >
+            稍后再说
+          </button>
+          <button
+            onClick={onGoSettings}
+            className="rounded-lg bg-[var(--accent-color)] px-4 py-1.5 text-sm text-white hover:opacity-90 transition-all duration-150 active:scale-[0.97]"
+          >
+            前往设置
+          </button>
+        </div>
+      </div>
     </div>
   )
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-  } catch {
-    return dateStr
-  }
 }
 
 export function DashboardPage() {
@@ -73,12 +68,15 @@ export function DashboardPage() {
   const [sortOrder, setSortOrder] = useState<'updatedAt' | 'createdAt'>('updatedAt')
   const [showOnboarding, setShowOnboarding] = useState(false)
 
-  // Inline rename state
-  const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
-  const [renameInput, setRenameInput] = useState("")
-  const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null)
-  const [renameError, setRenameError] = useState<string>("")
-  const isConfirmingRef = useRef(false)
+  const {
+    renameState,
+    setRenameInput,
+    setRenameError,
+    startRename,
+    startRenameById,
+    cancelRename,
+    confirmRename,
+  } = useProjectActions(setProjects)
 
   const filteredProjects = projects
     .filter((p) => {
@@ -90,50 +88,6 @@ export function DashboardPage() {
       if (sortOrder === 'updatedAt') return b.updatedAt.localeCompare(a.updatedAt)
       return a.createdAt.localeCompare(b.createdAt) // 最早创建 → 升序
     })
-
-  const startRename = useCallback((project: DashboardProject, e: React.MouseEvent) => {
-    if (renamingProjectId !== null) return
-    e.stopPropagation()
-    setEditingProjectId(project.id)
-    setRenameInput(project.name)
-    setRenameError("")
-    isConfirmingRef.current = false
-  }, [renamingProjectId])
-
-  const cancelRename = useCallback(() => {
-    setEditingProjectId(null)
-    setRenameInput("")
-    setRenameError("")
-    isConfirmingRef.current = false
-  }, [])
-
-  const confirmRename = useCallback(async (project: DashboardProject) => {
-    if (isConfirmingRef.current) return
-    const newName = renameInput.trim()
-    if (!newName) {
-      setRenameError("名称不能为空")
-      return
-    }
-    if (newName === project.name) {
-      cancelRename()
-      return
-    }
-    isConfirmingRef.current = true
-    setRenamingProjectId(project.id)
-    setRenameError("")
-    try {
-      await api.renameProject(project.id, newName)
-      setProjects(prev => prev.map(p => p.id === project.id ? { ...p, name: newName } : p))
-      setEditingProjectId(null)
-      setRenameInput("")
-      isConfirmingRef.current = false
-    } catch (err) {
-      setRenameError(String(err))
-      isConfirmingRef.current = false
-    } finally {
-      setRenamingProjectId(null)
-    }
-  }, [renameInput, cancelRename])
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -278,31 +232,7 @@ export function DashboardPage() {
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmId(null)}
         />
-        {showOnboarding && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" role="dialog" aria-modal="true" aria-labelledby="dialog-title-onboarding-1">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-[var(--shadow-xl)] w-96">
-              <p id="dialog-title-onboarding-1" className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
-                使用 AI 功能前，需要先配置 Claude API Key。
-                前往设置页填写后，即可开始使用完整功能。
-              </p>
-              <div className="mt-5 flex justify-end gap-2">
-                <button
-                  onClick={dismissOnboarding}
-                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-all duration-150 active:scale-[0.97]"
-                >
-                  稍后再说
-                </button>
-                <button
-                  onClick={goToSettings}
-                  className="rounded-lg bg-[var(--accent-color)] px-4 py-1.5 text-sm text-white hover:opacity-90 transition-all duration-150 active:scale-[0.97]"
-                >
-                  前往设置
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {showOnboarding && <OnboardingDialog onDismiss={dismissOnboarding} onGoSettings={goToSettings} />}
       </>
     )
   }
@@ -391,143 +321,25 @@ export function DashboardPage() {
 
         {/* Project cards grid */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredProjects.map((project, index) => {
-            const isComplete = project.completedCount >= project.totalPhases
-            const progress =
-              project.totalPhases > 0
-                ? Math.round((project.completedCount / project.totalPhases) * 100)
-                : 0
-            const phaseLabel = isComplete
-              ? "已完成"
-              : (PHASE_LABELS[project.currentPhase] ?? project.currentPhase)
-
-            const isFav = isFavorite(project.id)
-            const contextItems: ContextMenuItem[] = [
-              { label: isFav ? "取消收藏" : "收藏", icon: Star, action: () => toggleFavorite(project.id) },
-              { label: "打开项目", icon: FolderOpen, action: () => navigate(`/project/${project.id}/requirement`) },
-              { label: "重命名", icon: Pencil, action: () => { setEditingProjectId(project.id); setRenameInput(project.name); setRenameError(""); isConfirmingRef.current = false }, separator: true },
-              { label: `在 ${FILE_MANAGER_LABEL} 中显示`, icon: ExternalLink, action: () => api.revealFile(project.outputDir).catch(console.error) },
-              { label: "删除项目", icon: Trash2, action: () => setConfirmId(project.id), variant: "destructive" as const },
-            ]
-
-            return (
-              <ContextMenu key={project.id} items={contextItems}>
-              <div
-                className={cn(
-                  "group/card relative rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 cursor-pointer",
-                  "transition-all duration-200",
-                  "hover:shadow-[var(--shadow-md)] hover:-translate-y-[1px]",
-                  "active:scale-[0.99] active:shadow-none",
-                )}
-                onClick={() => navigate(`/project/${project.id}/${project.currentPhase}`)}
-                style={{
-                  animation: `fadeInUp 0.4s cubic-bezier(0.16,1,0.3,1) ${index * 0.08}s both`,
-                }}
-              >
-                {/* Card action buttons — top-right, revealed on hover */}
-                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity duration-150">
-                  <button
-                    onClick={(e) => handleToggleStatus(e, project)}
-                    className={cn(
-                      "flex size-6 items-center justify-center rounded-md transition-all duration-150",
-                      project.status === 'completed'
-                        ? "text-[var(--success)] hover:bg-[var(--success)]/10"
-                        : "text-[var(--text-tertiary)] hover:text-[var(--success)] hover:bg-[var(--success)]/10"
-                    )}
-                    title={project.status === 'completed' ? '重新激活' : '标记完成'}
-                  >
-                    {project.status === 'completed'
-                      ? <RotateCcw className="size-3.5" strokeWidth={1.75} />
-                      : <CheckCircle2 className="size-3.5" strokeWidth={1.75} />
-                    }
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(e, project.id)}
-                    className="flex size-6 items-center justify-center rounded-md
-                               text-[var(--text-tertiary)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10 transition-all duration-150"
-                    title="删除项目"
-                  >
-                    <Trash2 className="size-3.5" strokeWidth={1.75} />
-                  </button>
-                </div>
-
-                {/* Project name */}
-                <div className="flex items-start gap-2 pr-6 mb-3">
-                  {editingProjectId === project.id ? (
-                    <div className="flex flex-col gap-1 min-w-0 flex-1" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-2">
-                        <input
-                          autoFocus
-                          value={renameInput}
-                          onChange={(e) => { setRenameInput(e.target.value); setRenameError("") }}
-                          onFocus={(e) => e.target.select()}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); confirmRename(project) }
-                            else if (e.key === "Escape") { e.preventDefault(); cancelRename() }
-                          }}
-                          onBlur={() => confirmRename(project)}
-                          disabled={renamingProjectId === project.id}
-                          className={cn(
-                            "h-9 px-2.5 text-[15px] font-semibold rounded-lg border outline-none w-full transition-colors duration-200",
-                            "bg-[var(--card)] text-[var(--text-primary)]",
-                            renameError
-                              ? "border-[var(--destructive)] focus:ring-2 focus:ring-[rgba(220,38,38,0.15)]"
-                              : "border-[rgba(0,0,0,0.12)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
-                          )}
-                        />
-                        {renamingProjectId === project.id && (
-                          <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
-                          </svg>
-                        )}
-                      </div>
-                      {renameError && (
-                        <span className="text-[10px] text-[var(--destructive)]">{renameError}</span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 min-w-0 group/name">
-                      <span className="text-[16px] font-semibold text-[var(--text-primary)] leading-snug truncate">
-                        {project.name}
-                      </span>
-                      <button
-                        onClick={(e) => startRename(project, e)}
-                        className="opacity-0 group-hover/name:opacity-100 transition-opacity duration-150 p-0.5 rounded hover:bg-[var(--accent-color)]/10 text-[var(--text-tertiary)] hover:text-[var(--accent-color)] shrink-0"
-                        title="重命名"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                      {project.status === 'completed' && (
-                        <span className="ml-1 rounded-full bg-[var(--success)]/15 px-2 py-0.5 text-[10px] text-[var(--success)] font-medium shrink-0">
-                          已完成
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Phase badge */}
-                <Badge variant={isComplete ? "outline" : "default"} className="mb-3">
-                  {phaseLabel}
-                </Badge>
-
-                {/* Progress bar */}
-                <div className="mb-3">
-                  <ProgressBar value={progress} className="h-[2px]" />
-                </div>
-
-                {/* Footer: phase dots + date */}
-                <div className="flex items-center justify-between">
-                  <PhaseMiniMap completedPhases={project.completedPhases} />
-                  <span className="text-[11px] text-[var(--text-tertiary)]">
-                    {formatDate(project.updatedAt)}
-                  </span>
-                </div>
-              </div>
-              </ContextMenu>
-            )
-          })}
+          {filteredProjects.map((project, index) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              index={index}
+              isFavorite={isFavorite(project.id)}
+              renameState={renameState}
+              onToggleFavorite={() => toggleFavorite(project.id)}
+              onToggleStatus={(e) => handleToggleStatus(e, project)}
+              onDelete={(e) => handleDelete(e, project.id)}
+              rename={{
+                start: (e) => startRename(project, e),
+                startById: () => startRenameById(project),
+                cancel: cancelRename,
+                confirm: () => confirmRename(project),
+                onInputChange: (value) => { setRenameInput(value); setRenameError("") },
+              }}
+            />
+          ))}
 
           {filteredProjects.length === 0 && (search || statusFilter !== 'all') && (
             <div className="col-span-full py-16 text-center">
@@ -557,31 +369,7 @@ export function DashboardPage() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmId(null)}
       />
-      {showOnboarding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" role="dialog" aria-modal="true" aria-labelledby="dialog-title-onboarding-2">
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-[var(--shadow-xl)] w-96">
-            <p id="dialog-title-onboarding-2" className="text-base font-semibold text-[var(--text-primary)]">欢迎使用 AI PM</p>
-            <p className="mt-2 text-sm text-[var(--text-secondary)] leading-relaxed">
-              使用 AI 功能前，需要先配置 Claude API Key。
-              前往设置页填写后，即可开始使用完整功能。
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={dismissOnboarding}
-                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)]"
-              >
-                稍后再说
-              </button>
-              <button
-                onClick={goToSettings}
-                className="rounded-lg bg-[var(--accent-color)] px-4 py-1.5 text-sm text-white hover:opacity-90"
-              >
-                前往设置
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {showOnboarding && <OnboardingDialog onDismiss={dismissOnboarding} onGoSettings={goToSettings} />}
     </>
   )
 }
