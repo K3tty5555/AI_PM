@@ -413,7 +413,6 @@ function StoryBoard({ stories, onStoriesChange, isStreaming }: StoryBoardProps) 
           className={cn(
             "pt-3 border-t border-[var(--border)]",
             "text-xs text-[var(--text-muted)]",
-            "tracking-[1px]",
           )}
         >
           共 {stats.total} 个故事 | P0: {stats.p0} | P1: {stats.p1} | P2:{" "}

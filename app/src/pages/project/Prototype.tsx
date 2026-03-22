@@ -369,7 +369,7 @@ export function PrototypePage() {
               }
             }}
             className={cn(
-              "h-7 px-2 text-xs rounded",
+              "h-7 px-2 text-xs rounded-lg",
               "bg-[var(--secondary)] border border-[var(--border)]",
               "text-[var(--text-primary)]",
               "outline-none cursor-pointer",
