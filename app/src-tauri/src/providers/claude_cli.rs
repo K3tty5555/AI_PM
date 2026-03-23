@@ -15,6 +15,7 @@ pub fn enriched_path() -> String {
     let mut paths: Vec<String> = [
         ".local/bin",
         ".local/share/claude",
+        ".local/claude-code/node_modules/.bin",
         ".npm-global/bin",
         ".cargo/bin",
     ]
