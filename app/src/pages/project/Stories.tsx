@@ -67,6 +67,32 @@ export function StoriesPage() {
     }
   }, [streamParsedStories])
 
+  // Auto-save stories on change (debounced, skip during streaming and initial load)
+  const hasLoadedRef = useRef(false)
+  useEffect(() => {
+    // Mark as loaded after initial stories are set (from file or AI stream)
+    if (stories.length > 0 && !hasLoadedRef.current) {
+      // Delay marking loaded to skip the initial parse → setStories cycle
+      const id = setTimeout(() => { hasLoadedRef.current = true }, 500)
+      return () => clearTimeout(id)
+    }
+  }, [stories.length])
+
+  useEffect(() => {
+    if (!hasLoadedRef.current || isStreaming || stories.length === 0 || !projectId) return
+
+    const timer = setTimeout(async () => {
+      try {
+        const markdown = storiesToMarkdown(stories)
+        await api.saveProjectFile({ projectId, fileName: STORIES_FILE, content: markdown })
+      } catch (err) {
+        console.error("[Stories] auto-save failed:", err)
+      }
+    }, 800) // 800ms debounce
+
+    return () => clearTimeout(timer)
+  }, [stories, isStreaming, projectId])
+
   // Progress estimation during streaming
   const progressValue = isStreaming
     ? Math.min(90, Math.floor(text.length / 20))
