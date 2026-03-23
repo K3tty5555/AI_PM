@@ -7,6 +7,7 @@ import { useAiStream } from "@/hooks/use-ai-stream"
 import { parseStories, storiesToMarkdown, type Story } from "@/lib/story-parser"
 import { api } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
+import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -44,7 +45,7 @@ export function StoriesPage() {
   const startedRef = useRef(false)
 
   // AI stream hook
-  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, toolStatus, error, start, reset } = useAiStream({
     projectId,
     phase: "stories",
   })
@@ -297,9 +298,7 @@ export function StoriesPage() {
                   ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                   : null
             })()}
-            <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
-              {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
-            </p>
+            <StreamProgress isStreaming={isStreaming} isThinking={isThinking} elapsedSeconds={elapsedSeconds} streamMeta={streamMeta} toolStatus={toolStatus} />
           </div>
         )}
 
@@ -364,13 +363,7 @@ export function StoriesPage() {
             onStoriesChange={setStories}
             isStreaming={isStreaming}
           />
-          {!isStreaming && streamMeta !== null && (
-            <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
-              {streamMeta.inputTokens != null && streamMeta.outputTokens != null
-                ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
-                : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
-            </p>
-          )}
+          {!isStreaming && <StreamProgress isStreaming={false} isThinking={false} elapsedSeconds={0} streamMeta={streamMeta} />}
         </div>
 
         {/* Bottom action bar */}

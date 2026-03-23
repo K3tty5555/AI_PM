@@ -2,30 +2,21 @@ import { useState, useCallback, useRef, useEffect } from "react"
 import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { api } from "@/lib/tauri-api"
+import type { StreamChunkPayload, StreamErrorPayload, StreamDonePayload, StreamToolPayload, StreamMeta } from "@/lib/stream-types"
 
-interface StreamChunkPayload {
-  streamKey: string
-  text: string
+const TOOL_LABELS: Record<string, string> = {
+  WebSearch: "正在搜索网页",
+  WebFetch: "正在获取网页内容",
+  Bash: "正在执行命令",
+  Write: "正在写入文件",
+  Read: "正在读取文件",
+  Edit: "正在编辑文件",
+  Glob: "正在查找文件",
+  Grep: "正在搜索代码",
 }
 
-interface StreamErrorPayload {
-  streamKey: string
-  message: string
-}
-
-interface StreamDonePayload {
-  streamKey: string
-  outputFile: string
-  durationMs: number
-  inputTokens?: number
-  outputTokens?: number
-  finalText?: string
-}
-
-interface StreamMeta {
-  durationMs: number
-  inputTokens?: number
-  outputTokens?: number
+function getToolLabel(tool: string): string {
+  return TOOL_LABELS[tool] ?? `正在使用 ${tool}`
 }
 
 // ── Module-level background stream store (survives component unmount) ─────
@@ -40,6 +31,7 @@ interface BgPatch {
   error?: string
   outputFile?: string
   streamMeta?: StreamMeta | null
+  toolStatus?: string | null
 }
 
 interface BgStream {
@@ -48,6 +40,7 @@ interface BgStream {
   error: string | null
   outputFile: string | null
   streamMeta: StreamMeta | null
+  toolStatus: string | null
   unlisteners: UnlistenFn[]
   /** Unix ms timestamp when this stream was started — used to restore elapsed timer on remount */
   startedAt: number
@@ -72,6 +65,7 @@ interface UseAiStreamReturn {
   error: string | null
   outputFile: string | null
   streamMeta: StreamMeta | null
+  toolStatus: string | null
   start: (messages: Array<{ role: string; content: string }>, options?: { excludedContext?: string[]; styleId?: string; designSpec?: string }) => void
   reset: () => void
 }
@@ -87,20 +81,43 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
   const [error, setError] = useState<string | null>(bgInit?.error ?? null)
   const [outputFile, setOutputFile] = useState<string | null>(bgInit?.outputFile ?? null)
   const [streamMeta, setStreamMeta] = useState<StreamMeta | null>(bgInit?.streamMeta ?? null)
+  const [toolStatus, setToolStatus] = useState<string | null>(bgInit?.toolStatus ?? null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   const isThinking = isStreaming && text === ""
+
+  // rAF batching — accumulate high-frequency chunks and flush once per frame
+  const chunkBufferRef = useRef("")
+  const rafIdRef = useRef(0)
 
   // Mutable ref — always captures the latest setState functions so background
   // listeners can safely call them even after component re-renders.
   const notifyRef = useRef<((patch: BgPatch) => void) | null>(null)
   notifyRef.current = (patch: BgPatch) => {
-    if (patch.textChunk !== undefined) setText((prev) => prev + patch.textChunk!)
-    if (patch.textReplace !== undefined) setText(patch.textReplace)
+    if (patch.textChunk !== undefined) {
+      chunkBufferRef.current += patch.textChunk
+      if (!rafIdRef.current) {
+        rafIdRef.current = requestAnimationFrame(() => {
+          const buffered = chunkBufferRef.current
+          chunkBufferRef.current = ""
+          rafIdRef.current = 0
+          if (buffered) setText((prev) => prev + buffered)
+        })
+      }
+    }
+    if (patch.textReplace !== undefined) {
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current)
+        rafIdRef.current = 0
+      }
+      chunkBufferRef.current = ""
+      setText(patch.textReplace)
+    }
     if (patch.isStreaming !== undefined) setIsStreaming(patch.isStreaming)
     if ("error" in patch) setError(patch.error ?? null)
     if ("outputFile" in patch) setOutputFile(patch.outputFile ?? null)
     if ("streamMeta" in patch) setStreamMeta(patch.streamMeta ?? null)
+    if ("toolStatus" in patch) setToolStatus(patch.toolStatus ?? null)
   }
 
   // Elapsed timer — restores actual elapsed time from bgStore.startedAt on remount
@@ -143,11 +160,17 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
       bg.unlisteners.forEach((fn) => fn())
       bgStore.delete(key)
     }
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = 0
+    }
+    chunkBufferRef.current = ""
     setText("")
     setIsStreaming(false)
     setError(null)
     setOutputFile(null)
     setStreamMeta(null)
+    setToolStatus(null)
   }, [key])
 
   const start = useCallback(
@@ -184,6 +207,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
         error: null,
         outputFile: null,
         streamMeta: null,
+        toolStatus: null,
         unlisteners: [],
         startedAt: Date.now(),
         notify: (patch) => notifyRef.current?.(patch),
@@ -202,14 +226,14 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           target.notify?.({ textChunk: text })
         }),
         listen<StreamDonePayload>("stream_done", (event) => {
-          const { streamKey, outputFile: file, durationMs, inputTokens, outputTokens, finalText } = event.payload
+          const { streamKey, outputFile: file, durationMs, inputTokens, outputTokens, costUsd, finalText } = event.payload
           if (!streamKey.startsWith("generate:")) return  // ignore brainstorm/tool events
           const evtKey = streamKey.slice("generate:".length)
           const target = bgStore.get(evtKey)
           if (!target) return
 
           target.outputFile = file
-          target.streamMeta = { durationMs, inputTokens, outputTokens }
+          target.streamMeta = { durationMs, inputTokens, outputTokens, costUsd }
           target.isStreaming = false
           target.unlisteners.forEach((fn) => fn())
           target.unlisteners = []
@@ -217,7 +241,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           const patch: BgPatch = {
             isStreaming: false,
             outputFile: file,
-            streamMeta: { durationMs, inputTokens, outputTokens },
+            streamMeta: { durationMs, inputTokens, outputTokens, costUsd },
           }
 
           // CLI mode: if AI wrote content directly to disk via Write tool, finalText
@@ -232,6 +256,9 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
               patch.textReplace = finalText
             }
           }
+
+          target.toolStatus = null
+          patch.toolStatus = null
 
           target.notify?.(patch)
 
@@ -256,9 +283,20 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           if (!target) return
           target.error = message
           target.isStreaming = false
+          target.toolStatus = null
           target.unlisteners.forEach((fn) => fn())
           target.unlisteners = []
-          target.notify?.({ isStreaming: false, error: message })
+          target.notify?.({ isStreaming: false, error: message, toolStatus: null })
+        }),
+        listen<StreamToolPayload>("stream_tool", (event) => {
+          const { streamKey, tool, status } = event.payload
+          if (!streamKey.startsWith("generate:")) return
+          const evtKey = streamKey.slice("generate:".length)
+          const target = bgStore.get(evtKey)
+          if (!target) return
+          const label = status === "idle" ? null : getToolLabel(tool)
+          target.toolStatus = label
+          target.notify?.({ toolStatus: label })
         }),
       ]).then((unlisteners) => {
         bg.unlisteners = unlisteners
@@ -276,5 +314,5 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
     [projectId, phase, key]
   )
 
-  return { text, isStreaming, isThinking, elapsedSeconds, error, outputFile, streamMeta, start, reset }
+  return { text, isStreaming, isThinking, elapsedSeconds, error, outputFile, streamMeta, toolStatus, start, reset }
 }

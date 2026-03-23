@@ -1,31 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import { api } from "@/lib/tauri-api"
-
-interface StreamChunkPayload {
-  streamKey: string
-  text: string
-}
-
-interface StreamErrorPayload {
-  streamKey: string
-  message: string
-}
-
-interface StreamDonePayload {
-  streamKey: string
-  outputFile: string
-  durationMs: number
-  inputTokens?: number
-  outputTokens?: number
-  finalText?: string
-}
-
-interface StreamMeta {
-  durationMs: number
-  inputTokens?: number
-  outputTokens?: number
-}
+import type { StreamChunkPayload, StreamErrorPayload, StreamDonePayload, StreamMeta } from "@/lib/stream-types"
 
 interface UseToolStreamReturn {
   text: string

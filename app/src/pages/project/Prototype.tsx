@@ -5,6 +5,7 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api, type UiSpecEntry } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
+import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
@@ -132,7 +133,7 @@ export function PrototypePage() {
   const [activePageId, setActivePageId] = useState("")
   const [pageHtml, setPageHtml] = useState<string | null>(null)
 
-  const { text, isStreaming, isThinking, error, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, toolStatus, error, start, reset } = useAiStream({
     projectId: projectId!,
     phase: "prototype",
   })
@@ -435,9 +436,7 @@ export function PrototypePage() {
               ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{extractStreamStatus(text)}</p>
               : null
           }
-          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
-            生成原型中...
-          </p>
+          <StreamProgress isStreaming={isStreaming} isThinking={isThinking} elapsedSeconds={elapsedSeconds} streamMeta={streamMeta} toolStatus={toolStatus} />
         </div>
       )}
 

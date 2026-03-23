@@ -6,6 +6,7 @@ pub struct StreamResult {
     pub full_text: String,
     pub input_tokens: Option<u32>,
     pub output_tokens: Option<u32>,
+    pub cost_usd: Option<f64>,
 }
 
 #[async_trait]
