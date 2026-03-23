@@ -4,8 +4,11 @@ import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useAiStream } from "@/hooks/use-ai-stream"
+import { useProgressiveReveal } from "@/hooks/use-progressive-reveal"
+import { RevealContainer } from "@/components/RevealContainer"
 import { api } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
+import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -88,7 +91,7 @@ export function ReviewPage() {
   const startedRef = useRef(false)
 
   // Primary review stream
-  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, toolStatus, error, start, reset } = useAiStream({
     projectId,
     phase: "review",
   })
@@ -109,6 +112,11 @@ export function ReviewPage() {
   const autostart = searchParams.get("autostart") === "1"
 
   const displayContent = existingContent ?? text
+
+  const { visibleText, isRevealing, revealedCount, totalCount, skipReveal } = useProgressiveReveal({
+    text: displayContent || "",
+    isStreaming,
+  })
 
   // Compute role-filtered content — fallback to null when no roles matched (legacy format)
   const rawSections = !isStreaming && displayContent ? parseReviewSections(displayContent) : null
@@ -318,9 +326,7 @@ export function ReviewPage() {
                 ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
           })()}
-          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
-            {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
-          </p>
+          <StreamProgress isStreaming={isStreaming} isThinking={isThinking} elapsedSeconds={elapsedSeconds} streamMeta={streamMeta} toolStatus={toolStatus} />
         </div>
       )}
 
@@ -455,35 +461,31 @@ export function ReviewPage() {
 
       {/* Review report */}
       <div className="mt-6">
-        {isStreaming ? (
-          <PrdViewer
-            markdown={displayContent || ""}
-            isStreaming={isStreaming}
-          />
-        ) : sections ? (
-          <>
-            {sections[activeRole] ? (
-              <PrdViewer
-                markdown={sections[activeRole]!}
-                isStreaming={false}
-              />
-            ) : (
-              <p className="text-sm text-[var(--text-tertiary)] py-6 text-center">该视角暂无内容</p>
-            )}
-          </>
-        ) : (
-          <PrdViewer
-            markdown={displayContent || ""}
-            isStreaming={false}
-          />
-        )}
-        {!isStreaming && streamMeta !== null && (
-          <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
-            {streamMeta.inputTokens != null && streamMeta.outputTokens != null
-              ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
-              : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
-          </p>
-        )}
+        <RevealContainer isRevealing={isRevealing} revealedCount={revealedCount} totalCount={totalCount} onSkip={skipReveal}>
+          {isStreaming ? (
+            <PrdViewer
+              markdown={visibleText}
+              isStreaming={isStreaming}
+            />
+          ) : sections ? (
+            <>
+              {sections[activeRole] ? (
+                <PrdViewer
+                  markdown={sections[activeRole]!}
+                  isStreaming={false}
+                />
+              ) : (
+                <p className="text-sm text-[var(--text-tertiary)] py-6 text-center">该视角暂无内容</p>
+              )}
+            </>
+          ) : (
+            <PrdViewer
+              markdown={visibleText}
+              isStreaming={false}
+            />
+          )}
+        </RevealContainer>
+        {!isStreaming && <StreamProgress isStreaming={false} isThinking={false} elapsedSeconds={0} streamMeta={streamMeta} />}
       </div>
 
       {/* Bottom action bar */}

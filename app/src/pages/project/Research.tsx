@@ -6,11 +6,14 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
+import { useProgressiveReveal } from "@/hooks/use-progressive-reveal"
+import { RevealContainer } from "@/components/RevealContainer"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { api } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
+import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -118,7 +121,7 @@ export function ResearchPage() {
 
   const startedRef = useRef(false)
 
-  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, toolStatus, error, start, reset } = useAiStream({
     projectId,
     phase: "research",
   })
@@ -129,6 +132,11 @@ export function ResearchPage() {
   const isTeam = searchParams.get("team") === "1"
 
   const displayContent = existingContent ?? text
+
+  const { visibleText, isRevealing, revealedCount, totalCount, skipReveal } = useProgressiveReveal({
+    text: displayContent || "",
+    isStreaming,
+  })
 
   const questionInfo =
     !isStreaming && text ? detectQuestion(text) : { hasQuestion: false, question: "", options: [] }
@@ -453,9 +461,7 @@ export function ResearchPage() {
                 ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
           })()}
-          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
-            {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
-          </p>
+          <StreamProgress isStreaming={isStreaming} isThinking={isThinking} elapsedSeconds={elapsedSeconds} streamMeta={streamMeta} toolStatus={toolStatus} />
         </div>
       )}
 
@@ -484,17 +490,13 @@ export function ResearchPage() {
 
       {/* Research report viewer */}
       <div className="mt-6">
-        <PrdViewer
-          markdown={displayContent || ""}
-          isStreaming={isStreaming}
-        />
-        {!isStreaming && streamMeta !== null && (
-          <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
-            {streamMeta.inputTokens != null && streamMeta.outputTokens != null
-              ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
-              : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
-          </p>
-        )}
+        <RevealContainer isRevealing={isRevealing} revealedCount={revealedCount} totalCount={totalCount} onSkip={skipReveal}>
+          <PrdViewer
+            markdown={visibleText}
+            isStreaming={isStreaming}
+          />
+        </RevealContainer>
+        {!isStreaming && <StreamProgress isStreaming={false} isThinking={false} elapsedSeconds={0} streamMeta={streamMeta} />}
       </div>
 
       {/* Chat history */}

@@ -109,6 +109,6 @@ impl AiProvider for OpenAIProvider {
             return Err(error_msg);
         }
 
-        Ok(StreamResult { full_text, input_tokens, output_tokens })
+        Ok(StreamResult { full_text, input_tokens, output_tokens, cost_usd: None })
     }
 }
