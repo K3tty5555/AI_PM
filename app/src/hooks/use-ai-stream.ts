@@ -76,7 +76,22 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
   // Initialize from background store if a stream is already in progress
   const bgInit = bgStore.get(key)
 
-  const [text, setText] = useState(bgInit?.text ?? "")
+  const [text, setText] = useState(() => {
+    if (bgInit?.text) return bgInit.text
+    // Crash recovery: check for a snapshot saved by a previous interrupted stream
+    const stored = localStorage.getItem(`stream-recovery:${key}`)
+    if (stored) {
+      try {
+        const { text: recoveredText, timestamp } = JSON.parse(stored)
+        if (recoveredText && recoveredText.length > 100 && Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+          localStorage.removeItem(`stream-recovery:${key}`)
+          return recoveredText as string
+        }
+      } catch { /* ignore malformed data */ }
+      localStorage.removeItem(`stream-recovery:${key}`)
+    }
+    return ""
+  })
   const [isStreaming, setIsStreaming] = useState(bgInit?.isStreaming ?? false)
   const [error, setError] = useState<string | null>(bgInit?.error ?? null)
   const [outputFile, setOutputFile] = useState<string | null>(bgInit?.outputFile ?? null)
@@ -160,6 +175,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
       bg.unlisteners.forEach((fn) => fn())
       bgStore.delete(key)
     }
+    try { localStorage.removeItem(`stream-recovery:${key}`) } catch { /* noop */ }
     if (rafIdRef.current) {
       cancelAnimationFrame(rafIdRef.current)
       rafIdRef.current = 0
@@ -235,6 +251,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           target.outputFile = file
           target.streamMeta = { durationMs, inputTokens, outputTokens, costUsd }
           target.isStreaming = false
+          try { localStorage.removeItem(`stream-recovery:${evtKey}`) } catch { /* noop */ }
           target.unlisteners.forEach((fn) => fn())
           target.unlisteners = []
 
@@ -300,6 +317,18 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
         }),
       ]).then((unlisteners) => {
         bg.unlisteners = unlisteners
+
+        // Periodic snapshot for crash recovery (every 5s)
+        const snapshotKey = `stream-recovery:${key}`
+        const snapshotTimer = setInterval(() => {
+          const snap = bgStore.get(key)
+          if (snap && snap.isStreaming && snap.text.length > 100) {
+            try {
+              localStorage.setItem(snapshotKey, JSON.stringify({ text: snap.text, timestamp: Date.now() }))
+            } catch { /* storage full or unavailable — ignore */ }
+          }
+        }, 5000)
+        bg.unlisteners.push(() => clearInterval(snapshotTimer))
 
         api.startStream({ projectId, phase, messages, excludedContext: options?.excludedContext, styleId: options?.styleId, designSpec: options?.designSpec }).catch((err: unknown) => {
           bg.error = String(err)
