@@ -340,7 +340,11 @@ pub fn save_projects_dir(
 #[tauri::command]
 pub async fn test_cli_config() -> Result<serde_json::Value, String> {
     match crate::providers::claude_cli::ClaudeCliProvider::check_available().await {
-        Ok(version) => Ok(serde_json::json!({ "ok": true, "version": version })),
+        Ok((version, supports_stream_json)) => Ok(serde_json::json!({
+            "ok": true,
+            "version": version,
+            "supportsStreamJson": supports_stream_json,
+        })),
         Err(msg) => Ok(serde_json::json!({ "ok": false, "error": msg })),
     }
 }

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 interface AnalysisCardsProps {
   markdown: string
   isStreaming: boolean
+  isRevealing?: boolean
 }
 
 interface Section {
@@ -203,7 +204,7 @@ const markdownComponents = {
 // Component
 // ---------------------------------------------------------------------------
 
-function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
+function AnalysisCards({ markdown, isStreaming, isRevealing }: AnalysisCardsProps) {
   const sections = useMemo(() => parseSections(markdown), [markdown])
 
   if (sections.length === 0 && !isStreaming) {
@@ -234,7 +235,14 @@ function AnalysisCards({ markdown, isStreaming }: AnalysisCardsProps) {
         const isLast = index === sections.length - 1
 
         return (
-          <AccentStripeCard key={`${section.title}-${index}`} accent={section.accent}>
+          <AccentStripeCard
+            key={`${section.title}-${index}`}
+            accent={section.accent}
+            style={isRevealing ? {
+              animation: `revealIn 0.35s cubic-bezier(0.16,1,0.3,1) both`,
+              animationDelay: `${index * 0.1}s`,
+            } : undefined}
+          >
             {/* Card title */}
             <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
               {section.title}

@@ -5,8 +5,11 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
+import { useProgressiveReveal } from "@/hooks/use-progressive-reveal"
+import { RevealContainer } from "@/components/RevealContainer"
 import { api, type PrdStyleEntry } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
+import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus, FILE_MANAGER_LABEL } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
@@ -81,7 +84,7 @@ export function PrdPage() {
   const fromYolo = searchParams.get("yolo") === "1"
 
   // AI stream hook for initial generation
-  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, error, start, reset } = useAiStream({
+  const { text, isStreaming, isThinking, elapsedSeconds, streamMeta, toolStatus, error, start, reset } = useAiStream({
     projectId,
     phase: "prd",
   })
@@ -121,6 +124,11 @@ export function PrdPage() {
   // Progress estimation during streaming
   const currentStreaming = isStreaming || isAssistStreaming
   const streamText = isAssistStreaming ? assistText : text
+
+  const { visibleText, isRevealing, revealedCount, totalCount, skipReveal } = useProgressiveReveal({
+    text: displayMarkdown || "",
+    isStreaming: currentStreaming,
+  })
   const progressValue = currentStreaming
     ? Math.min(90, Math.floor(streamText.length / 40))
     : displayMarkdown
@@ -500,9 +508,7 @@ export function PrdPage() {
                 ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
                 : null
           })()}
-          <p className="mt-2 text-[12px] tabular-nums text-[var(--text-tertiary)]">
-            {String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:{String(elapsedSeconds % 60).padStart(2, "0")}
-          </p>
+          <StreamProgress isStreaming={currentStreaming} isThinking={isThinking} elapsedSeconds={elapsedSeconds} streamMeta={streamMeta} toolStatus={toolStatus} />
         </div>
       )}
 
@@ -583,18 +589,14 @@ export function PrdPage() {
           ref={contentRef}
           className="prd-content min-w-0 flex-1 overflow-y-auto"
         >
-          <PrdViewer
-            markdown={displayMarkdown || ""}
-            isStreaming={currentStreaming}
-            onEdit={handleEdit}
-          />
-          {!currentStreaming && streamMeta !== null && (
-            <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
-              {streamMeta.inputTokens != null && streamMeta.outputTokens != null
-                ? `API 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s · 输入 ${streamMeta.inputTokens.toLocaleString()} tokens · 输出 ${streamMeta.outputTokens.toLocaleString()} tokens`
-                : `CLI 模式：耗时 ${(streamMeta.durationMs / 1000).toFixed(1)}s`}
-            </p>
-          )}
+          <RevealContainer isRevealing={isRevealing} revealedCount={revealedCount} totalCount={totalCount} onSkip={skipReveal}>
+            <PrdViewer
+              markdown={visibleText}
+              isStreaming={currentStreaming}
+              onEdit={handleEdit}
+            />
+          </RevealContainer>
+          {!currentStreaming && <StreamProgress isStreaming={false} isThinking={false} elapsedSeconds={0} streamMeta={streamMeta} />}
         </div>
 
         {/* Right: TOC navigation */}

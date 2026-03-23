@@ -3,24 +3,8 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import { api, type BrainstormMessage } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 
-// ─── Event payloads (same shape as use-ai-stream) ──────────────────────────
-
-interface StreamChunkPayload {
-  streamKey: string
-  text: string
-}
-
-interface StreamDonePayload {
-  streamKey: string
-  outputFile: string
-  durationMs: number
-  finalText?: string
-}
-
-interface StreamErrorPayload {
-  streamKey: string
-  message: string
-}
+// ─── Event payloads ──────────────────────────────────────────────────────
+import type { StreamChunkPayload, StreamDonePayload, StreamErrorPayload } from "@/lib/stream-types"
 
 // ─── Public interface ──────────────────────────────────────────────────────
 
