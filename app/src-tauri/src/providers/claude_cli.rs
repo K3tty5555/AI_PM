@@ -9,54 +9,116 @@ pub struct ClaudeCliProvider {
     pub work_dir: String,
 }
 
-/// Build a PATH that includes common user binary locations (macOS .app has minimal PATH)
+/// PATH separator: `;` on Windows, `:` elsewhere
+#[cfg(target_os = "windows")]
+const PATH_SEP: char = ';';
+#[cfg(not(target_os = "windows"))]
+const PATH_SEP: char = ':';
+
+/// Build a PATH that includes common user binary locations.
+/// macOS .app and Windows installer both have minimal PATH.
 pub fn enriched_path() -> String {
     let home = dirs::home_dir().unwrap_or_default();
-    let mut paths: Vec<String> = [
-        ".local/bin",
-        ".local/share/claude",
-        ".local/claude-code/node_modules/.bin",
-        ".npm-global/bin",
-        ".cargo/bin",
-    ]
-    .iter()
-    .map(|p| home.join(p).to_string_lossy().to_string())
-    .collect();
+    let mut paths: Vec<String> = Vec::new();
 
-    // nvm: scan all installed node versions
-    let nvm_versions = home.join(".nvm/versions/node");
-    if let Ok(entries) = std::fs::read_dir(&nvm_versions) {
-        for entry in entries.flatten() {
-            let bin = entry.path().join("bin");
-            if bin.exists() {
-                paths.push(bin.to_string_lossy().to_string());
+    // === Unix paths (macOS / Linux) ===
+    #[cfg(not(target_os = "windows"))]
+    {
+        for p in &[
+            ".local/bin",
+            ".local/share/claude",
+            ".local/claude-code/node_modules/.bin",
+            ".npm-global/bin",
+            ".cargo/bin",
+        ] {
+            paths.push(home.join(p).to_string_lossy().to_string());
+        }
+
+        // nvm: scan all installed node versions
+        let nvm_versions = home.join(".nvm/versions/node");
+        if let Ok(entries) = std::fs::read_dir(&nvm_versions) {
+            for entry in entries.flatten() {
+                let bin = entry.path().join("bin");
+                if bin.exists() {
+                    paths.push(bin.to_string_lossy().to_string());
+                }
             }
         }
+        // fnm
+        let fnm_current = home.join(".local/share/fnm/aliases/default/bin");
+        if fnm_current.exists() {
+            paths.push(fnm_current.to_string_lossy().to_string());
+        }
     }
-    // fnm
-    let fnm_current = home.join(".local/share/fnm/aliases/default/bin");
-    if fnm_current.exists() {
-        paths.push(fnm_current.to_string_lossy().to_string());
+
+    // === Windows paths ===
+    #[cfg(target_os = "windows")]
+    {
+        // npm global: %APPDATA%\npm
+        if let Ok(appdata) = std::env::var("APPDATA") {
+            paths.push(format!("{}\\npm", appdata));
+        }
+        // Claude Code installer: %LOCALAPPDATA%\Programs\claude-code
+        // and %LOCALAPPDATA%\claude
+        if let Ok(local) = std::env::var("LOCALAPPDATA") {
+            paths.push(format!("{}\\Programs\\claude-code", local));
+            paths.push(format!("{}\\claude", local));
+        }
+        // User profile paths
+        paths.push(home.join(".npm-global").to_string_lossy().to_string());
+        paths.push(home.join(".cargo\\bin").to_string_lossy().to_string());
+
+        // nvm-windows: %APPDATA%\nvm\<version>
+        if let Ok(appdata) = std::env::var("APPDATA") {
+            let nvm_dir = std::path::Path::new(&appdata).join("nvm");
+            if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
+                for entry in entries.flatten() {
+                    if entry.path().is_dir() {
+                        paths.push(entry.path().to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+        // fnm on Windows
+        if let Ok(local) = std::env::var("LOCALAPPDATA") {
+            let fnm_current = std::path::Path::new(&local).join("fnm_multishells");
+            if fnm_current.exists() {
+                if let Ok(entries) = std::fs::read_dir(&fnm_current) {
+                    // fnm creates temp dirs per shell; pick the latest
+                    if let Some(latest) = entries.flatten().max_by_key(|e| e.metadata().and_then(|m| m.modified()).ok()) {
+                        paths.push(latest.path().to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
     }
 
     let sys_path = std::env::var("PATH").unwrap_or_default();
     if sys_path.is_empty() {
+        #[cfg(not(target_os = "windows"))]
         paths.push("/usr/local/bin:/usr/bin:/bin".to_string());
     } else {
         paths.push(sys_path);
     }
-    paths.join(":")
+    paths.join(&PATH_SEP.to_string())
 }
 
+/// Candidate binary names for `claude` on the current platform.
+#[cfg(target_os = "windows")]
+const CLAUDE_BINARIES: &[&str] = &["claude.cmd", "claude.exe", "claude.ps1", "claude"];
+#[cfg(not(target_os = "windows"))]
+const CLAUDE_BINARIES: &[&str] = &["claude"];
+
 /// Resolve the full path to `claude` binary by searching enriched PATH.
-/// `Command::new("claude")` uses the parent process PATH for lookup, which is
-/// minimal in macOS .app — so we must resolve the path ourselves.
+/// On Windows, tries claude.cmd, claude.exe, claude.ps1 in each directory.
 pub fn resolve_claude_binary() -> String {
     let path = enriched_path();
-    for dir in path.split(':') {
-        let candidate = std::path::Path::new(dir).join("claude");
-        if candidate.exists() {
-            return candidate.to_string_lossy().to_string();
+    for dir in path.split(PATH_SEP) {
+        for bin in CLAUDE_BINARIES {
+            let candidate = std::path::Path::new(dir).join(bin);
+            if candidate.exists() {
+                return candidate.to_string_lossy().to_string();
+            }
         }
     }
     "claude".to_string() // fallback: let OS try
