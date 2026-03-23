@@ -509,7 +509,16 @@ fn build_system_prompt(
             绝对不要输出「需要您批准」「请批准 Write 工具」「等待权限」等字样。".to_string());
         ctx.push("4. **禁止提问或确认**：设计规范已由用户选定，直接生成完整 HTML 原型。".to_string());
         ctx.push("5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从 `<!DOCTYPE html>` 开始。".to_string());
+    } else if is_cli {
+        // CLI mode (non-prototype): allow auxiliary tools (WebSearch/Read) but content goes to stdout
+        ctx.push("1. **第一行就是文档标题**（如 `# PRD：产品名`），最后一行是文档结尾，不要有任何前言或后记".to_string());
+        ctx.push("2. **禁止输出元信息**：「已生成」「文件已保存」「执行步骤」「操作结果」「PRD 已完成」等一律不输出".to_string());
+        ctx.push("3. **允许使用辅助工具**：可以使用 WebSearch、Read 等工具来收集信息辅助生成，\
+            但 **禁止使用 Write 工具** —— 最终文档内容必须输出到 stdout，后端会自动保存。".to_string());
+        ctx.push("4. **禁止提问或确认**：导出格式默认「仅 Markdown」，用户故事按标准编写，直接生成内容".to_string());
+        ctx.push("5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从文档第一行开始".to_string());
     } else {
+        // API mode: no tools available at all
         ctx.push("1. **第一行就是文档标题**（如 `# PRD：产品名`），最后一行是文档结尾，不要有任何前言或后记".to_string());
         ctx.push("2. **禁止输出元信息**：「已生成」「文件已保存」「执行步骤」「操作结果」「PRD 已完成」等一律不输出".to_string());
         ctx.push("3. **禁止调用任何工具**：Write、Edit、Bash、AskUserQuestion 在此环境中均不存在，调用无效。\
@@ -696,6 +705,7 @@ pub async fn start_stream(
                 "durationMs": duration_ms,
                 "inputTokens": result.input_tokens,
                 "outputTokens": result.output_tokens,
+                "costUsd": result.cost_usd,
                 "finalText": final_text,
             });
             let _ = app.emit("stream_done", done_payload);
