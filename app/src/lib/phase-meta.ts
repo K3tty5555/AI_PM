@@ -14,6 +14,7 @@ export const PHASE_LABELS: Record<string, string> = {
   analytics: "埋点设计",
   prototype: "原型设计",
   review: "需求评审",
+  "review-modify": "评审修订",
   retrospective: "项目复盘",
 }
 

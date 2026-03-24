@@ -1,8 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { listen, type UnlistenFn } from "@tauri-apps/api/event"
-import { getCurrentWindow } from "@tauri-apps/api/window"
+import { getCurrentWindow, ProgressBarStatus } from "@tauri-apps/api/window"
 import { api } from "@/lib/tauri-api"
 import type { StreamChunkPayload, StreamErrorPayload, StreamDonePayload, StreamToolPayload, StreamMeta } from "@/lib/stream-types"
+import { globalToast } from "@/hooks/use-toast"
+import { PHASE_LABELS } from "@/lib/phase-meta"
 
 // ── Module-level background stream store (survives component unmount) ─────
 // When the user navigates away mid-stream, the component unmounts but the
@@ -34,6 +36,22 @@ interface BgStream {
 }
 
 const bgStore = new Map<string, BgStream>()
+
+// ── Progress bar state (window-level, shared across all streams) ─────────
+let activeStreamCount = 0
+
+function setTaskbarProgress(status: ProgressBarStatus) {
+  getCurrentWindow().setProgressBar({ status }).catch(() => {})
+}
+
+function notifyUserAttention() {
+  const win = getCurrentWindow()
+  win.isFocused().then((focused) => {
+    if (!focused) {
+      win.requestUserAttention(2).catch(() => {})
+    }
+  }).catch(() => {})
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -218,6 +236,10 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
       }
       bgStore.set(key, bg)
 
+      // Start taskbar progress bar
+      activeStreamCount++
+      setTaskbarProgress(ProgressBarStatus.Indeterminate)
+
       // Set up listeners BEFORE invoking the backend
       Promise.all([
         listen<StreamChunkPayload>("stream_chunk", (event) => {
@@ -279,13 +301,23 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
 
           target.notify?.(patch)
 
-          // Dock bounce when AI completes and window is not focused (Task 25)
-          getCurrentWindow().isFocused().then((focused) => {
-            if (!focused) {
-              // UserAttentionType.Informational = 2 (bounces Dock icon once)
-              getCurrentWindow().requestUserAttention(2).catch(() => {})
-            }
-          }).catch(() => {})
+          // ── Taskbar notification ────────────────────────────────────
+          activeStreamCount = Math.max(0, activeStreamCount - 1)
+          if (activeStreamCount === 0) {
+            setTaskbarProgress(ProgressBarStatus.None)
+          }
+
+          const [evtProjectId, evtPhase] = evtKey.split(":")
+          const phaseLabel = PHASE_LABELS[evtPhase] ?? evtPhase
+          api.getProject(evtProjectId).then((project) => {
+            const name = project?.name ?? ""
+            const msg = name ? `${name} · ${phaseLabel}已完成` : `${phaseLabel}已完成`
+            globalToast(msg, "success")
+          }).catch(() => {
+            globalToast(`${phaseLabel}已完成`, "success")
+          })
+
+          notifyUserAttention()
 
           // Auto-mark phase as completed and notify sidebar to refresh
           api.updatePhase({ projectId, phase, status: "completed", outputFile: file })
@@ -312,6 +344,24 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           target.unlisteners.forEach((fn) => fn())
           target.unlisteners = []
           target.notify?.({ isStreaming: false, error: message, toolStatus: null })
+
+          // ── Taskbar notification for errors ────────────────────────
+          activeStreamCount = Math.max(0, activeStreamCount - 1)
+          if (activeStreamCount === 0) {
+            setTaskbarProgress(ProgressBarStatus.None)
+          }
+
+          const [errProjectId, errPhase] = evtKey.split(":")
+          const errPhaseLabel = PHASE_LABELS[errPhase] ?? errPhase
+          api.getProject(errProjectId).then((project) => {
+            const name = project?.name ?? ""
+            const msg = name ? `${name} · ${errPhaseLabel}生成失败` : `${errPhaseLabel}生成失败`
+            globalToast(msg, "error")
+          }).catch(() => {
+            globalToast(`${errPhaseLabel}生成失败`, "error")
+          })
+
+          notifyUserAttention()
         }),
         listen<StreamToolPayload>("stream_tool", (event) => {
           const { streamKey, tool, status } = event.payload
@@ -345,6 +395,10 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           bg.unlisteners.forEach((fn) => fn())
           bg.unlisteners = []
           bgStore.delete(key)
+          activeStreamCount = Math.max(0, activeStreamCount - 1)
+          if (activeStreamCount === 0) {
+            setTaskbarProgress(ProgressBarStatus.None)
+          }
           bg.notify?.({ isStreaming: false, error: String(err) })
         })
       })
