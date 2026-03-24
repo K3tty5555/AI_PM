@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import {
   ToastContext,
   useToastState,
+  registerGlobalToast,
   type ToastItem as ToastItemType,
   type ToastVariant,
 } from "@/hooks/use-toast"
@@ -96,6 +97,11 @@ function ToastItemComponent({
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const state = useToastState()
+
+  // Register module-level toast API for background stream notifications
+  React.useEffect(() => {
+    registerGlobalToast(state.setToasts, state.timersRef)
+  }, [state.setToasts, state.timersRef])
 
   return (
     <ToastContext.Provider value={state}>
