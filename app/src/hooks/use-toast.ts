@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef } from "react"
+import React, { createContext, useContext, useState, useCallback, useRef } from "react"
 
 export type ToastVariant = "success" | "error" | "info" | "warning"
 
@@ -19,7 +19,10 @@ export const ToastContext = createContext<ToastContextValue | null>(null)
 
 let idCounter = 0
 
-export function useToastState(): ToastContextValue {
+export function useToastState(): ToastContextValue & {
+  setToasts: React.Dispatch<React.SetStateAction<ToastItem[]>>
+  timersRef: React.MutableRefObject<Map<string, ReturnType<typeof setTimeout>>>
+} {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
@@ -53,7 +56,40 @@ export function useToastState(): ToastContextValue {
     []
   )
 
-  return { toasts, toast, dismiss }
+  return { toasts, toast, dismiss, setToasts, timersRef }
+}
+
+// ── Module-level Toast API (works outside React component tree) ──────────
+
+type ToastSetter = React.Dispatch<React.SetStateAction<ToastItem[]>>
+let globalSetToasts: ToastSetter | null = null
+let globalTimersRef: React.MutableRefObject<Map<string, ReturnType<typeof setTimeout>>> | null = null
+
+export function registerGlobalToast(
+  setter: ToastSetter,
+  timers: React.MutableRefObject<Map<string, ReturnType<typeof setTimeout>>>
+) {
+  globalSetToasts = setter
+  globalTimersRef = timers
+}
+
+export function globalToast(message: string, variant: ToastVariant = "info", duration = 3000) {
+  if (!globalSetToasts) return
+  const id = `toast-${++idCounter}`
+  const item: ToastItem = { id, message, variant, duration }
+
+  globalSetToasts((prev) => {
+    const next = [...prev, item]
+    return next.length > 3 ? next.slice(next.length - 3) : next
+  })
+
+  if (globalTimersRef) {
+    const timer = setTimeout(() => {
+      globalTimersRef?.current.delete(id)
+      globalSetToasts?.((prev) => prev.filter((t) => t.id !== id))
+    }, duration)
+    globalTimersRef.current.set(id, timer)
+  }
 }
 
 export function useToast(): ToastContextValue {
