@@ -67,19 +67,11 @@ export function StoriesPage() {
     }
   }, [streamParsedStories])
 
-  // Auto-save stories on change (debounced, skip during streaming and initial load)
-  const hasLoadedRef = useRef(false)
-  useEffect(() => {
-    // Mark as loaded after initial stories are set (from file or AI stream)
-    if (stories.length > 0 && !hasLoadedRef.current) {
-      // Delay marking loaded to skip the initial parse → setStories cycle
-      const id = setTimeout(() => { hasLoadedRef.current = true }, 500)
-      return () => clearTimeout(id)
-    }
-  }, [stories.length])
+  // Auto-save stories on change (debounced, only after user edits)
+  const userEditedRef = useRef(false)
 
   useEffect(() => {
-    if (!hasLoadedRef.current || isStreaming || stories.length === 0 || !projectId) return
+    if (!userEditedRef.current || isStreaming || stories.length === 0 || !projectId) return
 
     const timer = setTimeout(async () => {
       try {
@@ -88,7 +80,7 @@ export function StoriesPage() {
       } catch (err) {
         console.error("[Stories] auto-save failed:", err)
       }
-    }, 800) // 800ms debounce
+    }, 800)
 
     return () => clearTimeout(timer)
   }, [stories, isStreaming, projectId])
@@ -374,6 +366,7 @@ export function StoriesPage() {
           <div className="mt-6">
             <AddStoryInline
               onAdd={(story) => {
+                userEditedRef.current = true
                 setStories((prev) => [...prev, story])
                 setShowAddForm(false)
               }}
@@ -386,7 +379,10 @@ export function StoriesPage() {
         <div className="mt-6">
           <StoryBoard
             stories={stories}
-            onStoriesChange={setStories}
+            onStoriesChange={(newStories) => {
+              userEditedRef.current = true
+              setStories(newStories)
+            }}
             isStreaming={isStreaming}
           />
           {!isStreaming && <StreamProgress isStreaming={false} isThinking={false} elapsedSeconds={0} streamMeta={streamMeta} />}

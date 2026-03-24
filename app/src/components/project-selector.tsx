@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { api, type ProjectSummary } from "@/lib/tauri-api"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
 interface ProjectSelectorProps {
@@ -12,6 +13,7 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector({ toolKey, value, onChange, className, outputFile }: ProjectSelectorProps) {
+  const { toast } = useToast()
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState("")
@@ -64,7 +66,7 @@ export function ProjectSelector({ toolKey, value, onChange, className, outputFil
       setCreating(false)
       setNewName("")
     } catch (err) {
-      console.error("Failed to create project:", err)
+      toast(typeof err === "string" ? err : "项目创建失败", "error")
     }
   }
 
@@ -82,7 +84,7 @@ export function ProjectSelector({ toolKey, value, onChange, className, outputFil
       setImportResult("success")
       setTimeout(() => setImportResult(null), 3000)
     } catch (err) {
-      console.error("Failed to import:", err)
+      toast(typeof err === "string" ? err : "导入失败", "error")
       setImportResult("error")
       setTimeout(() => setImportResult(null), 3000)
     } finally {
@@ -108,18 +110,18 @@ export function ProjectSelector({ toolKey, value, onChange, className, outputFil
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={handleCreateKeyDown}
               placeholder="输入项目名称，回车创建"
-              className="flex-1 h-8 px-2 text-sm bg-transparent border border-[var(--accent-color)] text-[var(--text-primary)] outline-none"
+              className="flex-1 h-8 px-2 text-sm bg-transparent border border-[var(--accent-color)] text-[var(--text-primary)] outline-none rounded-lg"
             />
             <button
               onClick={handleCreate}
               disabled={!newName.trim()}
-              className="h-8 px-3 text-[12px] font-medium bg-[var(--accent-color)] text-white disabled:opacity-40 transition-opacity"
+              className="h-8 px-3 text-[12px] font-medium bg-[var(--accent-color)] text-white disabled:opacity-40 transition-opacity rounded-lg"
             >
               创建
             </button>
             <button
               onClick={() => { setCreating(false); setNewName("") }}
-              className="h-8 px-2 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+              className="h-8 px-2 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] rounded-lg"
             >
               取消
             </button>
@@ -129,7 +131,7 @@ export function ProjectSelector({ toolKey, value, onChange, className, outputFil
             value={value ?? ""}
             onChange={handleChange}
             className={cn(
-              "flex-1 h-8 px-2 text-sm bg-transparent border border-[var(--border)]",
+              "flex-1 h-8 px-2 text-sm bg-transparent border border-[var(--border)] rounded-lg",
               "text-[var(--text-primary)] outline-none",
               "focus:border-[var(--accent-color)] transition-colors"
             )}
@@ -144,7 +146,7 @@ export function ProjectSelector({ toolKey, value, onChange, className, outputFil
 
         {selectedProject && !creating && (
           <span className="text-[11px] text-[var(--text-tertiary)] shrink-0">
-            运行后自动保存上下文
+            产出物会保存到该项目
           </span>
         )}
       </div>
