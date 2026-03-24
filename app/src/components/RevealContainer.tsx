@@ -19,7 +19,7 @@ export function RevealContainer({ isRevealing, revealedCount, totalCount, onSkip
   }, [isRevealing, onSkip])
 
   return (
-    <div className="relative" onClick={isRevealing ? onSkip : undefined}>
+    <div className="relative">
       {children}
       {isRevealing && (
         <div className="sticky bottom-4 flex justify-center pointer-events-none mt-4">

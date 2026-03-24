@@ -77,11 +77,27 @@ pub async fn run_tool(
                 msg
             })?;
 
-        let projects_canonical = std::fs::canonicalize(&state.projects_dir)
-            .unwrap_or_else(|_| Path::new(&state.projects_dir).to_path_buf());
+        // Read-only access: allow any path (user may upload templates from Desktop, Downloads, etc.)
+        // Only write operations (not in this function) should enforce projects_dir restriction.
+        if !canonical.is_file() {
+            let msg = format!("文件不存在：{}", fpath);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
+            return Err(msg);
+        }
 
-        if !canonical.starts_with(&projects_canonical) {
-            let msg = format!("文件路径超出允许范围：{}", fpath);
+        // File size limit (10MB)
+        let file_size = canonical.metadata().map(|m| m.len()).unwrap_or(0);
+        if file_size > 10 * 1024 * 1024 {
+            let msg = format!("文件过大（{:.1}MB），上限 10MB", file_size as f64 / 1024.0 / 1024.0);
+            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
+            return Err(msg);
+        }
+
+        // Block dotfiles (security: prevent reading ~/.ssh, ~/.env, etc.)
+        if canonical.file_name().and_then(|n| n.to_str()).map(|n| n.starts_with('.')).unwrap_or(false)
+            || canonical.components().any(|c| c.as_os_str().to_str().map(|s| s.starts_with('.')).unwrap_or(false))
+        {
+            let msg = "不支持读取隐藏文件或隐藏目录中的文件".to_string();
             let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
             return Err(msg);
         }

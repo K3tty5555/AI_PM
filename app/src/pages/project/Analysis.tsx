@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { ProgressBar } from "@/components/ui/progress-bar"
 import { AnalysisCards } from "@/components/analysis-cards"
 import { InlineChat } from "@/components/inline-chat"
 import { useAiStream } from "@/hooks/use-ai-stream"
@@ -14,7 +13,7 @@ import { ReferenceFiles } from "@/components/reference-files"
 import { api } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
-import { cn, extractStreamStatus } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
 
@@ -143,13 +142,6 @@ export function AnalysisPage() {
   // Question detection on completed stream
   const questionInfo =
     !isStreaming && text ? detectQuestion(text) : { hasQuestion: false, question: "", options: [] }
-
-  // Progress estimation (for the indeterminate-ish progress bar during streaming)
-  const progressValue = isStreaming
-    ? Math.min(90, Math.floor(text.length / 20))
-    : text || existingContent
-      ? 100
-      : 0
 
   // -------------------------------------------------------------------------
   // Load existing analysis report on mount
@@ -390,22 +382,13 @@ export function AnalysisPage() {
         {/* Streaming progress */}
         {isStreaming && (
           <div className="mt-4">
-            <ProgressBar value={progressValue} animated />
-            {(() => {
-              const status = !isThinking ? extractStreamStatus(text) : ""
-              return isThinking
-                ? <p className="mt-2 text-[13px] text-[var(--text-secondary)] animate-[thinkingPulse_1.5s_ease-in-out_infinite]">思考中...</p>
-                : status
-                  ? <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{status}</p>
-                  : null
-            })()}
             <StreamProgress isStreaming={isStreaming} isThinking={isThinking} elapsedSeconds={elapsedSeconds} streamMeta={streamMeta} toolStatus={toolStatus} />
           </div>
         )}
 
         {/* Error display */}
         {error && (
-          <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
+          <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[color-mix(in_srgb,var(--destructive)_5%,transparent)] px-4 py-3">
             <p className="text-sm text-[var(--destructive)]">
               {error}
             </p>
