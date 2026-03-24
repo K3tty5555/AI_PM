@@ -38,6 +38,7 @@ export function RetrospectivePage() {
   const [saving, setSaving] = useState(false)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
   const [showExtractDialog, setShowExtractDialog] = useState(false)
+  const [completed, setCompleted] = useState(false)
 
   const startedRef = useRef(false)
 
@@ -136,7 +137,7 @@ export function RetrospectivePage() {
         outputFile: outputFile ?? RETRO_FILE,
       })
       invalidateProject(projectId)
-      setShowExtractDialog(true)
+      setCompleted(true)
     } catch (err) {
       console.error("Failed to complete:", err)
       toast("完成复盘失败，请重试", "error")
@@ -251,45 +252,65 @@ export function RetrospectivePage() {
           <PrdViewer
             markdown={visibleText}
             isStreaming={isStreaming}
+            onEdit={async (newMarkdown) => {
+              setExistingContent(newMarkdown)
+              try {
+                await api.saveProjectFile({ projectId, fileName: RETRO_FILE, content: newMarkdown })
+                toast("已保存", "success")
+              } catch { toast("保存失败", "error") }
+            }}
           />
         </RevealContainer>
         {!isStreaming && <StreamProgress isStreaming={false} isThinking={false} elapsedSeconds={0} streamMeta={streamMeta} />}
       </div>
 
       {/* Bottom action bar */}
-      <div
-        className={cn(
-          "mt-8 flex items-center justify-between",
-          "border-t border-[var(--border)] pt-6",
-        )}
-      >
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          disabled={isStreaming || advancing}
-        >
-          {PHASE_META.retrospective.backLabel}
-        </Button>
-
-        <div className="flex flex-col items-end gap-1">
-          <Button
-            variant="primary"
-            onClick={handleAdvance}
-            disabled={!canAdvance}
-          >
-            {saving
-              ? "保存中..."
-              : advancing
-                ? "推进中..."
-                : PHASE_META.retrospective.nextLabel + " →"}
+      {completed ? (
+        <div className="mb-4 mt-8 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3 animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]">
+          <span className="size-1.5 rounded-full bg-[var(--success)]" />
+          <span className="flex-1 text-[13px] text-[var(--text-secondary)]">复盘已完成</span>
+          <Button variant="ghost" size="sm" onClick={() => setShowExtractDialog(true)}>
+            沉淀知识到知识库
           </Button>
-          {!advancing && !saving && (
-            <p className="text-[11px] text-[var(--text-tertiary)]">
-              {PHASE_META.retrospective.nextDescription}
-            </p>
-          )}
+          <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
+            返回首页
+          </Button>
         </div>
-      </div>
+      ) : (
+        <div
+          className={cn(
+            "mt-8 flex items-center justify-between",
+            "border-t border-[var(--border)] pt-6",
+          )}
+        >
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            disabled={isStreaming || advancing}
+          >
+            {PHASE_META.retrospective.backLabel}
+          </Button>
+
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="primary"
+              onClick={handleAdvance}
+              disabled={!canAdvance}
+            >
+              {saving
+                ? "保存中..."
+                : advancing
+                  ? "推进中..."
+                  : PHASE_META.retrospective.nextLabel + " →"}
+            </Button>
+            {!advancing && !saving && (
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                {PHASE_META.retrospective.nextDescription}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <KnowledgeExtractDialog
         projectId={projectId!}

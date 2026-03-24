@@ -13,7 +13,13 @@ import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 
 const PROTOTYPE_FILE = "06-prototype.html"
-const DEVICE_WIDTHS = { mobile: 375, tablet: 768, desktop: 0 } as const
+
+const DEVICE_PRESETS = [
+  { width: 375, label: "iPhone" },
+  { width: 768, label: "iPad" },
+  { width: 1024, label: "Laptop" },
+  { width: 1440, label: "Desktop" },
+] as const
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -116,7 +122,12 @@ export function PrototypePage() {
   const [loading, setLoading] = useState(true)
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [advancing, setAdvancing] = useState(false)
-  const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">("desktop")
+  const [deviceWidth, setDeviceWidth] = useState(0) // 0 = 全屏
+  const [customWidth, setCustomWidth] = useState("")
+  const [showDeviceMenu, setShowDeviceMenu] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [iframeHeight, setIframeHeight] = useState(680)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
   const [protoDir, setProtoDir] = useState("")
   const startedRef = useRef(false)
@@ -284,7 +295,14 @@ export function PrototypePage() {
       let inlined = await inlineExternalCss(displayHtml!, projectId!, protoDir)
       inlined = await inlineExternalJs(inlined, projectId!, protoDir)
       if (cancelled) return
-      const blob = new Blob([inlined], { type: "text/html" })
+
+      // Inject resize script for iframe height auto-adaptation
+      const resizeScript = `<script>(function(){try{var ro=new ResizeObserver(function(){parent.postMessage({type:'aipm-resize',height:document.documentElement.scrollHeight},'*')});ro.observe(document.body);parent.postMessage({type:'aipm-resize',height:document.documentElement.scrollHeight},'*')}catch(e){}})()</script>`
+      const htmlWithResize = inlined.replace(/<\/body>/i, resizeScript + '</body>')
+        || inlined.replace(/<\/html>/i, resizeScript + '</html>')
+        || inlined + resizeScript
+
+      const blob = new Blob([htmlWithResize], { type: "text/html" })
       currentUrl = URL.createObjectURL(blob)
       setBlobUrl(currentUrl)
     }
@@ -296,6 +314,27 @@ export function PrototypePage() {
       if (currentUrl) URL.revokeObjectURL(currentUrl)
     }
   }, [displayHtml, projectId, protoDir])
+
+  // ── iframe height auto-adaptation via postMessage ────────────────
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "aipm-resize" && typeof e.data.height === "number") {
+        setIframeHeight(Math.max(400, Math.min(e.data.height + 16, window.innerHeight * 3)))
+      }
+    }
+    window.addEventListener("message", handler)
+    return () => window.removeEventListener("message", handler)
+  }, [])
+
+  // ── Fullscreen Esc exit ─────────────────────────────────────────
+  useEffect(() => {
+    if (!isFullscreen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); setIsFullscreen(false) }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [isFullscreen])
 
   // ── Streaming progress ────────────────────────────────────────────
 
@@ -463,39 +502,99 @@ export function PrototypePage() {
       {/* Prototype preview */}
       {(blobUrl || (manifest && !pageHtml && !isStreaming)) && (
         <div className="mt-6 overflow-hidden rounded-xl border border-[var(--border)] shadow-[var(--shadow-sm)]">
-          {/* Toolbar: device switcher */}
+          {/* Toolbar: device switcher + fullscreen */}
           <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--secondary)] px-4 py-2">
             <div className="flex items-center gap-1">
-              {(["mobile", "tablet", "desktop"] as const).map((d) => (
+              {/* Device selector dropdown */}
+              <div className="relative">
                 <button
-                  key={d}
-                  type="button"
-                  onClick={() => setDevice(d)}
-                  className={cn(
-                    "rounded-md px-2.5 py-1 text-[12px] font-medium transition-colors duration-[var(--dur-base)] ease-[var(--ease-standard)] active:scale-[0.97] active:duration-[100ms]",
-                    device === d
-                      ? "bg-[var(--active-bg)] text-[var(--text-primary)]"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                  )}
+                  onClick={() => setShowDeviceMenu(v => !v)}
+                  className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                 >
-                  {d === "mobile" ? "375" : d === "tablet" ? "768" : "全屏"}
+                  {deviceWidth === 0 ? "自适应" : `${deviceWidth}px`}
+                  <span className="text-[10px]">▾</span>
                 </button>
-              ))}
+                {showDeviceMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowDeviceMenu(false)} />
+                    <div className="absolute top-full left-0 mt-1 z-20 w-48 rounded-lg border border-[var(--border)] bg-[var(--card)] shadow-lg py-1 animate-[fadeIn_100ms]">
+                      <button
+                        onClick={() => { setDeviceWidth(0); setShowDeviceMenu(false) }}
+                        className={cn("w-full px-3 py-1.5 text-left text-[12px] hover:bg-[var(--hover-bg)] transition-colors",
+                          deviceWidth === 0 ? "text-[var(--accent-color)] font-medium" : "text-[var(--text-secondary)]")}
+                      >
+                        自适应
+                      </button>
+                      {DEVICE_PRESETS.map(p => (
+                        <button
+                          key={p.width}
+                          onClick={() => { setDeviceWidth(p.width); setShowDeviceMenu(false) }}
+                          className={cn("w-full px-3 py-1.5 text-left text-[12px] hover:bg-[var(--hover-bg)] transition-colors flex justify-between",
+                            deviceWidth === p.width ? "text-[var(--accent-color)] font-medium" : "text-[var(--text-secondary)]")}
+                        >
+                          <span>{p.label}</span>
+                          <span className="tabular-nums text-[var(--text-tertiary)]">{p.width}px</span>
+                        </button>
+                      ))}
+                      <div className="border-t border-[var(--border)] mt-1 pt-1 px-3 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-[var(--text-tertiary)]">自定义</span>
+                          <input
+                            type="number"
+                            min={280}
+                            max={2560}
+                            value={customWidth}
+                            onChange={e => setCustomWidth(e.target.value)}
+                            onBlur={() => {
+                              const v = parseInt(customWidth)
+                              if (v && v >= 280 && v <= 2560) {
+                                setDeviceWidth(v)
+                                setShowDeviceMenu(false)
+                              }
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === "Enter") {
+                                const v = parseInt(customWidth)
+                                if (v && v >= 280 && v <= 2560) {
+                                  setDeviceWidth(v)
+                                  setShowDeviceMenu(false)
+                                }
+                              }
+                            }}
+                            placeholder="px"
+                            className="w-20 h-6 px-1.5 text-[12px] tabular-nums rounded border border-[var(--border)] bg-transparent text-[var(--text-primary)] outline-none focus:border-[var(--accent-color)]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-            {/* Design spec badge */}
-            <span className="rounded-full bg-[var(--secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)] border border-[var(--border)]">
-              {selectedSpec === "ai-contextual" ? "AI 情境定制"
-                : selectedSpec === "ant-design" ? "Ant Design"
-                : selectedSpec === "material-design" ? "Material Design"
-                : selectedSpec === "element-plus" ? "Element Plus"
-                : selectedSpec}
-            </span>
-            {/* Page count badge */}
-            {manifest && manifest.length > 1 && (
-              <span className="rounded-full bg-[var(--accent-light)] px-2 py-0.5 text-[11px] font-medium tabular-nums text-[var(--accent-color)]">
-                {manifest.findIndex(s => s.id === activePageId) + 1} / {manifest.length}
+            <div className="flex items-center gap-2">
+              {/* Design spec badge */}
+              <span className="rounded-full bg-[var(--secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)] border border-[var(--border)]">
+                {selectedSpec === "ai-contextual" ? "AI 情境定制"
+                  : selectedSpec === "ant-design" ? "Ant Design"
+                  : selectedSpec === "material-design" ? "Material Design"
+                  : selectedSpec === "element-plus" ? "Element Plus"
+                  : selectedSpec}
               </span>
-            )}
+              {/* Page count badge */}
+              {manifest && manifest.length > 1 && (
+                <span className="rounded-full bg-[var(--accent-light)] px-2 py-0.5 text-[11px] font-medium tabular-nums text-[var(--accent-color)]">
+                  {manifest.findIndex(s => s.id === activePageId) + 1} / {manifest.length}
+                </span>
+              )}
+              {/* Fullscreen button */}
+              <button
+                onClick={() => setIsFullscreen(true)}
+                className="rounded-md px-2 py-1 text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                title="全屏预览"
+              >
+                ⛶
+              </button>
+            </div>
           </div>
 
           {/* Page tabs (multi-file mode) */}
@@ -527,25 +626,26 @@ export function PrototypePage() {
             {blobUrl && !isHtmlMissingStructure ? (
               <div
                 key={activePageId || "single"}
-                className="animate-[fadeInUp_250ms_var(--ease-decelerate)]"
-                style={{ width: device === "desktop" ? "100%" : DEVICE_WIDTHS[device] }}
+                className="animate-[fadeInUp_250ms_var(--ease-decelerate)] transition-[width] duration-200"
+                style={{ width: deviceWidth === 0 ? "100%" : Math.min(deviceWidth, 9999) }}
               >
                 <iframe
+                  ref={iframeRef}
                   src={blobUrl}
-                  style={
-                    device === "desktop"
-                      ? { width: "100%", height: 680, border: "none" }
-                      : { width: DEVICE_WIDTHS[device], height: 680, border: "none", boxShadow: "0 0 0 1px var(--border)" }
-                  }
+                  style={{
+                    width: deviceWidth === 0 ? "100%" : deviceWidth,
+                    height: iframeHeight,
+                    border: "none",
+                    ...(deviceWidth > 0 ? { boxShadow: "0 0 0 1px var(--border)" } : {}),
+                  }}
                   title="原型预览"
                 />
               </div>
             ) : (
-              <div className="flex h-[680px] w-full flex-col gap-4 p-8">
-                <div className="h-8 w-1/3 rounded-md bg-[var(--secondary)] animate-[shimmer_1.5s_infinite]" />
-                <div className="h-4 w-2/3 rounded-md bg-[var(--secondary)] animate-[shimmer_1.5s_infinite]" />
-                <div className="h-4 w-1/2 rounded-md bg-[var(--secondary)] animate-[shimmer_1.5s_infinite]" />
-                <div className="flex-1 rounded-lg bg-[var(--secondary)] animate-[shimmer_1.5s_infinite]" />
+              <div className="flex h-[400px] w-full flex-col gap-4 p-8">
+                <div className="h-8 w-1/3 rounded-md bg-[var(--secondary)] animate-[indeterminate_1.5s_infinite]" />
+                <div className="h-4 w-2/3 rounded-md bg-[var(--secondary)] animate-[indeterminate_1.5s_infinite]" />
+                <div className="flex-1 rounded-lg bg-[var(--secondary)] animate-[indeterminate_1.5s_infinite]" />
               </div>
             )}
           </div>
@@ -572,6 +672,19 @@ export function PrototypePage() {
           )}
         </div>
       </div>
+
+      {/* Fullscreen overlay */}
+      {isFullscreen && blobUrl && (
+        <div className="fixed inset-0 z-40 bg-white dark:bg-[var(--background)] animate-[fadeIn_150ms_ease]">
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+            <span className="text-[12px] text-[var(--text-tertiary)]">Esc 退出</span>
+            <Button variant="ghost" size="sm" onClick={() => setIsFullscreen(false)}>
+              退出全屏
+            </Button>
+          </div>
+          <iframe src={blobUrl} className="w-full h-full border-none" title="原型全屏预览" />
+        </div>
+      )}
     </div>
   )
 }

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 interface PrdViewerProps {
   markdown: string
   isStreaming: boolean
+  editable?: boolean
   onEdit?: (newMarkdown: string) => void
 }
 
@@ -439,10 +440,11 @@ function createMarkdownComponents(
 // Component
 // ---------------------------------------------------------------------------
 
-function PrdViewer({ markdown, isStreaming, onEdit }: PrdViewerProps) {
+function PrdViewer({ markdown, isStreaming, editable: editableProp, onEdit }: PrdViewerProps) {
   const editor = useBlockEditor(markdown, onEdit)
-  const editable = !isStreaming && !!onEdit
+  const editable = editableProp ?? (!isStreaming && !!onEdit)
   const blockCounterRef = useRef({ value: 0 })
+  const [onboarded, setOnboarded] = useState(() => !!localStorage.getItem("prd-edit-onboarded"))
 
   const components = useMemo(
     () => createMarkdownComponents(editor, editable, blockCounterRef.current),
@@ -477,6 +479,12 @@ function PrdViewer({ markdown, isStreaming, onEdit }: PrdViewerProps) {
       data-slot="prd-viewer"
       className="animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]"
     >
+      {editable && !onboarded && (
+        <div className="mb-3 flex items-center gap-2 text-[11px] text-[var(--text-tertiary)]">
+          <span>双击段落可编辑 · Cmd+Enter 保存 · Esc 取消</span>
+          <button onClick={() => { setOnboarded(true); localStorage.setItem("prd-edit-onboarded", "1") }} className="hover:text-[var(--text-secondary)]">×</button>
+        </div>
+      )}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
