@@ -20,59 +20,62 @@ export function useProgressiveReveal({
   staggerMs = 150,
 }: UseProgressiveRevealOptions): UseProgressiveRevealReturn {
   const [revealedCount, setRevealedCount] = useState(0)
-  const [skipped, setSkipped] = useState(false)
+  const [isActive, setIsActive] = useState(false)
   const prevTextLenRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const staggerRef = useRef(staggerMs)
+  staggerRef.current = staggerMs
 
   const paragraphs = text ? text.split(/\n\n+/) : []
   const totalCount = paragraphs.length
 
-  // 检测"从无到有"的跳变（CLI 模式一次性到达）
-  const isNewBulkArrival = !isStreaming && text.length > 100 && prevTextLenRef.current === 0 && !skipped
-
+  // Detect bulk arrival: text jumps from empty to substantial while not streaming
   useEffect(() => {
+    const wasBulk = !isStreaming && text.length > 100 && prevTextLenRef.current === 0
     prevTextLenRef.current = text.length
-  }, [text])
 
+    if (wasBulk && !isActive) {
+      setIsActive(true)
+      setRevealedCount(1)
+    }
+  }, [text, isStreaming]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Run stagger timer when active
   useEffect(() => {
-    if (!isNewBulkArrival || totalCount === 0) return
-
-    setRevealedCount(1)
-    if (totalCount <= 1) return
+    if (!isActive || totalCount <= 1) return
 
     const timer = setInterval(() => {
       setRevealedCount((prev) => {
         const next = prev + 1
-        if (next >= totalCount) clearInterval(timer)
+        if (next >= totalCount) {
+          clearInterval(timer)
+          setIsActive(false)
+        }
         return next
       })
-    }, staggerMs)
+    }, staggerRef.current)
 
     timerRef.current = timer
     return () => clearInterval(timer)
-  }, [isNewBulkArrival, totalCount, staggerMs])
-
-  useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [])
+  }, [isActive, totalCount])
 
   const skipReveal = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current)
       timerRef.current = null
     }
-    setSkipped(true)
+    setIsActive(false)
     setRevealedCount(totalCount)
   }, [totalCount])
 
-  const isRevealing = isNewBulkArrival && revealedCount < totalCount
-
   let visibleText: string
-  if (isStreaming || skipped || !isNewBulkArrival) {
-    visibleText = text
-  } else {
+  if (isActive && revealedCount < totalCount) {
     visibleText = paragraphs.slice(0, revealedCount).join("\n\n")
+  } else {
+    visibleText = text
   }
+
+  const isRevealing = isActive && revealedCount < totalCount
 
   return { visibleText, isRevealing, revealedCount, totalCount, skipReveal }
 }

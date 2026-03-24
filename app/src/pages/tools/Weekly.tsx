@@ -3,10 +3,14 @@ import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useToolStream } from "@/hooks/use-tool-stream"
+import { TemplateUpload } from "@/components/template-upload"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
 export function ToolWeeklyPage() {
+  const { toast } = useToast()
   const [input, setInput] = useState("")
+  const [templatePath, setTemplatePath] = useState<string | null>(null)
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } = useToolStream("ai-pm-weekly")
 
   const handleRun = useCallback((mode: "brief" | "detail") => {
@@ -15,12 +19,17 @@ export function ToolWeeklyPage() {
     const modeHint = mode === "brief"
       ? "\n\n请生成向上汇报版周报（简洁版，--brief 模式）"
       : "\n\n请生成团队同步版周报（详细版，--detail 模式）"
-    run(input.trim() + modeHint)
-  }, [input, run, reset])
+    let userInput = input.trim() + modeHint
+    if (templatePath) {
+      userInput += `\n\n---\n\n请严格按照以下模板的格式和结构输出周报。模板文件路径：${templatePath}`
+    }
+    run(userInput)
+  }, [input, templatePath, run, reset])
 
   const handleReset = useCallback(() => {
     reset()
     setInput("")
+    setTemplatePath(null)
   }, [reset])
 
   const progressValue = isStreaming ? Math.min(90, Math.floor(text.length / 20)) : text ? 100 : 0
@@ -51,6 +60,9 @@ export function ToolWeeklyPage() {
               "focus:border-[var(--accent-color)] transition-[border-color]"
             )}
           />
+          <div className="mt-3 flex items-center gap-3">
+            <TemplateUpload label="周报模板" storageKey="weekly" value={templatePath} onSelect={setTemplatePath} />
+          </div>
           <div className="mt-3 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => handleRun("brief")} disabled={!input.trim()}>
               向上汇报版
@@ -75,7 +87,7 @@ export function ToolWeeklyPage() {
       )}
 
       {error && (
-        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[color-mix(in_srgb,var(--destructive)_5%,transparent)] px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">{error}</p>
           <Button variant="ghost" size="sm" onClick={handleReset} className="mt-2">重置</Button>
         </div>
@@ -88,7 +100,7 @@ export function ToolWeeklyPage() {
             {!isStreaming && (
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={handleReset}>重新生成</Button>
-                <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(text)}>复制</Button>
+                <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(text).then(() => toast("已复制", "success"))}>复制</Button>
               </div>
             )}
           </div>

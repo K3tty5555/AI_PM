@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
 import { useToolStream } from "@/hooks/use-tool-stream"
+import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
+import { TemplateUpload } from "@/components/template-upload"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
 function parseReplyTemplates(text: string): Array<{name: string; content: string}> {
@@ -19,7 +22,10 @@ function parseReplyTemplates(text: string): Array<{name: string; content: string
 }
 
 export function ToolPriorityPage() {
+  const { toast } = useToast()
   const [input, setInput] = useState("")
+  const [filePath, setFilePath] = useState<string | null>(null)
+  const [templatePath, setTemplatePath] = useState<string | null>(null)
   const [templates, setTemplates] = useState<Array<{name: string; content: string}>>([])
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } = useToolStream("ai-pm-priority")
 
@@ -29,16 +35,36 @@ export function ToolPriorityPage() {
     }
   }, [isStreaming, text])
 
+  const handlePickFile = useCallback(async () => {
+    const selected = await dialogOpen({
+      multiple: false,
+      filters: [
+        { name: "表格文件", extensions: ["xlsx", "xls", "csv"] },
+        { name: "文本文件", extensions: ["txt", "md"] },
+        { name: "所有文件", extensions: ["*"] },
+      ],
+    })
+    if (selected) {
+      setFilePath(selected as string)
+    }
+  }, [])
+
   const handleRun = useCallback(() => {
-    if (!input.trim()) return
+    if (!input.trim() && !filePath) return
     reset()
     setTemplates([])
-    run(input.trim())
-  }, [input, run, reset])
+    let userInput = input.trim() || "请分析上传的文件中的需求并评估优先级"
+    if (templatePath) {
+      userInput += `\n\n---\n\n请严格按照以下模板的格式和结构输出评估结果。模板文件路径：${templatePath}`
+    }
+    run(userInput, filePath ?? undefined)
+  }, [input, filePath, templatePath, run, reset])
 
   const handleReset = useCallback(() => {
     reset()
     setInput("")
+    setFilePath(null)
+    setTemplatePath(null)
     setTemplates([])
   }, [reset])
 
@@ -57,7 +83,7 @@ export function ToolPriorityPage() {
       {!isStreaming && !text && (
         <div className="mt-6">
           <p className="mb-3 text-sm text-[var(--text-secondary)]">
-            粘贴需求列表（每行一条，可包含提报方、影响用户数等背景信息）
+            粘贴需求列表，或上传表格文件（Excel/CSV），批量导入需求
           </p>
           <textarea
             value={input}
@@ -72,8 +98,21 @@ export function ToolPriorityPage() {
               "focus:border-[var(--accent-color)] transition-[border-color]"
             )}
           />
-          <div className="mt-3 flex justify-end">
-            <Button variant="primary" onClick={handleRun} disabled={!input.trim()}>
+          {filePath && (
+            <div className="mt-2 flex items-center gap-2 text-[13px]">
+              <span className="text-[var(--text-secondary)]">已选文件：</span>
+              <span className="text-[var(--text-primary)] font-medium truncate max-w-[400px]">{filePath.split(/[/\\]/).pop()}</span>
+              <button onClick={() => setFilePath(null)} className="text-[var(--text-tertiary)] hover:text-[var(--destructive)] transition-colors">×</button>
+            </div>
+          )}
+          <div className="mt-3 flex items-center gap-3">
+            <TemplateUpload label="评估模板" storageKey="priority" value={templatePath} onSelect={setTemplatePath} />
+          </div>
+          <div className="mt-3 flex items-center justify-between">
+            <Button variant="ghost" size="sm" onClick={handlePickFile}>
+              上传表格文件
+            </Button>
+            <Button variant="primary" onClick={handleRun} disabled={!input.trim() && !filePath}>
               开始评估
             </Button>
           </div>
@@ -95,7 +134,7 @@ export function ToolPriorityPage() {
 
       {/* 错误 */}
       {error && (
-        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[color-mix(in_srgb,var(--destructive)_5%,transparent)] px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">{error}</p>
           <Button variant="ghost" size="sm" onClick={handleReset} className="mt-2">重置</Button>
         </div>
@@ -111,7 +150,7 @@ export function ToolPriorityPage() {
             {!isStreaming && (
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={handleReset}>重新评估</Button>
-                <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(text)}>复制结果</Button>
+                <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(displayText).then(() => toast("已复制", "success"))}>复制结果</Button>
               </div>
             )}
           </div>

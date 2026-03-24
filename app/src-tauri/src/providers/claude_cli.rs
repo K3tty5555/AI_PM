@@ -15,10 +15,32 @@ const PATH_SEP: char = ';';
 #[cfg(not(target_os = "windows"))]
 const PATH_SEP: char = ':';
 
+static ENRICHED_PATH_CACHE: OnceLock<String> = OnceLock::new();
+
 /// Build a PATH that includes common user binary locations.
 /// macOS .app and Windows installer both have minimal PATH.
 pub fn enriched_path() -> String {
-    let home = dirs::home_dir().unwrap_or_default();
+    ENRICHED_PATH_CACHE.get_or_init(|| {
+        build_enriched_path()
+    }).clone()
+}
+
+fn build_enriched_path() -> String {
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => {
+            // Cannot determine home directory — skip user-specific paths
+            let sys_path = std::env::var("PATH").unwrap_or_default();
+            return if sys_path.is_empty() {
+                #[cfg(not(target_os = "windows"))]
+                { "/usr/local/bin:/usr/bin:/bin".to_string() }
+                #[cfg(target_os = "windows")]
+                { std::env::var("PATH").unwrap_or_default() }
+            } else {
+                sys_path
+            };
+        }
+    };
     let mut paths: Vec<String> = Vec::new();
 
     // === Unix paths (macOS / Linux) ===
@@ -109,19 +131,23 @@ const CLAUDE_BINARIES: &[&str] = &["claude.cmd", "claude.exe", "claude.ps1", "cl
 #[cfg(not(target_os = "windows"))]
 const CLAUDE_BINARIES: &[&str] = &["claude"];
 
+static CLAUDE_BINARY_CACHE: OnceLock<String> = OnceLock::new();
+
 /// Resolve the full path to `claude` binary by searching enriched PATH.
 /// On Windows, tries claude.cmd, claude.exe, claude.ps1 in each directory.
 pub fn resolve_claude_binary() -> String {
-    let path = enriched_path();
-    for dir in path.split(PATH_SEP) {
-        for bin in CLAUDE_BINARIES {
-            let candidate = std::path::Path::new(dir).join(bin);
-            if candidate.exists() {
-                return candidate.to_string_lossy().to_string();
+    CLAUDE_BINARY_CACHE.get_or_init(|| {
+        let path = enriched_path();
+        for dir in path.split(PATH_SEP) {
+            for bin in CLAUDE_BINARIES {
+                let candidate = std::path::Path::new(dir).join(bin);
+                if candidate.exists() {
+                    return candidate.to_string_lossy().to_string();
+                }
             }
         }
-    }
-    "claude".to_string() // fallback: let OS try
+        "claude".to_string() // fallback: let OS try
+    }).clone()
 }
 
 /// Parse a semver-like version string, returning (major, minor, patch).
@@ -201,6 +227,7 @@ impl ClaudeCliProvider {
         let mut child = tokio::process::Command::new(resolve_claude_binary())
             .arg("--print")
             .arg("--dangerously-skip-permissions")
+            .arg("--allowedTools").arg("Read")
             .current_dir(&self.work_dir)
             .env_remove("CLAUDECODE")
             .env("PATH", enriched_path())
@@ -244,6 +271,7 @@ impl ClaudeCliProvider {
             Ok(Err(e)) => return Err(e),
             Err(_) => {
                 let _ = child.kill().await;
+                let _ = child.wait().await;
                 return Err("claude 进程超时（15分钟），已终止".to_string());
             }
         }
@@ -398,10 +426,11 @@ impl ClaudeCliProvider {
                     }
                     "result" => {
                         // Extract final result text
-                        if let Some(result_text) = event["result"].as_str() {
-                            // Only use result text if we haven't accumulated text from assistant events
-                            if full_text.trim().is_empty() {
-                                full_text = result_text.to_string();
+                        // result 事件的 result 字段是权威的最终文本
+                        // full_text 仅用于流式 emit，不作为最终内容
+                        if let Some(rt) = event["result"].as_str() {
+                            if !rt.is_empty() {
+                                full_text = rt.to_string();
                             }
                         }
                         // Extract cost
@@ -434,6 +463,7 @@ impl ClaudeCliProvider {
             Ok(Err(e)) => return Err(e),
             Err(_) => {
                 let _ = child.kill().await;
+                let _ = child.wait().await;
                 return Err("claude 进程超时（15分钟），已终止".to_string());
             }
         }
