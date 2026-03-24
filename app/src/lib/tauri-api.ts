@@ -1,4 +1,28 @@
 import { invoke } from "@tauri-apps/api/core"
+import { logError } from "@/lib/error-log"
+
+// ─── Error handling ──────────────────────────────────────────────────────
+
+export class AppError extends Error {
+  constructor(
+    public readonly cmd: string,
+    public readonly rawMessage: string
+  ) {
+    super(rawMessage)
+    this.name = "AppError"
+  }
+}
+
+async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  try {
+    return await invoke<T>(cmd, args)
+  } catch (err) {
+    const message = typeof err === "string" ? err : String(err)
+    const error = new AppError(cmd, message)
+    logError(error)
+    throw error
+  }
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -152,144 +176,144 @@ export interface DepStatus {
 export const api = {
   // Brainstorm
   loadBrainstormMessages: (projectId: string, phase: string) =>
-    invoke<BrainstormMessage[]>("load_brainstorm_messages", { projectId, phase }),
+    safeInvoke<BrainstormMessage[]>("load_brainstorm_messages", { projectId, phase }),
   saveBrainstormMessage: (args: { projectId: string; phase: string; role: "user" | "assistant"; content: string }) =>
-    invoke<BrainstormMessage>("save_brainstorm_message", { args }),
+    safeInvoke<BrainstormMessage>("save_brainstorm_message", { args }),
   clearBrainstorm: (projectId: string, phase: string) =>
-    invoke<void>("clear_brainstorm", { projectId, phase }),
+    safeInvoke<void>("clear_brainstorm", { projectId, phase }),
   brainstormMessageCount: (projectId: string, phase: string) =>
-    invoke<number>("brainstorm_message_count", { projectId, phase }),
+    safeInvoke<number>("brainstorm_message_count", { projectId, phase }),
   brainstormChat: (args: { projectId: string; phase: string; messages: Array<{ role: "user" | "assistant"; content: string }> }) =>
-    invoke<void>("brainstorm_chat", { args }),
+    safeInvoke<void>("brainstorm_chat", { args }),
 
   // Projects
-  listProjects: () => invoke<ProjectSummary[]>("list_projects"),
+  listProjects: () => safeInvoke<ProjectSummary[]>("list_projects"),
   createProject: (name: string, teamMode?: boolean) =>
-    invoke<ProjectDetail>("create_project", { args: { name, teamMode: teamMode ?? false } }),
-  getProject: (id: string) => invoke<ProjectDetail | null>("get_project", { id }),
-  deleteProject: (id: string) => invoke<void>("delete_project", { id }),
+    safeInvoke<ProjectDetail>("create_project", { args: { name, teamMode: teamMode ?? false } }),
+  getProject: (id: string) => safeInvoke<ProjectDetail | null>("get_project", { id }),
+  deleteProject: (id: string) => safeInvoke<void>("delete_project", { id }),
   setProjectStatus: (id: string, status: 'active' | 'completed') =>
-    invoke<void>("set_project_status", { id, status }),
-  advancePhase: (id: string) => invoke<string | null>("advance_phase", { id }),
+    safeInvoke<void>("set_project_status", { id, status }),
+  advancePhase: (id: string) => safeInvoke<string | null>("advance_phase", { id }),
   setTeamMode: (id: string, enabled: boolean) =>
-    invoke<void>("set_team_mode", { args: { id, enabled } }),
+    safeInvoke<void>("set_team_mode", { args: { id, enabled } }),
   updatePhase: (args: { projectId: string; phase: string; status: string; outputFile?: string }) =>
-    invoke<void>("update_phase", { args }),
+    safeInvoke<void>("update_phase", { args }),
 
   // Files
   readProjectFile: (projectId: string, fileName: string) =>
-    invoke<string | null>("read_project_file", { projectId, fileName }),
+    safeInvoke<string | null>("read_project_file", { projectId, fileName }),
   saveProjectFile: (args: { projectId: string; fileName: string; content: string }) =>
-    invoke<void>("save_project_file", { args }),
-  readFile: (path: string) => invoke<string>("read_file", { path }),
+    safeInvoke<void>("save_project_file", { args }),
+  readFile: (path: string) => safeInvoke<string>("read_file", { path }),
 
   // Config
-  getConfig: () => invoke<ConfigState>("get_config"),
+  getConfig: () => safeInvoke<ConfigState>("get_config"),
   saveConfig: (args: { apiKey?: string; baseUrl?: string; model?: string; backend?: string }) =>
-    invoke<{ ok: boolean }>("save_config", { args }),
+    safeInvoke<{ ok: boolean }>("save_config", { args }),
   testConfig: (args: { apiKey?: string; baseUrl?: string; model?: string }) =>
-    invoke<{ ok: boolean; model?: string; error?: string }>("test_config", { args }),
+    safeInvoke<{ ok: boolean; model?: string; error?: string }>("test_config", { args }),
   testCliConfig: () =>
-    invoke<{ ok: boolean; version?: string; error?: string }>("test_cli_config"),
+    safeInvoke<{ ok: boolean; version?: string; error?: string }>("test_cli_config"),
 
   // Stream (fire-and-forget — results come via events)
   startStream: (args: { projectId: string; phase: string; messages: ChatMessage[]; excludedContext?: string[]; styleId?: string; designSpec?: string }) =>
-    invoke<void>("start_stream", { args }),
+    safeInvoke<void>("start_stream", { args }),
   runTool: (args: { toolName: string; userInput: string; filePath?: string; projectId?: string; mode?: string }) =>
-    invoke<void>("run_tool", { args }),
+    safeInvoke<void>("run_tool", { args }),
 
   // Projects dir
-  getProjectsDir: () => invoke<string>("get_projects_dir"),
-  saveProjectsDir: (path: string) => invoke<{ ok: boolean }>("save_projects_dir", { path }),
+  getProjectsDir: () => safeInvoke<string>("get_projects_dir"),
+  saveProjectsDir: (path: string) => safeInvoke<{ ok: boolean }>("save_projects_dir", { path }),
 
   // Knowledge base
-  listKnowledge: () => invoke<KnowledgeEntry[]>("list_knowledge"),
+  listKnowledge: () => safeInvoke<KnowledgeEntry[]>("list_knowledge"),
   addKnowledge: (args: { category: string; title: string; content: string }) =>
-    invoke<KnowledgeEntry>("add_knowledge", { args }),
+    safeInvoke<KnowledgeEntry>("add_knowledge", { args }),
   deleteKnowledge: (category: string, id: string) =>
-    invoke<void>("delete_knowledge", { category, id }),
-  searchKnowledge: (query: string) => invoke<KnowledgeEntry[]>("search_knowledge", { query }),
+    safeInvoke<void>("delete_knowledge", { category, id }),
+  searchKnowledge: (query: string) => safeInvoke<KnowledgeEntry[]>("search_knowledge", { query }),
   getKnowledgeContent: (category: string, id: string) =>
-    invoke<string>("get_knowledge_content", { category, id }),
+    safeInvoke<string>("get_knowledge_content", { category, id }),
   recommendKnowledge: (args: { projectId: string; timing: "before_prd" | "before_review" }) =>
-    invoke<KnowledgeEntry[]>("recommend_knowledge", { args }),
+    safeInvoke<KnowledgeEntry[]>("recommend_knowledge", { args }),
   extractKnowledgeCandidates: (projectId: string) =>
-    invoke<KnowledgeCandidate[]>("extract_knowledge_candidates", { projectId }),
+    safeInvoke<KnowledgeCandidate[]>("extract_knowledge_candidates", { projectId }),
 
   // Reference files (07-references/)
   uploadReferenceFile: (projectId: string, sourcePath: string) =>
-    invoke<string>("upload_reference_file", { projectId, sourcePath }),
+    safeInvoke<string>("upload_reference_file", { projectId, sourcePath }),
   listReferenceFiles: (projectId: string) =>
-    invoke<ReferenceFileEntry[]>("list_reference_files", { projectId }),
+    safeInvoke<ReferenceFileEntry[]>("list_reference_files", { projectId }),
   deleteReferenceFile: (projectId: string, fileName: string) =>
-    invoke<void>("delete_reference_file", { projectId, fileName }),
+    safeInvoke<void>("delete_reference_file", { projectId, fileName }),
 
   // Context files
-  listProjectContext: (projectId: string) => invoke<ContextFile[]>("list_project_context", { projectId }),
+  listProjectContext: (projectId: string) => safeInvoke<ContextFile[]>("list_project_context", { projectId }),
 
   // Export
-  exportPrdDocx: (projectId: string) => invoke<string>("export_prd_docx", { projectId }),
-  revealFile: (path: string) => invoke<void>("reveal_file", { path }),
-  openFile: (path: string) => invoke<void>("open_file", { path }),
-  writeFile: (path: string, content: string) => invoke<void>("write_file", { path, content }),
+  exportPrdDocx: (projectId: string) => safeInvoke<string>("export_prd_docx", { projectId }),
+  revealFile: (path: string) => safeInvoke<void>("reveal_file", { path }),
+  openFile: (path: string) => safeInvoke<void>("open_file", { path }),
+  writeFile: (path: string, content: string) => safeInvoke<void>("write_file", { path, content }),
 
   // URL fetch
-  fetchUrlContent: (url: string) => invoke<string>("fetch_url_content", { url }),
+  fetchUrlContent: (url: string) => safeInvoke<string>("fetch_url_content", { url }),
 
   // Environment
-  checkEnv: () => invoke<DepStatus[]>("check_env"),
-  installDep: (dep: string, useMirror: boolean) => invoke<void>("install_dep", { args: { dep, useMirror } }),
-  checkPlaywrightMcp: () => invoke<boolean>("check_playwright_mcp"),
+  checkEnv: () => safeInvoke<DepStatus[]>("check_env"),
+  installDep: (dep: string, useMirror: boolean) => safeInvoke<void>("install_dep", { args: { dep, useMirror } }),
+  checkPlaywrightMcp: () => safeInvoke<boolean>("check_playwright_mcp"),
 
   // Legacy import
   scanLegacyProjects: (dir: string) =>
-    invoke<LegacyProjectScan[]>("scan_legacy_projects", { dir }),
+    safeInvoke<LegacyProjectScan[]>("scan_legacy_projects", { dir }),
   importLegacyProjects: (projects: LegacyProjectScan[]) =>
-    invoke<ImportResult>("import_legacy_projects", { projects }),
+    safeInvoke<ImportResult>("import_legacy_projects", { projects }),
 
   // Template migration
   scanLegacyKnowledge: (dir: string) =>
-    invoke<KnowledgeCategoryScan[]>("scan_legacy_knowledge", { dir }),
+    safeInvoke<KnowledgeCategoryScan[]>("scan_legacy_knowledge", { dir }),
   importLegacyKnowledge: (dir: string) =>
-    invoke<ImportResult>("import_legacy_knowledge", { dir }),
-  listPrdStyles: () => invoke<PrdStyleEntry[]>("list_prd_styles"),
+    safeInvoke<ImportResult>("import_legacy_knowledge", { dir }),
+  listPrdStyles: () => safeInvoke<PrdStyleEntry[]>("list_prd_styles"),
   scanLegacyPrdStyles: (dir: string) =>
-    invoke<PrdStyleScan[]>("scan_legacy_prd_styles", { dir }),
+    safeInvoke<PrdStyleScan[]>("scan_legacy_prd_styles", { dir }),
   importLegacyPrdStyles: (dir: string) =>
-    invoke<ImportResult>("import_legacy_prd_styles", { dir }),
+    safeInvoke<ImportResult>("import_legacy_prd_styles", { dir }),
   scanLegacyUiSpecs: (dir: string) =>
-    invoke<UiSpecScan[]>("scan_legacy_ui_specs", { dir }),
+    safeInvoke<UiSpecScan[]>("scan_legacy_ui_specs", { dir }),
   importLegacyUiSpecs: (dir: string) =>
-    invoke<ImportResult>("import_legacy_ui_specs", { dir }),
-  listUiSpecs: () => invoke<UiSpecEntry[]>("list_ui_specs"),
-  addUiSpec: (dir: string) => invoke<string>("add_ui_spec", { dir }),
-  getPrdStyleContent: (name: string) => invoke<PrdStyleContent>("get_prd_style_content", { name }),
-  getUiSpecContent: (name: string) => invoke<UiSpecContent>("get_ui_spec_content", { name }),
+    safeInvoke<ImportResult>("import_legacy_ui_specs", { dir }),
+  listUiSpecs: () => safeInvoke<UiSpecEntry[]>("list_ui_specs"),
+  addUiSpec: (dir: string) => safeInvoke<string>("add_ui_spec", { dir }),
+  getPrdStyleContent: (name: string) => safeInvoke<PrdStyleContent>("get_prd_style_content", { name }),
+  getUiSpecContent: (name: string) => safeInvoke<UiSpecContent>("get_ui_spec_content", { name }),
 
   // PRD style active management
-  setActivePrdStyle: (name: string) => invoke<void>("set_active_prd_style", { name }),
-  getActivePrdStyle: () => invoke<string | null>("get_active_prd_style"),
+  setActivePrdStyle: (name: string) => safeInvoke<void>("set_active_prd_style", { name }),
+  getActivePrdStyle: () => safeInvoke<string | null>("get_active_prd_style"),
 
   migrateProjectsToAppDir: () =>
-    invoke<MigrateResult>("migrate_projects_to_app_dir"),
+    safeInvoke<MigrateResult>("migrate_projects_to_app_dir"),
 
   // Rename
   renamePrdStyle: (oldName: string, newName: string) =>
-    invoke<void>("rename_prd_style", { oldName, newName }),
+    safeInvoke<void>("rename_prd_style", { oldName, newName }),
   renameUiSpec: (oldName: string, newName: string) =>
-    invoke<void>("rename_ui_spec", { oldName, newName }),
+    safeInvoke<void>("rename_ui_spec", { oldName, newName }),
   deleteUiSpec: (name: string) =>
-    invoke<void>("delete_ui_spec", { name }),
+    safeInvoke<void>("delete_ui_spec", { name }),
   deletePrdStyle: (name: string) =>
-    invoke<void>("delete_prd_style", { name }),
+    safeInvoke<void>("delete_prd_style", { name }),
   renameProject: (id: string, newName: string) =>
-    invoke<void>("rename_project", { id, newName }),
+    safeInvoke<void>("rename_project", { id, newName }),
 
   // Project design spec
   getProjectDesignSpec: (projectId: string) =>
-    invoke<string | null>("get_project_design_spec", { projectId }),
+    safeInvoke<string | null>("get_project_design_spec", { projectId }),
   setProjectDesignSpec: (projectId: string, specId: string) =>
-    invoke<void>("set_project_design_spec", { projectId, specId }),
+    safeInvoke<void>("set_project_design_spec", { projectId, specId }),
 }
 
 // ─── Updater ────────────────────────────────────────────────────────────────
@@ -301,7 +325,7 @@ export interface UpdateInfo {
 }
 
 export const checkUpdate = (): Promise<UpdateInfo> =>
-  invoke<UpdateInfo>("check_update")
+  safeInvoke<UpdateInfo>("check_update")
 
 export const downloadAndInstallUpdate = (): Promise<void> =>
-  invoke<void>("download_and_install_update")
+  safeInvoke<void>("download_and_install_update")

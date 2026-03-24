@@ -79,6 +79,7 @@ export function StoriesPage() {
         await api.saveProjectFile({ projectId, fileName: STORIES_FILE, content: markdown })
       } catch (err) {
         console.error("[Stories] auto-save failed:", err)
+        toast("自动保存失败", "warning")
       }
     }, 800)
 
