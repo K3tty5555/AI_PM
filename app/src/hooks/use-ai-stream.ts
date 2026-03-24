@@ -4,21 +4,6 @@ import { getCurrentWindow } from "@tauri-apps/api/window"
 import { api } from "@/lib/tauri-api"
 import type { StreamChunkPayload, StreamErrorPayload, StreamDonePayload, StreamToolPayload, StreamMeta } from "@/lib/stream-types"
 
-const TOOL_LABELS: Record<string, string> = {
-  WebSearch: "正在搜索网页",
-  WebFetch: "正在获取网页内容",
-  Bash: "正在执行命令",
-  Write: "正在写入文件",
-  Read: "正在读取文件",
-  Edit: "正在编辑文件",
-  Glob: "正在查找文件",
-  Grep: "正在搜索代码",
-}
-
-function getToolLabel(tool: string): string {
-  return TOOL_LABELS[tool] ?? `正在使用 ${tool}`
-}
-
 // ── Module-level background stream store (survives component unmount) ─────
 // When the user navigates away mid-stream, the component unmounts but the
 // store keeps the listeners alive and accumulates text.  When the component
@@ -108,6 +93,8 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
   // Mutable ref — always captures the latest setState functions so background
   // listeners can safely call them even after component re-renders.
   const notifyRef = useRef<((patch: BgPatch) => void) | null>(null)
+  // Safe to assign in render: ref.current is not used during rendering output.
+  // This pattern ensures bgStore listeners always call the latest setState functions.
   notifyRef.current = (patch: BgPatch) => {
     if (patch.textChunk !== undefined) {
       chunkBufferRef.current += patch.textChunk
@@ -182,6 +169,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
     }
     chunkBufferRef.current = ""
     setText("")
+    setElapsedSeconds(0)
     setIsStreaming(false)
     setError(null)
     setOutputFile(null)
@@ -248,6 +236,18 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           const target = bgStore.get(evtKey)
           if (!target) return
 
+          // Flush any pending rAF chunk buffer before marking done
+          if (chunkBufferRef.current && evtKey === key) {
+            const buffered = chunkBufferRef.current
+            chunkBufferRef.current = ""
+            if (rafIdRef.current) {
+              cancelAnimationFrame(rafIdRef.current)
+              rafIdRef.current = 0
+            }
+            target.text += buffered
+            target.notify?.({ textChunk: buffered })
+          }
+
           target.outputFile = file
           target.streamMeta = { durationMs, inputTokens, outputTokens, costUsd }
           target.isStreaming = false
@@ -291,6 +291,14 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           api.updatePhase({ projectId, phase, status: "completed", outputFile: file })
             .catch((err) => console.error("[AiStream]", err))
           window.dispatchEvent(new CustomEvent("project-phase-updated", { detail: { projectId } }))
+
+          // Auto-cleanup: if no component is subscribed after 60s, delete the entry
+          setTimeout(() => {
+            const stale = bgStore.get(evtKey)
+            if (stale && !stale.isStreaming && !stale.notify) {
+              bgStore.delete(evtKey)
+            }
+          }, 60000)
         }),
         listen<StreamErrorPayload>("stream_error", (event) => {
           const { streamKey, message } = event.payload
@@ -311,7 +319,8 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
           const evtKey = streamKey.slice("generate:".length)
           const target = bgStore.get(evtKey)
           if (!target) return
-          const label = status === "idle" ? null : getToolLabel(tool)
+          // Store raw tool name; translation happens in StreamProgress
+          const label = status === "idle" ? null : tool
           target.toolStatus = label
           target.notify?.({ toolStatus: label })
         }),
@@ -340,7 +349,7 @@ export function useAiStream({ projectId, phase }: UseAiStreamOptions): UseAiStre
         })
       })
     },
-    [projectId, phase, key]
+    [projectId, phase]
   )
 
   return { text, isStreaming, isThinking, elapsedSeconds, error, outputFile, streamMeta, toolStatus, start, reset }
