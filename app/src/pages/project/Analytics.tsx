@@ -256,6 +256,13 @@ export function AnalyticsPage() {
           <PrdViewer
             markdown={visibleText}
             isStreaming={isStreaming}
+            onEdit={async (newMarkdown) => {
+              setExistingContent(newMarkdown)
+              try {
+                await api.saveProjectFile({ projectId, fileName: ANALYTICS_FILE, content: newMarkdown })
+                toast("已保存", "success")
+              } catch { toast("保存失败", "error") }
+            }}
           />
         </RevealContainer>
         {!isStreaming && <StreamProgress isStreaming={false} isThinking={false} elapsedSeconds={0} streamMeta={streamMeta} />}

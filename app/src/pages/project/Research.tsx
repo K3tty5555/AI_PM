@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { Loader2 } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -81,6 +81,16 @@ function detectQuestion(text: string): {
 }
 
 // ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface UrlEntry {
+  url: string
+  status: "idle" | "loading" | "success" | "error"
+  error?: string
+}
+
+// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
@@ -106,7 +116,7 @@ export function ResearchPage() {
   const [isApiMode, setIsApiMode] = useState(false)
   const [hasPlaywrightMcp, setHasPlaywrightMcp] = useState(false)
   const [urlInput, setUrlInput] = useState("")
-  const [urls, setUrls] = useState<string[]>([])
+  const [urls, setUrls] = useState<UrlEntry[]>([])
   const [fetchingUrls, setFetchingUrls] = useState(false)
 
   useEffect(() => {
@@ -210,23 +220,36 @@ export function ResearchPage() {
     [messages, text, existingContent, questionInfo.question, start]
   )
 
+  const fetchUrlEntries = useCallback(async (entries: UrlEntry[]): Promise<{ urlContext: string; updated: UrlEntry[] }> => {
+    if (entries.length === 0) return { urlContext: "", updated: entries }
+    setFetchingUrls(true)
+    // Mark all as loading
+    const loading = entries.map(e => ({ ...e, status: "loading" as const, error: undefined }))
+    setUrls(loading)
+    const results = await Promise.allSettled(
+      entries.map(e => api.fetchUrlContent(e.url))
+    )
+    setFetchingUrls(false)
+    const updated = entries.map((e, i) => {
+      const r = results[i]
+      return r.status === "fulfilled"
+        ? { ...e, status: "success" as const, error: undefined }
+        : { ...e, status: "error" as const, error: r.reason?.message ?? String(r.reason ?? "抓取失败") }
+    })
+    setUrls(updated)
+    const urlContext = entries
+      .map((e, i) => {
+        const r = results[i]
+        return r.status === "fulfilled"
+          ? `### 来源：${e.url}\n${r.value}`
+          : `### 来源：${e.url}\n（抓取失败，请基于已知信息分析）`
+      })
+      .join("\n\n---\n\n")
+    return { urlContext, updated }
+  }, [])
+
   const handleGenerate = useCallback(async () => {
-    let urlContext = ""
-    if (urls.length > 0) {
-      setFetchingUrls(true)
-      const results = await Promise.allSettled(
-        urls.map(url => api.fetchUrlContent(url))
-      )
-      setFetchingUrls(false)
-      urlContext = urls
-        .map((url, i) => {
-          const r = results[i]
-          return r.status === "fulfilled"
-            ? `### 来源：${url}\n${r.value}`
-            : `### 来源：${url}\n（抓取失败，请基于已知信息分析）`
-        })
-        .join("\n\n---\n\n")
-    }
+    const { urlContext } = await fetchUrlEntries(urls)
 
     const promptContent = urlContext
       ? `请开始竞品研究\n\n以下是参考网页的实际内容，请基于真实内容进行分析：\n\n${urlContext}`
@@ -235,29 +258,14 @@ export function ResearchPage() {
     setMessages(initialMessages)
     startedRef.current = true
     start(initialMessages, { excludedContext })
-  }, [start, excludedContext, urls])
+  }, [start, excludedContext, urls, fetchUrlEntries])
 
   const handleRestart = useCallback(async () => {
     reset()
     setExistingContent(null)
     setChatHistory([])
 
-    let urlContext = ""
-    if (urls.length > 0) {
-      setFetchingUrls(true)
-      const results = await Promise.allSettled(
-        urls.map(url => api.fetchUrlContent(url))
-      )
-      setFetchingUrls(false)
-      urlContext = urls
-        .map((url, i) => {
-          const r = results[i]
-          return r.status === "fulfilled"
-            ? `### 来源：${url}\n${r.value}`
-            : `### 来源：${url}\n（抓取失败，请基于已知信息分析）`
-        })
-        .join("\n\n---\n\n")
-    }
+    const { urlContext } = await fetchUrlEntries(urls)
 
     const promptContent = urlContext
       ? `请开始竞品研究\n\n以下是参考网页的实际内容，请基于真实内容进行分析：\n\n${urlContext}`
@@ -268,7 +276,7 @@ export function ResearchPage() {
     setMessages(initialMessages)
     startedRef.current = true
     start(initialMessages, { excludedContext })
-  }, [reset, start, excludedContext, urls])
+  }, [reset, start, excludedContext, urls, fetchUrlEntries])
 
   const handleSkip = useCallback(async () => {
     if (!projectId) return
@@ -378,7 +386,7 @@ export function ResearchPage() {
               onChange={(e) => setUrlInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && urlInput.trim()) {
-                  setUrls((prev) => [...prev, urlInput.trim()])
+                  setUrls((prev) => [...prev, { url: urlInput.trim(), status: "idle" }])
                   setUrlInput("")
                 }
               }}
@@ -389,7 +397,7 @@ export function ResearchPage() {
               size="sm"
               onClick={() => {
                 if (urlInput.trim()) {
-                  setUrls((prev) => [...prev, urlInput.trim()])
+                  setUrls((prev) => [...prev, { url: urlInput.trim(), status: "idle" }])
                   setUrlInput("")
                 }
               }}
@@ -399,9 +407,38 @@ export function ResearchPage() {
           </div>
           {urls.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
-              {urls.map((u, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-[var(--secondary)] border border-[var(--border)] text-[var(--text-secondary)]">
-                  {(() => { try { return new URL(u).hostname } catch { return u.slice(0, 30) } })()}
+              {urls.map((entry, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-[var(--secondary)] border text-[var(--text-secondary)]",
+                    entry.status === "error"
+                      ? "border-[var(--destructive)]/50"
+                      : "border-[var(--border)]",
+                  )}
+                  title={entry.status === "error" ? entry.error : entry.url}
+                >
+                  {entry.status === "loading" && <Loader2 className="size-3 animate-spin text-[var(--text-tertiary)]" />}
+                  {entry.status === "success" && <CheckCircle2 className="size-3 text-[var(--success)]" />}
+                  {entry.status === "error" && (
+                    <button
+                      onClick={async () => {
+                        // Retry single URL
+                        setUrls(prev => prev.map((e, idx) => idx === i ? { ...e, status: "loading", error: undefined } : e))
+                        try {
+                          await api.fetchUrlContent(entry.url)
+                          setUrls(prev => prev.map((e, idx) => idx === i ? { ...e, status: "success", error: undefined } : e))
+                        } catch (err) {
+                          setUrls(prev => prev.map((e, idx) => idx === i ? { ...e, status: "error", error: err instanceof Error ? err.message : String(err) } : e))
+                        }
+                      }}
+                      className="flex items-center"
+                      title="点击重试"
+                    >
+                      <XCircle className="size-3 text-[var(--destructive)]" />
+                    </button>
+                  )}
+                  {(() => { try { return new URL(entry.url).hostname } catch { return entry.url.slice(0, 30) } })()}
                   <button
                     onClick={() => setUrls((prev) => prev.filter((_, idx) => idx !== i))}
                     className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"

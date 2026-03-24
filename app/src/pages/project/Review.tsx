@@ -44,8 +44,18 @@ type RoleKey = typeof REVIEW_ROLES[number]["key"]
 // Section parser — splits review report into 6 role panels
 // ---------------------------------------------------------------------------
 
-function parseReviewSections(markdown: string): Partial<Record<RoleKey, string>> {
-  const result: Partial<Record<RoleKey, string>> = {}
+const ROLE_PATTERNS: Record<RoleKey, RegExp> = {
+  product:   /产品经理|产品\s*视角|PM\s*视角/i,
+  tech:      /技术架构|架构师|技术\s*视角/i,
+  ux:        /UX|设计|交互\s*设计/i,
+  ops:       /运营|运营\s*视角/i,
+  biz:       /商务|商业|商务\s*视角/i,
+  user:      /用户代表|用户\s*视角|终端用户/i,
+}
+
+function parseReviewSections(markdown: string): { sections: Partial<Record<RoleKey, string>>; fuzzy: boolean } {
+  // Step 1: exact heading match
+  const exact: Partial<Record<RoleKey, string>> = {}
   for (const role of REVIEW_ROLES) {
     const idx = markdown.indexOf(role.heading)
     if (idx === -1) continue
@@ -54,9 +64,41 @@ function parseReviewSections(markdown: string): Partial<Record<RoleKey, string>>
       .map(r => markdown.indexOf(r.heading, start))
       .filter(i => i > idx)
       .sort((a, b) => a - b)[0] ?? markdown.length
-    result[role.key] = markdown.slice(start, nextIdx).trim()
+    exact[role.key] = markdown.slice(start, nextIdx).trim()
   }
-  return result
+  if (Object.keys(exact).length >= 3) {
+    return { sections: exact, fuzzy: false }
+  }
+
+  // Step 2: fuzzy regex match on ## headings
+  const fuzzy: Partial<Record<RoleKey, string>> = {}
+  const headingRegex = /^##\s+(.+)$/gm
+  const headings: { key: RoleKey | null; index: number; length: number }[] = []
+  let match: RegExpExecArray | null
+  while ((match = headingRegex.exec(markdown)) !== null) {
+    const title = match[1]
+    let matchedKey: RoleKey | null = null
+    for (const [key, pattern] of Object.entries(ROLE_PATTERNS)) {
+      if (pattern.test(title)) {
+        matchedKey = key as RoleKey
+        break
+      }
+    }
+    headings.push({ key: matchedKey, index: match.index + match[0].length, length: match[0].length })
+  }
+  for (let i = 0; i < headings.length; i++) {
+    const h = headings[i]
+    if (!h.key) continue
+    const start = h.index
+    const end = i + 1 < headings.length ? headings[i + 1].index - headings[i + 1].length : markdown.length
+    fuzzy[h.key] = markdown.slice(start, end).trim()
+  }
+  if (Object.keys(fuzzy).length >= 2) {
+    return { sections: fuzzy, fuzzy: true }
+  }
+
+  // Step 3: no match — return empty (caller will fallback to full text)
+  return { sections: {}, fuzzy: false }
 }
 
 // ---------------------------------------------------------------------------
@@ -119,8 +161,23 @@ export function ReviewPage() {
   })
 
   // Compute role-filtered content — fallback to null when no roles matched (legacy format)
-  const rawSections = !isStreaming && displayContent ? parseReviewSections(displayContent) : null
-  const sections = rawSections && Object.keys(rawSections).length > 0 ? rawSections : null
+  const parseResult = !isStreaming && displayContent ? parseReviewSections(displayContent) : null
+  const sections = parseResult && Object.keys(parseResult.sections).length > 0 ? parseResult.sections : null
+  const parsedFuzzy = parseResult?.fuzzy ?? false
+  const parseFallback = parseResult !== null && !sections
+
+  // Toast when parse degrades
+  const parseToastedRef = useRef(false)
+  useEffect(() => {
+    if (parseToastedRef.current) return
+    if (parsedFuzzy && sections) {
+      parseToastedRef.current = true
+      toast("评审格式与预期不同，已模糊匹配角色", "info")
+    } else if (parseFallback) {
+      parseToastedRef.current = true
+      toast("评审格式与预期不同，已切换全文视图", "info")
+    }
+  }, [parsedFuzzy, parseFallback, sections, toast])
 
   const progressValue = isStreaming
     ? Math.min(90, Math.floor(text.length / 20))
@@ -490,14 +547,12 @@ export function ReviewPage() {
 
       {/* Bottom action bar */}
       {completed ? (
-        <div className="mt-8 p-5 rounded-lg border border-[var(--accent-color)]/20 bg-[var(--accent-color)]/5">
-          <p className="text-sm font-medium text-[var(--text-primary)] mb-1">项目已完成</p>
-          <p className="text-[13px] text-[var(--text-secondary)] mb-4">
-            建议将本次项目经验存入知识库，方便下次参考。
-          </p>
-          <div className="flex gap-2">
+        <>
+          <div className="mb-4 mt-8 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3 animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]">
+            <span className="size-1.5 rounded-full bg-[var(--success)]" />
+            <span className="flex-1 text-[13px] text-[var(--text-secondary)]">评审已完成</span>
             <Button variant="ghost" size="sm" onClick={() => setShowKnowledgeModal(true)}>
-              记录经验
+              沉淀知识到知识库
             </Button>
             <Button
               variant="ghost"
@@ -507,7 +562,7 @@ export function ReviewPage() {
               返回首页
             </Button>
           </div>
-        </div>
+        </>
       ) : (
         <div
           className={cn(

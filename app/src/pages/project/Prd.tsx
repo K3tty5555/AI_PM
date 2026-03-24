@@ -72,6 +72,7 @@ export function PrdPage() {
   // AI assist input
   const [assistInput, setAssistInput] = useState("")
   const [isAssistStreaming, setIsAssistStreaming] = useState(false)
+  const [pendingAssistText, setPendingAssistText] = useState<string | null>(null)
 
   // Prevent double-start in StrictMode
   const startedRef = useRef(false)
@@ -107,10 +108,10 @@ export function PrdPage() {
     setIsAssistStreaming(assistStreaming)
   }, [assistStreaming])
 
-  // When assist finishes, update the markdown
+  // When assist finishes, stage the result for user confirmation
   useEffect(() => {
     if (!assistStreaming && assistText) {
-      setEditedMarkdown(assistText)
+      setPendingAssistText(assistText)
     }
   }, [assistStreaming, assistText])
 
@@ -580,6 +581,24 @@ export function PrdPage() {
             <button onClick={() => setExportResult(null)} className="shrink-0 text-[12px] text-[var(--text-tertiary)] hover:opacity-70" aria-label="关闭">×</button>
           </div>
         )
+      )}
+
+      {/* AI assist confirmation banner */}
+      {pendingAssistText && (
+        <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--accent-color)] bg-[var(--accent-light)] px-4 py-3 animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]">
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-medium text-[var(--text-primary)]">AI 已生成修改建议</span>
+            <div className="flex gap-2">
+              <Button variant="primary" size="sm" onClick={() => {
+                setEditedMarkdown(pendingAssistText)
+                setPendingAssistText(null)
+                api.saveProjectFile({ projectId, fileName: PRD_FILE, content: pendingAssistText }).catch(() => {})
+                toast("修改已应用", "success")
+              }}>应用修改</Button>
+              <Button variant="ghost" size="sm" onClick={() => { setPendingAssistText(null); toast("已放弃修改", "info") }}>放弃</Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Main content: two-column layout */}
