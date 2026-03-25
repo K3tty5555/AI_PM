@@ -21,6 +21,7 @@ import { ReferenceFiles } from "@/components/reference-files"
 import { KnowledgeRecommendPanel } from "@/components/knowledge-recommend-panel"
 import { PrdDiffViewer } from "@/components/PrdDiffViewer"
 import { PrdScoreBadge, PrdScorePanel } from "@/components/prd-score-panel"
+import { PrdAssistPanel } from "@/components/prd-assist-panel"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -184,7 +185,6 @@ export function PrdPage() {
   const [assistInput, setAssistInput] = useState("")
   const [isAssistStreaming, setIsAssistStreaming] = useState(false)
   const [pendingAssistText, setPendingAssistText] = useState<string | null>(null)
-  const [assistMode, setAssistMode] = useState<"modify" | "iterate">("modify")
 
   // Prevent double-start in StrictMode
   const startedRef = useRef(false)
@@ -208,7 +208,7 @@ export function PrdPage() {
     text: assistText,
     isStreaming: assistStreaming,
     error: assistError,
-    start: assistStart,
+    start: _assistStart,
     reset: assistReset,
   } = useAiStream({
     projectId,
@@ -400,31 +400,6 @@ export function PrdPage() {
       : "请重新生成 PRD"
     start([{ role: "user", content: prompt }], { excludedContext })
   }, [reset, assistReset, start, excludedContext, reviewContent])
-
-  /** Send AI assist modification request */
-  const handleAssistSend = useCallback(() => {
-    if (!assistInput.trim() || !displayMarkdown) return
-
-    assistReset()
-    assistStart([
-      {
-        role: "user",
-        content: `这是当前的 PRD：\n\n${displayMarkdown}\n\n请根据以下要求修改：${assistInput.trim()}`,
-      },
-    ])
-    setAssistInput("")
-  }, [assistInput, displayMarkdown, assistReset, assistStart])
-
-  /** Handle Enter key in assist input */
-  const handleAssistKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
-        handleAssistSend()
-      }
-    },
-    [handleAssistSend]
-  )
 
   /** Save PRD and go back */
   const handleBack = useCallback(() => {
@@ -805,34 +780,19 @@ export function PrdPage() {
         )
       )}
 
-      {/* AI assist confirmation banner */}
+      {/* AI assist confirmation banner (legacy — kept for regenerate flow) */}
       {pendingAssistText && (
         <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--accent-color)] bg-[var(--accent-light)] px-4 py-3 animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]">
           <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-[var(--text-primary)]">
-              {assistMode === "iterate" ? "AI 已生成新版本" : "AI 已生成修改建议"}
-            </span>
+            <span className="text-[13px] font-medium text-[var(--text-primary)]">AI 已生成修改建议</span>
             <div className="flex gap-2">
               <Button variant="primary" size="sm" onClick={() => {
-                if (assistMode === "iterate") {
-                  // Save as new version
-                  const newVer = currentVersion + 1
-                  api.saveProjectFile({ projectId, fileName: prdFile(newVer), content: pendingAssistText }).then(() => {
-                    setCurrentVersion(newVer)
-                    setVersions((prev) => [...prev, newVer].sort((a, b) => a - b))
-                    setEditedMarkdown(null)
-                    setExistingMarkdown(pendingAssistText)
-                    toast(`已保存为 v${newVer}.0`, "success")
-                  }).catch(() => toast("保存失败", "error"))
-                } else {
-                  setEditedMarkdown(pendingAssistText)
-                  api.saveProjectFile({ projectId, fileName: prdFile(currentVersion), content: pendingAssistText }).catch(() => {})
-                  toast("修改已应用", "success")
-                }
+                setEditedMarkdown(pendingAssistText)
+                setScoreStale(true)
+                api.saveProjectFile({ projectId, fileName: prdFile(currentVersion), content: pendingAssistText }).catch(() => {})
+                toast("修改已应用", "success")
                 setPendingAssistText(null)
-              }}>
-                {assistMode === "iterate" ? `保存为 v${currentVersion + 1}.0` : "应用修改"}
-              </Button>
+              }}>应用修改</Button>
               <Button variant="ghost" size="sm" onClick={() => { setPendingAssistText(null); toast("已放弃修改", "info") }}>放弃</Button>
             </div>
           </div>
@@ -910,72 +870,18 @@ export function PrdPage() {
       </div>
       )}
 
-      {/* AI Assist input */}
+      {/* AI Assist panel */}
       {hasContent && !currentStreaming && (
-        <div
-          className={cn(
-            "prd-assist",
-            "mt-6",
-            "relative pl-5",
-            "before:absolute before:left-0 before:top-0 before:bottom-0",
-            "before:w-[3px] before:bg-[var(--accent-color)] before:content-['']",
-            "animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]",
-          )}
-        >
-          <div className="flex items-center gap-1 mb-2">
-            <button
-              onClick={() => setAssistMode("modify")}
-              className={cn(
-                "px-2.5 py-1 text-xs rounded-md transition-colors",
-                assistMode === "modify"
-                  ? "bg-[var(--accent-color)] text-white"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]",
-              )}
-            >
-              修改
-            </button>
-            <button
-              onClick={() => setAssistMode("iterate")}
-              className={cn(
-                "px-2.5 py-1 text-xs rounded-md transition-colors",
-                assistMode === "iterate"
-                  ? "bg-[var(--accent-color)] text-white"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]",
-              )}
-            >
-              迭代
-            </button>
-            <span className="ml-2 text-[11px] text-[var(--text-tertiary)]">
-              {assistMode === "modify" ? "就地更新当前版本" : "保存为新版本"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={assistInput}
-              onChange={(e) => setAssistInput(e.target.value)}
-              onKeyDown={handleAssistKeyDown}
-              placeholder={assistMode === "iterate" ? "描述变更，如「新增微信登录、去掉短信验证码」" : "输入修改指令，如「把权限配置这一段写详细些」"}
-              className={cn(
-                "flex-1 h-9 px-3",
-                "text-sm text-[var(--text-primary)]",
-                "bg-transparent border border-[var(--border)]",
-                "placeholder:text-[var(--text-secondary)]",
-                "outline-none",
-                "transition-[border-color] duration-[0.28s] ease-[cubic-bezier(0.16,1,0.3,1)]",
-                "focus:border-[var(--accent-color)]",
-              )}
-            />
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleAssistSend}
-              disabled={!assistInput.trim() || isAssistStreaming}
-            >
-              {isAssistStreaming ? "生成中..." : "发送"}
-            </Button>
-          </div>
-        </div>
+        <PrdAssistPanel
+          projectId={projectId}
+          currentMarkdown={displayMarkdown || ""}
+          onApply={(newMd) => {
+            setEditedMarkdown(newMd)
+            setScoreStale(true)
+            api.saveProjectFile({ projectId, fileName: prdFile(currentVersion), content: newMd }).catch(() => {})
+          }}
+          initialInput={assistInput}
+        />
       )}
 
       {/* Bottom action bar */}
