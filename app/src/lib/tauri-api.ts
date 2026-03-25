@@ -291,6 +291,7 @@ export const api = {
   revealFile: (path: string) => safeInvoke<void>("reveal_file", { path }),
   openFile: (path: string) => safeInvoke<void>("open_file", { path }),
   writeFile: (path: string, content: string) => safeInvoke<void>("write_file", { path, content }),
+  extractDocxText: (path: string) => safeInvoke<string>("extract_docx_text", { path }),
 
   // URL fetch
   fetchUrlContent: (url: string) => safeInvoke<string>("fetch_url_content", { url }),
