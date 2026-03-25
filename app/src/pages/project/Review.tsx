@@ -17,6 +17,7 @@ import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { KnowledgeRecommendPanel } from "@/components/knowledge-recommend-panel"
 import { KnowledgeRecordModal } from "@/components/knowledge-record-modal"
+import { ReviewGroupedView } from "@/components/review-grouped-view"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -120,6 +121,7 @@ export function ReviewPage() {
 
   // Role tab state
   const [activeRole, setActiveRole] = useState<RoleKey>("product")
+  const [reviewViewMode, setReviewViewMode] = useState<"roles" | "chapters">("roles")
 
   // Strategy + modification state
   const [strategyChosen, setStrategyChosen] = useState<string | null>(null)
@@ -410,9 +412,46 @@ export function ReviewPage() {
         </div>
       )}
 
-      {/* Role tabs — only when sections parsed successfully */}
+      {/* View mode toggle + Role tabs */}
       {!isStreaming && sections && (
-        <div className="flex gap-0 border-b border-[var(--border)] overflow-x-auto mt-4">
+        <>
+        <div className="flex items-center gap-2 mt-4 mb-2">
+          <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--secondary)] p-0.5">
+            <button
+              onClick={() => setReviewViewMode("roles")}
+              className={cn(
+                "rounded-full px-3 py-1 text-[12px] font-medium transition-all duration-200",
+                reviewViewMode === "roles"
+                  ? "bg-[var(--card)] text-[var(--text-primary)] shadow-sm"
+                  : "text-[var(--text-secondary)]",
+              )}
+            >
+              按角色
+            </button>
+            <button
+              onClick={() => setReviewViewMode("chapters")}
+              className={cn(
+                "rounded-full px-3 py-1 text-[12px] font-medium transition-all duration-200",
+                reviewViewMode === "chapters"
+                  ? "bg-[var(--card)] text-[var(--text-primary)] shadow-sm"
+                  : "text-[var(--text-secondary)]",
+              )}
+            >
+              按章节
+            </button>
+          </div>
+        </div>
+
+        {/* Chapter grouped view */}
+        {reviewViewMode === "chapters" && displayContent && (
+          <div className="mt-2">
+            <ReviewGroupedView markdown={displayContent} projectId={projectId} />
+          </div>
+        )}
+
+        {/* Role tabs */}
+        {reviewViewMode === "roles" && (
+        <div className="flex gap-0 border-b border-[var(--border)] overflow-x-auto">
           {REVIEW_ROLES.map(role => (
             <button
               key={role.key}
@@ -429,6 +468,8 @@ export function ReviewPage() {
             </button>
           ))}
         </div>
+        )}
+        </>
       )}
 
       {/* Strategy selection — shown once review is done and no strategy chosen yet */}

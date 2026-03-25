@@ -563,6 +563,42 @@ fn build_system_prompt(
         ctx.push("5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从文档第一行开始".to_string());
     }
 
+    // Review phase: enumerate PRD chapters for structured opinion tagging
+    if phase == "review" {
+        let prd_dir = Path::new(output_dir).join("05-prd");
+        // Find latest PRD version
+        let mut prd_versions: Vec<u32> = Vec::new();
+        if let Ok(entries) = fs::read_dir(&prd_dir) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if let Some(rest) = name.strip_prefix("05-PRD-v") {
+                    if let Some(ver_str) = rest.strip_suffix(".0.md") {
+                        if let Ok(ver) = ver_str.parse::<u32>() { prd_versions.push(ver); }
+                    }
+                }
+            }
+        }
+        let ver = prd_versions.iter().max().copied().unwrap_or(1);
+        let prd_path = prd_dir.join(format!("05-PRD-v{}.0.md", ver));
+        if let Ok(prd) = fs::read_to_string(&prd_path) {
+            let chapters: Vec<&str> = prd.lines()
+                .filter(|l| l.starts_with("## "))
+                .map(|l| l.trim_start_matches("## ").trim())
+                .collect();
+            if !chapters.is_empty() {
+                let list = chapters.join("、");
+                ctx.push(String::new());
+                ctx.push("### 评审意见格式要求".to_string());
+                ctx.push(String::new());
+                ctx.push(format!(
+                    "每条评审意见必须标注所属 PRD 章节。可选章节：{}、全局。\
+                     格式：[章节：{{章节名}}] 意见内容。无法对应具体章节的意见标注 [章节：全局]。",
+                    list
+                ));
+            }
+        }
+    }
+
     parts.push(ctx.join("\n"));
 
     let full_prompt = parts.join("\n");
