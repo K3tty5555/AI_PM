@@ -24,6 +24,17 @@ async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
   }
 }
 
+// ─── Project Types ──────────────────────────────────────────────────────────
+
+export type ProjectType = "general" | "to-b" | "to-c" | "internal"
+
+export const PROJECT_TYPE_META: Record<ProjectType, { label: string; description: string }> = {
+  general: { label: "通用", description: "标准 9 阶段完整流程" },
+  "to-b": { label: "To B 企业应用", description: "强调权限、审批流、系统集成" },
+  "to-c": { label: "To C 用户产品", description: "强调增长漏斗、留存转化、体验" },
+  internal: { label: "内部工具", description: "精简流程，重点效率提升" },
+}
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export interface ProjectPhase {
@@ -48,11 +59,13 @@ export interface ProjectSummary {
   totalPhases: number
   completedPhases: string[]
   status: 'active' | 'completed'
+  projectType?: string
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases' | 'completedPhases'> {
   phases: ProjectPhase[]
   teamMode: boolean
+  projectType?: string
 }
 
 export interface ConfigState {
