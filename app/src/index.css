@@ -130,6 +130,10 @@
   --success: #16A34A;
   --success-light: rgba(22, 163, 74, 0.08);
   --warning: #F59E0B;
+  --diff-add-bg: rgba(22, 163, 74, 0.1);
+  --diff-del-bg: rgba(220, 38, 38, 0.1);
+  --diff-add-text: #16A34A;
+  --diff-del-text: #DC2626;
   --text-primary: #0F172A;
   --text-secondary: #64748B;
   --text-tertiary: #94A3B8;
@@ -217,6 +221,10 @@ html.theme-dark {
   --success: #4ADE80;
   --success-light: rgba(74, 222, 128, 0.10);
   --warning: #FBBF24;
+  --diff-add-bg: rgba(22, 163, 74, 0.2);
+  --diff-del-bg: rgba(220, 38, 38, 0.2);
+  --diff-add-text: #4ADE80;
+  --diff-del-text: #F87171;
   --text-primary: oklch(94% 0.005 250);
   --text-secondary: oklch(62% 0.01 250);
   --text-tertiary: oklch(42% 0.01 250);

@@ -16,6 +16,7 @@ pub struct KnowledgeEntry {
     pub category: String,
     pub title: String,
     pub content: String,
+    pub source: String,  // "manual" or "auto"
 }
 
 /// 全量遍历文件系统 + 内存子串匹配。
@@ -35,11 +36,12 @@ fn list_knowledge_internal(state: &AppState) -> Vec<KnowledgeEntry> {
             if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
             let Ok(content) = fs::read_to_string(&path) else { continue; };
             let id = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
+            let source = if id.starts_with("auto-") { "auto" } else { "manual" };
             let title = content.lines()
                 .find(|l| l.starts_with("# "))
                 .map(|l| l[2..].trim().to_string())
                 .unwrap_or_else(|| id.clone());
-            entries.push(KnowledgeEntry { id, category: category.to_string(), title, content });
+            entries.push(KnowledgeEntry { id, category: category.to_string(), title, content, source: source.to_string() });
         }
     }
     entries
@@ -48,6 +50,92 @@ fn list_knowledge_internal(state: &AppState) -> Vec<KnowledgeEntry> {
 #[tauri::command]
 pub fn list_knowledge(state: State<'_, AppState>) -> Vec<KnowledgeEntry> {
     list_knowledge_internal(&state)
+}
+
+/// Recommend knowledge entries relevant to the current project phase.
+/// Called internally from stream.rs — NOT a Tauri command (avoids Mutex deadlock).
+pub fn recommend_knowledge_internal(
+    templates_base: &Path,
+    output_dir: &str,
+    _phase: &str,
+) -> Vec<KnowledgeEntry> {
+    let kb_root = templates_base.join("knowledge-base");
+    if !kb_root.exists() {
+        return Vec::new();
+    }
+
+    // Read analysis report headings as keywords
+    let analysis_path = std::path::Path::new(output_dir).join("02-analysis-report.md");
+    let keywords: Vec<String> = match fs::read_to_string(&analysis_path) {
+        Ok(content) => content
+            .lines()
+            .filter(|l| l.starts_with('#'))
+            .map(|l| l.trim_start_matches('#').trim().to_lowercase())
+            .filter(|k| !k.is_empty())
+            .collect(),
+        Err(_) => return Vec::new(),
+    };
+
+    if keywords.is_empty() {
+        return Vec::new();
+    }
+
+    // Collect all entries
+    let mut all_entries = Vec::new();
+    for category in CATEGORIES {
+        let cat_dir = kb_root.join(category);
+        if !cat_dir.exists() { continue; }
+        let Ok(dir) = fs::read_dir(&cat_dir) else { continue; };
+        for file in dir.filter_map(|e| e.ok()) {
+            let path = file.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
+            let Ok(content) = fs::read_to_string(&path) else { continue; };
+            let id = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
+            let source = if id.starts_with("auto-") { "auto" } else { "manual" };
+            let title = content.lines()
+                .find(|l| l.starts_with("# "))
+                .map(|l| l[2..].trim().to_string())
+                .unwrap_or_else(|| id.clone());
+            all_entries.push(KnowledgeEntry {
+                id, category: category.to_string(), title, content, source: source.to_string(),
+            });
+        }
+    }
+
+    // Score entries by keyword matching
+    let mut scored: Vec<(KnowledgeEntry, i32)> = all_entries
+        .into_iter()
+        .filter_map(|entry| {
+            let title_lower = entry.title.to_lowercase();
+            let content_lower = entry.content.to_lowercase();
+            let mut score: i32 = 0;
+            for kw in &keywords {
+                if title_lower.contains(kw.as_str()) { score += 3; }
+                if content_lower.contains(kw.as_str()) { score += 1; }
+            }
+            if score == 0 { return None; }
+            Some((entry, score))
+        })
+        .collect();
+
+    scored.sort_by(|a, b| b.1.cmp(&a.1));
+
+    // Return top 5 entries, total content limited to 2000 chars
+    let mut result = Vec::new();
+    let mut total_chars = 0usize;
+    for (entry, _) in scored {
+        let entry_len = entry.content.len();
+        if total_chars + entry_len > 2000 && !result.is_empty() {
+            break;
+        }
+        total_chars += entry_len;
+        result.push(entry);
+        if result.len() >= 5 {
+            break;
+        }
+    }
+
+    result
 }
 
 #[derive(Debug, Deserialize)]
@@ -98,7 +186,7 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
     let full_content = format!("# {}\n\n{}", args.title, args.content);
     fs::write(&path, &full_content).map_err(|e| e.to_string())?;
 
-    Ok(KnowledgeEntry { id: final_slug, category: args.category, title: args.title, content: full_content })
+    Ok(KnowledgeEntry { id: final_slug, category: args.category, title: args.title, content: full_content, source: "manual".to_string() })
 }
 
 /// 全量遍历文件系统 + 内存子串匹配。
@@ -128,8 +216,9 @@ pub fn search_knowledge(state: State<'_, AppState>, query: String) -> Vec<Knowle
                 .find(|l| l.starts_with("# "))
                 .map(|l| l[2..].trim().to_string())
                 .unwrap_or_else(|| id.clone());
+            let source = if id.starts_with("auto-") { "auto" } else { "manual" };
             if title.to_lowercase().contains(&q) || content_lower.contains(&q) {
-                entries.push(KnowledgeEntry { id, category: category.to_string(), title, content });
+                entries.push(KnowledgeEntry { id, category: category.to_string(), title, content, source: source.to_string() });
                 if entries.len() >= 20 { return entries; }
             }
         }

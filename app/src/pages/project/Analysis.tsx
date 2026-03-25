@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
 import { cn } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
-import { PHASE_META } from "@/lib/phase-meta"
+import { PHASE_META, PHASE_LABELS } from "@/lib/phase-meta"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -116,6 +116,11 @@ export function AnalysisPage() {
   const [advancing, setAdvancing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [excludedContext, setExcludedContext] = useState<string[]>([])
+
+  // Skip suggestions
+  const [skipSuggestions, setSkipSuggestions] = useState<{ phase: string; reason: string }[]>([])
+  const [skipCardState, setSkipCardState] = useState<"visible" | "accepted" | "dismissed">("dismissed")
+  const skipCheckedRef = useRef(false)
 
   // Prevent double-start of AI stream in React StrictMode
   const startedRef = useRef(false)
@@ -262,6 +267,31 @@ export function AnalysisPage() {
     startedRef.current = true
     start(initialMessages, { excludedContext })
   }, [reset, start, excludedContext])
+
+  // After analysis stream completes, check for skip suggestions
+  useEffect(() => {
+    if (isStreaming || !text || skipCheckedRef.current) return
+    skipCheckedRef.current = true
+    api.suggestSkipPhases(projectId).then((suggestions) => {
+      if (suggestions.length > 0) {
+        setSkipSuggestions(suggestions)
+        setSkipCardState("visible")
+      }
+    }).catch((err) => console.error("[Analysis] suggestSkipPhases:", err))
+  }, [isStreaming, text, projectId])
+
+  const handleAcceptSkip = useCallback(async () => {
+    const phases = skipSuggestions.map((s) => s.phase)
+    try {
+      await api.skipPhases(projectId, phases)
+      setSkipCardState("accepted")
+      window.dispatchEvent(new CustomEvent("project-phase-updated", { detail: { projectId } }))
+      toast(`已跳过 ${phases.length} 个阶段`, "success")
+    } catch (err) {
+      console.error("[Analysis] skipPhases:", err)
+      toast("跳过阶段失败", "error")
+    }
+  }, [skipSuggestions, projectId, toast])
 
   /** Go back to requirement page */
   const handleBack = useCallback(() => {
@@ -459,6 +489,44 @@ export function AnalysisPage() {
               question="分析已完成。如果需要补充信息或调整方向，可以在这里告诉我。"
               onAnswer={handleAnswer}
             />
+          </div>
+        )}
+
+        {/* Skip suggestion card */}
+        {skipCardState === "visible" && skipSuggestions.length > 0 && (
+          <div
+            className="mt-6 rounded-lg border-l-[3px] border-l-[var(--accent-color)] bg-[var(--accent-light)] px-4 py-3"
+            style={{ animation: "fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1)" }}
+          >
+            <p className="text-[13px] font-medium text-[var(--text-primary)] mb-2">
+              建议跳过以下阶段
+            </p>
+            <ul className="space-y-1.5 mb-3">
+              {skipSuggestions.map((s) => (
+                <li key={s.phase} className="flex items-start gap-2 text-[13px] text-[var(--text-secondary)]">
+                  <span className="shrink-0 font-medium text-[var(--text-primary)]">{PHASE_LABELS[s.phase] ?? s.phase}</span>
+                  <span>— {s.reason}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center gap-2">
+              <Button variant="primary" size="sm" onClick={handleAcceptSkip}>采纳建议</Button>
+              <Button variant="ghost" size="sm" onClick={() => setSkipCardState("dismissed")}>保持完整流程</Button>
+            </div>
+          </div>
+        )}
+        {skipCardState === "accepted" && (
+          <div className="mt-6 flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-2.5">
+            <span className="size-1.5 shrink-0 rounded-full bg-[var(--accent-color)]" />
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              已跳过 {skipSuggestions.length} 个阶段
+            </p>
+            <button
+              onClick={() => setSkipCardState("visible")}
+              className="text-[12px] text-[var(--accent-color)] hover:opacity-70 transition-opacity"
+            >
+              查看详情
+            </button>
           </div>
         )}
 
