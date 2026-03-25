@@ -229,6 +229,9 @@ pub fn run() {
             commands::projects::suggest_skip_phases,
             commands::projects::skip_phases,
             commands::projects::unskip_phase,
+            commands::projects::get_project_prompts,
+            commands::projects::save_project_prompt,
+            commands::projects::clear_project_prompts,
             commands::update::check_update,
             commands::update::download_and_install_update,
         ])

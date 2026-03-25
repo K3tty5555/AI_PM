@@ -1346,3 +1346,62 @@ pub fn unskip_phase(
     .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+// ── Prompt overrides ──────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_project_prompts(
+    state: State<AppState>,
+    project_id: String,
+) -> Result<HashMap<String, String>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = db
+        .prepare("SELECT phase, prompt_text FROM project_prompt_overrides WHERE project_id = ?1")
+        .map_err(|e| e.to_string())?;
+    let map: HashMap<String, String> = stmt
+        .query_map(params![&project_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+    Ok(map)
+}
+
+#[tauri::command]
+pub fn save_project_prompt(
+    state: State<AppState>,
+    project_id: String,
+    phase: String,
+    prompt_text: String,
+) -> Result<(), String> {
+    if prompt_text.len() > 4000 {
+        return Err("补充指令不能超过 4000 字符".to_string());
+    }
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    if prompt_text.trim().is_empty() {
+        db.execute(
+            "DELETE FROM project_prompt_overrides WHERE project_id = ?1 AND phase = ?2",
+            params![&project_id, &phase],
+        ).map_err(|e| e.to_string())?;
+    } else {
+        db.execute(
+            "INSERT OR REPLACE INTO project_prompt_overrides (project_id, phase, prompt_text) VALUES (?1, ?2, ?3)",
+            params![&project_id, &phase, &prompt_text],
+        ).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn clear_project_prompts(
+    state: State<AppState>,
+    project_id: String,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.execute(
+        "DELETE FROM project_prompt_overrides WHERE project_id = ?1",
+        params![&project_id],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}

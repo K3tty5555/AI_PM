@@ -294,6 +294,7 @@ fn build_system_prompt(
     design_spec: Option<&str>,
     brainstorm_context: &str,
     project_type: &str,
+    custom_prompt: Option<&str>,
 ) -> Result<String, String> {
     let mut skill_content = load_skill(skills_root, skill_name)?;
 
@@ -337,6 +338,15 @@ fn build_system_prompt(
                 }
             }
         }
+    }
+
+    // Inject user custom prompt override (from DB)
+    if let Some(custom) = custom_prompt {
+        let capped = if custom.len() > 4000 { &custom[..4000] } else { custom };
+        parts[0].push_str(&format!(
+            "\n\n<!-- custom-prompt-override -->\n### 用户自定义补充指令\n\n{}\n<!-- /custom-prompt-override -->",
+            capped
+        ));
     }
 
     // Context files injection (tool outputs bound to this project)
@@ -588,7 +598,7 @@ pub async fn start_stream(
 ) -> Result<(), String> {
     let stream_key = format!("generate:{}:{}", args.project_id, args.phase);
 
-    let (project_name, output_dir, team_mode, project_type, brainstorm_context) = {
+    let (project_name, output_dir, team_mode, project_type, custom_prompt, brainstorm_context) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let result = db.query_row(
             "SELECT name, output_dir, COALESCE(team_mode, 0), COALESCE(project_type, 'general') FROM projects WHERE id = ?1",
@@ -596,7 +606,13 @@ pub async fn start_stream(
             |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)?, row.get::<_, String>(3)?)),
         ).map_err(|e| format!("Project not found: {}", e))?;
         let bs = load_brainstorm_for_prompt(&db, &args.project_id, &args.phase);
-        (result.0, result.1, result.2, result.3, bs)
+        // Read custom prompt override for this phase
+        let cp: Option<String> = db.query_row(
+            "SELECT prompt_text FROM project_prompt_overrides WHERE project_id = ?1 AND phase = ?2",
+            params![&args.project_id, &args.phase],
+            |row| row.get(0),
+        ).ok();
+        (result.0, result.1, result.2, result.3, cp, bs)
     };
     let team_mode = team_mode != 0;
     let excluded_context = args.excluded_context.unwrap_or_default();
@@ -642,6 +658,7 @@ pub async fn start_stream(
         args.design_spec.as_deref(),
         &brainstorm_context,
         &project_type,
+        custom_prompt.as_deref(),
     ).map_err(|e| {
         let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
         e
