@@ -221,6 +221,12 @@ export const api = {
     safeInvoke<void>("skip_phases", { projectId, phases }),
   unskipPhase: (projectId: string, phase: string) =>
     safeInvoke<void>("unskip_phase", { projectId, phase }),
+  getProjectPrompts: (projectId: string) =>
+    safeInvoke<Record<string, string>>("get_project_prompts", { projectId }),
+  saveProjectPrompt: (projectId: string, phase: string, promptText: string) =>
+    safeInvoke<void>("save_project_prompt", { projectId, phase, promptText }),
+  clearProjectPrompts: (projectId: string) =>
+    safeInvoke<void>("clear_project_prompts", { projectId }),
   setTeamMode: (id: string, enabled: boolean) =>
     safeInvoke<void>("set_team_mode", { args: { id, enabled } }),
   updatePhase: (args: { projectId: string; phase: string; status: string; outputFile?: string }) =>
