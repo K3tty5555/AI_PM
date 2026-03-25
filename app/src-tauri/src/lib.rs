@@ -184,6 +184,7 @@ pub fn run() {
             commands::files::delete_reference_file,
             commands::files::get_project_design_spec,
             commands::files::set_project_design_spec,
+            commands::files::extract_docx_text,
             commands::env::check_env,
             commands::env::install_dep,
             commands::env::check_playwright_mcp,

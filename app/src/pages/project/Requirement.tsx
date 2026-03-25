@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { Upload } from "lucide-react"
+import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
 import { Button } from "@/components/ui/button"
 import { RichEditor } from "@/components/rich-editor"
 import { FileUpload } from "@/components/file-upload"
@@ -36,6 +38,61 @@ export function RequirementPage() {
   const [advancing, setAdvancing] = useState(false)
   const [saveHint, setSaveHint] = useState("")
   const [loading, setLoading] = useState(true)
+  const [dragging, setDragging] = useState(false)
+
+  const handleImportFile = useCallback(async () => {
+    const selected = await dialogOpen({
+      multiple: false,
+      filters: [{ name: "文档", extensions: ["txt", "md", "docx"] }],
+    })
+    if (!selected || typeof selected !== "string") return
+
+    try {
+      let imported: string
+      if (selected.endsWith(".docx")) {
+        imported = await api.extractDocxText(selected)
+      } else {
+        imported = await api.readFile(selected)
+      }
+      if (!imported.trim()) {
+        toast("文件内容为空", "warning")
+        return
+      }
+      const separator = `\n\n---\n*以下内容导入于 ${new Date().toLocaleString("zh-CN")}*\n\n`
+      setContent((prev) => (prev ? prev + separator + imported : imported))
+      setInitialContent((prev) => (prev ? prev + separator + imported : imported))
+      toast(`已导入 ${imported.length} 字内容`, "success")
+    } catch (err) {
+      toast(String(err), "error")
+    }
+  }, [toast])
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (!file) return
+    const ext = file.name.split(".").pop()?.toLowerCase()
+    if (!["txt", "md", "docx"].includes(ext ?? "")) {
+      toast("不支持该文件格式，请使用 .md .txt .docx 文件", "error")
+      return
+    }
+    if (ext === "docx") {
+      // For docx, we need the file path — Tauri drag events don't give us the path directly
+      // Fall back to reading via FileReader for txt/md; docx needs the file picker
+      toast("DOCX 文件请使用导入按钮选择", "info")
+      return
+    }
+    const text = await file.text()
+    if (!text.trim()) {
+      toast("文件内容为空", "warning")
+      return
+    }
+    const separator = `\n\n---\n*以下内容导入于 ${new Date().toLocaleString("zh-CN")}*\n\n`
+    setContent((prev) => (prev ? prev + separator + text : text))
+    setInitialContent((prev) => (prev ? prev + separator + text : text))
+    toast(`已导入 ${text.length} 字内容`, "success")
+  }, [toast])
 
   // Fetch project details and existing draft
   useEffect(() => {
@@ -173,9 +230,26 @@ export function RequirementPage() {
 
       {/* Requirement description — Rich Editor */}
       <div className="mt-8 mb-6">
-        <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
-          需求描述
-        </label>
+        <div className="mb-2 flex items-center justify-between">
+          <label className="text-sm font-medium text-[var(--text-primary)]">
+            需求描述
+          </label>
+          <Button variant="ghost" size="sm" onClick={handleImportFile} className="gap-1.5 h-7 text-xs">
+            <Upload className="size-3.5" strokeWidth={1.75} />
+            导入
+          </Button>
+        </div>
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          className={cn("relative", dragging && "ring-2 ring-[var(--accent-color)] ring-dashed rounded-lg")}
+        >
+          {dragging && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-[var(--accent-light)]/60 backdrop-blur-[2px]">
+              <span className="text-sm font-medium text-[var(--accent-color)]">松开以导入</span>
+            </div>
+          )}
         {initialContent !== undefined ? (
           <RichEditor
             content={initialContent}
@@ -190,6 +264,7 @@ export function RequirementPage() {
             editable={!advancing}
           />
         )}
+        </div>
       </div>
 
       {/* File upload */}
