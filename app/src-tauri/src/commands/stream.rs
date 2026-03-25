@@ -536,7 +536,18 @@ fn build_system_prompt(
 
     parts.push(ctx.join("\n"));
 
-    Ok(parts.join("\n"))
+    let full_prompt = parts.join("\n");
+
+    // System prompt size guard — warn if exceeding 300k chars
+    let char_count = full_prompt.len();
+    if char_count > 300_000 {
+        eprintln!(
+            "[WARN] System prompt exceeds 300,000 chars ({} chars) for project '{}' phase '{}'",
+            char_count, project_name, phase
+        );
+    }
+
+    Ok(full_prompt)
 }
 
 #[derive(Debug, Deserialize)]

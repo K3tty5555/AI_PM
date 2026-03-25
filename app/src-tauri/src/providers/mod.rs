@@ -20,6 +20,7 @@ pub trait AiProvider: Send + Sync {
     ) -> Result<StreamResult, String>;
 }
 
+pub mod ai_call;
 pub mod anthropic;
 pub mod openai;
 pub mod claude_cli;
