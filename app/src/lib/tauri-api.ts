@@ -202,8 +202,8 @@ export const api = {
 
   // Projects
   listProjects: () => safeInvoke<ProjectSummary[]>("list_projects"),
-  createProject: (name: string, teamMode?: boolean) =>
-    safeInvoke<ProjectDetail>("create_project", { args: { name, teamMode: teamMode ?? false } }),
+  createProject: (name: string, teamMode?: boolean, projectType?: string) =>
+    safeInvoke<ProjectDetail>("create_project", { args: { name, teamMode: teamMode ?? false, projectType: projectType ?? "general" } }),
   getProject: (id: string) => safeInvoke<ProjectDetail | null>("get_project", { id }),
   deleteProject: (id: string) => safeInvoke<void>("delete_project", { id }),
   setProjectStatus: (id: string, status: 'active' | 'completed') =>

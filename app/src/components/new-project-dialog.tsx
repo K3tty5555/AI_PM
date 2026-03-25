@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react"
-import { api } from "@/lib/tauri-api"
+import { Briefcase, Users, Wrench, Layers } from "lucide-react"
+import { api, type ProjectType, PROJECT_TYPE_META } from "@/lib/tauri-api"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+
+const TYPE_ICONS: Record<ProjectType, typeof Layers> = {
+  general: Layers,
+  "to-b": Briefcase,
+  "to-c": Users,
+  internal: Wrench,
+}
 
 interface NewProjectDialogProps {
   open: boolean
@@ -11,6 +19,7 @@ interface NewProjectDialogProps {
 
 function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
   const [name, setName] = useState("")
+  const [projectType, setProjectType] = useState<ProjectType>("general")
   const [teamMode, setTeamMode] = useState(false)
   const [isApiMode, setIsApiMode] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -28,6 +37,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
   useEffect(() => {
     if (open) {
       setName("")
+      setProjectType("general")
       setTeamMode(false)
       setError("")
       setSubmitting(false)
@@ -63,7 +73,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
     setError("")
 
     try {
-      const project = await api.createProject(trimmedName, teamMode)
+      const project = await api.createProject(trimmedName, teamMode, projectType)
       onCreated(project)
     } catch (err) {
       setError(typeof err === "string" ? err : err instanceof Error ? err.message : "创建项目失败")
@@ -120,6 +130,46 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
                 {error}
               </p>
             )}
+          </div>
+
+          {/* Project type selector */}
+          <div className="mb-6">
+            <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
+              项目类型
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(PROJECT_TYPE_META) as ProjectType[]).map((type) => {
+                const meta = PROJECT_TYPE_META[type]
+                const Icon = TYPE_ICONS[type]
+                const selected = projectType === type
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setProjectType(type)}
+                    className={cn(
+                      "flex items-start gap-2.5 rounded-lg border p-3 text-left transition-all duration-150",
+                      selected
+                        ? "border-[var(--accent-color)] bg-[var(--accent-light)]"
+                        : "border-[var(--border)] bg-[var(--card)] hover:border-[var(--accent-color)]/40",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0 mt-0.5" style={{ color: selected ? "var(--accent-color)" : "var(--text-tertiary)" }} strokeWidth={1.75} />
+                    <div className="min-w-0">
+                      <p className={cn("text-sm font-medium", selected ? "text-[var(--accent-color)]" : "text-[var(--text-primary)]")}>
+                        {meta.label}
+                      </p>
+                      <p className="text-[11px] text-[var(--text-secondary)] leading-snug mt-0.5">
+                        {meta.description}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
+              创建后可在项目设置中更改
+            </p>
           </div>
 
           {/* Team mode toggle */}

@@ -293,6 +293,7 @@ fn build_system_prompt(
     is_cli: bool,
     design_spec: Option<&str>,
     brainstorm_context: &str,
+    project_type: &str,
 ) -> Result<String, String> {
     let mut skill_content = load_skill(skills_root, skill_name)?;
 
@@ -318,6 +319,24 @@ fn build_system_prompt(
             kb_block.push_str(&format!("#### [{}] {}\n\n{}\n\n---\n\n", entry.category, entry.title, entry.content));
         }
         parts[0].push_str(&kb_block);
+    }
+
+    // Inject project type override (if not "general")
+    if project_type != "general" {
+        let override_path = templates_base.join("project-types").join(project_type).join("prompt-overrides.json");
+        if override_path.exists() {
+            if let Ok(raw) = fs::read_to_string(&override_path) {
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) {
+                    if let Some(text) = json["overrides"][phase].as_str() {
+                        let capped = if text.len() > 4000 { &text[..4000] } else { text };
+                        parts[0].push_str(&format!(
+                            "\n\n<!-- project-type-override -->\n### 项目类型补充指令\n\n{}\n<!-- /project-type-override -->",
+                            capped
+                        ));
+                    }
+                }
+            }
+        }
     }
 
     // Context files injection (tool outputs bound to this project)
@@ -569,15 +588,15 @@ pub async fn start_stream(
 ) -> Result<(), String> {
     let stream_key = format!("generate:{}:{}", args.project_id, args.phase);
 
-    let (project_name, output_dir, team_mode, brainstorm_context) = {
+    let (project_name, output_dir, team_mode, project_type, brainstorm_context) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let result = db.query_row(
-            "SELECT name, output_dir, COALESCE(team_mode, 0) FROM projects WHERE id = ?1",
+            "SELECT name, output_dir, COALESCE(team_mode, 0), COALESCE(project_type, 'general') FROM projects WHERE id = ?1",
             params![&args.project_id],
-            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)?)),
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)?, row.get::<_, String>(3)?)),
         ).map_err(|e| format!("Project not found: {}", e))?;
         let bs = load_brainstorm_for_prompt(&db, &args.project_id, &args.phase);
-        (result.0, result.1, result.2, bs)
+        (result.0, result.1, result.2, result.3, bs)
     };
     let team_mode = team_mode != 0;
     let excluded_context = args.excluded_context.unwrap_or_default();
@@ -622,6 +641,7 @@ pub async fn start_stream(
         is_cli,
         args.design_spec.as_deref(),
         &brainstorm_context,
+        &project_type,
     ).map_err(|e| {
         let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
         e
