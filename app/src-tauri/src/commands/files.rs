@@ -634,3 +634,78 @@ pub fn set_project_design_spec(
     let spec_file = Path::new(&output_dir).join(".design-spec");
     fs::write(&spec_file, &spec_id).map_err(|e| e.to_string())
 }
+
+/// Extract plain text from a DOCX file (zip + XML parsing).
+#[tauri::command]
+pub fn extract_docx_text(path: String) -> Result<String, String> {
+    use std::io::Read as _;
+
+    let file = fs::File::open(&path).map_err(|e| format!("打开文件失败: {}", e))?;
+    let metadata = file.metadata().map_err(|e| e.to_string())?;
+    if metadata.len() > 50 * 1024 * 1024 {
+        return Err("文件大小超过 50MB 限制".to_string());
+    }
+
+    let mut archive = zip::ZipArchive::new(file)
+        .map_err(|e| format!("无效的 DOCX 文件: {}", e))?;
+
+    // Security: check for path traversal
+    for i in 0..archive.len() {
+        let entry = archive.by_index(i).map_err(|e| e.to_string())?;
+        let name = entry.name().to_string();
+        if name.contains("..") || name.starts_with('/') || name.starts_with('\\') {
+            return Err("DOCX 文件包含非法路径".to_string());
+        }
+    }
+
+    let mut doc_xml = archive.by_name("word/document.xml")
+        .map_err(|_| "DOCX 中未找到 document.xml".to_string())?;
+
+    let mut xml_content = String::new();
+    doc_xml.read_to_string(&mut xml_content)
+        .map_err(|e| format!("读取 document.xml 失败: {}", e))?;
+
+    // Parse XML and extract <w:t> text nodes
+    let mut reader = quick_xml::Reader::from_str(&xml_content);
+    let mut text = String::new();
+    let mut in_paragraph = false;
+    let mut in_text = false;
+    let mut buf = Vec::new();
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(quick_xml::events::Event::Start(ref e)) | Ok(quick_xml::events::Event::Empty(ref e)) => {
+                let local = e.local_name();
+                if local.as_ref() == b"p" {
+                    if in_paragraph && !text.ends_with('\n') {
+                        text.push('\n');
+                    }
+                    in_paragraph = true;
+                } else if local.as_ref() == b"t" {
+                    in_text = true;
+                }
+            }
+            Ok(quick_xml::events::Event::End(ref e)) => {
+                let local = e.local_name();
+                if local.as_ref() == b"t" {
+                    in_text = false;
+                } else if local.as_ref() == b"p" {
+                    in_paragraph = false;
+                }
+            }
+            Ok(quick_xml::events::Event::Text(ref e)) => {
+                if in_text {
+                    if let Ok(t) = e.unescape() {
+                        text.push_str(&t);
+                    }
+                }
+            }
+            Ok(quick_xml::events::Event::Eof) => break,
+            Err(_) => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    Ok(text.trim().to_string())
+}
