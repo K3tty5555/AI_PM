@@ -41,11 +41,53 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
 
     let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_bs_proj_phase ON brainstorm_messages(project_id, phase, seq)", []);
 
-    // Migration: add team_mode if not exists (for existing databases)
-    let _ = conn.execute("ALTER TABLE projects ADD COLUMN team_mode INTEGER NOT NULL DEFAULT 0", []);
+    // ── Schema version management ───────────────────────────────────────
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS schema_version (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            version INTEGER NOT NULL DEFAULT 0
+        );
+        INSERT OR IGNORE INTO schema_version (id, version) VALUES (1, 0);"
+    )?;
 
-    // Migration: add status if not exists
-    let _ = conn.execute("ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'active'", []);
+    let current_version: i32 = conn.query_row(
+        "SELECT version FROM schema_version WHERE id = 1",
+        [],
+        |row| row.get(0),
+    )?;
+
+    // Version 1: add team_mode + status columns (ignore errors for backward compat)
+    if current_version < 1 {
+        let _ = conn.execute("ALTER TABLE projects ADD COLUMN team_mode INTEGER NOT NULL DEFAULT 0", []);
+        let _ = conn.execute("ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'active'", []);
+        conn.execute("UPDATE schema_version SET version = 1 WHERE id = 1", [])?;
+    }
+
+    // Version 2: add project_type column
+    if current_version < 2 {
+        conn.execute("ALTER TABLE projects ADD COLUMN project_type TEXT DEFAULT 'general'", [])
+            .map_err(|e| {
+                eprintln!("Migration v2 failed (project_type): {e}");
+                e
+            })?;
+        conn.execute("UPDATE schema_version SET version = 2 WHERE id = 1", [])?;
+    }
+
+    // Version 3: create project_prompt_overrides table
+    if current_version < 3 {
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS project_prompt_overrides (
+                project_id TEXT NOT NULL,
+                phase TEXT NOT NULL,
+                prompt_text TEXT NOT NULL,
+                PRIMARY KEY (project_id, phase)
+            );"
+        ).map_err(|e| {
+            eprintln!("Migration v3 failed (project_prompt_overrides): {e}");
+            e
+        })?;
+        conn.execute("UPDATE schema_version SET version = 3 WHERE id = 1", [])?;
+    }
 
     Ok(conn)
 }

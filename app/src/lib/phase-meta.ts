@@ -5,6 +5,8 @@ export const PHASE_ORDER = [
 
 export type Phase = typeof PHASE_ORDER[number]
 
+export const REQUIRED_PHASES = ["requirement", "prd"] as const
+
 export const PHASE_LABELS: Record<string, string> = {
   requirement: "需求收集",
   analysis: "需求分析",
