@@ -1,30 +1,19 @@
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus, Clock, ArrowRight } from "lucide-react"
+import { Plus, Clock, ArrowRight, CheckSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ProjectCard } from "@/components/project-card"
+import { BatchActionBar } from "@/components/BatchActionBar"
 import { useFavorites } from "@/hooks/use-favorites"
 import { useToast } from "@/hooks/use-toast"
 import { useRecent } from "@/hooks/use-recent"
 import { useProjectActions } from "@/hooks/use-project-actions"
-import { api } from "@/lib/tauri-api"
+import { useBatchSelect } from "@/hooks/use-batch-select"
+import { api, type ProjectSummary } from "@/lib/tauri-api"
+import { translateError } from "@/lib/error-messages"
 import { cn } from "@/lib/utils"
-
-interface DashboardProject {
-  id: string
-  name: string
-  description: string | null
-  currentPhase: string
-  completedCount: number
-  totalPhases: number
-  completedPhases: string[]
-  updatedAt: string
-  createdAt: string
-  status: 'active' | 'completed'
-  outputDir: string
-}
 
 function OnboardingDialog({ onDismiss, onGoSettings }: { onDismiss: () => void; onGoSettings: () => void }) {
   return (
@@ -59,7 +48,7 @@ export function DashboardPage() {
   const { isFavorite, toggleFavorite } = useFavorites()
   const { recentItems } = useRecent()
   const { toast } = useToast()
-  const [projects, setProjects] = useState<DashboardProject[]>([])
+  const [projects, setProjects] = useState<ProjectSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
@@ -67,6 +56,10 @@ export function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all')
   const [sortOrder, setSortOrder] = useState<'updatedAt' | 'createdAt'>('updatedAt')
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  // Batch delete confirmation
+  const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false)
 
   const {
     renameState,
@@ -86,8 +79,10 @@ export function DashboardPage() {
     })
     .sort((a, b) => {
       if (sortOrder === 'updatedAt') return b.updatedAt.localeCompare(a.updatedAt)
-      return a.createdAt.localeCompare(b.createdAt) // 最早创建 → 升序
+      return a.createdAt.localeCompare(b.createdAt)
     })
+
+  const batch = useBatchSelect({ items: filteredProjects })
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -131,7 +126,7 @@ export function DashboardPage() {
     }
   }
 
-  const handleToggleStatus = useCallback(async (e: React.MouseEvent, project: DashboardProject) => {
+  const handleToggleStatus = useCallback(async (e: React.MouseEvent, project: ProjectSummary) => {
     e.stopPropagation()
     const newStatus = project.status === 'completed' ? 'active' : 'completed'
     try {
@@ -143,6 +138,73 @@ export function DashboardPage() {
       toast("更新项目状态失败", "error")
     }
   }, [])
+
+  // ── Batch operations ──────────────────────────────────────────────────
+
+  const handleBatchArchive = useCallback(async () => {
+    const ids = Array.from(batch.selectedIds)
+    try {
+      const result = await api.batchSetProjectStatus(ids, "completed")
+      if (result.succeeded.length > 0) {
+        setProjects((prev) =>
+          prev.map((p) =>
+            result.succeeded.includes(p.id) ? { ...p, status: "completed" } : p,
+          ),
+        )
+        toast(`已归档 ${result.succeeded.length} 个项目`, "success")
+        window.dispatchEvent(new Event("projects-updated"))
+      }
+      if (result.failed.length > 0) {
+        toast(`${result.failed.length} 个项目归档失败`, "error")
+      }
+    } catch (err) {
+      toast(translateError(err), "error")
+    }
+    batch.exitSelectionMode()
+  }, [batch.selectedIds, batch.exitSelectionMode, toast])
+
+  const handleBatchExport = useCallback(async () => {
+    const ids = Array.from(batch.selectedIds)
+    setExporting(true)
+    try {
+      const zipPath = await api.exportProjectsZip(ids)
+      toast("导出完成", "success")
+      api.revealFile(zipPath).catch(console.error)
+    } catch (err) {
+      toast(translateError(err), "error")
+    } finally {
+      setExporting(false)
+      batch.exitSelectionMode()
+    }
+  }, [batch.selectedIds, batch.exitSelectionMode, toast])
+
+  const handleBatchDeleteConfirm = useCallback(async () => {
+    setBatchDeleteConfirm(false)
+    const ids = Array.from(batch.selectedIds)
+    try {
+      const result = await api.batchDeleteProjects(ids)
+      if (result.succeeded.length > 0) {
+        setProjects((prev) => prev.filter((p) => !result.succeeded.includes(p.id)))
+        toast(`已删除 ${result.succeeded.length} 个项目`, "success")
+        window.dispatchEvent(new Event("projects-updated"))
+      }
+      if (result.failed.length > 0) {
+        toast(`${result.failed.length} 个项目删除失败`, "error")
+      }
+    } catch (err) {
+      toast(translateError(err), "error")
+    }
+    batch.exitSelectionMode()
+  }, [batch.selectedIds, batch.exitSelectionMode, toast])
+
+  const handleToggleSelect = useCallback(
+    (id: string, shiftKey: boolean) => {
+      batch.toggleSelect(id, shiftKey)
+    },
+    [batch.toggleSelect],
+  )
+
+  // ── End batch operations ──────────────────────────────────────────────
 
   const dismissOnboarding = useCallback(() => {
     localStorage.setItem("onboarding-dismissed", "1")
@@ -240,14 +302,29 @@ export function DashboardPage() {
   // Project list
   return (
     <>
-      <div className="layout-cards">
+      <div className={cn("layout-cards", batch.selectionMode && "pb-20")}>
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">项目</h1>
-          <Button variant="primary" size="sm" onClick={() => setDialogOpen(true)} className="gap-2">
-            <Plus className="size-3.5" strokeWidth={1.75} />
-            新建项目
-          </Button>
+          <div className="flex items-center gap-2">
+            {filteredProjects.length > 1 && (
+              <Button
+                variant={batch.selectionMode ? "secondary" : "ghost"}
+                size="sm"
+                onClick={batch.selectionMode ? batch.exitSelectionMode : batch.enterSelectionMode}
+                className="gap-1.5"
+              >
+                <CheckSquare className="size-3.5" strokeWidth={1.75} />
+                {batch.selectionMode ? "取消" : "选择"}
+              </Button>
+            )}
+            {!batch.selectionMode && (
+              <Button variant="primary" size="sm" onClick={() => setDialogOpen(true)} className="gap-2">
+                <Plus className="size-3.5" strokeWidth={1.75} />
+                新建项目
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search */}
@@ -290,8 +367,8 @@ export function DashboardPage() {
           </select>
         </div>
 
-        {/* Recent access */}
-        {recentItems.length > 0 && (
+        {/* Recent access (hidden in selection mode) */}
+        {!batch.selectionMode && recentItems.length > 0 && (
           <div className="mb-5">
             <div className="flex items-center gap-1.5 mb-2.5">
               <Clock className="size-3.5 text-[var(--text-tertiary)]" strokeWidth={1.75} />
@@ -320,7 +397,11 @@ export function DashboardPage() {
         )}
 
         {/* Project cards grid */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          role={batch.selectionMode ? "listbox" : undefined}
+          aria-multiselectable={batch.selectionMode ? true : undefined}
+        >
           {filteredProjects.map((project, index) => (
             <ProjectCard
               key={project.id}
@@ -328,6 +409,9 @@ export function DashboardPage() {
               index={index}
               isFavorite={isFavorite(project.id)}
               renameState={renameState}
+              selectionMode={batch.selectionMode}
+              isSelected={batch.selectedIds.has(project.id)}
+              onToggleSelect={handleToggleSelect}
               onToggleFavorite={() => toggleFavorite(project.id)}
               onToggleStatus={(e) => handleToggleStatus(e, project)}
               onDelete={(e) => handleDelete(e, project.id)}
@@ -354,6 +438,21 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {/* Batch action bar */}
+      {batch.selectionMode && (
+        <BatchActionBar
+          selectedCount={batch.selectedIds.size}
+          totalCount={filteredProjects.length}
+          isAllSelected={batch.isAllSelected}
+          onToggleSelectAll={batch.toggleSelectAll}
+          onArchive={handleBatchArchive}
+          onExport={handleBatchExport}
+          onDelete={() => setBatchDeleteConfirm(true)}
+          onExit={batch.exitSelectionMode}
+          exporting={exporting}
+        />
+      )}
+
       <NewProjectDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -368,6 +467,16 @@ export function DashboardPage() {
         variant="danger"
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmId(null)}
+      />
+      <ConfirmDialog
+        open={batchDeleteConfirm}
+        title="批量删除项目"
+        description={`确认删除选中的 ${batch.selectedIds.size} 个项目？所有项目的数据库记录和本地输出文件将被永久删除，此操作不可撤销。`}
+        confirmLabel="删除"
+        cancelLabel="取消"
+        variant="danger"
+        onConfirm={handleBatchDeleteConfirm}
+        onCancel={() => setBatchDeleteConfirm(false)}
       />
       {showOnboarding && <OnboardingDialog onDismiss={dismissOnboarding} onGoSettings={goToSettings} />}
     </>

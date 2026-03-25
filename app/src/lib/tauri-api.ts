@@ -74,6 +74,7 @@ export interface KnowledgeEntry {
   category: string
   title: string
   content: string
+  source: string  // "manual" | "auto"
 }
 
 export interface KnowledgeCandidate {
@@ -194,7 +195,19 @@ export const api = {
   deleteProject: (id: string) => safeInvoke<void>("delete_project", { id }),
   setProjectStatus: (id: string, status: 'active' | 'completed') =>
     safeInvoke<void>("set_project_status", { id, status }),
+  batchDeleteProjects: (ids: string[]) =>
+    safeInvoke<{ succeeded: string[]; failed: [string, string][] }>("batch_delete_projects", { ids }),
+  batchSetProjectStatus: (ids: string[], status: string) =>
+    safeInvoke<{ succeeded: string[]; failed: [string, string][] }>("batch_set_project_status", { ids, status }),
+  exportProjectsZip: (ids: string[]) =>
+    safeInvoke<string>("export_projects_zip", { ids }),
   advancePhase: (id: string) => safeInvoke<string | null>("advance_phase", { id }),
+  suggestSkipPhases: (projectId: string) =>
+    safeInvoke<{ phase: string; reason: string }[]>("suggest_skip_phases", { projectId }),
+  skipPhases: (projectId: string, phases: string[]) =>
+    safeInvoke<void>("skip_phases", { projectId, phases }),
+  unskipPhase: (projectId: string, phase: string) =>
+    safeInvoke<void>("unskip_phase", { projectId, phase }),
   setTeamMode: (id: string, enabled: boolean) =>
     safeInvoke<void>("set_team_mode", { args: { id, enabled } }),
   updatePhase: (args: { projectId: string; phase: string; status: string; outputFile?: string }) =>
@@ -253,6 +266,9 @@ export const api = {
 
   // Export
   exportPrdDocx: (projectId: string) => safeInvoke<string>("export_prd_docx", { projectId }),
+  exportPrdShareHtml: (projectId: string) => safeInvoke<string>("export_prd_share_html", { projectId }),
+  listPrdVersions: (projectId: string) => safeInvoke<number[]>("list_prd_versions", { projectId }),
+  getLatestPrdVersion: (projectId: string) => safeInvoke<number>("get_latest_prd_version", { projectId }),
   revealFile: (path: string) => safeInvoke<void>("reveal_file", { path }),
   openFile: (path: string) => safeInvoke<void>("open_file", { path }),
   writeFile: (path: string, content: string) => safeInvoke<void>("write_file", { path, content }),

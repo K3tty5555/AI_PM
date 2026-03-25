@@ -5,7 +5,7 @@ import {
   Sun, Moon,
   Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone,
   Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette,
-  CheckCircle2,
+  CheckCircle2, SkipForward,
   FolderOpen, Pencil, Trash2, ArrowRight, RefreshCw, FileText,
   Star,
 } from "lucide-react"
@@ -25,7 +25,7 @@ export interface SidebarProject {
 export interface SidebarPhase {
   id: string
   label: string
-  status: "completed" | "in-progress" | "current" | "pending"
+  status: "completed" | "in-progress" | "current" | "pending" | "skipped"
 }
 
 interface SidebarProps {
@@ -91,6 +91,15 @@ function PhaseIcon({ phaseId, status }: { phaseId: string; status: SidebarPhase[
       <CheckCircle2
         className="size-4 shrink-0"
         style={{ color: "var(--success)" }}
+        strokeWidth={1.75}
+      />
+    )
+  }
+  if (status === "skipped") {
+    return (
+      <SkipForward
+        className="size-4 shrink-0"
+        style={{ color: "var(--text-tertiary)", opacity: 0.5 }}
         strokeWidth={1.75}
       />
     )
@@ -226,7 +235,9 @@ function Sidebar({
                           ? "font-medium text-[var(--text-primary)]"
                           : phase.status === "completed"
                             ? "text-[var(--text-secondary)]"
-                            : "text-[var(--text-tertiary)]",
+                            : phase.status === "skipped"
+                              ? "text-[var(--text-tertiary)] opacity-50 line-through"
+                              : "text-[var(--text-tertiary)]",
                       )}
                     >
                       {phase.label}

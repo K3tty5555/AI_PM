@@ -214,6 +214,11 @@ export function ToolKnowledgePage() {
                       <span className="text-[10px] text-[var(--text-secondary)] bg-[var(--secondary)] px-1.5 py-0.5 rounded">
                         {CATEGORIES.find((c) => c.key === entry.category)?.label ?? entry.category}
                       </span>
+                      {entry.source === "auto" && (
+                        <span className="text-[9px] text-[var(--accent-color)] bg-[var(--accent-light)] px-1.5 py-0.5 rounded font-medium">
+                          自动提取
+                        </span>
+                      )}
                     </div>
                     <p className="font-medium text-sm text-[var(--text-primary)]">{entry.title}</p>
                     <p className="mt-1 text-xs text-[var(--text-secondary)] line-clamp-2">
@@ -239,7 +244,14 @@ export function ToolKnowledgePage() {
             <div key={entry.id} className="group rounded-lg border border-[var(--border)] p-4 hover:border-[var(--accent-color)]/40 transition-colors cursor-pointer" onClick={() => handleOpenDrawer(entry)}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm text-[var(--text-primary)]">{entry.title}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm text-[var(--text-primary)]">{entry.title}</p>
+                    {entry.source === "auto" && (
+                      <span className="text-[9px] text-[var(--accent-color)] bg-[var(--accent-light)] px-1.5 py-0.5 rounded font-medium">
+                        自动提取
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-1 text-xs text-[var(--text-secondary)] line-clamp-2">
                     {entry.content.replace(/^#[^\n]+\n+/, "").slice(0, 120)}
                   </p>

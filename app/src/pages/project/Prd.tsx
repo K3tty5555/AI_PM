@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
+import { ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -18,12 +19,15 @@ import { PhaseShell } from "@/components/phase-shell"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { KnowledgeRecommendPanel } from "@/components/knowledge-recommend-panel"
+import { PrdDiffViewer } from "@/components/PrdDiffViewer"
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const PRD_FILE = "05-prd/05-PRD-v1.0.md"
+function prdFile(version: number) {
+  return `05-prd/05-PRD-v${version}.0.md`
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -40,6 +44,94 @@ function extractSectionIds(markdown: string): string[] {
     else if (h3) ids.push(slugify(h3[1].trim()))
   }
   return ids
+}
+
+// ---------------------------------------------------------------------------
+// Export dropdown
+// ---------------------------------------------------------------------------
+
+function ExportDropdown({
+  onCopyMd,
+  copied,
+  onPrint,
+  onExportDocx,
+  onExportShareHtml,
+  exporting,
+}: {
+  onCopyMd: () => void
+  copied: boolean
+  onPrint: () => void
+  onExportDocx: () => void
+  onExportShareHtml: () => void
+  exporting: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [open])
+
+  const handleItem = (action: () => void) => {
+    setOpen(false)
+    action()
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen((v) => !v)}
+        disabled={exporting}
+        className="gap-1"
+      >
+        {exporting ? "导出中..." : "导出"}
+        <ChevronDown className="size-3" strokeWidth={2} />
+      </Button>
+      {open && (
+        <div
+          className={cn(
+            "absolute right-0 top-full mt-1 z-50",
+            "w-44 rounded-lg border border-[var(--border)] bg-[var(--background)]",
+            "shadow-[var(--shadow-lg)] py-1",
+          )}
+          style={{ animation: "fadeInUp 120ms var(--ease-decelerate)" }}
+        >
+          <button
+            onClick={() => handleItem(onCopyMd)}
+            className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
+          >
+            {copied ? "已复制 \u2713" : "复制 Markdown"}
+          </button>
+          <button
+            onClick={() => handleItem(onPrint)}
+            className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
+          >
+            打印 / PDF
+          </button>
+          <button
+            onClick={() => handleItem(onExportDocx)}
+            className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
+          >
+            导出 DOCX
+          </button>
+          <div className="my-1 h-px bg-[var(--border)]" />
+          <button
+            onClick={() => handleItem(onExportShareHtml)}
+            className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
+          >
+            生成分享页
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -69,10 +161,22 @@ export function PrdPage() {
   const [prdStyles, setPrdStyles] = useState<PrdStyleEntry[]>([])
   const [selectedStyle, setSelectedStyle] = useState<string>("")
 
+  // Version management
+  const [currentVersion, setCurrentVersion] = useState(1)
+  const [versions, setVersions] = useState<number[]>([1])
+
+  // Diff view
+  const [diffMode, setDiffMode] = useState(false)
+  const [diffOldText, setDiffOldText] = useState("")
+  const [diffNewText, setDiffNewText] = useState("")
+  const [diffOldVer, setDiffOldVer] = useState(1)
+  const [diffNewVer, setDiffNewVer] = useState(2)
+
   // AI assist input
   const [assistInput, setAssistInput] = useState("")
   const [isAssistStreaming, setIsAssistStreaming] = useState(false)
   const [pendingAssistText, setPendingAssistText] = useState<string | null>(null)
+  const [assistMode, setAssistMode] = useState<"modify" | "iterate">("modify")
 
   // Prevent double-start in StrictMode
   const startedRef = useRef(false)
@@ -198,13 +302,23 @@ export function PrdPage() {
         if (!cancelled && r) setReviewContent(r)
       }).catch((err) => console.error("[Prd]", err))
 
+      // Load versions
+      api.listPrdVersions(projectId).then((vers) => {
+        if (!cancelled && vers.length > 0) {
+          setVersions(vers)
+          setCurrentVersion(vers[vers.length - 1])
+        }
+      }).catch(() => {})
+
       try {
-        const content = await api.readProjectFile(projectId, PRD_FILE)
+        // Load latest version
+        const latestVer = await api.getLatestPrdVersion(projectId)
+        const content = await api.readProjectFile(projectId, prdFile(latestVer))
         if (!cancelled) {
+          setCurrentVersion(latestVer)
           if (content) {
             setExistingMarkdown(content)
           } else if (autostart) {
-            // No existing file — trigger AI generation
             if (!startedRef.current) {
               startedRef.current = true
               start([{ role: "user", content: "请生成 PRD" }])
@@ -318,6 +432,20 @@ export function PrdPage() {
     }
   }, [projectId])
 
+  const handleExportShareHtml = useCallback(async () => {
+    setExporting(true)
+    setExportResult(null)
+    try {
+      const path = await api.exportPrdShareHtml(projectId)
+      setExportResult({ path })
+      toast("分享页已生成", "success")
+    } catch (err) {
+      setExportResult({ error: typeof err === "string" ? err : String(err) })
+    } finally {
+      setExporting(false)
+    }
+  }, [projectId, toast])
+
   /** Save PRD & mark phase complete */
   const handleComplete = useCallback(async () => {
     if (!projectId || !displayMarkdown) return
@@ -328,7 +456,7 @@ export function PrdPage() {
       // Save PRD file
       await api.saveProjectFile({
         projectId,
-        fileName: PRD_FILE,
+        fileName: prdFile(currentVersion),
         content: displayMarkdown,
       })
       setSaving(false)
@@ -456,25 +584,68 @@ export function PrdPage() {
       <div className="prd-header mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">PRD 撰写</h1>
+          {versions.length > 0 && (
+            <span className="text-[13px] text-[var(--text-secondary)]">·</span>
+          )}
+          {versions.length <= 1 ? (
+            <span className="text-[13px] text-[var(--text-secondary)]">v{currentVersion}.0</span>
+          ) : (
+            <select
+              value={currentVersion}
+              onChange={(e) => {
+                const ver = Number(e.target.value)
+                setCurrentVersion(ver)
+                setEditedMarkdown(null)
+                setExistingMarkdown(null)
+                setLoading(true)
+                api.readProjectFile(projectId, prdFile(ver)).then((content) => {
+                  setExistingMarkdown(content)
+                }).finally(() => setLoading(false))
+              }}
+              className="text-[13px] text-[var(--accent-color)] bg-transparent border-none outline-none cursor-pointer font-medium"
+            >
+              {versions.map((v) => (
+                <option key={v} value={v}>v{v}.0</option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="prd-actions flex items-center gap-1">
           {hasContent && !currentStreaming && (
             <>
-              <Button variant="ghost" size="sm" onClick={handleCopyMarkdown} disabled={copied} title="复制 Markdown 源文本">
-                {copied ? "已复制 ✓" : "复制 MD"}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => window.print()} title="打印或存储为 PDF">
-                打印 / PDF
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleExportDocx}
-                disabled={exporting}
-                title="导出为 Word / DOCX 格式"
-              >
-                {exporting ? "导出中..." : "导出 DOCX"}
-              </Button>
+              <ExportDropdown
+                onCopyMd={handleCopyMarkdown}
+                copied={copied}
+                onPrint={() => window.print()}
+                onExportDocx={handleExportDocx}
+                onExportShareHtml={handleExportShareHtml}
+                exporting={exporting}
+              />
+              {versions.length >= 2 && (
+                <Button
+                  variant={diffMode ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={async () => {
+                    if (diffMode) {
+                      setDiffMode(false)
+                      return
+                    }
+                    const oldVer = versions[versions.length - 2]
+                    const newVer = versions[versions.length - 1]
+                    const [oldContent, newContent] = await Promise.all([
+                      api.readProjectFile(projectId, prdFile(oldVer)),
+                      api.readProjectFile(projectId, prdFile(newVer)),
+                    ])
+                    setDiffOldVer(oldVer)
+                    setDiffNewVer(newVer)
+                    setDiffOldText(oldContent || "")
+                    setDiffNewText(newContent || "")
+                    setDiffMode(true)
+                  }}
+                >
+                  {diffMode ? "退出对比" : "对比"}
+                </Button>
+              )}
             </>
           )}
           <Button
@@ -540,7 +711,7 @@ export function PrdPage() {
         </div>
       )}
 
-      {/* DOCX export result */}
+      {/* Export result */}
       {exportResult && (
         "error" in exportResult ? (() => {
           const err = exportResult.error
@@ -570,7 +741,7 @@ export function PrdPage() {
           <div className="mt-4 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
             <span className="size-1.5 shrink-0 rounded-full bg-[var(--success)]" />
             <p className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-secondary)]">
-              DOCX 已导出：{exportResult.path}
+              已导出：{exportResult.path}
             </p>
             <button
               onClick={() => api.revealFile(exportResult.path)}
@@ -587,21 +758,78 @@ export function PrdPage() {
       {pendingAssistText && (
         <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--accent-color)] bg-[var(--accent-light)] px-4 py-3 animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]">
           <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-[var(--text-primary)]">AI 已生成修改建议</span>
+            <span className="text-[13px] font-medium text-[var(--text-primary)]">
+              {assistMode === "iterate" ? "AI 已生成新版本" : "AI 已生成修改建议"}
+            </span>
             <div className="flex gap-2">
               <Button variant="primary" size="sm" onClick={() => {
-                setEditedMarkdown(pendingAssistText)
+                if (assistMode === "iterate") {
+                  // Save as new version
+                  const newVer = currentVersion + 1
+                  api.saveProjectFile({ projectId, fileName: prdFile(newVer), content: pendingAssistText }).then(() => {
+                    setCurrentVersion(newVer)
+                    setVersions((prev) => [...prev, newVer].sort((a, b) => a - b))
+                    setEditedMarkdown(null)
+                    setExistingMarkdown(pendingAssistText)
+                    toast(`已保存为 v${newVer}.0`, "success")
+                  }).catch(() => toast("保存失败", "error"))
+                } else {
+                  setEditedMarkdown(pendingAssistText)
+                  api.saveProjectFile({ projectId, fileName: prdFile(currentVersion), content: pendingAssistText }).catch(() => {})
+                  toast("修改已应用", "success")
+                }
                 setPendingAssistText(null)
-                api.saveProjectFile({ projectId, fileName: PRD_FILE, content: pendingAssistText }).catch(() => {})
-                toast("修改已应用", "success")
-              }}>应用修改</Button>
+              }}>
+                {assistMode === "iterate" ? `保存为 v${currentVersion + 1}.0` : "应用修改"}
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => { setPendingAssistText(null); toast("已放弃修改", "info") }}>放弃</Button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Diff view */}
+      {diffMode && (
+        <div className="mt-6">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs text-[var(--text-secondary)]">对比版本：</span>
+            <select
+              value={diffOldVer}
+              onChange={async (e) => {
+                const v = Number(e.target.value)
+                setDiffOldVer(v)
+                const content = await api.readProjectFile(projectId, prdFile(v))
+                setDiffOldText(content || "")
+              }}
+              className="text-xs bg-transparent border border-[var(--border)] rounded px-1.5 py-0.5 outline-none"
+            >
+              {versions.map((v) => <option key={v} value={v}>v{v}.0</option>)}
+            </select>
+            <span className="text-xs text-[var(--text-tertiary)]">→</span>
+            <select
+              value={diffNewVer}
+              onChange={async (e) => {
+                const v = Number(e.target.value)
+                setDiffNewVer(v)
+                const content = await api.readProjectFile(projectId, prdFile(v))
+                setDiffNewText(content || "")
+              }}
+              className="text-xs bg-transparent border border-[var(--border)] rounded px-1.5 py-0.5 outline-none"
+            >
+              {versions.map((v) => <option key={v} value={v}>v{v}.0</option>)}
+            </select>
+          </div>
+          <PrdDiffViewer
+            oldText={diffOldText}
+            newText={diffNewText}
+            oldLabel={`v${diffOldVer}.0`}
+            newLabel={`v${diffNewVer}.0`}
+          />
+        </div>
+      )}
+
       {/* Main content: two-column layout */}
+      {!diffMode && (
       <div className="mt-6 flex gap-6">
         {/* Left: PRD content */}
         <div
@@ -629,6 +857,7 @@ export function PrdPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* AI Assist input */}
       {hasContent && !currentStreaming && (
@@ -642,13 +871,40 @@ export function PrdPage() {
             "animate-[fadeInUp_0.28s_cubic-bezier(0.16,1,0.3,1)]",
           )}
         >
+          <div className="flex items-center gap-1 mb-2">
+            <button
+              onClick={() => setAssistMode("modify")}
+              className={cn(
+                "px-2.5 py-1 text-xs rounded-md transition-colors",
+                assistMode === "modify"
+                  ? "bg-[var(--accent-color)] text-white"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]",
+              )}
+            >
+              修改
+            </button>
+            <button
+              onClick={() => setAssistMode("iterate")}
+              className={cn(
+                "px-2.5 py-1 text-xs rounded-md transition-colors",
+                assistMode === "iterate"
+                  ? "bg-[var(--accent-color)] text-white"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]",
+              )}
+            >
+              迭代
+            </button>
+            <span className="ml-2 text-[11px] text-[var(--text-tertiary)]">
+              {assistMode === "modify" ? "就地更新当前版本" : "保存为新版本"}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="text"
               value={assistInput}
               onChange={(e) => setAssistInput(e.target.value)}
               onKeyDown={handleAssistKeyDown}
-              placeholder="输入修改指令，如「把权限配置这一段写详细些」"
+              placeholder={assistMode === "iterate" ? "描述变更，如「新增微信登录、去掉短信验证码」" : "输入修改指令，如「把权限配置这一段写详细些」"}
               className={cn(
                 "flex-1 h-9 px-3",
                 "text-sm text-[var(--text-primary)]",
