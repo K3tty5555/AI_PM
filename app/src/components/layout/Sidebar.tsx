@@ -5,7 +5,7 @@ import {
   Sun, Moon,
   Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone,
   Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette,
-  CheckCircle2, SkipForward,
+  CheckCircle2, SkipForward, Settings2,
   FolderOpen, Pencil, Trash2, ArrowRight, RefreshCw, FileText,
   Star,
 } from "lucide-react"
@@ -47,6 +47,8 @@ interface SidebarProps {
   // Project status
   projectStatus?: 'active' | 'completed'
   onStatusChange?: (status: 'active' | 'completed') => void
+  // Project settings
+  onOpenSettings?: () => void
   // Theme
   themePreference: "light" | "dark" | "system"
   resolvedTheme: "light" | "dark"
@@ -137,6 +139,7 @@ function Sidebar({
   onPhaseClick,
   projectStatus,
   onStatusChange,
+  onOpenSettings,
   themePreference,
   resolvedTheme: _resolvedTheme,
   onCycleTheme,
@@ -270,6 +273,16 @@ function Sidebar({
                   {projectStatus === 'completed' ? '重新激活项目' : '完成项目'}
                 </button>
               </>
+            )}
+            {onOpenSettings && (
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                className="mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-secondary)] transition-colors duration-[var(--dur-base)]"
+              >
+                <Settings2 className="size-3.5 shrink-0" strokeWidth={1.75} />
+                项目设置
+              </button>
             )}
           </div>
         )}
