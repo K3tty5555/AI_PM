@@ -1298,6 +1298,14 @@ pub fn skip_phases(
         return Ok(());
     }
 
+    // Reject skipping required phases
+    let required = ["requirement", "prd"];
+    for phase in &phases {
+        if required.contains(&phase.as_str()) {
+            return Err(format!("「{}」是核心阶段，不可跳过", phase));
+        }
+    }
+
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let now = Utc::now().to_rfc3339();
 
