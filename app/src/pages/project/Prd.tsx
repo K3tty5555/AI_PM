@@ -20,6 +20,7 @@ import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { KnowledgeRecommendPanel } from "@/components/knowledge-recommend-panel"
 import { PrdDiffViewer } from "@/components/PrdDiffViewer"
+import { PrdScoreBadge, PrdScorePanel } from "@/components/prd-score-panel"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -172,6 +173,13 @@ export function PrdPage() {
   const [diffOldVer, setDiffOldVer] = useState(1)
   const [diffNewVer, setDiffNewVer] = useState(2)
 
+  // Score state
+  const [scoreData, setScoreData] = useState<{ dimensions: { name: string; score: number; comment: string; suggestion: string }[]; totalScore: number } | null>(null)
+  const [scoreLoading, setScoreLoading] = useState(false)
+  const [scoreStale, setScoreStale] = useState(false)
+  const [scorePanelOpen, setScorePanelOpen] = useState(false)
+  const scoreCheckedRef = useRef(false)
+
   // AI assist input
   const [assistInput, setAssistInput] = useState("")
   const [isAssistStreaming, setIsAssistStreaming] = useState(false)
@@ -206,6 +214,18 @@ export function PrdPage() {
     projectId,
     phase: "prd-assist",
   })
+
+  // Auto-score when PRD generation completes
+  useEffect(() => {
+    if (isStreaming || !text || scoreCheckedRef.current) return
+    scoreCheckedRef.current = true
+    setScoreLoading(true)
+    api.scorePrd(projectId).then((data) => {
+      setScoreData(data)
+      setScoreStale(false)
+    }).catch((err) => console.error("[Prd] scorePrd:", err))
+      .finally(() => setScoreLoading(false))
+  }, [isStreaming, text, projectId])
 
   // Track assist streaming state
   useEffect(() => {
@@ -609,6 +629,23 @@ export function PrdPage() {
               ))}
             </select>
           )}
+          {hasContent && (
+            <PrdScoreBadge
+              score={scoreData?.totalScore ?? null}
+              loading={scoreLoading}
+              stale={scoreStale}
+              onClick={() => {
+                if (scoreStale) {
+                  setScoreLoading(true)
+                  api.scorePrd(projectId).then((data) => { setScoreData(data); setScoreStale(false) })
+                    .catch((err) => console.error("[Prd] scorePrd:", err))
+                    .finally(() => setScoreLoading(false))
+                } else {
+                  setScorePanelOpen((v) => !v)
+                }
+              }}
+            />
+          )}
         </div>
         <div className="prd-actions flex items-center gap-1">
           {hasContent && !currentStreaming && (
@@ -660,6 +697,20 @@ export function PrdPage() {
       </div>
 
       <div className="h-px bg-[var(--border)]" />
+
+      {/* Score panel */}
+      {scorePanelOpen && scoreData && (
+        <div className="mt-4">
+          <PrdScorePanel
+            dimensions={scoreData.dimensions}
+            totalScore={scoreData.totalScore}
+            onSendSuggestions={(suggestions) => {
+              setAssistInput(suggestions.join("；"))
+              setScorePanelOpen(false)
+            }}
+          />
+        </div>
+      )}
 
       <ContextPills
         projectId={projectId!}

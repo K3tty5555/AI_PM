@@ -285,6 +285,8 @@ export const api = {
 
   // Export
   exportPrdDocx: (projectId: string) => safeInvoke<string>("export_prd_docx", { projectId }),
+  scorePrd: (projectId: string) =>
+    safeInvoke<{ dimensions: { name: string; score: number; comment: string; suggestion: string }[]; totalScore: number }>("score_prd", { projectId }),
   exportPrdShareHtml: (projectId: string) => safeInvoke<string>("export_prd_share_html", { projectId }),
   listPrdVersions: (projectId: string) => safeInvoke<number[]>("list_prd_versions", { projectId }),
   getLatestPrdVersion: (projectId: string) => safeInvoke<number>("get_latest_prd_version", { projectId }),

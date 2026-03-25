@@ -352,7 +352,7 @@ pub struct KnowledgeCandidate {
 }
 
 /// Truncate a string to at most `max` characters, respecting UTF-8 char boundaries.
-fn truncate_to_chars(s: &str, max: usize) -> &str {
+pub fn truncate_to_chars(s: &str, max: usize) -> &str {
     match s.char_indices().nth(max) {
         Some((idx, _)) => &s[..idx],
         None => s,
