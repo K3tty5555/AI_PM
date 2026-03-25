@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { Sidebar, type SidebarProject, type SidebarPhase } from "./Sidebar"
 import { NewProjectDialog } from "@/components/new-project-dialog"
+import { ProjectSettingsDrawer } from "@/components/project-settings-drawer"
 import { useFavorites } from "@/hooks/use-favorites"
 import { api } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
@@ -23,6 +24,7 @@ function SidebarShell({
   const { toast } = useToast()
   const [projects, setProjects] = useState<SidebarProject[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [projectName, setProjectName] = useState<string | undefined>()
   const [projectPhases, setProjectPhases] = useState<SidebarPhase[] | undefined>()
   const [projectStatus, setProjectStatus] = useState<'active' | 'completed' | undefined>()
@@ -159,6 +161,7 @@ function SidebarShell({
         onPhaseClick={handlePhaseClick}
         projectStatus={projectStatus}
         onStatusChange={handleStatusChange}
+        onOpenSettings={activeProjectId ? () => setSettingsOpen(true) : undefined}
         themePreference={themePreference}
         resolvedTheme={resolvedTheme}
         onCycleTheme={onCycleTheme}
@@ -168,6 +171,13 @@ function SidebarShell({
         onClose={() => setDialogOpen(false)}
         onCreated={handleCreated}
       />
+      {activeProjectId && (
+        <ProjectSettingsDrawer
+          open={settingsOpen}
+          projectId={activeProjectId}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </>
   )
 }
