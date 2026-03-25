@@ -2,7 +2,7 @@ use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use crate::state::AppState;
 
 /// 校验文件路径在指定基础目录内，防止路径遍历
@@ -256,6 +256,118 @@ pub async fn export_prd_docx(
     }
 
     Ok(docx_path.to_string_lossy().to_string())
+}
+
+/// List PRD version numbers by scanning 05-prd/ directory.
+#[tauri::command]
+pub fn list_prd_versions(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<Vec<u32>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ).map_err(|_| "项目不存在".to_string())?
+    };
+
+    let prd_dir = Path::new(&output_dir).join("05-prd");
+    if !prd_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut versions: Vec<u32> = Vec::new();
+    if let Ok(entries) = fs::read_dir(&prd_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let name = entry.file_name().to_string_lossy().to_string();
+            // Match pattern: 05-PRD-v{N}.0.md
+            if let Some(rest) = name.strip_prefix("05-PRD-v") {
+                if let Some(ver_str) = rest.strip_suffix(".0.md") {
+                    if let Ok(ver) = ver_str.parse::<u32>() {
+                        versions.push(ver);
+                    }
+                }
+            }
+        }
+    }
+    versions.sort();
+    Ok(versions)
+}
+
+/// Get the latest PRD version number.
+#[tauri::command]
+pub fn get_latest_prd_version(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<u32, String> {
+    let versions = list_prd_versions(state, project_id)?;
+    Ok(versions.last().copied().unwrap_or(1))
+}
+
+/// Export PRD as a self-contained shareable HTML page.
+/// Returns the absolute path of the generated .html file.
+#[tauri::command]
+pub fn export_prd_share_html(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<String, String> {
+    // Resolve project info
+    let (project_name, output_dir): (String, String) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT name, output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        ).map_err(|_| "项目不存在".to_string())?
+    };
+
+    // Read PRD markdown
+    let prd_path = Path::new(&output_dir).join("05-prd").join("05-PRD-v1.0.md");
+    if !prd_path.exists() {
+        return Err("PRD 文件不存在，请先完成 PRD 生成".to_string());
+    }
+    let markdown = fs::read_to_string(&prd_path)
+        .map_err(|e| format!("读取 PRD 失败: {}", e))?;
+
+    // Load HTML template from bundled resources
+    let resource_base = app.path().resource_dir()
+        .map_err(|e| format!("无法获取资源目录: {}", e))?;
+    let template_path = resource_base.join("resources/templates/share-template.html");
+    let template_fallback = resource_base.join("templates/share-template.html");
+    let template = if template_path.exists() {
+        fs::read_to_string(&template_path)
+    } else if template_fallback.exists() {
+        fs::read_to_string(&template_fallback)
+    } else {
+        return Err(format!("分享页模板未找到: {}", template_path.display()));
+    }.map_err(|e| format!("读取模板失败: {}", e))?;
+
+    // Escape markdown for embedding in <script> tag
+    // Replace </script with <\/script to prevent premature tag close
+    let escaped_md = markdown.replace("</script", "<\\/script");
+
+    let now = chrono::Utc::now().format("%Y-%m-%d %H:%M").to_string();
+    let html = template
+        .replace("{{PROJECT_NAME}}", &html_escape(&project_name))
+        .replace("{{GENERATED_AT}}", &now)
+        .replace("{{MARKDOWN_CONTENT}}", &escaped_md);
+
+    // Write to output
+    let html_path = Path::new(&output_dir).join("05-prd").join("PRD-分享页.html");
+    fs::write(&html_path, &html)
+        .map_err(|e| format!("写入分享页失败: {}", e))?;
+
+    Ok(html_path.to_string_lossy().to_string())
+}
+
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 /// Reveal a file in macOS Finder.

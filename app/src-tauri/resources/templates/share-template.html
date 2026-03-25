@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{PROJECT_NAME}} - PRD</title>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --bg: #ffffff;
+  --border: #e5e5ea;
+  --accent: #1d4ed8;
+  --accent-light: #eff6ff;
+  --code-bg: #f5f5f7;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.75;
+}
+
+/* ── Banner ───────────────────────────────────────────────────────────── */
+.banner {
+  background: var(--accent-light);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.banner .project-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 15px;
+}
+.banner .meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────── */
+.container {
+  display: flex;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: calc(100vh - 56px);
+}
+
+.toc-nav {
+  width: 240px;
+  padding: 32px 16px 32px 24px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.toc-nav ul { list-style: none; }
+.toc-nav li { margin-bottom: 4px; }
+.toc-nav a {
+  display: block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.15s;
+  line-height: 1.5;
+}
+.toc-nav a:hover { color: var(--accent); background: var(--accent-light); }
+.toc-nav .toc-h3 { padding-left: 20px; font-size: 12px; }
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 40px 48px 80px;
+}
+
+/* ── Markdown styles ──────────────────────────────────────────────────── */
+.markdown-body h1 { font-size: 28px; font-weight: 700; margin: 0 0 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.markdown-body h2 { font-size: 22px; font-weight: 600; margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.markdown-body h3 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; }
+.markdown-body h4 { font-size: 16px; font-weight: 600; margin: 24px 0 8px; }
+.markdown-body p { margin: 0 0 16px; }
+.markdown-body ul, .markdown-body ol { margin: 0 0 16px; padding-left: 24px; }
+.markdown-body li { margin-bottom: 6px; }
+.markdown-body li > ul, .markdown-body li > ol { margin-top: 6px; margin-bottom: 0; }
+
+.markdown-body blockquote {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-light);
+  color: var(--text-secondary);
+  border-radius: 0 8px 8px 0;
+}
+.markdown-body blockquote p:last-child { margin-bottom: 0; }
+
+.markdown-body code {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 0.875em;
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.markdown-body pre {
+  margin: 0 0 16px;
+  padding: 16px;
+  background: var(--code-bg);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.markdown-body pre code { background: transparent; padding: 0; font-size: 13px; }
+
+.markdown-body table {
+  width: 100%;
+  margin: 0 0 16px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.markdown-body th, .markdown-body td {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.markdown-body th { background: var(--code-bg); font-weight: 600; }
+.markdown-body tr:nth-child(even) td { background: #fafafa; }
+
+.markdown-body img { max-width: 100%; border-radius: 8px; }
+.markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+.markdown-body a { color: var(--accent); text-decoration: none; }
+.markdown-body a:hover { text-decoration: underline; }
+
+/* ── Mermaid ──────────────────────────────────────────────────────────── */
+.mermaid { margin: 16px 0; text-align: center; }
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .toc-nav { display: none; }
+  .content { padding: 24px 16px 60px; }
+  .banner { padding: 12px 16px; flex-direction: column; align-items: flex-start; gap: 4px; }
+}
+
+@media print {
+  .toc-nav, .banner { display: none; }
+  .content { padding: 0; }
+  .container { display: block; }
+}
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <span class="project-name">{{PROJECT_NAME}}</span>
+  <div class="meta">
+    <span>{{GENERATED_AT}}</span>
+    <span>由 AI PM 生成</span>
+  </div>
+</div>
+
+<div class="container">
+  <nav class="toc-nav" id="toc"></nav>
+  <main class="content">
+    <article class="markdown-body" id="content"></article>
+  </main>
+</div>
+
+<script id="prd-source" type="text/markdown">
+{{MARKDOWN_CONTENT}}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+(function() {
+  // Parse markdown
+  var src = document.getElementById('prd-source').textContent;
+  var html = marked.parse(src);
+  document.getElementById('content').innerHTML = html;
+
+  // Init mermaid
+  mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+  document.querySelectorAll('pre code.language-mermaid').forEach(function(block) {
+    var pre = block.parentElement;
+    var div = document.createElement('div');
+    div.className = 'mermaid';
+    div.textContent = block.textContent;
+    pre.replaceWith(div);
+  });
+  mermaid.run();
+
+  // Generate TOC
+  var toc = document.getElementById('toc');
+  var ul = document.createElement('ul');
+  document.querySelectorAll('.markdown-body h2, .markdown-body h3').forEach(function(h) {
+    var text = h.textContent;
+    var id = text.toLowerCase().replace(/[^\w\u4e00-\u9fff]+/g, '-').replace(/^-|-$/g, '');
+    h.id = id;
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = '#' + id;
+    a.textContent = text;
+    if (h.tagName === 'H3') li.className = 'toc-h3';
+    li.appendChild(a);
+    ul.appendChild(li);
+  });
+  toc.appendChild(ul);
+})();
+</script>
+</body>
+</html>

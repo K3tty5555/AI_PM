@@ -308,10 +308,16 @@ fn build_system_prompt(
 
     let mut parts = vec![skill_content];
 
-    // Inject knowledge base entries (if any)
-    let knowledge = load_knowledge(&templates_base);
-    if !knowledge.is_empty() {
-        parts[0].push_str(&knowledge);
+    // Inject recommended knowledge base entries (max 5 entries, 2000 chars)
+    let recommended = crate::commands::knowledge::recommend_knowledge_internal(
+        &templates_base, output_dir, phase,
+    );
+    if !recommended.is_empty() {
+        let mut kb_block = String::from("\n\n---\n\n### 产品知识库（推荐条目）\n\n");
+        for entry in &recommended {
+            kb_block.push_str(&format!("#### [{}] {}\n\n{}\n\n---\n\n", entry.category, entry.title, entry.content));
+        }
+        parts[0].push_str(&kb_block);
     }
 
     // Context files injection (tool outputs bound to this project)
