@@ -2,7 +2,8 @@ use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::io::Write as IoWrite;
+use std::path::{Path, PathBuf};
 use tauri::State;
 use uuid::Uuid;
 use chrono::Utc;
@@ -448,8 +449,6 @@ pub fn advance_phase(state: State<AppState>, id: String) -> Result<Option<String
             return Ok(None);
         }
 
-        let next_phase = PHASES[idx + 1];
-
         // Mark current phase completed
         db.execute(
             "UPDATE project_phases SET status = 'completed', completed_at = ?1
@@ -457,6 +456,30 @@ pub fn advance_phase(state: State<AppState>, id: String) -> Result<Option<String
             params![&now, &id, &current_phase],
         )
         .map_err(|e| e.to_string())?;
+
+        // Find next non-skipped phase
+        let mut next_idx = idx + 1;
+        while next_idx < PHASES.len() {
+            let candidate = PHASES[next_idx];
+            let candidate_status: String = db
+                .query_row(
+                    "SELECT status FROM project_phases WHERE project_id = ?1 AND phase = ?2",
+                    params![&id, candidate],
+                    |row| row.get(0),
+                )
+                .unwrap_or_else(|_| "pending".to_string());
+            if candidate_status != "skipped" {
+                break;
+            }
+            next_idx += 1;
+        }
+
+        // All remaining phases are skipped — flow complete
+        if next_idx >= PHASES.len() {
+            return Ok(None);
+        }
+
+        let next_phase = PHASES[next_idx];
 
         // Mark next phase in_progress
         db.execute(
@@ -531,7 +554,11 @@ fn write_status_json(output_dir: &str, phases: &[ProjectPhase], last_phase: &str
         .map(|p| {
             (
                 p.phase.clone(),
-                serde_json::Value::Bool(p.status == "completed"),
+                if p.status == "skipped" {
+                    serde_json::Value::String("skipped".to_string())
+                } else {
+                    serde_json::Value::Bool(p.status == "completed")
+                },
             )
         })
         .collect();
@@ -997,5 +1024,309 @@ pub fn set_project_status(state: State<AppState>, id: String, status: String) ->
         "UPDATE projects SET status = ?1, updated_at = ?2 WHERE id = ?3",
         rusqlite::params![&status, &now, &id],
     ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ── Batch operations ──────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchResult {
+    pub succeeded: Vec<String>,
+    pub failed: Vec<(String, String)>,
+}
+
+#[tauri::command]
+pub fn batch_delete_projects(state: State<AppState>, ids: Vec<String>) -> Result<BatchResult, String> {
+    if ids.is_empty() {
+        return Ok(BatchResult { succeeded: vec![], failed: vec![] });
+    }
+
+    // Phase 1: DB transaction — collect output_dirs and delete records
+    let mut dirs_to_delete: Vec<(String, String)> = Vec::new();
+    let mut succeeded: Vec<String> = Vec::new();
+    let mut failed: Vec<(String, String)> = Vec::new();
+
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.execute("BEGIN IMMEDIATE", []).map_err(|e| e.to_string())?;
+
+        for id in &ids {
+            let dir: Option<String> = db
+                .query_row(
+                    "SELECT output_dir FROM projects WHERE id = ?1",
+                    params![id],
+                    |row| row.get(0),
+                )
+                .ok();
+
+            match db.execute("DELETE FROM projects WHERE id = ?1", params![id]) {
+                Ok(_) => {
+                    if let Some(d) = dir {
+                        dirs_to_delete.push((id.clone(), d));
+                    }
+                    succeeded.push(id.clone());
+                }
+                Err(e) => {
+                    failed.push((id.clone(), e.to_string()));
+                }
+            }
+        }
+
+        db.execute("COMMIT", []).map_err(|e| e.to_string())?;
+        // db guard drops here
+    }
+
+    // Phase 2: delete filesystem directories (best-effort, no lock held)
+    for (id, dir) in dirs_to_delete {
+        if Path::new(&dir).exists() {
+            if let Err(e) = fs::remove_dir_all(&dir) {
+                eprintln!("[batch_delete] Failed to remove dir for {}: {}", id, e);
+            }
+        }
+    }
+
+    Ok(BatchResult { succeeded, failed })
+}
+
+#[tauri::command]
+pub fn batch_set_project_status(
+    state: State<AppState>,
+    ids: Vec<String>,
+    status: String,
+) -> Result<BatchResult, String> {
+    if status != "active" && status != "completed" && status != "archived" {
+        return Err(format!("无效状态: {}", status));
+    }
+    if ids.is_empty() {
+        return Ok(BatchResult { succeeded: vec![], failed: vec![] });
+    }
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let now = chrono::Utc::now().to_rfc3339();
+    let mut succeeded: Vec<String> = Vec::new();
+    let mut failed: Vec<(String, String)> = Vec::new();
+
+    db.execute("BEGIN IMMEDIATE", []).map_err(|e| e.to_string())?;
+
+    for id in &ids {
+        match db.execute(
+            "UPDATE projects SET status = ?1, updated_at = ?2 WHERE id = ?3",
+            params![&status, &now, id],
+        ) {
+            Ok(_) => succeeded.push(id.clone()),
+            Err(e) => failed.push((id.clone(), e.to_string())),
+        }
+    }
+
+    db.execute("COMMIT", []).map_err(|e| e.to_string())?;
+
+    Ok(BatchResult { succeeded, failed })
+}
+
+#[tauri::command]
+pub async fn export_projects_zip(state: State<'_, AppState>, ids: Vec<String>) -> Result<String, String> {
+    if ids.is_empty() {
+        return Err("没有选中的项目".to_string());
+    }
+
+    // Phase 1: collect output dirs under the lock
+    let home_dir = dirs::home_dir().unwrap_or_default();
+    let mut dirs_to_zip: Vec<(String, PathBuf)> = Vec::new();
+
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        for id in &ids {
+            let result: Option<(String, String)> = db
+                .query_row(
+                    "SELECT name, output_dir FROM projects WHERE id = ?1",
+                    params![id],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .ok();
+
+            if let Some((name, dir)) = result {
+                let dir_path = PathBuf::from(&dir);
+                // Path traversal protection: must be under home directory
+                let canonical = dir_path.canonicalize().map_err(|e| e.to_string())?;
+                if !canonical.starts_with(&home_dir) {
+                    return Err(format!("项目目录不在用户主目录下: {}", name));
+                }
+                if canonical.exists() {
+                    dirs_to_zip.push((name, canonical));
+                }
+            }
+        }
+        // db guard drops here
+    }
+
+    if dirs_to_zip.is_empty() {
+        return Err("选中的项目没有可导出的文件".to_string());
+    }
+
+    // Phase 2: create zip file in a blocking task
+    let timestamp = Utc::now().format("%Y%m%d_%H%M%S").to_string();
+    let zip_name = format!("AI_PM_导出_{}.zip", timestamp);
+    let downloads_dir = dirs::download_dir()
+        .or_else(dirs::desktop_dir)
+        .unwrap_or_else(|| home_dir.join("Downloads"));
+    let zip_path = downloads_dir.join(&zip_name);
+    let zip_path_clone = zip_path.clone();
+
+    tokio::task::spawn_blocking(move || {
+        let file = fs::File::create(&zip_path_clone)
+            .map_err(|e| format!("创建 zip 文件失败: {}", e))?;
+        let mut zip_writer = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        for (project_name, dir) in &dirs_to_zip {
+            for entry in walkdir::WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+                let path = entry.path();
+                if path.is_file() {
+                    let relative = path.strip_prefix(dir).unwrap_or(path);
+                    let archive_path = format!("{}/{}", project_name, relative.to_string_lossy());
+                    zip_writer.start_file(&archive_path, options)
+                        .map_err(|e| format!("zip 写入失败: {}", e))?;
+                    let data = fs::read(path)
+                        .map_err(|e| format!("读取文件失败: {}", e))?;
+                    zip_writer.write_all(&data)
+                        .map_err(|e| format!("zip 写入失败: {}", e))?;
+                }
+            }
+        }
+
+        zip_writer.finish().map_err(|e| format!("zip 完成失败: {}", e))?;
+        Ok::<String, String>(zip_path_clone.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| format!("导出任务失败: {}", e))?
+}
+
+// ── Phase skip ────────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkipSuggestion {
+    pub phase: String,
+    pub reason: String,
+}
+
+#[tauri::command]
+pub fn suggest_skip_phases(
+    state: State<AppState>,
+    project_id: String,
+) -> Result<Vec<SkipSuggestion>, String> {
+    // Read analysis report content
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| "项目不存在".to_string())?
+    };
+
+    let analysis_path = Path::new(&output_dir).join("02-analysis-report.md");
+    let content = fs::read_to_string(&analysis_path).unwrap_or_default().to_lowercase();
+
+    let mut suggestions = Vec::new();
+
+    // Rule 1: no competitor/market keywords → skip research
+    let has_market_keywords = ["竞品", "竞争", "市场", "行业", "同类", "友商", "对手"]
+        .iter()
+        .any(|kw| content.contains(kw));
+    if !has_market_keywords {
+        suggestions.push(SkipSuggestion {
+            phase: "research".to_string(),
+            reason: "当前需求面向内部或已知领域，无需竞品分析".to_string(),
+        });
+    }
+
+    // Rule 2: few features → skip stories
+    let feature_count = content.matches("功能").count()
+        + content.matches("模块").count()
+        + content.matches("feature").count();
+    if feature_count <= 3 {
+        suggestions.push(SkipSuggestion {
+            phase: "stories".to_string(),
+            reason: "功能点较少，可直接撰写 PRD".to_string(),
+        });
+    }
+
+    // Rule 3: no data/analytics keywords → skip analytics
+    let has_data_keywords = ["数据", "埋点", "指标", "转化", "追踪", "漏斗", "analytics", "tracking"]
+        .iter()
+        .any(|kw| content.contains(kw));
+    if !has_data_keywords {
+        suggestions.push(SkipSuggestion {
+            phase: "analytics".to_string(),
+            reason: "当前需求以功能实现为主，未涉及数据追踪，建议跳过埋点设计".to_string(),
+        });
+    }
+
+    // Rule 4: no UI/interaction keywords → skip prototype
+    let has_ui_keywords = ["界面", "交互", "ui", "ux", "页面", "原型", "布局", "样式", "前端"]
+        .iter()
+        .any(|kw| content.contains(kw));
+    if !has_ui_keywords {
+        suggestions.push(SkipSuggestion {
+            phase: "prototype".to_string(),
+            reason: "当前需求以后端/API 为主，无需原型设计".to_string(),
+        });
+    }
+
+    Ok(suggestions)
+}
+
+#[tauri::command]
+pub fn skip_phases(
+    state: State<AppState>,
+    project_id: String,
+    phases: Vec<String>,
+) -> Result<(), String> {
+    if phases.is_empty() {
+        return Ok(());
+    }
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let now = Utc::now().to_rfc3339();
+
+    db.execute("BEGIN IMMEDIATE", []).map_err(|e| e.to_string())?;
+
+    for phase in &phases {
+        db.execute(
+            "UPDATE project_phases SET status = 'skipped'
+             WHERE project_id = ?1 AND phase = ?2 AND status = 'pending'",
+            params![&project_id, phase],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    db.execute(
+        "UPDATE projects SET updated_at = ?1 WHERE id = ?2",
+        params![&now, &project_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    db.execute("COMMIT", []).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn unskip_phase(
+    state: State<AppState>,
+    project_id: String,
+    phase: String,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.execute(
+        "UPDATE project_phases SET status = 'pending'
+         WHERE project_id = ?1 AND phase = ?2 AND status = 'skipped'",
+        params![&project_id, &phase],
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }

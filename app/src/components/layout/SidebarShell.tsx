@@ -58,6 +58,7 @@ function SidebarShell({
           const backendStatus = phaseStatusMap.get(id)
           let status: SidebarPhase["status"] = "pending"
           if (backendStatus === "completed") status = "completed"
+          else if (backendStatus === "skipped") status = "skipped"
           else if (backendStatus === "in_progress") status = "in-progress"
           else if (id === currentPhase) status = "current"
           return { id, label: PHASE_LABELS[id] ?? id, status }

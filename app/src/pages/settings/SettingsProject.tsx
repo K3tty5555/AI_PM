@@ -8,6 +8,9 @@ import { api } from "@/lib/tauri-api"
 export function SettingsProject() {
   // Projects dir state
   const [projectsDir, setProjectsDir] = useState("")
+  const [contextMemoryEnabled, setContextMemoryEnabled] = useState(
+    () => localStorage.getItem("context-memory-enabled") !== "0"
+  )
   const [projectsDirDirty, setProjectsDirDirty] = useState(false)
   const [savingDir, setSavingDir] = useState(false)
   const [dirSaveResult, setDirSaveResult] = useState<{ ok: boolean; message: string } | null>(null)
@@ -50,6 +53,7 @@ export function SettingsProject() {
   }
 
   return (
+    <>
     <Card className="hover:shadow-none">
       <CardHeader>
         <CardTitle>项目目录</CardTitle>
@@ -106,5 +110,36 @@ export function SettingsProject() {
         )}
       </CardFooter>
     </Card>
+
+    {/* Context Memory Toggle */}
+    <Card className="hover:shadow-none mt-6">
+      <CardHeader>
+        <CardTitle>上下文记忆</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-[var(--text-primary)]">自动注入知识库上下文</p>
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+              生成 PRD 等内容时，自动注入知识库中与当前需求相关的经验条目
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={contextMemoryEnabled}
+              onChange={(e) => {
+                const val = e.target.checked
+                setContextMemoryEnabled(val)
+                localStorage.setItem("context-memory-enabled", val ? "1" : "0")
+              }}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-[var(--border)] peer-focus:ring-2 peer-focus:ring-[var(--accent-ring)] rounded-full peer peer-checked:bg-[var(--accent-color)] transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:size-4 after:transition-all peer-checked:after:translate-x-full" />
+          </label>
+        </div>
+      </CardContent>
+    </Card>
+    </>
   )
 }

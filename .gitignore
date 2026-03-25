@@ -49,6 +49,7 @@ docs/
 .playwright/
 .playwright-mcp/
 .claude/**/.playwright-cli/
+.claude/projects/
 
 # -----------------------------------------------------------------------------
 # AI_PM Specific - Templates (Keep examples, ignore user uploads)

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { BrainstormChat } from "@/components/brainstorm-chat"
+import { Button } from "@/components/ui/button"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
@@ -26,6 +27,8 @@ export function PhaseShell({
 }: PhaseShellProps) {
   const [mode, setMode] = useState<"normal" | "brainstorm">("normal")
   const [messageCount, setMessageCount] = useState(0)
+  const [isSkipped, setIsSkipped] = useState(false)
+  const [restoring, setRestoring] = useState(false)
 
   // Lightweight count query — no event listeners, no conflict with BrainstormChat's hook
   const refreshCount = useCallback(() => {
@@ -33,6 +36,28 @@ export function PhaseShell({
   }, [projectId, phase])
 
   useEffect(() => { refreshCount() }, [refreshCount])
+
+  // Check if this phase is skipped
+  useEffect(() => {
+    api.getProject(projectId).then((project) => {
+      if (!project) return
+      const phaseData = project.phases.find((p: any) => p.phase === phase)
+      setIsSkipped(phaseData?.status === "skipped")
+    }).catch(() => {})
+  }, [projectId, phase])
+
+  const handleRestore = useCallback(async () => {
+    setRestoring(true)
+    try {
+      await api.unskipPhase(projectId, phase)
+      setIsSkipped(false)
+      window.dispatchEvent(new CustomEvent("project-phase-updated", { detail: { projectId } }))
+    } catch {
+      // silent
+    } finally {
+      setRestoring(false)
+    }
+  }, [projectId, phase])
 
   // First-time onboarding hint
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -83,6 +108,21 @@ export function PhaseShell({
           </div>
         )}
       </div>
+
+      {/* Skipped phase banner */}
+      {isSkipped && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
+          <span className="text-[13px] text-[var(--text-secondary)]">此阶段已标记为跳过</span>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleRestore}
+            disabled={restoring}
+          >
+            {restoring ? "恢复中..." : "恢复并生成"}
+          </Button>
+        </div>
+      )}
 
       {/* Content area */}
       {mode === "normal" ? (
