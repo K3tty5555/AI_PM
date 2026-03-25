@@ -635,6 +635,79 @@ pub fn set_project_design_spec(
     fs::write(&spec_file, &spec_id).map_err(|e| e.to_string())
 }
 
+/// Score PRD quality using non-streaming AI call.
+#[tauri::command]
+pub async fn score_prd(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<serde_json::Value, String> {
+    // Phase 1: read PRD under lock, then release
+    let (prd_content, config_dir) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let output_dir: String = db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ).map_err(|_| "项目不存在".to_string())?;
+
+        let prd_dir = Path::new(&output_dir).join("05-prd");
+        // Find latest version
+        let mut versions: Vec<u32> = Vec::new();
+        if let Ok(entries) = fs::read_dir(&prd_dir) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if let Some(rest) = name.strip_prefix("05-PRD-v") {
+                    if let Some(ver_str) = rest.strip_suffix(".0.md") {
+                        if let Ok(ver) = ver_str.parse::<u32>() { versions.push(ver); }
+                    }
+                }
+            }
+        }
+        let ver = versions.iter().max().copied().unwrap_or(1);
+        let prd_path = prd_dir.join(format!("05-PRD-v{}.0.md", ver));
+        let content = fs::read_to_string(&prd_path)
+            .map_err(|_| "PRD 文件不存在".to_string())?;
+        (content, state.config_dir.clone())
+        // db guard drops here
+    };
+
+    let truncated = crate::commands::knowledge::truncate_to_chars(&prd_content, 8000);
+
+    let prompt = format!(
+        "你是一位资深产品评审专家。请对以下 PRD 进行质量评分。\n\n\
+         评分维度（每项 1-5 分）：\n\
+         1. 完整性：是否覆盖了目标用户、核心功能、非功能需求、验收标准\n\
+         2. 清晰度：描述是否无歧义，开发可直接理解\n\
+         3. 可执行性：功能描述是否足够详细，能否直接转化为开发任务\n\
+         4. 一致性：各章节之间是否矛盾\n\
+         5. 边界定义：是否明确了「不做什么」、异常处理、边界条件\n\n\
+         请直接输出 JSON，格式：\n\
+         {{\"dimensions\":[{{\"name\":\"完整性\",\"score\":4,\"comment\":\"...\",\"suggestion\":\"...\"}},...],\"totalScore\":4.2}}\n\n\
+         不要输出 JSON 以外的任何内容。\n\nPRD 内容：\n{}", truncated
+    );
+
+    // Phase 2: AI call (no lock held)
+    let raw = crate::providers::ai_call::call_ai_non_streaming(&config_dir, &prompt).await?;
+
+    // Parse JSON — try direct parse, then extract between { }
+    let trimmed = raw.trim();
+    let stripped = if trimmed.starts_with("```") {
+        trimmed.trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim()
+    } else { trimmed };
+
+    if let Ok(v) = serde_json::from_str::<serde_json::Value>(stripped) {
+        return Ok(v);
+    }
+    if let Some(start) = stripped.find('{') {
+        if let Some(end) = stripped.rfind('}') {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&stripped[start..=end]) {
+                return Ok(v);
+            }
+        }
+    }
+    Err(format!("AI 返回的评分格式无法解析：{}", stripped.chars().take(200).collect::<String>()))
+}
+
 /// Extract plain text from a DOCX file (zip + XML parsing).
 #[tauri::command]
 pub fn extract_docx_text(path: String) -> Result<String, String> {
