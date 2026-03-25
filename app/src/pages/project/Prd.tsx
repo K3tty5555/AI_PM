@@ -22,6 +22,7 @@ import { KnowledgeRecommendPanel } from "@/components/knowledge-recommend-panel"
 import { PrdDiffViewer } from "@/components/PrdDiffViewer"
 import { PrdScoreBadge, PrdScorePanel } from "@/components/prd-score-panel"
 import { PrdAssistPanel } from "@/components/prd-assist-panel"
+import { consumeAdoptionQueue } from "@/components/review-grouped-view"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -185,6 +186,14 @@ export function PrdPage() {
   const [assistInput, setAssistInput] = useState("")
   const [isAssistStreaming, setIsAssistStreaming] = useState(false)
   const [pendingAssistText, setPendingAssistText] = useState<string | null>(null)
+
+  // Consume review adoption queue
+  useEffect(() => {
+    const queue = consumeAdoptionQueue()
+    if (queue.length > 0) {
+      setAssistInput(queue.join("；"))
+    }
+  }, [])
 
   // Prevent double-start in StrictMode
   const startedRef = useRef(false)
