@@ -6,6 +6,7 @@ import { PrdViewer } from "@/components/prd-viewer"
 import { useToolStream } from "@/hooks/use-tool-stream"
 import { TemplateUpload } from "@/components/template-upload"
 import { useToast, type ToastVariant } from "@/hooks/use-toast"
+import { SegmentedControl } from "@/components/ui/segmented-control"
 import { cn, copyRichText } from "@/lib/utils"
 import { api, type WeeklyReportMeta } from "@/lib/tauri-api"
 import { save } from "@tauri-apps/plugin-dialog"
@@ -34,28 +35,16 @@ export function ToolWeeklyPage() {
       </div>
       <div className="h-px bg-[var(--border)]" />
 
-      {/* Segmented control tabs — matches Data.tsx pattern */}
-      <div className="mt-4 flex gap-1 rounded-lg bg-[var(--secondary)] p-1" role="tablist">
-        {([
-          { key: "generate" as Tab, label: "生成周报" },
-          { key: "history" as Tab, label: "历史记录" },
-        ]).map(({ key, label }) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-            className={cn(
-              "flex-1 rounded-md px-3 py-1.5 text-[13px] transition-colors",
-              tab === key
-                ? "bg-[var(--card)] text-[var(--text-primary)] shadow-sm"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* Segmented control tabs */}
+      <SegmentedControl
+        value={tab}
+        onChange={setTab}
+        items={[
+          { key: "generate", label: "生成周报" },
+          { key: "history", label: "历史记录" },
+        ]}
+        className="mt-4"
+      />
 
       <div role="tabpanel">
         {tab === "generate" ? (
