@@ -1,15 +1,14 @@
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
-import { SkeletonList, SkeletonText } from "@/components/ui/skeleton"
 import { PrdViewer } from "@/components/prd-viewer"
+import { HistoryList } from "@/components/history-list"
 import { useToolStream } from "@/hooks/use-tool-stream"
 import { TemplateUpload } from "@/components/template-upload"
 import { useToast, type ToastVariant } from "@/hooks/use-toast"
 import { SegmentedControl } from "@/components/ui/segmented-control"
 import { cn, copyRichText } from "@/lib/utils"
 import { api, type WeeklyReportMeta } from "@/lib/tauri-api"
-import { save } from "@tauri-apps/plugin-dialog"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -198,171 +197,32 @@ function GenerateTab({
 
 // ─── History Tab ─────────────────────────────────────────────────────────────
 
+const modeLabel = (mode: string) => mode === "brief" ? "向上汇报版" : "团队同步版"
+
 function HistoryTab({ toast }: { toast: (msg: string, variant?: ToastVariant) => void }) {
-  const [reports, setReports] = useState<WeeklyReportMeta[]>([])
-  const [loading, setLoading] = useState(true)
-  const [expandedFile, setExpandedFile] = useState<string | null>(null)
-  const [contentLoading, setContentLoading] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
-
-  // Cache: Map<filename, markdown content>
-  const contentCache = useRef<Map<string, string>>(new Map())
-
-  const loadReports = useCallback(async () => {
-    setLoading(true)
-    try {
-      const list = await api.listWeeklyReports()
-      setReports(list)
-    } catch {
-      // Error is already logged by safeInvoke
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { loadReports() }, [loadReports])
-
-  const handleExpand = useCallback(async (filename: string) => {
-    if (expandedFile === filename) {
-      setExpandedFile(null)
-      return
-    }
-    setExpandedFile(filename)
-
-    // Use cached content if available
-    if (contentCache.current.has(filename)) {
-      return
-    }
-
-    setContentLoading(true)
-    try {
-      const content = await api.getWeeklyReport(filename)
-      contentCache.current.set(filename, content)
-    } catch {
-      toast("读取周报失败", "error")
-      setExpandedFile(null)
-    } finally {
-      setContentLoading(false)
-    }
-  }, [expandedFile, toast])
-
-  const handleDelete = useCallback(async (filename: string) => {
-    try {
-      await api.deleteWeeklyReport(filename)
-      setReports((prev) => prev.filter((r) => r.filename !== filename))
-      setExpandedFile((prev) => prev === filename ? null : prev)
-      contentCache.current.delete(filename)
-      setConfirmDelete(null)
-      toast("已删除", "success")
-    } catch {
-      toast("删除失败", "error")
-    }
-  }, [toast])
-
-  const handleExport = useCallback(async (filename: string) => {
-    try {
-      const content = contentCache.current.get(filename) ?? await api.getWeeklyReport(filename)
-      const savePath = await save({
-        defaultPath: filename,
-        filters: [{ name: "Markdown", extensions: ["md"] }],
-      })
-      if (savePath) {
-        await api.writeFile(savePath, content)
-        toast("已导出", "success")
-      }
-    } catch {
-      toast("导出失败", "error")
-    }
-  }, [toast])
-
-  const handleCopy = useCallback(async (filename: string) => {
-    const content = contentCache.current.get(filename)
-    if (content) {
-      await copyRichText(content)
-      toast("已复制富文本", "success")
-    }
-  }, [toast])
-
-  const modeLabel = (mode: string) => mode === "brief" ? "向上汇报版" : "团队同步版"
-
-  if (loading) {
-    return (
-      <div className="mt-6">
-        <SkeletonList count={3} />
-      </div>
-    )
-  }
-
-  if (reports.length === 0) {
-    return (
-      <div className="mt-16 flex flex-col items-center gap-3 animate-[fadeInUp_300ms_cubic-bezier(0.16,1,0.3,1)]">
-        <p className="text-sm text-[var(--text-tertiary)]">还没有生成过周报</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="mt-4 space-y-2">
-      {reports.map((r) => (
-        <div key={r.filename} className="rounded-lg border border-[var(--border)] overflow-hidden">
-          {/* Card header */}
-          <button
-            onClick={() => handleExpand(r.filename)}
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-[var(--hover-bg)] transition-colors text-left"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-[var(--text-primary)]">
-                {r.date.replace("T", " ").slice(0, 16)}
-              </span>
-              <span className={cn(
-                "text-xs px-2 py-0.5 rounded-full",
-                r.mode === "brief"
-                  ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
-                  : "bg-[color-mix(in_srgb,var(--success)_10%,transparent)] text-[var(--success)]"
-              )}>
-                {modeLabel(r.mode)}
-              </span>
-            </div>
-            <svg
-              className={cn("w-4 h-4 text-[var(--text-tertiary)] transition-transform", expandedFile === r.filename && "rotate-180")}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          {/* Expanded content */}
-          {expandedFile === r.filename && (
-            <div className="border-t border-[var(--border)] animate-[fadeInUp_200ms_cubic-bezier(0.16,1,0.3,1)]">
-              <div className={cn(
-                "flex justify-end gap-1 px-4 py-2 border-b border-[var(--border)]",
-                confirmDelete === r.filename
-                  ? "bg-[color-mix(in_srgb,var(--destructive)_5%,transparent)]"
-                  : "bg-[var(--secondary)]"
-              )}>
-                <Button variant="ghost" size="sm" onClick={() => handleExport(r.filename)}>导出</Button>
-                <Button variant="ghost" size="sm" onClick={() => handleCopy(r.filename)}>复制</Button>
-                {confirmDelete === r.filename ? (
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-[var(--text-tertiary)]">确认删除？</span>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(r.filename)} className="text-[var(--destructive)]">删除</Button>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(null)}>取消</Button>
-                  </div>
-                ) : (
-                  <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(r.filename)} className="text-[var(--text-tertiary)]">删除</Button>
-                )}
-              </div>
-              <div className="px-4 py-4">
-                {contentLoading && !contentCache.current.has(r.filename) ? (
-                  <SkeletonText lines={5} />
-                ) : (
-                  <PrdViewer markdown={contentCache.current.get(r.filename) ?? ""} isStreaming={false} />
-                )}
-              </div>
-            </div>
-          )}
+    <HistoryList<WeeklyReportMeta>
+      loadItems={api.listWeeklyReports}
+      getContent={api.getWeeklyReport}
+      deleteItem={api.deleteWeeklyReport}
+      getFilename={(r) => r.filename}
+      renderHeader={(r) => (
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-[var(--text-primary)]">
+            {r.date.replace("T", " ").slice(0, 16)}
+          </span>
+          <span className={cn(
+            "text-xs px-2 py-0.5 rounded-full",
+            r.mode === "brief"
+              ? "bg-[var(--accent-light)] text-[var(--accent-color)]"
+              : "bg-[color-mix(in_srgb,var(--success)_10%,transparent)] text-[var(--success)]"
+          )}>
+            {modeLabel(r.mode)}
+          </span>
         </div>
-      ))}
-    </div>
+      )}
+      toast={toast}
+      emptyMessage="还没有生成过周报"
+    />
   )
 }
