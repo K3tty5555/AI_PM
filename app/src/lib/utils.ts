@@ -13,6 +13,39 @@ export const FILE_MANAGER_LABEL = navigator.userAgent.includes("Macintosh") || n
     : "文件管理器"
 
 /**
+ * Copy markdown content as rich text (HTML) to clipboard.
+ * Extracts rendered HTML from the nearest PrdViewer DOM container if available,
+ * falls back to plain-text copy otherwise.
+ *
+ * @param markdown - The raw markdown text (used as plain-text fallback)
+ * @param containerSelector - Optional CSS selector to locate the rendered HTML container
+ */
+export async function copyRichText(
+  markdown: string,
+  containerSelector = "[data-slot='prd-viewer']",
+): Promise<void> {
+  // Try to grab rendered HTML from PrdViewer DOM
+  let html: string | null = null
+  const el = document.querySelector(containerSelector)
+  if (el) {
+    html = el.innerHTML
+  }
+
+  if (html && typeof ClipboardItem !== "undefined") {
+    const htmlBlob = new Blob([html], { type: "text/html" })
+    const textBlob = new Blob([markdown], { type: "text/plain" })
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/html": htmlBlob,
+        "text/plain": textBlob,
+      }),
+    ])
+  } else {
+    await navigator.clipboard.writeText(markdown)
+  }
+}
+
+/**
  * Extract a short status hint from streaming AI output.
  * Returns the last non-empty line that contains meaningful content,
  * stripped of markdown syntax, truncated to 20 chars.

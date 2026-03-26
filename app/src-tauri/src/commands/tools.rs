@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
@@ -196,9 +196,43 @@ pub async fn run_tool(
         Ok(result) => {
             let duration_ms = stream_start.elapsed().as_millis() as u64;
 
-            // I2: tools_dir already computed above; save output there
-            let out_path = tools_dir.join("output.md");
-            let _ = fs::write(&out_path, &result.full_text);
+            // I2: save output — weekly/priority get timestamped files + frontmatter; others overwrite output.md
+            let (out_path, save_content) = if args.tool_name == "ai-pm-weekly" {
+                let now = chrono::Local::now();
+                let mode = args.mode.as_deref().unwrap_or("detail");
+                let filename = format!("周报-{}.md", now.format("%Y-%m-%d-%H%M%S"));
+                let frontmatter = format!(
+                    "---\ndate: {}\nmode: {}\ninput_tokens: {}\noutput_tokens: {}\nduration_ms: {}\n---\n\n",
+                    now.format("%Y-%m-%dT%H:%M:%S"),
+                    mode,
+                    result.input_tokens.unwrap_or(0),
+                    result.output_tokens.unwrap_or(0),
+                    duration_ms,
+                );
+                (tools_dir.join(&filename), format!("{}{}", frontmatter, result.full_text))
+            } else if args.tool_name == "ai-pm-priority" {
+                let now = chrono::Local::now();
+                // count is passed from frontend via mode field as "priority:N"
+                let count: u64 = args.mode.as_deref()
+                    .and_then(|m| m.strip_prefix("priority:"))
+                    .and_then(|n| n.parse().ok())
+                    .unwrap_or(0);
+                let filename = format!("评估-{}.md", now.format("%Y-%m-%d-%H%M%S"));
+                let frontmatter = format!(
+                    "---\ndate: {}\ncount: {}\ninput_tokens: {}\noutput_tokens: {}\nduration_ms: {}\n---\n\n",
+                    now.format("%Y-%m-%dT%H:%M:%S"),
+                    count,
+                    result.input_tokens.unwrap_or(0),
+                    result.output_tokens.unwrap_or(0),
+                    duration_ms,
+                );
+                (tools_dir.join(&filename), format!("{}{}", frontmatter, result.full_text))
+            } else {
+                (tools_dir.join("output.md"), result.full_text.clone())
+            };
+            if let Err(e) = fs::write(&out_path, &save_content) {
+                eprintln!("[{}] 写入失败 {:?}: {}", args.tool_name, out_path, e);
+            }
 
             // Additionally save to project context dir if project_id was provided
             if let Some(ref pid) = args.project_id {
@@ -271,6 +305,247 @@ pub async fn fetch_url_content(url: String) -> Result<String, String> {
         text
     };
     Ok(truncated)
+}
+
+// ─── Weekly report history ─────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WeeklyReportMeta {
+    pub filename: String,
+    pub date: String,
+    pub mode: String,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub duration_ms: u64,
+}
+
+/// Parse YAML-like frontmatter from tool output files.
+/// Format: "---\nkey: value\n...\n---\n\nbody"
+/// Returns (field_map, body_start_offset). Keys/values are trimmed strings.
+/// split_once(':') splits at first colon only — safe for ISO date values containing colons.
+fn parse_tool_frontmatter(content: &str) -> Option<(std::collections::HashMap<String, String>, usize)> {
+    if !content.starts_with("---\n") {
+        return None;
+    }
+    let end = content[4..].find("\n---")?;
+    let fm_block = &content[4..4 + end];
+    let mut fields = std::collections::HashMap::new();
+    for line in fm_block.lines() {
+        if let Some((key, val)) = line.split_once(':') {
+            fields.insert(key.trim().to_string(), val.trim().to_string());
+        }
+    }
+    // Body starts after "---\n" (4) + fm_block (end) + "\n---\n" (5)
+    let raw_body_start = 4 + end + 5;
+    let body_start = content[raw_body_start..]
+        .find(|c: char| c != '\n')
+        .map(|i| raw_body_start + i)
+        .unwrap_or(raw_body_start);
+    Some((fields, body_start))
+}
+
+/// Helper to extract a u64 from frontmatter HashMap.
+fn fm_u64(fm: &std::collections::HashMap<String, String>, key: &str) -> u64 {
+    fm.get(key).and_then(|v| v.parse().ok()).unwrap_or(0)
+}
+
+/// Helper to extract a String from frontmatter HashMap.
+fn fm_str(fm: &std::collections::HashMap<String, String>, key: &str) -> String {
+    fm.get(key).cloned().unwrap_or_default()
+}
+
+#[tauri::command]
+pub fn list_weekly_reports(
+    state: State<'_, AppState>,
+) -> Result<Vec<WeeklyReportMeta>, String> {
+    let tools_dir = Path::new(&state.projects_dir).join("tools").join("ai-pm-weekly");
+    if !tools_dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut reports: Vec<WeeklyReportMeta> = Vec::new();
+    let entries = fs::read_dir(&tools_dir).map_err(|e| e.to_string())?;
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !name.starts_with("周报-") || !name.ends_with(".md") {
+            continue;
+        }
+        // Only read first 512 bytes for frontmatter parsing (performance)
+        let path = entry.path();
+        let content = match fs::File::open(&path) {
+            Ok(f) => {
+                use std::io::Read;
+                let mut buf = vec![0u8; 512];
+                let mut reader = std::io::BufReader::new(f);
+                let n = reader.read(&mut buf).unwrap_or(0);
+                String::from_utf8_lossy(&buf[..n]).to_string()
+            }
+            Err(_) => continue,
+        };
+        if let Some((fm, _)) = parse_tool_frontmatter(&content) {
+            reports.push(WeeklyReportMeta {
+                filename: name,
+                date: fm_str(&fm, "date"),
+                mode: fm_str(&fm, "mode"),
+                input_tokens: fm_u64(&fm, "input_tokens"),
+                output_tokens: fm_u64(&fm, "output_tokens"),
+                duration_ms: fm_u64(&fm, "duration_ms"),
+            });
+        }
+    }
+    // Sort by date descending (newest first)
+    reports.sort_by(|a, b| b.date.cmp(&a.date));
+    Ok(reports)
+}
+
+#[tauri::command]
+pub fn get_weekly_report(
+    state: State<'_, AppState>,
+    filename: String,
+) -> Result<String, String> {
+    // C1: prevent path traversal
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return Err("非法文件名".to_string());
+    }
+    let path = Path::new(&state.projects_dir)
+        .join("tools").join("ai-pm-weekly").join(&filename);
+    let content = fs::read_to_string(&path).map_err(|e| format!("读取失败：{}", e))?;
+    // Strip frontmatter, return body only
+    if let Some((_, body_start)) = parse_tool_frontmatter(&content) {
+        Ok(content[body_start..].to_string())
+    } else {
+        Ok(content)
+    }
+}
+
+#[tauri::command]
+pub fn delete_weekly_report(
+    state: State<'_, AppState>,
+    filename: String,
+) -> Result<(), String> {
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return Err("非法文件名".to_string());
+    }
+    let path = Path::new(&state.projects_dir)
+        .join("tools").join("ai-pm-weekly").join(&filename);
+    fs::remove_file(&path).map_err(|e| format!("删除失败：{}", e))
+}
+
+// ─── Priority report history ──────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PriorityReportMeta {
+    pub filename: String,
+    pub date: String,
+    pub count: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub duration_ms: u64,
+}
+
+#[tauri::command]
+pub async fn list_priority_reports(
+    state: State<'_, AppState>,
+    keyword: Option<String>,
+) -> Result<Vec<PriorityReportMeta>, String> {
+    let projects_dir = state.projects_dir.clone();
+    let kw = keyword.clone();
+
+    // Run file I/O in blocking thread to avoid blocking the event loop (review #5)
+    tokio::task::spawn_blocking(move || {
+        let tools_dir = Path::new(&projects_dir).join("tools").join("ai-pm-priority");
+        if !tools_dir.exists() {
+            return Ok(vec![]);
+        }
+        let mut reports: Vec<PriorityReportMeta> = Vec::new();
+        let entries = fs::read_dir(&tools_dir).map_err(|e| e.to_string())?;
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !name.starts_with("评估-") || !name.ends_with(".md") {
+                continue;
+            }
+            let path = entry.path();
+
+            if let Some(ref kw) = kw {
+                // Keyword search: read full content, check contains
+                let content = match fs::read_to_string(&path) {
+                    Ok(c) => c,
+                    Err(_) => continue,
+                };
+                if !content.contains(kw.as_str()) {
+                    continue;
+                }
+                if let Some((fm, _)) = parse_tool_frontmatter(&content) {
+                    reports.push(PriorityReportMeta {
+                        filename: name,
+                        date: fm_str(&fm, "date"),
+                        count: fm_u64(&fm, "count"),
+                        input_tokens: fm_u64(&fm, "input_tokens"),
+                        output_tokens: fm_u64(&fm, "output_tokens"),
+                        duration_ms: fm_u64(&fm, "duration_ms"),
+                    });
+                }
+            } else {
+                // No keyword: only read first 512 bytes for frontmatter
+                let content = match fs::File::open(&path) {
+                    Ok(f) => {
+                        use std::io::Read;
+                        let mut buf = vec![0u8; 512];
+                        let mut reader = std::io::BufReader::new(f);
+                        let n = reader.read(&mut buf).unwrap_or(0);
+                        String::from_utf8_lossy(&buf[..n]).to_string()
+                    }
+                    Err(_) => continue,
+                };
+                if let Some((fm, _)) = parse_tool_frontmatter(&content) {
+                    reports.push(PriorityReportMeta {
+                        filename: name,
+                        date: fm_str(&fm, "date"),
+                        count: fm_u64(&fm, "count"),
+                        input_tokens: fm_u64(&fm, "input_tokens"),
+                        output_tokens: fm_u64(&fm, "output_tokens"),
+                        duration_ms: fm_u64(&fm, "duration_ms"),
+                    });
+                }
+            }
+        }
+        reports.sort_by(|a, b| b.date.cmp(&a.date));
+        Ok(reports)
+    })
+    .await
+    .map_err(|e| format!("spawn_blocking failed: {}", e))?
+}
+
+#[tauri::command]
+pub fn get_priority_report(
+    state: State<'_, AppState>,
+    filename: String,
+) -> Result<String, String> {
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return Err("非法文件名".to_string());
+    }
+    let path = Path::new(&state.projects_dir)
+        .join("tools").join("ai-pm-priority").join(&filename);
+    let content = fs::read_to_string(&path).map_err(|e| format!("读取失败：{}", e))?;
+    if let Some((_, body_start)) = parse_tool_frontmatter(&content) {
+        Ok(content[body_start..].to_string())
+    } else {
+        Ok(content)
+    }
+}
+
+#[tauri::command]
+pub fn delete_priority_report(
+    state: State<'_, AppState>,
+    filename: String,
+) -> Result<(), String> {
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return Err("非法文件名".to_string());
+    }
+    let path = Path::new(&state.projects_dir)
+        .join("tools").join("ai-pm-priority").join(&filename);
+    fs::remove_file(&path).map_err(|e| format!("删除失败：{}", e))
 }
 
 fn strip_html(html: String) -> String {
