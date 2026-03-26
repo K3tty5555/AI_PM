@@ -243,8 +243,8 @@ pub fn run() {
                 let _ = window.set_icon(tauri::include_image!("icons/128x128@2x.png"));
             }
 
-            // ── Native macOS menu bar ─────────────────────────────────────
-            #[cfg(desktop)]
+            // ── Native macOS menu bar (Windows uses custom titlebar) ─────
+            #[cfg(target_os = "macos")]
             {
                 let handle = app.handle();
 
