@@ -169,6 +169,24 @@ export interface UiSpecContent {
   tokensRaw: string | null
 }
 
+export interface WeeklyReportMeta {
+  filename: string
+  date: string
+  mode: string
+  inputTokens: number
+  outputTokens: number
+  durationMs: number
+}
+
+export interface PriorityReportMeta {
+  filename: string
+  date: string
+  count: number
+  inputTokens: number
+  outputTokens: number
+  durationMs: number
+}
+
 export interface ReferenceFileEntry {
   name: string
   size: number
@@ -253,6 +271,17 @@ export const api = {
     safeInvoke<void>("start_stream", { args }),
   runTool: (args: { toolName: string; userInput: string; filePath?: string; projectId?: string; mode?: string }) =>
     safeInvoke<void>("run_tool", { args }),
+
+  // Weekly reports history
+  listWeeklyReports: () => safeInvoke<WeeklyReportMeta[]>("list_weekly_reports"),
+  getWeeklyReport: (filename: string) => safeInvoke<string>("get_weekly_report", { filename }),
+  deleteWeeklyReport: (filename: string) => safeInvoke<void>("delete_weekly_report", { filename }),
+
+  // Priority reports history
+  listPriorityReports: (keyword?: string) =>
+    safeInvoke<PriorityReportMeta[]>("list_priority_reports", keyword ? { keyword } : undefined),
+  getPriorityReport: (filename: string) => safeInvoke<string>("get_priority_report", { filename }),
+  deletePriorityReport: (filename: string) => safeInvoke<void>("delete_priority_report", { filename }),
 
   // Projects dir
   getProjectsDir: () => safeInvoke<string>("get_projects_dir"),
