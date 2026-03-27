@@ -5,6 +5,7 @@ pub struct AppState {
     pub db: Mutex<Connection>,
     pub projects_dir: String,
     pub config_dir: String,
+    pub illustration_lock: Mutex<()>,
 }
 
 impl AppState {
