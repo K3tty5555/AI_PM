@@ -10,16 +10,16 @@ use chrono::Utc;
 use crate::state::AppState;
 
 const PHASES: &[&str] = &[
-    "requirement", "analysis", "research", "stories", "prd",
+    "office-hours", "requirement", "analysis", "research", "stories", "prd",
     "analytics", "prototype", "review", "retrospective",
 ];
 
-/// Sanitize legacy phase names. Falls back to "requirement" for unknown values.
+/// Sanitize legacy phase names. Falls back to "office-hours" for unknown values.
 fn sanitize_phase(phase: &str) -> &str {
     match phase {
         "review-modify" => "review",
         p if PHASES.contains(&p) => p,
-        _ => "requirement",
+        _ => "office-hours",
     }
 }
 
@@ -134,7 +134,7 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
         // Insert project
         db.execute(
             "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode, project_type)
-             VALUES (?1, ?2, NULL, 'requirement', ?3, ?4, ?4, ?5, ?6)",
+             VALUES (?1, ?2, NULL, 'office-hours', ?3, ?4, ?4, ?5, ?6)",
             params![&id, &args.name, &output_dir, &now, &team_mode_int, &project_type],
         )
         .map_err(|e| e.to_string())?;
@@ -168,13 +168,13 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
     };
 
     // Phase 3: Write _status.json for CLI skill compatibility (no lock held)
-    write_status_json(&output_dir, &phases, "requirement");
+    write_status_json(&output_dir, &phases, "office-hours");
 
     Ok(ProjectDetail {
         id,
         name: args.name,
         description: None,
-        current_phase: "requirement".to_string(),
+        current_phase: "office-hours".to_string(),
         output_dir,
         created_at: now.clone(),
         updated_at: now,
@@ -717,6 +717,7 @@ pub struct ImportResult {
 
 fn phase_output_file(phase: &str) -> Option<&'static str> {
     match phase {
+        "office-hours" => Some("00-office-hours.md"),
         "requirement" => Some("01-requirement-draft.md"),
         "analysis"    => Some("02-analysis-report.md"),
         "research"    => Some("03-competitor-report.md"),
@@ -1299,7 +1300,7 @@ pub fn skip_phases(
     }
 
     // Reject skipping required phases
-    let required = ["requirement", "prd"];
+    let required = ["office-hours", "requirement", "prd"];
     for phase in &phases {
         if required.contains(&phase.as_str()) {
             return Err(format!("「{}」是核心阶段，不可跳过", phase));
