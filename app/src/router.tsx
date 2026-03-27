@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom"
 import { AppLayout } from "./layouts/AppLayout"
 import { DashboardPage } from "./pages/Dashboard"
 import { SettingsPage } from "./pages/Settings"
+import { OfficeHoursPage } from "./pages/project/OfficeHours"
 import { RequirementPage } from "./pages/project/Requirement"
 import { AnalysisPage } from "./pages/project/Analysis"
 import { ResearchPage } from "./pages/project/Research"
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "/",         element: <DashboardPage /> },
       { path: "/settings", element: <SettingsPage /> },
+      { path: "/project/:id/office-hours", element: <OfficeHoursPage /> },
       { path: "/project/:id/requirement", element: <RequirementPage /> },
       { path: "/project/:id/analysis",    element: <AnalysisPage /> },
       { path: "/project/:id/research",    element: <ResearchPage /> },
