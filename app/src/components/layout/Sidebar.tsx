@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import {
   Plus, ChevronLeft,
   Sun, Moon,
-  Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone,
+  Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone, MessageSquare,
   Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette,
   CheckCircle2, SkipForward, Settings2,
   FolderOpen, Pencil, Trash2, ArrowRight, RefreshCw, FileText,
@@ -63,6 +63,7 @@ function safePhase(phase: string): string {
 }
 
 const PHASE_ICONS: Record<string, React.ElementType> = {
+  "office-hours": MessageSquare,
   requirement:   Inbox,
   analysis:      ScanSearch,
   research:      Globe,
