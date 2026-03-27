@@ -4,12 +4,14 @@ import { useNavigate } from "react-router-dom"
 import { SettingsApi } from "./settings/SettingsApi"
 import { SettingsProject } from "./settings/SettingsProject"
 import { SettingsAbout } from "./settings/SettingsAbout"
+import { DiagnosticsPanel } from "@/components/diagnostics-panel"
 
-type TabKey = "api" | "project" | "about"
+type TabKey = "api" | "project" | "diagnostics" | "about"
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "api", label: "API 配置" },
   { key: "project", label: "项目管理" },
+  { key: "diagnostics", label: "环境诊断" },
   { key: "about", label: "关于" },
 ]
 
@@ -56,6 +58,7 @@ export function SettingsPage() {
       {/* Tab content */}
       {activeTab === "api" && <SettingsApi />}
       {activeTab === "project" && <SettingsProject />}
+      {activeTab === "diagnostics" && <DiagnosticsPanel />}
       {activeTab === "about" && <SettingsAbout />}
     </div>
   )
