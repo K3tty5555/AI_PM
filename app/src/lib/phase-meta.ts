@@ -1,5 +1,5 @@
 export const PHASE_ORDER = [
-  "requirement", "analysis", "research", "stories", "prd",
+  "office-hours", "requirement", "analysis", "research", "stories", "prd",
   "analytics", "prototype", "review", "retrospective",
 ] as const
 
@@ -8,6 +8,7 @@ export type Phase = typeof PHASE_ORDER[number]
 export const REQUIRED_PHASES = ["requirement", "prd"] as const
 
 export const PHASE_LABELS: Record<string, string> = {
+  "office-hours": "需求速评",
   requirement: "需求收集",
   analysis: "需求分析",
   research: "竞品研究",
@@ -37,6 +38,11 @@ export interface PhaseMeta {
 }
 
 export const PHASE_META: Record<string, PhaseMeta> = {
+  "office-hours": {
+    nextLabel: "进入需求收集",
+    nextDescription: "速评完成，进入正式需求描述",
+    backLabel: "← 返回",
+  },
   requirement: {
     nextLabel: "进入需求分析",
     nextDescription: "深挖用户痛点和核心价值",
