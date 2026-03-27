@@ -249,6 +249,13 @@ pub fn run() {
             commands::instincts::list_instincts,
             commands::instincts::confirm_instinct,
             commands::instincts::delete_instinct,
+            commands::illustration::get_illustration_config,
+            commands::illustration::save_illustration_config,
+            commands::illustration::generate_illustration,
+            commands::illustration::list_illustrations,
+            commands::illustration::read_local_image,
+            commands::illustration::test_illustration_key,
+            commands::illustration::delete_illustration,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]
