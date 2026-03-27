@@ -146,6 +146,7 @@ pub fn run() {
         db: std::sync::Mutex::new(conn),
         projects_dir,
         config_dir,
+        illustration_lock: std::sync::Mutex::new(()),
     };
 
     tauri::Builder::default()
