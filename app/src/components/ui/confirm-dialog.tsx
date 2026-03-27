@@ -10,6 +10,7 @@ interface ConfirmDialogProps {
   variant?: "danger" | "default"
   onConfirm: () => void
   onCancel: () => void
+  children?: React.ReactNode
 }
 
 function ConfirmDialog({
@@ -21,6 +22,7 @@ function ConfirmDialog({
   variant = "default",
   onConfirm,
   onCancel,
+  children,
 }: ConfirmDialogProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
 
@@ -58,10 +60,14 @@ function ConfirmDialog({
         {/* 分隔线 */}
         <div className="mb-4 h-px bg-[var(--border)]" />
 
-        {/* 描述文字 */}
-        <p className="mb-6 text-sm leading-relaxed text-[var(--text-secondary)]">
-          {description}
-        </p>
+        {/* 描述文字 / 自定义内容 */}
+        {children ? (
+          <div className="mb-6">{children}</div>
+        ) : (
+          <p className="mb-6 text-sm leading-relaxed text-[var(--text-secondary)]">
+            {description}
+          </p>
+        )}
 
         {/* 操作按钮 */}
         <div className="flex items-center justify-end gap-3">

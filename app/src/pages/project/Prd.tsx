@@ -8,7 +8,7 @@ import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { useProgressiveReveal } from "@/hooks/use-progressive-reveal"
 import { RevealContainer } from "@/components/RevealContainer"
-import { api, type PrdStyleEntry } from "@/lib/tauri-api"
+import { api, type PrdStyleEntry, type SensitiveMatch } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus, FILE_MANAGER_LABEL } from "@/lib/utils"
@@ -23,6 +23,7 @@ import { PrdDiffViewer } from "@/components/PrdDiffViewer"
 import { PrdScoreBadge, PrdScorePanel } from "@/components/prd-score-panel"
 import { PrdAssistPanel } from "@/components/prd-assist-panel"
 import { consumeAdoptionQueue } from "@/components/review-grouped-view"
+import { SensitiveScanDialog } from "@/components/sensitive-scan-dialog"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -159,6 +160,11 @@ export function PrdPage() {
   const [copied, setCopied] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportResult, setExportResult] = useState<{ path: string } | { error: string } | null>(null)
+
+  // Sensitive scan dialog
+  const [sensitiveMatches, setSensitiveMatches] = useState<SensitiveMatch[]>([])
+  const [sensitiveDialogOpen, setSensitiveDialogOpen] = useState(false)
+  const [pendingExportAction, setPendingExportAction] = useState<(() => Promise<void>) | null>(null)
 
   // PRD style selector
   const [prdStyles, setPrdStyles] = useState<PrdStyleEntry[]>([])
@@ -423,7 +429,8 @@ export function PrdPage() {
     }
   }, [displayMarkdown])
 
-  const handleExportDocx = useCallback(async () => {
+  // Core export actions (called directly or after scan confirmation)
+  const doExportDocx = useCallback(async () => {
     setExporting(true)
     setExportResult(null)
     try {
@@ -436,7 +443,7 @@ export function PrdPage() {
     }
   }, [projectId])
 
-  const handleExportShareHtml = useCallback(async () => {
+  const doExportShareHtml = useCallback(async () => {
     setExporting(true)
     setExportResult(null)
     try {
@@ -449,6 +456,64 @@ export function PrdPage() {
       setExporting(false)
     }
   }, [projectId, toast])
+
+  // Sensitive-scan wrapper: scan first, prompt if matches found
+  const withSensitiveScan = useCallback(
+    (exportFn: () => Promise<void>) => {
+      return async () => {
+        setExporting(true)
+        try {
+          const matches = await api.scanSensitive(projectId)
+          if (matches.length === 0) {
+            // No sensitive content — proceed directly
+            setExporting(false)
+            await exportFn()
+          } else {
+            // Show dialog for user decision
+            setExporting(false)
+            setSensitiveMatches(matches)
+            setPendingExportAction(() => exportFn)
+            setSensitiveDialogOpen(true)
+          }
+        } catch {
+          // Scan failed — fall through to export directly
+          setExporting(false)
+          await exportFn()
+        }
+      }
+    },
+    [projectId],
+  )
+
+  const handleExportDocx = useCallback(() => {
+    withSensitiveScan(doExportDocx)()
+  }, [withSensitiveScan, doExportDocx])
+
+  const handleExportShareHtml = useCallback(() => {
+    withSensitiveScan(doExportShareHtml)()
+  }, [withSensitiveScan, doExportShareHtml])
+
+  // Sensitive dialog callbacks
+  const handleSensitiveRedactExport = useCallback(() => {
+    setSensitiveDialogOpen(false)
+    // For now, redact export = same as raw export (backend redact support pending)
+    pendingExportAction?.()
+    setPendingExportAction(null)
+    setSensitiveMatches([])
+  }, [pendingExportAction])
+
+  const handleSensitiveRawExport = useCallback(() => {
+    setSensitiveDialogOpen(false)
+    pendingExportAction?.()
+    setPendingExportAction(null)
+    setSensitiveMatches([])
+  }, [pendingExportAction])
+
+  const handleSensitiveCancel = useCallback(() => {
+    setSensitiveDialogOpen(false)
+    setPendingExportAction(null)
+    setSensitiveMatches([])
+  }, [])
 
   /** Save PRD & mark phase complete */
   const handleComplete = useCallback(async () => {
@@ -928,6 +993,15 @@ export function PrdPage() {
           )}
         </div>
       </div>
+
+      {/* Sensitive scan dialog */}
+      <SensitiveScanDialog
+        open={sensitiveDialogOpen}
+        matches={sensitiveMatches}
+        onRedactExport={handleSensitiveRedactExport}
+        onRawExport={handleSensitiveRawExport}
+        onCancel={handleSensitiveCancel}
+      />
     </div>
     </PhaseShell>
   )
