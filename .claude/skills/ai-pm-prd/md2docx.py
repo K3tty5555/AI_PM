@@ -1,8 +1,129 @@
 """
 PRD Markdown → DOCX 转换器
 支持：标题、段落、表格（含单元格内插图）、列表、粗体、代码、分隔线、Mermaid 流程图
+支持：Mermaid 渲染方式选择（AI 高清 Seedream / 本地 Chrome headless）
 """
 import re, json, sys, os, subprocess, tempfile, threading
+import urllib.request
+import base64
+
+# ─── Seedream AI 图片生成 ───────────────────────────────────────────────
+
+SEEDREAM_MODEL = 'doubao-seedream-4-5-251128'
+SEEDREAM_URL = 'https://ark.cn-beijing.volces.com/api/v3/images/generations'
+SEEDREAM_SIZE = '2560x1440'
+
+STYLE_PRESETS = {
+    'graph':           ('linear-progression', 'corporate-memphis', '蓝色系'),
+    'sequenceDiagram': ('linear-progression', 'technical-schematic', '蓝色系'),
+    'flowchart':       ('tree-branching', 'corporate-memphis', '蓝色系'),
+    'classDiagram':    ('structural-breakdown', 'technical-schematic', '蓝色系'),
+}
+
+def _load_ark_api_key():
+    """从 ~/.baoyu-skills/.env 或环境变量加载 ARK_API_KEY"""
+    key = os.environ.get('ARK_API_KEY')
+    if key:
+        return key
+    env_file = os.path.expanduser('~/.baoyu-skills/.env')
+    if os.path.exists(env_file):
+        for line in open(env_file):
+            line = line.strip()
+            if line.startswith('ARK_API_KEY='):
+                return line.split('=', 1)[1].strip()
+    return None
+
+def generate_seedream(prompt, size=SEEDREAM_SIZE):
+    """调用 Seedream API 生成图片，返回临时文件路径或 None"""
+    api_key = _load_ark_api_key()
+    if not api_key:
+        print('  ⚠️ 未找到 ARK_API_KEY，无法使用 AI 生成')
+        return None
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}'
+    }
+    data = json.dumps({
+        'model': SEEDREAM_MODEL,
+        'prompt': prompt,
+        'size': size,
+        'response_format': 'b64_json'
+    }).encode()
+    try:
+        req = urllib.request.Request(SEEDREAM_URL, data=data, headers=headers)
+        resp = urllib.request.urlopen(req, timeout=120)
+        result = json.loads(resp.read())
+        img_data = base64.b64decode(result['data'][0]['b64_json'])
+        out_png = tempfile.mktemp(suffix='.png', dir='/tmp')
+        with open(out_png, 'wb') as f:
+            f.write(img_data)
+        return out_png
+    except Exception as e:
+        print(f'  ⚠️ Seedream 生成失败: {e}')
+        return None
+
+def _detect_mermaid_type(code):
+    first_line = code.strip().split('\n')[0].strip()
+    for key in STYLE_PRESETS:
+        if first_line.startswith(key):
+            return key
+    return 'graph'
+
+def _build_seedream_prompt(code, layout, style, palette):
+    lines = [l.strip() for l in code.split('\n') if l.strip() and not l.strip().startswith('```')]
+    flow_desc = '\n'.join(lines)
+    return (
+        f'专业产品流程信息图，扁平矢量{style}风格，纯白色背景(#FFFFFF)，{palette}配色(主色#1D4ED8)。'
+        f'中文标注，清晰可读，简洁专业，适合嵌入PRD文档。充足留白，节点间用带箭头连接线。'
+        f'布局类型：{layout}。'
+        f'\n\n流程内容（基于以下 Mermaid 代码转化为可视化信息图）：\n{flow_desc}'
+    )
+
+def _prompt_mermaid_choice(code):
+    """交互式选择 Mermaid 渲染方式。非 tty 时直接返回 local。"""
+    if not sys.stdin.isatty():
+        return 'local', None
+
+    if not _load_ark_api_key():
+        return 'local', None
+
+    mtype = _detect_mermaid_type(code)
+    layout, style, palette = STYLE_PRESETS.get(mtype, STYLE_PRESETS['graph'])
+
+    print(f'\n  检测到流程图（{mtype}）')
+    print(f'    A. AI 生成高清信息图（Seedream，会产生 API 费用）')
+    print(f'    B. 本地渲染（Chrome headless，免费但质量一般）')
+    choice = input('  选择 A/B（默认 B）：').strip().upper()
+    if choice != 'A':
+        return 'local', None
+
+    ALT_STYLES = [
+        ('tree-branching', 'corporate-memphis', '蓝色系'),
+        ('hub-spoke', 'ikea-manual', '蓝灰色系'),
+        ('linear-progression', 'technical-schematic', '蓝色系'),
+    ]
+
+    print(f'\n  推荐风格：{layout} × {style}（{palette}）')
+    print(f'    1. 用推荐风格直接生成')
+    print(f'    2. 换其他风格')
+    print(f'    3. 自定义描述风格要求')
+    sc = input('  选择（默认 1）：').strip()
+
+    if sc == '2':
+        for idx, (l, s, p) in enumerate(ALT_STYLES, 1):
+            print(f'    {idx}. {l} × {s}（{p}）')
+        ai = input('  选择编号（默认 1）：').strip()
+        ai_idx = int(ai) - 1 if ai.isdigit() else 0
+        if 0 <= ai_idx < len(ALT_STYLES):
+            layout, style, palette = ALT_STYLES[ai_idx]
+    elif sc == '3':
+        custom = input('  描述你想要的风格：').strip()
+        prompt = f'{custom}\n\n流程内容：\n{code}'
+        return 'ai', prompt
+
+    return 'ai', _build_seedream_prompt(code, layout, style, palette)
+
+# ─── 原有代码 ───────────────────────────────────────────────────────────
 from pathlib import Path
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
@@ -262,7 +383,7 @@ def convert(prd_path, output_path, manifest_path=None):
             i += 1
             continue
 
-        # Mermaid 流程图
+        # Mermaid 流程图（支持 AI 高清 / 本地渲染 二选一）
         if re.match(r'^```mermaid\s*$', line.strip()):
             mermaid_lines = []
             i += 1
@@ -271,16 +392,35 @@ def convert(prd_path, output_path, manifest_path=None):
                 i += 1
             i += 1  # 跳过结束 ```
             code = '\n'.join(mermaid_lines)
-            print(f'  渲染 Mermaid 流程图...')
-            tmp_png = render_mermaid(code)
+
+            render_mode, ai_prompt = _prompt_mermaid_choice(code)
+
+            if render_mode == 'ai' and ai_prompt:
+                print(f'  🎨 AI 生成高清流程图中...')
+                tmp_png = generate_seedream(ai_prompt)
+                img_width = Cm(15)
+                if tmp_png:
+                    # 同时保存到 11-illustrations/
+                    ill_dir = project_dir / '11-illustrations'
+                    ill_dir.mkdir(exist_ok=True)
+                    existing = sorted(ill_dir.glob('*.png'))
+                    next_num = len(existing) + 1
+                    save_name = f'{next_num:02d}-flowchart.png'
+                    import shutil
+                    shutil.copy2(tmp_png, str(ill_dir / save_name))
+                    print(f'  ✅ AI 流程图已保存: 11-illustrations/{save_name}')
+            else:
+                print(f'  渲染 Mermaid 流程图（本地）...')
+                tmp_png = render_mermaid(code)
+                img_width = Cm(12)
+
             if tmp_png:
                 para = doc.add_paragraph()
                 run = para.add_run()
-                run.add_picture(tmp_png, width=Cm(12))
+                run.add_picture(tmp_png, width=img_width)
                 para.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 os.unlink(tmp_png)
             else:
-                # 降级：显示为代码块
                 para = doc.add_paragraph(code)
                 para.style = 'No Spacing'
             continue
@@ -312,6 +452,34 @@ def convert(prd_path, output_path, manifest_path=None):
 
         # 空行
         if not line.strip():
+            i += 1
+            continue
+
+        # Markdown 图片语法 ![alt](path)
+        m_img = re.match(r'^!\[(.+?)\]\((.+?)\)$', line.strip())
+        if m_img:
+            alt_text = m_img.group(1)
+            img_rel = m_img.group(2)
+            # 相对于 PRD 文件所在目录解析路径
+            img_abs = (prd_path.parent / img_rel).resolve()
+            if img_abs.exists():
+                try:
+                    para = doc.add_paragraph()
+                    run = para.add_run()
+                    run.add_picture(str(img_abs), width=Cm(15))
+                    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    caption = doc.add_paragraph(alt_text)
+                    caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    for r in caption.runs:
+                        r.font.size = Pt(9)
+                        r.font.color.rgb = RGBColor(0x86, 0x86, 0x8b)
+                    print(f'  ✅ 图片已嵌入: {alt_text} ({img_abs.name})')
+                except Exception as e:
+                    print(f'  ⚠️ 图片插入失败 [{alt_text}]: {e}')
+            else:
+                print(f'  ⚠️ 图片不存在: {img_abs}')
+                para = doc.add_paragraph()
+                add_inline_formats(para, f'[图片: {alt_text}]')
             i += 1
             continue
 
