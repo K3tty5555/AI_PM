@@ -242,6 +242,9 @@ pub fn run() {
             commands::projects::clear_project_prompts,
             commands::update::check_update,
             commands::update::download_and_install_update,
+            commands::instincts::list_instincts,
+            commands::instincts::confirm_instinct,
+            commands::instincts::delete_instinct,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]
