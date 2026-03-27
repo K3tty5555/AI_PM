@@ -58,6 +58,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 
 | 命令 | 说明 |
 |------|------|
+| `/ai-pm office-hours` | 需求速评（5 个灵魂拷问，约 2 分钟） |
 | `/ai-pm analyze` | 需求分析 |
 | `/ai-pm research` | 竞品研究 |
 | `/ai-pm story` | 用户故事 |
@@ -88,6 +89,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 
 ```
 {projects_dir}/{项目名}/           ← projects_dir 由 ~/.ai-pm-config 决定
+├── 00-office-hours.md           需求速评（可选）
 ├── 01-requirement-draft.md      需求草稿
 ├── 02-analysis-report.md        需求分析
 ├── 03-competitor-report.md      竞品研究
@@ -96,6 +98,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 │   └── 05-PRD-v1.0.md           PRD 文档
 ├── 06-prototype/
 │   └── index.html               可交互原型
+├── 07-audit-report.md          原型完整性审计（自动生成）
 ├── 07-references/               参考资源（URL/截图）
 ├── 08-review-report-v1.md       评审报告
 ├── 09-analytics-requirement.md  埋点方案（可选）
@@ -107,8 +110,8 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 ## 阶段流程
 
 ```
-Phase 0（可选）: 参考资源收集（URL/图片分析）
-    ↓
+Phase 0（可选）: 需求速评（Office Hours）+ 参考资源收集
+    ↓  → 生成 00-office-hours.md（跳过则不生成）
 Phase 1: 需求澄清（交互式访谈，每次只问1-2个问题）
          若用户有现成文档，引导放入 07-references/ 后直接读取，跳过访谈
     ↓  → 生成 01-requirement-draft.md
@@ -125,10 +128,59 @@ Phase 6（可选）: 数据埋点设计
     ↓  → 生成 09-analytics-requirement.md
 Phase 7: 原型生成（Token 消耗提示后确认）
     ↓  → 生成 06-prototype/index.html
+Phase 7.5（自动触发）: PRD↔原型完整性审计
+    ↓  → 生成 07-audit-report.md
 Phase 8（可选）: 需求评审（六角色并行）
     ↓  → 生成 08-review-report-v1.md
 项目完成: 触发知识沉淀（knowledge sync）
 ```
+
+### Phase 0: 需求速评（Office Hours）
+
+**触发条件**: 新项目创建后，未检测到 `00-office-hours.md` 文件时自动询问。
+
+**跳过机制**: 提示用户"先做个需求速评？（约 2 分钟）[开始] [跳过，直接进入需求澄清]"。跳过后不再追问。
+
+**执行流程**: 逐问逐答，每个问题回答后给出简短"挑战"帮助收敛思路：
+
+- **Q1**: 这个产品解决谁的什么问题？（一句话，不超过 20 字）
+  → 挑战方向：目标用户是否足够具体？问题是否足够痛？
+- **Q2**: 这些人现在怎么解决这个问题？为什么现有方案不够好？
+  → 挑战方向：是否真的了解用户现状？"不够好"是否有具体证据？
+- **Q3**: 你的方案凭什么比现有方案好？核心差异是什么？
+  → 挑战方向：差异是否足够大？是"有了更好"还是"没有不行"？
+- **Q4**: 如果只做一个功能就上线，你做哪个？
+  → 挑战方向：这个功能是否直接解决 Q1 的核心问题？
+- **Q5**: 怎么判断做成了？用什么指标衡量成功？
+  → 挑战方向：指标是否可量化、可追踪？
+
+**挑战规则**: 每个挑战不超过 2 句话，目的是帮用户想清楚而非否定。用户回应后进入下一题。
+
+**中途退出**: 用户任何时候说"跳过"或"稍后"，立即停止，已回答部分不保存。
+
+**输出**: 回答完毕后生成需求速评报告，保存到 `00-office-hours.md`：
+
+```markdown
+---
+status: complete
+date: {当天日期}
+---
+
+## 需求速评
+
+**一句话定义**: {Q1 提炼}
+**现有方案缺陷**: {Q2 提炼}
+**核心差异点**: {Q3 提炼}
+**MVP 功能**: {Q4 提炼}
+**成功指标**: {Q5 提炼}
+
+**AI 建议**:
+  ● 值得深入 → 进入 Phase 1 详细澄清
+  ● 需要补充思考 → 建议先想清楚 {具体薄弱点} 再继续
+  ● 方向不清晰 → 建议先做用户访谈（/ai-pm interview）
+```
+
+---
 
 ### Phase 2+3 并行执行方式
 
@@ -159,6 +211,59 @@ Phase 8（可选）: 需求评审（六角色并行）
 用户选择后执行 PRD 写入。
 
 ---
+
+### Phase 7.5: 原型完整性审计（自动触发）
+
+**前提条件**: Phase 5（PRD）和 Phase 7（原型）均已完成，即 `05-prd/05-PRD-v1.0.md` 和 `06-prototype.html`（或 `06-prototype/index.html`）都存在。
+
+**跳过条件**: 
+- PRD 未生成（跳阶段场景）→ 跳过审计，提示"无 PRD 可比对"
+- 用户明确要求跳过
+
+**执行方式**: 技能侧（LLM）执行，不依赖外部工具。
+
+**步骤**:
+1. 读取 `05-prd/05-PRD-v1.0.md`，提取所有功能模块和功能点（解析 ## 级标题和功能列表）
+2. 读取 `06-prototype.html`（或 `06-prototype/index.html`）的 HTML 源码
+3. 如果存在 `06-prototype/screenshots/manifest.json`，也读取以获取多页面信息
+4. 逐个功能点检查是否在原型中有对应的页面/视图/交互元素体现
+5. 生成审计报告
+
+**输出格式** — 保存到 `07-audit-report.md`：
+
+```markdown
+## 原型完整性审计
+
+审计时间: {日期}
+PRD 版本: v1.0
+
+| PRD 功能点 | 原型状态 | 说明 |
+|-----------|---------|------|
+| {功能名} | ✅ 已覆盖 | 对应 {页面/视图名} |
+| {功能名} | ❌ 未覆盖 | 原型中无对应页面或按钮 |
+| {功能名} | ⚠️ 部分覆盖 | {具体说明} |
+
+**覆盖率**: {已覆盖数}/{总数}（{百分比}%）
+
+**未覆盖功能清单**:
+1. {功能名} — 建议补充 {页面/视图描述}
+2. ...
+
+**建议**: {根据覆盖率给出建议}
+```
+
+**审计比对原则**:
+- 只比对页面/视图级别，不要求交互细节完全对齐
+- 纯静态展示的原型也能审计
+- "部分覆盖"指有入口但缺少完整流程
+- 对功能点的命名做语义匹配，不要求字面完全一致
+
+**审计完成后**:
+- 向用户展示审计结果
+- 如果覆盖率 < 100%，提示可选操作："是否要补充未覆盖的功能到原型中？"
+- 用户选择补充 → 将未覆盖功能点作为补充需求，触发新一轮完整原型生成
+- 用户选择跳过 → 继续进入 Phase 8 评审
+
 
 ## 多代理调度逻辑
 
@@ -320,6 +425,7 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
     "stories": false,
     "prd": false,
     "prototype": false,
+    "audit": false,
     "review": false
   },
   "last_phase": "init"
@@ -337,6 +443,7 @@ phases.competitor  = true  → 写完 03-competitor-report.md 后
 phases.stories     = true  → 写完 04-user-stories.md 后
 phases.prd         = true  → 写完 05-prd/05-PRD-v1.0.md 后
 phases.prototype   = true  → 写完 06-prototype/index.html 后
+phases.audit       = true  → 写完 07-audit-report.md 后
 phases.review      = true  → 写完 08-review-report-v1.md 后
 ```
 
@@ -380,7 +487,7 @@ phases.review      = true  → 写完 08-review-report-v1.md 后
 ── AI 产品经理 ──  N 个项目
 
 项目：{项目名}
-阶段：需求✅ 分析✅ 竞品✅ 故事✅ PRD✅ 原型⬜ 评审⬜
+阶段：需求✅ 分析✅ 竞品✅ 故事✅ PRD✅ 原型⬜ 审计⬜ 评审⬜
 
 → 建议：{推荐下一步}（{推荐理由}）
 
@@ -395,7 +502,8 @@ phases.review      = true  → 写完 08-review-report-v1.md 后
 | `init` / `requirement` | 需求分析 + 竞品研究（并行） | 需求草稿已就绪 |
 | `analysis` / `competitor` / `stories` | 生成 PRD | 前置分析已完成 |
 | `prd` | 生成原型 | PRD 已完成，可直接进入 |
-| `prototype` | 需求评审 | 原型已就绪，可提交评审 |
+| `prototype` | 原型完整性审计 | 原型已就绪，自动审计 PRD 覆盖率 |
+| `audit` | 需求评审 | 审计完成，可提交评审 |
 | `review` | 项目完成 ✓ | 全流程已走完 |
 
 **「其他操作」列表规则**：仅列出 phases 为 false 的阶段（不包括推荐步骤本身），若全部完成则省略该行。

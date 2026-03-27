@@ -36,6 +36,15 @@
             "command": "bash .claude/hooks/memory-backup.sh"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/skill-sync-check.sh"
+          }
+        ]
       }
     ]
   }
