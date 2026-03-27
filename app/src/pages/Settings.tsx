@@ -5,13 +5,15 @@ import { SettingsApi } from "./settings/SettingsApi"
 import { SettingsProject } from "./settings/SettingsProject"
 import { SettingsAbout } from "./settings/SettingsAbout"
 import { DiagnosticsPanel } from "@/components/diagnostics-panel"
+import { InstinctPanel } from "@/components/instinct-panel"
 
-type TabKey = "api" | "project" | "diagnostics" | "about"
+type TabKey = "api" | "project" | "diagnostics" | "habits" | "about"
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "api", label: "API 配置" },
   { key: "project", label: "项目管理" },
   { key: "diagnostics", label: "环境诊断" },
+  { key: "habits", label: "我的习惯" },
   { key: "about", label: "关于" },
 ]
 
@@ -59,6 +61,7 @@ export function SettingsPage() {
       {activeTab === "api" && <SettingsApi />}
       {activeTab === "project" && <SettingsProject />}
       {activeTab === "diagnostics" && <DiagnosticsPanel />}
+      {activeTab === "habits" && <InstinctPanel />}
       {activeTab === "about" && <SettingsAbout />}
     </div>
   )
