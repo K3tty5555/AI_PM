@@ -215,6 +215,56 @@ export interface InstinctEntry {
   description: string
 }
 
+// ── Illustration ─────────────────────────────────────────────────
+
+export interface GenerateIllustrationArgs {
+  prompt: string
+  stylePreset?: string
+  layout?: string
+  size?: string
+  projectDir?: string
+}
+
+export interface IllustrationResult {
+  filePath: string
+  thumbPath: string
+  width: number
+  height: number
+  sizeBytes: number
+}
+
+export interface IllustrationEntry {
+  filePath: string
+  thumbPath: string
+  fileName: string
+  prompt: string
+  createdAt: string
+  sizeBytes: number
+}
+
+export interface IllustrationConfigState {
+  provider: string
+  model: string
+  apiKeyMasked: string | null
+  apiKeySource: "env" | "env_file" | "config" | "none"
+  defaultSize: string
+  availableProviders: ProviderDef[]
+}
+
+export interface ProviderDef {
+  id: string
+  name: string
+  models: { id: string; name: string }[]
+  sizes: string[]
+  envKeyName: string
+}
+
+export interface TestKeyResult {
+  valid: boolean
+  message: string
+  costWarning: boolean
+}
+
 export interface SensitiveMatch {
   line: number
   column: number
@@ -431,6 +481,22 @@ export const api = {
     safeInvoke<string | null>("get_project_design_spec", { projectId }),
   setProjectDesignSpec: (projectId: string, specId: string) =>
     safeInvoke<void>("set_project_design_spec", { projectId, specId }),
+
+  // ── Illustration ───────────────────────────────────────────────
+  generateIllustration: (args: GenerateIllustrationArgs) =>
+    safeInvoke<IllustrationResult>("generate_illustration", { args }),
+  listIllustrations: (args: { projectDir?: string; offset?: number; limit?: number }) =>
+    safeInvoke<IllustrationEntry[]>("list_illustrations", { args }),
+  readLocalImage: (path: string) =>
+    safeInvoke<string>("read_local_image", { path }),
+  getIllustrationConfig: () =>
+    safeInvoke<IllustrationConfigState>("get_illustration_config"),
+  saveIllustrationConfig: (args: { provider: string; model: string; apiKey?: string; defaultSize: string }) =>
+    safeInvoke<void>("save_illustration_config", { args }),
+  testIllustrationKey: (apiKey?: string) =>
+    safeInvoke<TestKeyResult>("test_illustration_key", { apiKey: apiKey ?? null }),
+  deleteIllustration: (path: string) =>
+    safeInvoke<void>("delete_illustration", { path }),
 }
 
 // ─── Updater ────────────────────────────────────────────────────────────────
