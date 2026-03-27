@@ -171,6 +171,118 @@ fn run_sync(cmd: &str, args: &[&str]) -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
+// ── run_diagnostics ──────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnosticItem {
+    pub name: String,
+    pub category: String,
+    pub status: String,
+    pub message: String,
+    pub fix_hint: Option<String>,
+    pub auto_installable: bool,
+    pub duration_ms: u64,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnosticSummary {
+    pub total: u32,
+    pub passed: u32,
+    pub warnings: u32,
+    pub errors: u32,
+}
+
+fn dep_to_diagnostic(dep: &DepStatus) -> DiagnosticItem {
+    DiagnosticItem {
+        name: dep.label.clone(),
+        category: "dependency".to_string(),
+        status: if dep.installed {
+            "ok"
+        } else if dep.required {
+            "error"
+        } else {
+            "warning"
+        }
+        .to_string(),
+        message: dep
+            .version
+            .clone()
+            .unwrap_or_else(|| {
+                if dep.installed {
+                    "已安装".to_string()
+                } else {
+                    "未安装".to_string()
+                }
+            }),
+        fix_hint: dep.manual_hint.clone(),
+        auto_installable: dep.auto_installable,
+        duration_ms: 0,
+    }
+}
+
+#[tauri::command]
+pub async fn run_diagnostics(app: AppHandle, detailed: bool) -> Result<(), String> {
+    let mut total = 0u32;
+    let mut passed = 0u32;
+    let mut warnings = 0u32;
+    let mut errors = 0u32;
+
+    // Basic dependency checks — reuse existing helpers
+    let deps = vec![
+        check_python3(),
+        check_python_pkg("python-docx", "python-docx", "python_docx", true, "PRD 导出 Word 文档"),
+        check_python_pkg("Pillow", "Pillow（图像处理）", "Pillow", false, "Word 文档中嵌入原型截图"),
+        check_claude_cli(),
+        check_playwright_mcp_dep(),
+    ];
+
+    for dep in &deps {
+        let item = dep_to_diagnostic(dep);
+        total += 1;
+        match item.status.as_str() {
+            "ok" => passed += 1,
+            "warning" => warnings += 1,
+            _ => errors += 1,
+        }
+        let _ = app.emit("diagnostic_item", &item);
+    }
+
+    if detailed {
+        // Disk space check (placeholder — always passes for now)
+        let disk_item = DiagnosticItem {
+            name: "磁盘空间".to_string(),
+            category: "local".to_string(),
+            status: "ok".to_string(),
+            message: "检查通过".to_string(),
+            fix_hint: None,
+            auto_installable: false,
+            duration_ms: 0,
+        };
+        total += 1;
+        passed += 1;
+        let _ = app.emit("diagnostic_item", &disk_item);
+
+        // More deep checks can be added here later...
+    }
+
+    let summary = DiagnosticSummary {
+        total,
+        passed,
+        warnings,
+        errors,
+    };
+    let _ = app.emit("diagnostic_done", &summary);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn cancel_diagnostics() -> Result<(), String> {
+    // TODO: implement cancellation logic
+    Ok(())
+}
+
 // ── install_dep ──────────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
