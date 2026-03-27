@@ -463,3 +463,195 @@ pub async fn generate_illustration(
         size_bytes,
     })
 }
+
+// ── List Command ────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn list_illustrations(
+    state: tauri::State<'_, AppState>,
+    args: ListIllustrationsArgs,
+) -> Result<Vec<IllustrationEntry>, String> {
+    let dir = if let Some(ref proj_dir) = args.project_dir {
+        PathBuf::from(proj_dir).join("11-illustrations")
+    } else {
+        PathBuf::from(&state.config_dir).join("illustrations")
+    };
+
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let offset = args.offset.unwrap_or(0);
+    let limit = args.limit.unwrap_or(50).min(100);
+
+    let mut entries: Vec<IllustrationEntry> = fs::read_dir(&dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            name.ends_with(".png") && !name.contains(".thumb.")
+        })
+        .filter_map(|e| {
+            let path = e.path();
+            let file_name = e.file_name().to_string_lossy().to_string();
+            let stem = file_name.trim_end_matches(".png");
+            let meta_path = dir.join(format!("{}.meta.json", stem));
+            let thumb_path = dir.join(format!("{}.thumb.png", stem));
+
+            let (prompt, created_at) = if meta_path.exists() {
+                let content = fs::read_to_string(&meta_path).unwrap_or_default();
+                let meta: serde_json::Value = serde_json::from_str(&content).unwrap_or_default();
+                (
+                    meta.get("prompt").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    meta.get("createdAt").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                )
+            } else {
+                let modified = e.metadata().ok()
+                    .and_then(|m| m.modified().ok())
+                    .map(|t| {
+                        let dt: chrono::DateTime<chrono::Utc> = t.into();
+                        dt.to_rfc3339()
+                    })
+                    .unwrap_or_default();
+                (String::new(), modified)
+            };
+
+            let size_bytes = e.metadata().ok().map(|m| m.len()).unwrap_or(0);
+
+            Some(IllustrationEntry {
+                file_path: path.to_string_lossy().to_string(),
+                thumb_path: thumb_path.to_string_lossy().to_string(),
+                file_name,
+                prompt,
+                created_at,
+                size_bytes,
+            })
+        })
+        .collect();
+
+    entries.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    let paginated: Vec<IllustrationEntry> = entries.into_iter().skip(offset).take(limit).collect();
+    Ok(paginated)
+}
+
+// ── Read Local Image Command ────────────────────────────────────
+
+const ALLOWED_IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp", "svg"];
+const MAX_IMAGE_SIZE: u64 = 20 * 1024 * 1024;
+
+#[tauri::command]
+pub fn read_local_image(path: String) -> Result<String, String> {
+    let file_path = Path::new(&path);
+
+    let home = dirs::home_dir().ok_or("无法确定主目录")?;
+    let canonical = file_path.canonicalize().map_err(|_| "图片文件不存在或路径无效")?;
+    if !canonical.starts_with(&home) {
+        return Err("只能读取主目录下的图片文件".into());
+    }
+    if path.contains("..") {
+        return Err("路径不允许包含 ..".into());
+    }
+
+    let ext = file_path.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+    if !ALLOWED_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+        return Err(format!("不支持的图片格式: .{}", ext));
+    }
+
+    let metadata = fs::metadata(&canonical).map_err(|_| "图片文件不存在")?;
+    if metadata.len() > MAX_IMAGE_SIZE {
+        return Err("图片文件过大（超过 20MB）".into());
+    }
+
+    Ok(canonical.to_string_lossy().to_string())
+}
+
+// ── Test Key Command ────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn test_illustration_key(
+    state: tauri::State<'_, AppState>,
+    api_key: Option<String>,
+) -> Result<TestKeyResult, String> {
+    let providers = get_providers();
+    let provider = &providers[0];
+
+    let key = if let Some(k) = api_key {
+        k
+    } else {
+        let (k, _) = load_api_key(provider, &state.config_dir);
+        k.ok_or("未配置 API Key")?
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let resp = client
+        .post("https://ark.cn-beijing.volces.com/api/v3/images/generations")
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", key))
+        .body("{}")
+        .send()
+        .await;
+
+    match resp {
+        Ok(r) => {
+            let status = r.status().as_u16();
+            if status == 401 {
+                Ok(TestKeyResult {
+                    valid: false,
+                    message: "API Key 无效或已过期".into(),
+                    cost_warning: false,
+                })
+            } else {
+                Ok(TestKeyResult {
+                    valid: true,
+                    message: "API Key 有效".into(),
+                    cost_warning: false,
+                })
+            }
+        }
+        Err(e) => {
+            if e.is_timeout() {
+                Ok(TestKeyResult {
+                    valid: false,
+                    message: "连接超时（15秒）".into(),
+                    cost_warning: false,
+                })
+            } else {
+                Ok(TestKeyResult {
+                    valid: false,
+                    message: format!("网络错误: {}", e),
+                    cost_warning: false,
+                })
+            }
+        }
+    }
+}
+
+// ── Delete Command ──────────────────────────────────────────────
+
+#[tauri::command]
+pub fn delete_illustration(path: String) -> Result<(), String> {
+    let file_path = Path::new(&path);
+
+    let home = dirs::home_dir().ok_or("无法确定主目录")?;
+    let canonical = file_path.canonicalize().map_err(|_| "文件不存在")?;
+    if !canonical.starts_with(&home) || path.contains("..") {
+        return Err("路径不合法".into());
+    }
+
+    let stem = canonical.file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or("无法解析文件名")?;
+    let parent = canonical.parent().ok_or("无法确定父目录")?;
+
+    let _ = fs::remove_file(&canonical);
+    let _ = fs::remove_file(parent.join(format!("{}.thumb.png", stem)));
+    let _ = fs::remove_file(parent.join(format!("{}.meta.json", stem)));
+    Ok(())
+}
