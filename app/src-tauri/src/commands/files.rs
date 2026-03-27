@@ -1,3 +1,5 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -781,4 +783,152 @@ pub fn extract_docx_text(path: String) -> Result<String, String> {
     }
 
     Ok(text.trim().to_string())
+}
+
+// ── Sensitive info scanning ────────────────────────────────────────
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SensitiveMatch {
+    pub line: usize,
+    pub column: usize,
+    pub matched_preview: String,
+    pub context: String,
+    pub rule_name: String,
+    pub severity: String,
+    pub redacted: String,
+}
+
+struct ScanRule {
+    name: &'static str,
+    pattern: Regex,
+    severity: &'static str,
+}
+
+static SAFE_EMAIL_DOMAINS: &[&str] = &[
+    "example.com", "example.org", "test.com", "localhost",
+    "placeholder.com", "foo.com", "bar.com",
+];
+
+static SCAN_RULES: Lazy<Vec<ScanRule>> = Lazy::new(|| vec![
+    ScanRule { name: "api_key", pattern: Regex::new(r"\b(?:sk-|key-|token-)[a-zA-Z0-9_\-]{20,}\b").unwrap(), severity: "high" },
+    ScanRule { name: "db_connection", pattern: Regex::new(r"(?:postgres|mysql|mongodb|redis)://[^\s]+").unwrap(), severity: "high" },
+    ScanRule { name: "password", pattern: Regex::new(r"(?i)password\s*[:=]\s*['\x22][^'\x22]+['\x22]").unwrap(), severity: "high" },
+    ScanRule { name: "private_key", pattern: Regex::new(r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----").unwrap(), severity: "high" },
+    ScanRule { name: "internal_ip", pattern: Regex::new(r"\b(?:192\.168|10\.|172\.(?:1[6-9]|2\d|3[01]))\.\d+\.\d+\b").unwrap(), severity: "medium" },
+    ScanRule { name: "internal_domain", pattern: Regex::new(r"[a-z0-9\-]+\.(?:internal|local|corp|intranet)\b").unwrap(), severity: "medium" },
+    ScanRule { name: "phone", pattern: Regex::new(r"\b1[3-9]\d{9}\b").unwrap(), severity: "medium" },
+    ScanRule { name: "id_card", pattern: Regex::new(r"\b\d{17}[\dXx]\b").unwrap(), severity: "medium" },
+    ScanRule { name: "email", pattern: Regex::new(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}").unwrap(), severity: "medium" },
+]);
+
+/// Helper: safely take the first `n` chars from a string.
+fn take_chars(s: &str, n: usize) -> String {
+    s.chars().take(n).collect()
+}
+
+/// Helper: safely take the last `n` chars from a string.
+fn take_chars_end(s: &str, n: usize) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    if chars.len() <= n {
+        s.to_string()
+    } else {
+        chars[chars.len() - n..].iter().collect()
+    }
+}
+
+fn scan_prd_sensitive(content: &str) -> Vec<SensitiveMatch> {
+    let mut matches = Vec::new();
+    for (line_idx, line) in content.lines().enumerate() {
+        for rule in SCAN_RULES.iter() {
+            for mat in rule.pattern.find_iter(line) {
+                let matched_text = mat.as_str();
+
+                // Email whitelist check
+                if rule.name == "email" {
+                    if SAFE_EMAIL_DOMAINS.iter().any(|d| matched_text.ends_with(d)) {
+                        continue;
+                    }
+                }
+
+                // Generate preview (first 4 + last 4 chars)
+                let char_count = matched_text.chars().count();
+                let preview = if char_count > 12 {
+                    format!("{}****{}", take_chars(matched_text, 4), take_chars_end(matched_text, 4))
+                } else {
+                    "****".to_string()
+                };
+
+                // Context (up to 20 bytes before and after, clamped to line)
+                let start = mat.start().saturating_sub(20);
+                let end = (mat.end() + 20).min(line.len());
+                // Adjust to char boundaries
+                let ctx_start = line.floor_char_boundary(start);
+                let ctx_end = line.ceil_char_boundary(end);
+                let context = line[ctx_start..ctx_end].to_string();
+
+                // Redacted replacement text
+                let redacted = match rule.name {
+                    "api_key" => "[API_KEY_REDACTED]".to_string(),
+                    "db_connection" => "[DB_CONNECTION_REDACTED]".to_string(),
+                    "password" => "[PASSWORD_REDACTED]".to_string(),
+                    "private_key" => "[PRIVATE_KEY_REDACTED]".to_string(),
+                    "internal_ip" => "[INTERNAL_IP]".to_string(),
+                    "internal_domain" => "[INTERNAL_DOMAIN]".to_string(),
+                    "phone" if char_count == 11 => {
+                        format!("{}****{}", take_chars(matched_text, 3), take_chars_end(matched_text, 4))
+                    }
+                    "id_card" if char_count == 18 => {
+                        format!("{}**************{}", take_chars(matched_text, 3), take_chars_end(matched_text, 4))
+                    }
+                    "email" => {
+                        if let Some(at) = matched_text.find('@') {
+                            let domain = &matched_text[at..];
+                            format!("{}**{}", take_chars(matched_text, 1), domain)
+                        } else {
+                            "[REDACTED]".to_string()
+                        }
+                    }
+                    _ => "[REDACTED]".to_string(),
+                };
+
+                matches.push(SensitiveMatch {
+                    line: line_idx + 1,
+                    column: mat.start() + 1,
+                    matched_preview: preview,
+                    context,
+                    rule_name: rule.name.to_string(),
+                    severity: rule.severity.to_string(),
+                    redacted,
+                });
+            }
+        }
+    }
+    matches
+}
+
+#[tauri::command]
+pub fn scan_sensitive(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<Vec<SensitiveMatch>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ).map_err(|_| "项目不存在".to_string())?
+    };
+
+    let prd_path = std::path::PathBuf::from(&output_dir)
+        .join("05-prd")
+        .join("05-PRD-v1.0.md");
+
+    if !prd_path.exists() {
+        return Ok(vec![]);
+    }
+
+    let content = fs::read_to_string(&prd_path).map_err(|e| e.to_string())?;
+    Ok(scan_prd_sensitive(&content))
 }
