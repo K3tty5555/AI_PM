@@ -187,6 +187,44 @@ export interface PriorityReportMeta {
   durationMs: number
 }
 
+export interface DiagnosticItem {
+  name: string
+  category: "dependency" | "connectivity" | "local" | "config"
+  status: "ok" | "warning" | "error" | "timeout"
+  message: string
+  fixHint: string | null
+  autoInstallable: boolean
+  durationMs: number
+}
+
+export interface DiagnosticSummary {
+  total: number
+  passed: number
+  warnings: number
+  errors: number
+}
+
+export interface InstinctEntry {
+  id: string
+  type: "writing" | "workflow"
+  confidence: number
+  observations: number
+  firstSeen: string
+  lastSeen: string
+  sourceProjects: string[]
+  description: string
+}
+
+export interface SensitiveMatch {
+  line: number
+  column: number
+  matchedPreview: string
+  context: string
+  ruleName: string
+  severity: "high" | "medium"
+  redacted: string
+}
+
 export interface ReferenceFileEntry {
   name: string
   size: number
@@ -282,6 +320,18 @@ export const api = {
     safeInvoke<PriorityReportMeta[]>("list_priority_reports", keyword ? { keyword } : undefined),
   getPriorityReport: (filename: string) => safeInvoke<string>("get_priority_report", { filename }),
   deletePriorityReport: (filename: string) => safeInvoke<void>("delete_priority_report", { filename }),
+
+  // Diagnostics
+  runDiagnostics: (detailed: boolean) => safeInvoke<void>("run_diagnostics", { detailed }),
+  cancelDiagnostics: () => safeInvoke<void>("cancel_diagnostics"),
+
+  // Instincts
+  listInstincts: () => safeInvoke<InstinctEntry[]>("list_instincts"),
+  confirmInstinct: (id: string) => safeInvoke<void>("confirm_instinct", { id }),
+  deleteInstinct: (id: string) => safeInvoke<void>("delete_instinct", { id }),
+
+  // Sensitive scan
+  scanSensitive: (projectId: string) => safeInvoke<SensitiveMatch[]>("scan_sensitive", { projectId }),
 
   // Projects dir
   getProjectsDir: () => safeInvoke<string>("get_projects_dir"),
