@@ -2,6 +2,7 @@ pub mod brainstorm;
 pub mod config;
 pub mod env;
 pub mod files;
+pub mod instincts;
 pub mod knowledge;
 pub mod projects;
 pub mod stream;
