@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { api, type UiSpecEntry } from "@/lib/tauri-api"
@@ -110,6 +111,235 @@ async function inlineExternalJs(
     } catch { /* not found */ }
   }
   return result
+}
+
+// ── Audit report parser ───────────────────────────────────────────────
+
+interface AuditItem {
+  name: string
+  status: "covered" | "partial" | "uncovered"
+  note: string
+}
+
+interface AuditReport {
+  coverage: { covered: number; total: number }
+  items: AuditItem[]
+}
+
+function parseAuditReport(md: string): AuditReport {
+  const items: AuditItem[] = []
+
+  // Match markdown table rows: | name | status_emoji | note |
+  const rowRe = /^\|(.+)\|(.+)\|(.+)\|$/gm
+  let match: RegExpExecArray | null
+  let headerSkipped = false
+
+  while ((match = rowRe.exec(md)) !== null) {
+    const col1 = match[1].trim()
+    const col2 = match[2].trim()
+    const col3 = match[3].trim()
+
+    // Skip the header row and separator row
+    if (/^-+$/.test(col1) || /^-+$/.test(col2) || /^-+$/.test(col3)) continue
+    if (!headerSkipped) {
+      // First non-separator row is the header
+      headerSkipped = true
+      continue
+    }
+
+    let status: AuditItem["status"] = "uncovered"
+    if (col2.includes("\u2705") || col2.includes("covered") || col2.includes("\u2714")) {
+      status = "covered"
+    } else if (col2.includes("\u26A0") || col2.includes("partial")) {
+      status = "partial"
+    }
+    // else ❌ or anything else → uncovered
+
+    items.push({ name: col1, status, note: col3 })
+  }
+
+  const covered = items.filter(i => i.status === "covered" || i.status === "partial").length
+  return {
+    coverage: { covered, total: items.length },
+    items,
+  }
+}
+
+// ── Audit Card component ──────────────────────────────────────────────
+
+function AuditCard({
+  projectId,
+  onSupplement,
+}: {
+  projectId: string
+  onSupplement: (items: string[]) => void
+}) {
+  const [report, setReport] = useState<AuditReport | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    api.readProjectFile(projectId, "07-audit-report.md").then((content) => {
+      if (cancelled || !content) return
+      const parsed = parseAuditReport(content)
+      if (parsed.items.length > 0) setReport(parsed)
+    }).catch(() => { /* file not found — don't show card */ })
+    return () => { cancelled = true }
+  }, [projectId])
+
+  if (!report) return null
+
+  const { covered, total } = report.coverage
+  const uncoveredItems = report.items.filter(i => i.status === "uncovered")
+  const ratio = total > 0 ? covered / total : 0
+  const coverageColor =
+    ratio >= 1 ? "text-[var(--success)]"
+      : ratio >= 0.8 ? "text-[var(--warning)]"
+        : "text-[var(--destructive)]"
+
+  const toggleItem = (name: string) => {
+    setSelectedItems(prev => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }
+
+  const handleConfirmSupplement = () => {
+    setConfirmOpen(false)
+    const items = Array.from(selectedItems)
+    setSelectedItems(new Set())
+    onSupplement(items)
+  }
+
+  return (
+    <div className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-sm)] animate-[fadeInUp_250ms_var(--ease-decelerate)]">
+      {/* Collapsed header — always visible */}
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        className={cn(
+          "flex w-full items-center justify-between px-4 py-3",
+          "text-left transition-colors duration-[var(--dur-base)] ease-[var(--ease-standard)]",
+          "hover:bg-[var(--hover-bg)]",
+          expanded && "border-b border-[var(--border)]",
+        )}
+      >
+        <span className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+          <span aria-hidden>&#x1F4CB;</span>
+          {" "}原型完整性:{" "}
+          <span className={cn("tabular-nums font-semibold", coverageColor)}>
+            {covered}/{total}
+          </span>
+          {" "}覆盖
+        </span>
+        <span className="text-xs text-[var(--text-tertiary)]">
+          {expanded ? "收起 \u25B2" : "展开 \u25BC"}
+        </span>
+      </button>
+
+      {/* Expanded body */}
+      {expanded && (
+        <div className="px-4 py-3 animate-[fadeInUp_200ms_var(--ease-decelerate)]">
+          {/* Coverage table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  <th className="py-2 pr-4 text-left text-[11px] font-semibold text-[var(--text-secondary)]">PRD 功能点</th>
+                  <th className="py-2 pr-4 text-left text-[11px] font-semibold text-[var(--text-secondary)]">状态</th>
+                  <th className="py-2 text-left text-[11px] font-semibold text-[var(--text-secondary)]">说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.items.map((item) => (
+                  <tr key={item.name} className="border-b border-[var(--border)] last:border-b-0">
+                    <td className="py-2 pr-4 text-[var(--text-primary)]">{item.name}</td>
+                    <td className="py-2 pr-4">
+                      {item.status === "covered" && <span className="text-[var(--success)]">{"\u2705"}</span>}
+                      {item.status === "partial" && <span className="text-[var(--warning)]">{"\u26A0\uFE0F"}</span>}
+                      {item.status === "uncovered" && <span className="text-[var(--destructive)]">{"\u274C"}</span>}
+                    </td>
+                    <td className="py-2 text-[var(--text-secondary)]">{item.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Uncovered items checkboxes + supplement button */}
+          {uncoveredItems.length > 0 && (
+            <div className="mt-4 border-t border-[var(--border)] pt-4">
+              <p className="mb-2 text-[11px] font-medium text-[var(--text-tertiary)]">
+                选择需要补充的功能点
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {uncoveredItems.map((item) => (
+                  <label
+                    key={item.name}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm",
+                      "transition-colors duration-[var(--dur-base)] ease-[var(--ease-standard)]",
+                      selectedItems.has(item.name)
+                        ? "border-[var(--accent-color)] bg-[var(--accent-light)] text-[var(--accent-color)]"
+                        : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent-color)]/40",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(item.name)}
+                      onChange={() => toggleItem(item.name)}
+                      className="sr-only"
+                    />
+                    <span className={cn(
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                      "transition-colors duration-[var(--dur-base)]",
+                      selectedItems.has(item.name)
+                        ? "border-[var(--accent-color)] bg-[var(--accent-color)] text-white"
+                        : "border-[var(--border)] bg-transparent",
+                    )}>
+                      {selectedItems.has(item.name) && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </span>
+                    {item.name}
+                  </label>
+                ))}
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={selectedItems.size === 0}
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  补充选中项
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Confirm dialog */}
+      <ConfirmDialog
+        open={confirmOpen}
+        title="补充原型功能"
+        description={`将为以下 ${selectedItems.size} 个未覆盖功能点重新生成原型：${Array.from(selectedItems).join("、")}。当前原型内容会被替换。`}
+        confirmLabel="开始生成"
+        cancelLabel="取消"
+        variant="default"
+        onConfirm={handleConfirmSupplement}
+        onCancel={() => setConfirmOpen(false)}
+      />
+    </div>
+  )
 }
 
 // ── Component ──────────────────────────────────────────────────────────
@@ -376,6 +606,19 @@ export function PrototypePage() {
       setAdvancing(false)
     }
   }, [projectId, existingHtml, manifest, text, navigate])
+
+  const handleSupplement = useCallback((items: string[]) => {
+    if (items.length === 0) return
+    reset()
+    setExistingHtml(null)
+    setManifest(null)
+    setActivePageId("")
+    setPageHtml(null)
+    setBlobUrl(null)
+    startedRef.current = true
+    const supplementPrompt = `请在现有原型基础上补充以下未覆盖的功能点：${items.join("、")}。保持已有页面不变，仅新增缺失部分。`
+    start([{ role: "user", content: supplementPrompt }], { excludedContext, designSpec: selectedSpec })
+  }, [reset, start, excludedContext, selectedSpec])
 
   // ── Render ────────────────────────────────────────────────────────
 
@@ -650,6 +893,11 @@ export function PrototypePage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Audit card — shown when 07-audit-report.md exists */}
+      {hasContent && !isStreaming && projectId && (
+        <AuditCard projectId={projectId} onSupplement={handleSupplement} />
       )}
 
       {/* Bottom action bar */}
