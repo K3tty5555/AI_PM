@@ -51,6 +51,7 @@ pub struct ProjectSummary {
     pub status: String,
     pub project_type: String,
     pub industry: String,
+    pub motion_intensity: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -67,6 +68,7 @@ pub struct ProjectDetail {
     pub status: String,
     pub project_type: String,
     pub industry: String,
+    pub motion_intensity: String,
     pub phases: Vec<ProjectPhase>,
 }
 
@@ -81,7 +83,8 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
                     COUNT(CASE WHEN pp.status = 'completed' THEN 1 END) as completed_count,
                     GROUP_CONCAT(CASE WHEN pp.status = 'completed' THEN pp.phase END) as completed_phases,
                     COALESCE(p.project_type, 'general') as project_type,
-                    COALESCE(p.industry, 'general') as industry
+                    COALESCE(p.industry, 'general') as industry,
+                    COALESCE(p.motion_intensity, 'medium') as motion_intensity
              FROM projects p
              LEFT JOIN project_phases pp ON pp.project_id = p.id
              GROUP BY p.id
@@ -111,6 +114,7 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
                     .collect(),
                 project_type: row.get::<_, Option<String>>(10)?.unwrap_or_else(|| "general".to_string()),
                 industry: row.get::<_, Option<String>>(11)?.unwrap_or_else(|| "general".to_string()),
+                motion_intensity: row.get::<_, Option<String>>(12)?.unwrap_or_else(|| "medium".to_string()),
             })
         })
         .map_err(|e| e.to_string())?
@@ -187,6 +191,7 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
         status: "active".to_string(),
         project_type: project_type,
         industry: industry,
+        motion_intensity: "medium".to_string(),
         phases,
     })
 }
@@ -194,18 +199,18 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
 #[tauri::command]
 pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectDetail>, String> {
     // Phase 1: query DB under the lock
-    let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, phases) = {
+    let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, motion_intensity_val, phases) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
 
-        let result: rusqlite::Result<(String, String, Option<String>, String, String, String, String, i64, String, String, String)> =
+        let result: rusqlite::Result<(String, String, Option<String>, String, String, String, String, i64, String, String, String, String)> =
             db.query_row(
-                "SELECT id, name, description, current_phase, output_dir, created_at, updated_at, COALESCE(team_mode, 0), COALESCE(status, 'active'), COALESCE(project_type, 'general'), COALESCE(industry, 'general')
+                "SELECT id, name, description, current_phase, output_dir, created_at, updated_at, COALESCE(team_mode, 0), COALESCE(status, 'active'), COALESCE(project_type, 'general'), COALESCE(industry, 'general'), COALESCE(motion_intensity, 'medium')
                  FROM projects WHERE id = ?1",
                 params![&id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?, row.get(8)?, row.get(9)?, row.get(10)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?, row.get(8)?, row.get(9)?, row.get(10)?, row.get(11)?)),
             );
 
-        let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val) = match result {
+        let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, motion_intensity_val) = match result {
             Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
             Err(e) => return Err(e.to_string()),
             Ok(row) => row,
@@ -234,7 +239,7 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
             .filter_map(|r| r.ok())
             .collect();
 
-        (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, phases)
+        (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, motion_intensity_val, phases)
         // db guard drops here
     };
 
@@ -254,6 +259,7 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
         status,
         project_type: project_type_val,
         industry: industry_val,
+        motion_intensity: motion_intensity_val,
         phases,
     }))
 }
@@ -605,6 +611,27 @@ pub fn set_team_mode(state: State<'_, AppState>, args: SetTeamModeArgs) -> Resul
     db.execute(
         "UPDATE projects SET team_mode = ?1 WHERE id = ?2",
         params![args.enabled as i64, &args.id],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetMotionIntensityArgs {
+    pub id: String,
+    pub intensity: String, // "low" | "medium" | "high"
+}
+
+#[tauri::command]
+pub fn set_motion_intensity(state: State<'_, AppState>, args: SetMotionIntensityArgs) -> Result<(), String> {
+    let valid = ["low", "medium", "high"];
+    if !valid.contains(&args.intensity.as_str()) {
+        return Err(format!("无效的动效档位: {}", args.intensity));
+    }
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.execute(
+        "UPDATE projects SET motion_intensity = ?1 WHERE id = ?2",
+        params![&args.intensity, &args.id],
     ).map_err(|e| e.to_string())?;
     Ok(())
 }

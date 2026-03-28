@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { useAiStream } from "@/hooks/use-ai-stream"
-import { api, type UiSpecEntry } from "@/lib/tauri-api"
+import { api, type UiSpecEntry, type MotionIntensity } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus } from "@/lib/utils"
@@ -367,6 +367,9 @@ export function PrototypePage() {
   const [designSpecs, setDesignSpecs] = useState<UiSpecEntry[]>([])
   const [selectedSpec, setSelectedSpec] = useState<string>("ai-contextual")
 
+  // Motion intensity
+  const [motionIntensity, setMotionIntensity] = useState<MotionIntensity>("medium")
+
   // Single-file mode
   const [existingHtml, setExistingHtml] = useState<string | null>(null)
 
@@ -389,6 +392,11 @@ export function PrototypePage() {
       setDesignSpecs(specs)
       if (saved) setSelectedSpec(saved)
     }).catch((err) => console.error("[Prototype] spec load:", err))
+
+    // Load motion intensity from project
+    api.getProject(projectId).then((proj) => {
+      if (proj?.motionIntensity) setMotionIntensity(proj.motionIntensity)
+    }).catch(() => {})
   }, [projectId])
 
   const [searchParams] = useSearchParams()
@@ -675,6 +683,34 @@ export function PrototypePage() {
               <option key={s.name} value={s.name}>{s.name}</option>
             ))}
           </select>
+        </div>
+        <div className="flex items-center gap-2 px-1 py-3 border-b border-[var(--border)]">
+          <span className="text-xs text-[var(--text-secondary)] shrink-0">动效档位</span>
+          <div className="flex rounded-lg bg-[var(--bg-secondary)] p-0.5 text-xs">
+            {([
+              { value: "low" as MotionIntensity, label: "低·克制" },
+              { value: "medium" as MotionIntensity, label: "中·平衡" },
+              { value: "high" as MotionIntensity, label: "高·丰富" },
+            ]).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  setMotionIntensity(opt.value)
+                  if (projectId) {
+                    api.setMotionIntensity(projectId, opt.value).catch((err) => console.error("[Prototype]", err))
+                  }
+                }}
+                className={cn(
+                  "px-3 py-1 rounded-md transition-colors",
+                  motionIntensity === opt.value
+                    ? "bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
         <PreflightCard projectId={projectId!} phaseId="prototype" className="mx-1 my-3" />
         <PhaseEmptyState

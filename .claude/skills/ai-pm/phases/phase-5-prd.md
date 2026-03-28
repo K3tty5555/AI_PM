@@ -21,3 +21,10 @@
 - 自定义风格（若已配置 persona，列出可用风格名）
 
 用户选择后执行 PRD 写入。
+
+## FAB 功能描述
+
+PRD「详细功能设计」中每个核心功能，自动生成 FAB 三行描述（Feature → Advantage → Benefit）。
+- 读取 `templates/presets/copywriting-frameworks.md` 中 FAB 模板
+- 为每个功能填充 FAB 结构，Benefit 部分用数字或场景说明
+- 写入 PRD 对应功能描述段落中
