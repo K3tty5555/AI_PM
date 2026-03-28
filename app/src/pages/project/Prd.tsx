@@ -28,6 +28,7 @@ import { useExportPipeline } from "@/hooks/use-export-pipeline"
 import { PreflightCard } from "@/components/preflight-card"
 import { ExportDropdown } from "@/components/prd-toolbar"
 import { PrdExportResult } from "@/components/prd-export-result"
+import { PdfCoverDialog } from "@/components/pdf-cover-dialog"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -362,6 +363,21 @@ export function PrdPage() {
     })
   }, [projectId, exportPipeline, toast])
 
+  // PDF export with cover dialog
+  const [pdfCoverDialogOpen, setPdfCoverDialogOpen] = useState(false)
+
+  const handleExportPdf = useCallback(() => {
+    setPdfCoverDialogOpen(true)
+  }, [])
+
+  const handlePdfCoverConfirm = useCallback((coverStyle: string) => {
+    setPdfCoverDialogOpen(false)
+    exportPipeline.startExport(async () => {
+      const path = await api.exportPrdPdf(projectId, coverStyle)
+      return { path }
+    })
+  }, [projectId, exportPipeline])
+
   /** Save PRD & mark phase complete */
   const handleComplete = useCallback(async () => {
     if (!projectId || !displayMarkdown) return
@@ -552,6 +568,7 @@ export function PrdPage() {
                 copied={copied}
                 onPrint={() => window.print()}
                 onExportDocx={handleExportDocx}
+                onExportPdf={handleExportPdf}
                 onExportShareHtml={handleExportShareHtml}
                 exporting={exportPipeline.exporting}
               />
@@ -813,6 +830,13 @@ export function PrdPage() {
         mermaidBlocks={exportPipeline.mermaidBlocks}
         onExport={exportPipeline.confirmPreflight}
         onCancel={exportPipeline.cancel}
+      />
+
+      {/* PDF cover selection dialog */}
+      <PdfCoverDialog
+        open={pdfCoverDialogOpen}
+        onConfirm={handlePdfCoverConfirm}
+        onCancel={() => setPdfCoverDialogOpen(false)}
       />
 
       {/* Sample PRD reference dialog */}
