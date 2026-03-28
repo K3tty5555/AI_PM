@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdViewer } from "@/components/prd-viewer"
@@ -11,7 +10,7 @@ import { RevealContainer } from "@/components/RevealContainer"
 import { api, type PrdStyleEntry } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
-import { cn, extractStreamStatus, FILE_MANAGER_LABEL } from "@/lib/utils"
+import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
@@ -27,6 +26,8 @@ import { ExportPreflightDialog } from "@/components/export-preflight-dialog"
 import { SamplePrdDialog } from "@/components/sample-prd-dialog"
 import { useExportPipeline } from "@/hooks/use-export-pipeline"
 import { PreflightCard } from "@/components/preflight-card"
+import { ExportDropdown } from "@/components/prd-toolbar"
+import { PrdExportResult } from "@/components/prd-export-result"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -55,94 +56,6 @@ function extractSectionIds(markdown: string): string[] {
 
 // ---------------------------------------------------------------------------
 // Mermaid detection helpers — imported from @/lib/mermaid-utils
-
-// ---------------------------------------------------------------------------
-// Export dropdown
-// ---------------------------------------------------------------------------
-
-function ExportDropdown({
-  onCopyMd,
-  copied,
-  onPrint,
-  onExportDocx,
-  onExportShareHtml,
-  exporting,
-}: {
-  onCopyMd: () => void
-  copied: boolean
-  onPrint: () => void
-  onExportDocx: () => void
-  onExportShareHtml: () => void
-  exporting: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [open])
-
-  const handleItem = (action: () => void) => {
-    setOpen(false)
-    action()
-  }
-
-  return (
-    <div ref={ref} className="relative">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setOpen((v) => !v)}
-        disabled={exporting}
-        className="gap-1"
-      >
-        {exporting ? "导出中..." : "导出"}
-        <ChevronDown className="size-3" strokeWidth={2} />
-      </Button>
-      {open && (
-        <div
-          className={cn(
-            "absolute right-0 top-full mt-1 z-50",
-            "w-44 rounded-lg border border-[var(--border)] bg-[var(--background)]",
-            "shadow-[var(--shadow-lg)] py-1",
-          )}
-          style={{ animation: "fadeInUp 120ms var(--ease-decelerate)" }}
-        >
-          <button
-            onClick={() => handleItem(onCopyMd)}
-            className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
-          >
-            {copied ? "已复制 \u2713" : "复制 Markdown"}
-          </button>
-          <button
-            onClick={() => handleItem(onPrint)}
-            className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
-          >
-            打印 / PDF
-          </button>
-          <button
-            onClick={() => handleItem(onExportDocx)}
-            className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
-          >
-            导出 DOCX
-          </button>
-          <div className="my-1 h-px bg-[var(--border)]" />
-          <button
-            onClick={() => handleItem(onExportShareHtml)}
-            className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
-          >
-            生成分享页
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Page component
@@ -750,50 +663,7 @@ export function PrdPage() {
       )}
 
       {/* Export result */}
-      {exportPipeline.exportResult && (
-        "error" in exportPipeline.exportResult ? (() => {
-          const err = exportPipeline.exportResult.error
-          const needsDep =
-            err.includes("python3") ||
-            err.includes("python-docx") ||
-            err.includes("pip3")
-          return (
-            <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm text-[var(--destructive)]">{err}</p>
-                {needsDep && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 h-7 px-2 text-xs text-[var(--accent-color)]"
-                    onClick={() => navigate("/settings")}
-                  >
-                    前往设置安装
-                  </Button>
-                )}
-              </div>
-              <button onClick={() => exportPipeline.reset()} className="mt-1 text-[12px] text-[var(--text-tertiary)] hover:opacity-70">关闭</button>
-            </div>
-          )
-        })() : (() => {
-          const result = exportPipeline.exportResult as { path: string }
-          return (
-          <div className="mt-4 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
-            <span className="size-1.5 shrink-0 rounded-full bg-[var(--success)]" />
-            <p className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-secondary)]">
-              已导出：{result.path}
-            </p>
-            <button
-              onClick={() => api.revealFile(result.path)}
-              className="shrink-0 text-[13px] text-[var(--accent-color)] hover:opacity-70 transition-opacity"
-            >
-              在 {FILE_MANAGER_LABEL} 中显示
-            </button>
-            <button onClick={() => exportPipeline.reset()} className="shrink-0 text-[12px] text-[var(--text-tertiary)] hover:opacity-70" aria-label="关闭">×</button>
-          </div>
-          )
-        })()
-      )}
+      <PrdExportResult result={exportPipeline.exportResult} onReset={exportPipeline.reset} />
 
       {/* AI assist confirmation banner (legacy — kept for regenerate flow) */}
       {pendingAssistText && (
