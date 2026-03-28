@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Briefcase, Users, Wrench, Layers } from "lucide-react"
-import { api, type ProjectType, PROJECT_TYPE_META } from "@/lib/tauri-api"
+import { api, type ProjectType, type Industry, PROJECT_TYPE_META } from "@/lib/tauri-api"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -11,6 +11,16 @@ const TYPE_ICONS: Record<ProjectType, typeof Layers> = {
   internal: Wrench,
 }
 
+const INDUSTRY_OPTIONS: { value: Industry; label: string; accent: string }[] = [
+  { value: "general", label: "通用/不指定", accent: "#374151" },
+  { value: "finance", label: "金融/法律", accent: "#1E3A5F" },
+  { value: "healthcare", label: "医疗/健康", accent: "#0D7377" },
+  { value: "tech", label: "科技/互联网", accent: "#4F46E5" },
+  { value: "education", label: "教育", accent: "#1B4F72" },
+  { value: "ecommerce", label: "电商/零售", accent: "#DC2626" },
+  { value: "enterprise", label: "企业内部工具", accent: "#374151" },
+]
+
 interface NewProjectDialogProps {
   open: boolean
   onClose: () => void
@@ -20,6 +30,7 @@ interface NewProjectDialogProps {
 function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
   const [name, setName] = useState("")
   const [projectType, setProjectType] = useState<ProjectType>("general")
+  const [industry, setIndustry] = useState<Industry>("general")
   const [teamMode, setTeamMode] = useState(false)
   const [isApiMode, setIsApiMode] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -38,6 +49,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
     if (open) {
       setName("")
       setProjectType("general")
+      setIndustry("general")
       setTeamMode(false)
       setError("")
       setSubmitting(false)
@@ -73,7 +85,7 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
     setError("")
 
     try {
-      const project = await api.createProject(trimmedName, teamMode, projectType)
+      const project = await api.createProject(trimmedName, teamMode, projectType, industry)
       onCreated(project)
     } catch (err) {
       setError(typeof err === "string" ? err : err instanceof Error ? err.message : "创建项目失败")
@@ -169,6 +181,37 @@ function NewProjectDialog({ open, onClose, onCreated }: NewProjectDialogProps) {
             </div>
             <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
               创建后可在项目设置中更改
+            </p>
+          </div>
+
+          {/* Industry selector */}
+          <div className="mb-6">
+            <label
+              htmlFor="project-industry"
+              className="mb-2 block text-sm font-medium text-[var(--text-primary)]"
+            >
+              行业
+            </label>
+            <div className="relative">
+              <select
+                id="project-industry"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value as Industry)}
+                className="h-10 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 pr-8 text-sm text-[var(--text-primary)] outline-none transition-colors duration-[var(--dur-base)] ease-[var(--ease-standard)] focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+              >
+                {INDUSTRY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <span
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-2 rounded-full"
+                style={{ backgroundColor: INDUSTRY_OPTIONS.find(o => o.value === industry)?.accent ?? "#374151" }}
+              />
+            </div>
+            <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
+              选择行业（可选，影响配色推荐）
             </p>
           </div>
 
