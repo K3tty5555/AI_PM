@@ -283,6 +283,15 @@ export interface PlaceholderMatch {
   ruleName: string
 }
 
+export interface PrerequisiteItem {
+  id: string
+  label: string
+  passed: boolean
+  checkType: "auto" | "manual"
+  hint: string | null
+  navigateTo: string | null
+}
+
 export interface ReferenceFileEntry {
   name: string
   size: number
@@ -393,6 +402,10 @@ export const api = {
 
   // Placeholder scan
   scanPlaceholders: (projectId: string) => safeInvoke<PlaceholderMatch[]>("scan_placeholders", { projectId }),
+
+  // Phase prerequisites
+  checkPhasePrerequisites: (projectId: string, phaseId: string) =>
+    safeInvoke<PrerequisiteItem[]>("check_phase_prerequisites", { projectId, phaseId }),
 
   // Projects dir
   getProjectsDir: () => safeInvoke<string>("get_projects_dir"),
