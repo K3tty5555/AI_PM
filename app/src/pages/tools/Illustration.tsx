@@ -5,7 +5,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control"
 import { Lightbox } from "@/components/lightbox"
 import { useIllustration } from "@/hooks/use-illustration"
 import { useToast } from "@/hooks/use-toast"
-import { api } from "@/lib/tauri-api"
+import { api, type IllustrationEntry } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -88,6 +88,13 @@ export function ToolIllustrationPage() {
   // Last generation args (for retry)
   const lastArgsRef = useRef<{ prompt: string; stylePreset?: string; layout?: string } | null>(null)
 
+  // History gallery
+  const [illustrations, setIllustrations] = useState<IllustrationEntry[]>([])
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [thumbMap, setThumbMap] = useState<Record<string, string>>({})
+  const [galleryLightbox, setGalleryLightbox] = useState<{ src: string; fileName: string } | null>(null)
+  const [deletingPath, setDeletingPath] = useState<string | null>(null)
+
   // ── Check API Key on mount ──────────────────────────────────────────────
   useEffect(() => {
     api.getIllustrationConfig().then((config) => {
@@ -127,6 +134,67 @@ export function ToolIllustrationPage() {
     })
     return () => { cancelled = true }
   }, [result])
+
+  // ── Load history gallery ─────────────────────────────────────────────────
+  useEffect(() => {
+    api.listIllustrations({}).then(setIllustrations).catch(() => {
+      // Silently ignore — list fetch failure is not critical
+    })
+  }, [refreshKey])
+
+  // Refresh gallery when a new image is generated
+  useEffect(() => {
+    if (result && !generating) {
+      setRefreshKey((k) => k + 1)
+    }
+  }, [result, generating])
+
+  // Load thumbnails for gallery entries
+  useEffect(() => {
+    if (illustrations.length === 0) return
+    let cancelled = false
+    const newMap: Record<string, string> = {}
+    const loadAll = illustrations.map((entry) => {
+      // Use thumbPath if available, otherwise fall back to filePath
+      const imgPath = entry.thumbPath || entry.filePath
+      return api.readLocalImage(imgPath).then((dataUrl) => {
+        if (!cancelled) newMap[entry.filePath] = dataUrl
+      }).catch(() => {
+        // Skip entries that fail to load
+      })
+    })
+    Promise.all(loadAll).then(() => {
+      if (!cancelled) setThumbMap(newMap)
+    })
+    return () => { cancelled = true }
+  }, [illustrations])
+
+  // ── Gallery actions ────────────────────────────────────────────────────
+  const handleGalleryClick = useCallback((entry: IllustrationEntry) => {
+    // Load full image for lightbox
+    api.readLocalImage(entry.filePath).then((dataUrl) => {
+      setGalleryLightbox({ src: dataUrl, fileName: entry.fileName })
+    }).catch(() => {
+      toast("无法加载图片", "error")
+    })
+  }, [toast])
+
+  const handleDeleteIllustration = useCallback((entry: IllustrationEntry, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDeletingPath(entry.filePath)
+  }, [])
+
+  const confirmDelete = useCallback(() => {
+    if (!deletingPath) return
+    api.deleteIllustration(deletingPath).then(() => {
+      toast("已删除", "success")
+      setRefreshKey((k) => k + 1)
+    }).catch(() => {
+      toast("删除失败", "error")
+    }).finally(() => {
+      setDeletingPath(null)
+    })
+  }, [deletingPath, toast])
 
   // Detect mermaid type and compute recommended style
   const recommendedStyle = useMemo(() => {
@@ -564,14 +632,89 @@ export function ToolIllustrationPage() {
         />
       )}
 
-      {/* History gallery placeholder */}
+      {/* History gallery */}
       <div className="mt-10">
         <div className="mb-3 h-px bg-[var(--border)]" />
         <p className="px-1 pb-2 pt-1 text-[11px] font-medium text-[var(--text-tertiary)]">历史画廊</p>
-        <div className="rounded-lg border border-dashed border-[var(--border)] px-4 py-12 text-center">
-          <p className="text-sm text-[var(--text-tertiary)]">还没有生成过插图</p>
-        </div>
+
+        {illustrations.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-[var(--border)] px-4 py-12 text-center">
+            <p className="text-sm text-[var(--text-tertiary)]">还没有生成过插图，试试上方的输入框</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {illustrations.map((entry) => {
+              const thumb = thumbMap[entry.filePath]
+              return (
+                <div
+                  key={entry.filePath}
+                  className="relative group cursor-pointer"
+                  onClick={() => handleGalleryClick(entry)}
+                >
+                  {thumb ? (
+                    <img
+                      src={thumb}
+                      alt={entry.fileName}
+                      className="aspect-square w-full object-cover rounded-lg"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="aspect-square w-full animate-pulse rounded-lg bg-[var(--secondary)]" />
+                  )}
+
+                  {/* Delete button — visible on hover */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteIllustration(entry, e)}
+                    className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+                    aria-label="删除"
+                  >
+                    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+
+                  {/* File name */}
+                  <p className="mt-1 truncate text-[11px] text-[var(--text-tertiary)]">{entry.fileName}</p>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
+
+      {/* Gallery Lightbox */}
+      {galleryLightbox && (
+        <Lightbox
+          open={!!galleryLightbox}
+          src={galleryLightbox.src}
+          alt={galleryLightbox.fileName}
+          fileName={galleryLightbox.fileName}
+          onClose={() => setGalleryLightbox(null)}
+        />
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deletingPath && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDeletingPath(null)}>
+          <div
+            className="mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-primary)] p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-medium text-[var(--text-primary)]">确认删除这张插图？</p>
+            <p className="mt-1 text-[13px] text-[var(--text-secondary)]">删除后无法恢复</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setDeletingPath(null)}>
+                取消
+              </Button>
+              <Button variant="destructive" size="sm" onClick={confirmDelete}>
+                删除
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
