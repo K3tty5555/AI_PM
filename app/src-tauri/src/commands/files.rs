@@ -372,6 +372,109 @@ fn html_escape(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
+// ── PDF cover templates ──────────────────────────────────────────
+
+#[tauri::command]
+pub fn list_pdf_covers(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let path = state.templates_base()
+        .join("presets")
+        .join("pdf-covers.json");
+    let content = fs::read_to_string(&path)
+        .map_err(|_| "PDF 封面配置文件不存在".to_string())?;
+    serde_json::from_str(&content)
+        .map_err(|e| format!("PDF 封面配置格式错误: {}", e))
+}
+
+#[tauri::command]
+pub async fn export_prd_pdf(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    project_id: String,
+    _cover_style: Option<String>,
+    _accent_color: Option<String>,
+) -> Result<String, String> {
+    // 1. Generate share HTML first
+    let html_path = export_prd_share_html(app.clone(), state.clone(), project_id.clone())?;
+
+    // 2. Resolve output PDF path
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ).map_err(|_| "项目不存在".to_string())?
+    };
+    let pdf_path = std::path::Path::new(&output_dir)
+        .join("05-prd")
+        .join("05-PRD-v1.0.pdf");
+
+    // 3. Find Chrome/Chromium for headless PDF generation
+    let chrome = find_chrome_binary()
+        .ok_or("未找到 Chrome 或 Chromium 浏览器，无法生成 PDF。请安装 Google Chrome 后重试。")?;
+
+    // 4. Convert HTML → PDF via headless Chrome
+    let output = tokio::process::Command::new(&chrome)
+        .args([
+            "--headless=new",
+            "--no-sandbox",
+            "--disable-gpu",
+            "--disable-software-rasterizer",
+            &format!("--print-to-pdf={}", pdf_path.display()),
+            "--no-pdf-header-footer",
+            &format!("file://{}", html_path),
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Chrome 调用失败: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("PDF 生成失败: {}", stderr.chars().take(300).collect::<String>()));
+    }
+
+    if !pdf_path.exists() {
+        return Err("PDF 文件未生成，请检查 Chrome 安装".to_string());
+    }
+
+    Ok(pdf_path.to_string_lossy().to_string())
+}
+
+/// Find Chrome or Chromium binary on macOS
+fn find_chrome_binary() -> Option<String> {
+    let candidates = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    ];
+    for path in &candidates {
+        if std::path::Path::new(path).exists() {
+            return Some(path.to_string());
+        }
+    }
+    // Try Playwright's Chromium cache
+    if let Some(home) = dirs::home_dir() {
+        let playwright_dir = home.join("Library/Caches/ms-playwright");
+        if let Ok(entries) = std::fs::read_dir(&playwright_dir) {
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.starts_with("chromium-") {
+                    let bin = entry.path()
+                        .join("chrome-mac")
+                        .join("Chromium.app")
+                        .join("Contents")
+                        .join("MacOS")
+                        .join("Chromium");
+                    if bin.exists() {
+                        return Some(bin.to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Reveal a file in macOS Finder.
 #[tauri::command]
 pub fn reveal_file(path: String) -> Result<(), String> {
