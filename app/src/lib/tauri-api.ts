@@ -27,6 +27,7 @@ async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
 // ─── Project Types ──────────────────────────────────────────────────────────
 
 export type ProjectType = "general" | "to-b" | "to-c" | "internal"
+export type Industry = "general" | "finance" | "healthcare" | "tech" | "education" | "ecommerce" | "enterprise"
 
 export const PROJECT_TYPE_META: Record<ProjectType, { label: string; description: string }> = {
   general: { label: "通用", description: "标准 9 阶段完整流程" },
@@ -60,12 +61,14 @@ export interface ProjectSummary {
   completedPhases: string[]
   status: 'active' | 'completed'
   projectType?: string
+  industry?: Industry
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases' | 'completedPhases'> {
   phases: ProjectPhase[]
   teamMode: boolean
   projectType?: string
+  industry?: Industry
 }
 
 export interface ConfigState {
@@ -325,8 +328,8 @@ export const api = {
 
   // Projects
   listProjects: () => safeInvoke<ProjectSummary[]>("list_projects"),
-  createProject: (name: string, teamMode?: boolean, projectType?: string) =>
-    safeInvoke<ProjectDetail>("create_project", { args: { name, teamMode: teamMode ?? false, projectType: projectType ?? "general" } }),
+  createProject: (name: string, teamMode?: boolean, projectType?: string, industry?: Industry) =>
+    safeInvoke<ProjectDetail>("create_project", { args: { name, teamMode: teamMode ?? false, projectType: projectType ?? "general", industry: industry ?? "general" } }),
   getProject: (id: string) => safeInvoke<ProjectDetail | null>("get_project", { id }),
   deleteProject: (id: string) => safeInvoke<void>("delete_project", { id }),
   setProjectStatus: (id: string, status: 'active' | 'completed') =>
