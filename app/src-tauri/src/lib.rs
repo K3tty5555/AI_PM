@@ -238,6 +238,7 @@ pub fn run() {
             commands::templates::rename_ui_spec,
             commands::templates::delete_ui_spec,
             commands::templates::delete_prd_style,
+            commands::projects::check_phase_prerequisites,
             commands::projects::rename_project,
             commands::projects::suggest_skip_phases,
             commands::projects::skip_phases,
