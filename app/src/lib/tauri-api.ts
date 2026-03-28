@@ -28,6 +28,7 @@ async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
 
 export type ProjectType = "general" | "to-b" | "to-c" | "internal"
 export type Industry = "general" | "finance" | "healthcare" | "tech" | "education" | "ecommerce" | "enterprise"
+export type MotionIntensity = "low" | "medium" | "high"
 
 export const PROJECT_TYPE_META: Record<ProjectType, { label: string; description: string }> = {
   general: { label: "通用", description: "标准 9 阶段完整流程" },
@@ -62,6 +63,7 @@ export interface ProjectSummary {
   status: 'active' | 'completed'
   projectType?: string
   industry?: Industry
+  motionIntensity?: MotionIntensity
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases' | 'completedPhases'> {
@@ -69,6 +71,7 @@ export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | '
   teamMode: boolean
   projectType?: string
   industry?: Industry
+  motionIntensity?: MotionIntensity
 }
 
 export interface ConfigState {
@@ -307,6 +310,37 @@ export interface ReferenceFileEntry {
   size: number
 }
 
+// ── PPT ─────────────────────────────────────────────────────────────
+
+export interface PptxOutlineSlide {
+  pageType: "cover" | "section" | "content" | "chart" | "end"
+  title: string
+  bullets: string[]
+  subLayout?: string
+}
+
+export interface PptxResult {
+  path: string
+  slideCount: number
+}
+
+// ── Screenshot Analysis ─────────────────────────────────────────────
+
+export type ScreenshotAnalysisMode = "describe" | "ocr" | "ui-review" | "chart-data" | "object-detect"
+
+export const ANALYSIS_MODE_META: Record<ScreenshotAnalysisMode, { label: string; description: string }> = {
+  describe: { label: "界面描述", description: "描述截图中的布局、功能区域和色彩" },
+  ocr: { label: "文字提取", description: "提取截图中的所有文字，保留结构" },
+  "ui-review": { label: "设计评审", description: "评审界面设计优缺点并给改进建议" },
+  "chart-data": { label: "数据提取", description: "从图表中提取数据点和趋势" },
+  "object-detect": { label: "组件识别", description: "识别界面中使用的 UI 组件及位置" },
+}
+
+export interface ScreenshotAnalysis {
+  markdown: string
+  mode: string
+}
+
 export interface DepStatus {
   name: string
   label: string
@@ -464,6 +498,23 @@ export const api = {
   openFile: (path: string) => safeInvoke<void>("open_file", { path }),
   writeFile: (path: string, content: string) => safeInvoke<void>("write_file", { path, content }),
   extractDocxText: (path: string) => safeInvoke<string>("extract_docx_text", { path }),
+
+  // Motion intensity
+  setMotionIntensity: (id: string, intensity: MotionIntensity) =>
+    safeInvoke<void>("set_motion_intensity", { args: { id, intensity } }),
+
+  // PPT
+  generatePptx: (projectId: string, outline: PptxOutlineSlide[], colorScheme: string, style: string) =>
+    safeInvoke<PptxResult>("generate_pptx", { projectId, outline, colorScheme, style }),
+  generatePptxOutline: (projectId: string) =>
+    safeInvoke<PptxOutlineSlide[]>("generate_pptx_outline", { projectId }),
+  listPptxColorSchemes: () => safeInvoke<Record<string, unknown>>("list_pptx_color_schemes"),
+
+  // Screenshot analysis
+  analyzeScreenshot: (imagePath: string, mode: ScreenshotAnalysisMode, context?: string) =>
+    safeInvoke<ScreenshotAnalysis>("analyze_screenshot", { args: { imagePath, mode, context } }),
+  captureUrlScreenshot: (url: string, outputDir: string) =>
+    safeInvoke<string>("capture_url_screenshot", { url, outputDir }),
 
   // URL fetch
   fetchUrlContent: (url: string) => safeInvoke<string>("fetch_url_content", { url }),
