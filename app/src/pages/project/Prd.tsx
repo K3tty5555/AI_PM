@@ -8,7 +8,7 @@ import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
 import { useProgressiveReveal } from "@/hooks/use-progressive-reveal"
 import { RevealContainer } from "@/components/RevealContainer"
-import { api, type PrdStyleEntry, type SensitiveMatch } from "@/lib/tauri-api"
+import { api, type PrdStyleEntry } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus, FILE_MANAGER_LABEL } from "@/lib/utils"
@@ -23,9 +23,8 @@ import { PrdDiffViewer } from "@/components/PrdDiffViewer"
 import { PrdScoreBadge, PrdScorePanel } from "@/components/prd-score-panel"
 import { PrdAssistPanel } from "@/components/prd-assist-panel"
 import { consumeAdoptionQueue } from "@/components/review-grouped-view"
-import { SensitiveScanDialog } from "@/components/sensitive-scan-dialog"
-import { MermaidRenderDialog, type MermaidExportChoices } from "@/components/mermaid-render-dialog"
-import { type MermaidBlock, extractMermaidBlocks } from "@/lib/mermaid-utils"
+import { ExportPreflightDialog } from "@/components/export-preflight-dialog"
+import { useExportPipeline } from "@/hooks/use-export-pipeline"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -163,19 +162,6 @@ export function PrdPage() {
   const [excludedContext, setExcludedContext] = useState<string[]>([])
   const [reviewContent, setReviewContent] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [exporting, setExporting] = useState(false)
-  const [exportResult, setExportResult] = useState<{ path: string } | { error: string } | null>(null)
-
-  // Sensitive scan dialog
-  const [sensitiveMatches, setSensitiveMatches] = useState<SensitiveMatch[]>([])
-  const [sensitiveDialogOpen, setSensitiveDialogOpen] = useState(false)
-  const [pendingExportAction, setPendingExportAction] = useState<(() => Promise<void>) | null>(null)
-
-  // Mermaid render dialog
-  const [mermaidBlocks, setMermaidBlocks] = useState<MermaidBlock[]>([])
-  const [mermaidDialogOpen, setMermaidDialogOpen] = useState(false)
-  const [pendingMermaidExportAction, setPendingMermaidExportAction] = useState<((choices?: MermaidExportChoices) => Promise<void>) | null>(null)
-
   // PRD style selector
   const [prdStyles, setPrdStyles] = useState<PrdStyleEntry[]>([])
   const [selectedStyle, setSelectedStyle] = useState<string>("")
@@ -270,6 +256,9 @@ export function PrdPage() {
     if (existingMarkdown) return existingMarkdown
     return text
   }, [editedMarkdown, existingMarkdown, text])
+
+  // Unified export pipeline
+  const exportPipeline = useExportPipeline(projectId, displayMarkdown)
 
   // Progress estimation during streaming
   const currentStreaming = isStreaming || isAssistStreaming
@@ -439,117 +428,21 @@ export function PrdPage() {
     }
   }, [displayMarkdown])
 
-  // Core export actions (called directly or after scan confirmation)
-  const doExportDocx = useCallback(async () => {
-    setExporting(true)
-    setExportResult(null)
-    try {
-      const path = await api.exportPrdDocx(projectId)
-      setExportResult({ path })
-    } catch (err) {
-      setExportResult({ error: typeof err === "string" ? err : String(err) })
-    } finally {
-      setExporting(false)
-    }
-  }, [projectId])
-
-  const doExportShareHtml = useCallback(async () => {
-    setExporting(true)
-    setExportResult(null)
-    try {
-      const path = await api.exportPrdShareHtml(projectId)
-      setExportResult({ path })
-      toast("分享页已生成", "success")
-    } catch (err) {
-      setExportResult({ error: typeof err === "string" ? err : String(err) })
-    } finally {
-      setExporting(false)
-    }
-  }, [projectId, toast])
-
-  // Export preflight: sensitive scan + mermaid detection → dialogs → export
-  const withExportPreflight = useCallback(
-    (exportFn: (mermaidChoices?: MermaidExportChoices) => Promise<void>) => {
-      return async () => {
-        setExporting(true)
-
-        // Parallel preflight: sensitive scan + mermaid detection
-        const [sensitiveResult] = await Promise.allSettled([
-          Promise.race([
-            api.scanSensitive(projectId),
-            new Promise<never>((_, reject) => setTimeout(() => reject("timeout"), 10000)),
-          ]),
-        ])
-        const matches = sensitiveResult.status === "fulfilled" ? sensitiveResult.value : []
-        const blocks = extractMermaidBlocks(displayMarkdown || "")
-
-        setExporting(false)
-
-        const proceedWithMermaid = async () => {
-          if (blocks.length > 0) {
-            setMermaidBlocks(blocks)
-            setPendingMermaidExportAction(() => exportFn)
-            setMermaidDialogOpen(true)
-          } else {
-            await exportFn()
-          }
-        }
-
-        if (matches.length > 0) {
-          setSensitiveMatches(matches)
-          setPendingExportAction(() => proceedWithMermaid)
-          setSensitiveDialogOpen(true)
-        } else {
-          await proceedWithMermaid()
-        }
-      }
-    },
-    [projectId, displayMarkdown],
-  )
-
+  // Export actions via pipeline
   const handleExportDocx = useCallback(() => {
-    withExportPreflight(doExportDocx)()
-  }, [withExportPreflight, doExportDocx])
+    exportPipeline.startExport(async () => {
+      const path = await api.exportPrdDocx(projectId)
+      return { path }
+    })
+  }, [projectId, exportPipeline])
 
   const handleExportShareHtml = useCallback(() => {
-    withExportPreflight(doExportShareHtml)()
-  }, [withExportPreflight, doExportShareHtml])
-
-  // Sensitive dialog callbacks
-  const handleSensitiveRedactExport = useCallback(() => {
-    setSensitiveDialogOpen(false)
-    // For now, redact export = same as raw export (backend redact support pending)
-    pendingExportAction?.()
-    setPendingExportAction(null)
-    setSensitiveMatches([])
-  }, [pendingExportAction])
-
-  const handleSensitiveRawExport = useCallback(() => {
-    setSensitiveDialogOpen(false)
-    pendingExportAction?.()
-    setPendingExportAction(null)
-    setSensitiveMatches([])
-  }, [pendingExportAction])
-
-  const handleSensitiveCancel = useCallback(() => {
-    setSensitiveDialogOpen(false)
-    setPendingExportAction(null)
-    setSensitiveMatches([])
-  }, [])
-
-  // Mermaid dialog callbacks
-  const handleMermaidConfirm = useCallback((choices: MermaidExportChoices) => {
-    setMermaidDialogOpen(false)
-    pendingMermaidExportAction?.(choices)
-    setPendingMermaidExportAction(null)
-    setMermaidBlocks([])
-  }, [pendingMermaidExportAction])
-
-  const handleMermaidCancel = useCallback(() => {
-    setMermaidDialogOpen(false)
-    setPendingMermaidExportAction(null)
-    setMermaidBlocks([])
-  }, [])
+    exportPipeline.startExport(async () => {
+      const path = await api.exportPrdShareHtml(projectId)
+      toast("分享页已生成", "success")
+      return { path }
+    })
+  }, [projectId, exportPipeline, toast])
 
   /** Save PRD & mark phase complete */
   const handleComplete = useCallback(async () => {
@@ -741,7 +634,7 @@ export function PrdPage() {
                 onPrint={() => window.print()}
                 onExportDocx={handleExportDocx}
                 onExportShareHtml={handleExportShareHtml}
-                exporting={exporting}
+                exporting={exportPipeline.exporting}
               />
               {versions.length >= 2 && (
                 <Button
@@ -848,9 +741,9 @@ export function PrdPage() {
       )}
 
       {/* Export result */}
-      {exportResult && (
-        "error" in exportResult ? (() => {
-          const err = exportResult.error
+      {exportPipeline.exportResult && (
+        "error" in exportPipeline.exportResult ? (() => {
+          const err = exportPipeline.exportResult.error
           const needsDep =
             err.includes("python3") ||
             err.includes("python-docx") ||
@@ -870,24 +763,27 @@ export function PrdPage() {
                   </Button>
                 )}
               </div>
-              <button onClick={() => setExportResult(null)} className="mt-1 text-[12px] text-[var(--text-tertiary)] hover:opacity-70">关闭</button>
+              <button onClick={() => exportPipeline.reset()} className="mt-1 text-[12px] text-[var(--text-tertiary)] hover:opacity-70">关闭</button>
             </div>
           )
-        })() : (
+        })() : (() => {
+          const result = exportPipeline.exportResult as { path: string }
+          return (
           <div className="mt-4 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
             <span className="size-1.5 shrink-0 rounded-full bg-[var(--success)]" />
             <p className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-secondary)]">
-              已导出：{exportResult.path}
+              已导出：{result.path}
             </p>
             <button
-              onClick={() => api.revealFile(exportResult.path)}
+              onClick={() => api.revealFile(result.path)}
               className="shrink-0 text-[13px] text-[var(--accent-color)] hover:opacity-70 transition-opacity"
             >
               在 {FILE_MANAGER_LABEL} 中显示
             </button>
-            <button onClick={() => setExportResult(null)} className="shrink-0 text-[12px] text-[var(--text-tertiary)] hover:opacity-70" aria-label="关闭">×</button>
+            <button onClick={() => exportPipeline.reset()} className="shrink-0 text-[12px] text-[var(--text-tertiary)] hover:opacity-70" aria-label="关闭">×</button>
           </div>
-        )
+          )
+        })()
       )}
 
       {/* AI assist confirmation banner (legacy — kept for regenerate flow) */}
@@ -1030,21 +926,14 @@ export function PrdPage() {
         </div>
       </div>
 
-      {/* Sensitive scan dialog */}
-      <SensitiveScanDialog
-        open={sensitiveDialogOpen}
-        matches={sensitiveMatches}
-        onRedactExport={handleSensitiveRedactExport}
-        onRawExport={handleSensitiveRawExport}
-        onCancel={handleSensitiveCancel}
-      />
-
-      {/* Mermaid render dialog */}
-      <MermaidRenderDialog
-        open={mermaidDialogOpen}
-        blocks={mermaidBlocks}
-        onConfirm={handleMermaidConfirm}
-        onCancel={handleMermaidCancel}
+      {/* Unified export preflight dialog */}
+      <ExportPreflightDialog
+        open={exportPipeline.preflightOpen}
+        sensitiveMatches={exportPipeline.sensitiveMatches}
+        placeholderMatches={exportPipeline.placeholderMatches}
+        mermaidBlocks={exportPipeline.mermaidBlocks}
+        onExport={exportPipeline.confirmPreflight}
+        onCancel={exportPipeline.cancel}
       />
     </div>
     </PhaseShell>
