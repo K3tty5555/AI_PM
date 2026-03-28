@@ -275,6 +275,14 @@ export interface SensitiveMatch {
   redacted: string
 }
 
+export interface PlaceholderMatch {
+  line: number
+  column: number
+  matchedText: string
+  context: string
+  ruleName: string
+}
+
 export interface ReferenceFileEntry {
   name: string
   size: number
@@ -382,6 +390,9 @@ export const api = {
 
   // Sensitive scan
   scanSensitive: (projectId: string) => safeInvoke<SensitiveMatch[]>("scan_sensitive", { projectId }),
+
+  // Placeholder scan
+  scanPlaceholders: (projectId: string) => safeInvoke<PlaceholderMatch[]>("scan_placeholders", { projectId }),
 
   // Projects dir
   getProjectsDir: () => safeInvoke<string>("get_projects_dir"),

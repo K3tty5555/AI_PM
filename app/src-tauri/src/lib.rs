@@ -188,6 +188,7 @@ pub fn run() {
             commands::files::extract_docx_text,
             commands::files::score_prd,
             commands::files::scan_sensitive,
+            commands::files::scan_placeholders,
             commands::env::check_env,
             commands::env::install_dep,
             commands::env::check_playwright_mcp,
