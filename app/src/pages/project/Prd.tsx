@@ -577,6 +577,7 @@ export function PrdPage() {
                 onPrint={() => window.print()}
                 onExportDocx={handleExportDocx}
                 onExportPdf={handleExportPdf}
+                onExportPptx={() => navigate(`/tools/pptx?projectId=${projectId}`)}
                 onExportShareHtml={handleExportShareHtml}
                 exporting={exportPipeline.exporting}
               />

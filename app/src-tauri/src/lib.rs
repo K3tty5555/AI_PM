@@ -263,6 +263,12 @@ pub fn run() {
             commands::illustration::read_local_image,
             commands::illustration::test_illustration_key,
             commands::illustration::delete_illustration,
+            commands::pptx::generate_pptx,
+            commands::pptx::generate_pptx_outline,
+            commands::pptx::list_pptx_color_schemes,
+            commands::tools::analyze_screenshot,
+            commands::tools::capture_url_screenshot,
+            commands::projects::set_motion_intensity,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

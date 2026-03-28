@@ -1,3 +1,4 @@
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -546,6 +547,117 @@ pub fn delete_priority_report(
     let path = Path::new(&state.projects_dir)
         .join("tools").join("ai-pm-priority").join(&filename);
     fs::remove_file(&path).map_err(|e| format!("删除失败：{}", e))
+}
+
+// ── Screenshot analysis ───────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyzeScreenshotArgs {
+    pub image_path: String,
+    pub mode: String, // "describe" | "ocr" | "ui-review" | "chart-data" | "object-detect"
+    pub context: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScreenshotAnalysis {
+    pub markdown: String,
+    pub mode: String,
+}
+
+#[tauri::command]
+pub async fn analyze_screenshot(
+    _app: AppHandle,
+    _state: State<'_, AppState>,
+    args: AnalyzeScreenshotArgs,
+) -> Result<ScreenshotAnalysis, String> {
+    let path = std::path::Path::new(&args.image_path);
+    if !path.exists() {
+        return Err(format!("文件不存在: {}", args.image_path));
+    }
+
+    // Check file size (< 10MB)
+    let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
+    if metadata.len() > 10 * 1024 * 1024 {
+        return Err("图片文件超过 10MB 限制".to_string());
+    }
+
+    let valid_modes = ["describe", "ocr", "ui-review", "chart-data", "object-detect"];
+    if !valid_modes.contains(&args.mode.as_str()) {
+        return Err(format!("不支持的分析模式: {}", args.mode));
+    }
+
+    let mode_prompt = match args.mode.as_str() {
+        "describe" => "请描述这张截图中的界面布局、功能区域和色彩风格。使用 Markdown 格式输出。",
+        "ocr" => "请提取这张截图中的所有文字内容，保留原始结构和层级关系。使用 Markdown 格式输出。",
+        "ui-review" => "请从 UI/UX 设计角度评审这个界面，指出优缺点并给出改进建议。使用 Markdown 格式输出。",
+        "chart-data" => "请从这张图表截图中提取所有数据点和趋势分析。使用 Markdown 表格格式输出数据。",
+        "object-detect" => "请识别这个界面中使用的所有 UI 组件（按钮、输入框、导航栏等），标注其位置和类型。使用 Markdown 格式输出。",
+        _ => "请分析这张截图。",
+    };
+
+    let full_prompt = if let Some(ctx) = &args.context {
+        format!("{mode_prompt}\n\n补充背景：{ctx}")
+    } else {
+        mode_prompt.to_string()
+    };
+
+    // Read image as base64 for frontend to pass to LLM
+    let image_bytes = std::fs::read(path).map_err(|e| format!("读取图片失败: {e}"))?;
+    let base64 = base64::engine::general_purpose::STANDARD.encode(&image_bytes);
+
+    // Return metadata + base64 prompt — frontend calls stream with this
+    Ok(ScreenshotAnalysis {
+        markdown: format!("data:image/png;base64,{base64}\n---\n{full_prompt}"),
+        mode: args.mode,
+    })
+}
+
+#[tauri::command]
+pub async fn capture_url_screenshot(
+    url: String,
+    output_dir: String,
+) -> Result<String, String> {
+    // Security: only allow http/https
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err("仅支持 http/https URL".to_string());
+    }
+
+    // Warn about private IPs (don't block, just log)
+    let is_private = url.contains("localhost")
+        || url.contains("127.0.0.1")
+        || url.contains("192.168.")
+        || url.contains("10.")
+        || url.contains("172.16.");
+    if is_private {
+        eprintln!("[capture_url_screenshot] Warning: private/local URL detected: {url}");
+    }
+
+    std::fs::create_dir_all(&output_dir).map_err(|e| e.to_string())?;
+
+    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let filename = format!("screenshot_{timestamp}.png");
+    let output_path = std::path::Path::new(&output_dir).join(&filename);
+
+    // Use Playwright Chromium headless screenshot
+    let output = tokio::process::Command::new("npx")
+        .arg("playwright")
+        .arg("screenshot")
+        .arg("--browser")
+        .arg("chromium")
+        .arg(&url)
+        .arg(output_path.to_string_lossy().as_ref())
+        .output()
+        .await
+        .map_err(|e| format!("截图工具调用失败: {e}"))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("截图失败: {stderr}"));
+    }
+
+    Ok(output_path.to_string_lossy().to_string())
 }
 
 fn strip_html(html: String) -> String {

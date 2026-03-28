@@ -34,6 +34,8 @@ pub async fn check_env() -> Vec<DepStatus> {
         check_python3(),
         check_python_pkg("python-docx", "python-docx", "python_docx", true, "PRD 导出 Word 文档"),
         check_python_pkg("Pillow",      "Pillow（图像处理）", "Pillow", false, "Word 文档中嵌入原型截图"),
+        check_python_pkg("python-pptx", "python-pptx", "pptx", true, "PRD 导出 PPT 演示文稿"),
+        check_python_pkg("markitdown",  "markitdown（PPT 验证）", "markitdown", false, "PPT 生成后内容完整性验证"),
         check_claude_cli(),
         check_playwright_mcp_dep(),
     ]

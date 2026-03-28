@@ -8,5 +8,6 @@ pub mod projects;
 pub mod stream;
 pub mod tools;
 pub mod illustration;
+pub mod pptx;
 pub mod templates;
 pub mod update;

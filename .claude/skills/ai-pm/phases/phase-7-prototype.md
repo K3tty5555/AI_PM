@@ -7,6 +7,23 @@
 
 基于 PRD 生成可交互的单页网页原型。生成前提示 Token 消耗并等待用户确认。
 
+### 动效强度档位
+
+原型生成前根据用户选择的动效档位注入对应的 CSS/JS 约束：
+
+| 档位 | MOTION_INTENSITY | VISUAL_DENSITY | DESIGN_VARIANCE | 适用 |
+|------|:---:|:---:|:---:|------|
+| 低·克制 | 2 | 3 | 4 | B 端、内部工具 |
+| 中·平衡 | 6 | 5 | 7 | C 端、移动端 |
+| 高·丰富 | 8 | 7 | 9 | 营销页、品牌展示 |
+
+**CSS/JS 白名单约束**：
+- **低档**：只允许 `transition`（duration <= 300ms）
+- **中档**：允许 `@keyframes` + `transition`（duration <= 600ms）
+- **高档**：允许 `gsap` / `framer-motion` / 自定义动画
+
+**行业自动推荐**：finance/enterprise → 低·克制，tech/education → 中·平衡，ecommerce → 高·丰富
+
 ## Phase 7.5: 原型完整性审计（自动触发）
 
 **前提条件**: Phase 5（PRD）和 Phase 7（原型）均已完成，即 `05-prd/05-PRD-v1.0.md` 和 `06-prototype.html`（或 `06-prototype/index.html`）都存在。

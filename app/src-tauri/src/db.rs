@@ -99,5 +99,15 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
         conn.execute("UPDATE schema_version SET version = 4 WHERE id = 1", [])?;
     }
 
+    // Version 5: add motion_intensity column for prototype animation tier
+    if current_version < 5 {
+        conn.execute("ALTER TABLE projects ADD COLUMN motion_intensity TEXT DEFAULT 'medium'", [])
+            .map_err(|e| {
+                eprintln!("Migration v5 failed (motion_intensity): {e}");
+                e
+            })?;
+        conn.execute("UPDATE schema_version SET version = 5 WHERE id = 1", [])?;
+    }
+
     Ok(conn)
 }
