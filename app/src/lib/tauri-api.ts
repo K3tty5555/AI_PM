@@ -452,7 +452,9 @@ export const api = {
   listProjectContext: (projectId: string) => safeInvoke<ContextFile[]>("list_project_context", { projectId }),
 
   // Export
-  exportPrdDocx: (projectId: string) => safeInvoke<string>("export_prd_docx", { projectId }),
+  exportPrdDocx: (projectId: string, recipe?: string) =>
+    safeInvoke<string>("export_prd_docx", { projectId, recipe }),
+  listDocxRecipes: () => safeInvoke<Record<string, unknown>>("list_docx_recipes"),
   scorePrd: (projectId: string) =>
     safeInvoke<{ dimensions: { name: string; score: number; comment: string; suggestion: string }[]; totalScore: number }>("score_prd", { projectId }),
   exportPrdShareHtml: (projectId: string) => safeInvoke<string>("export_prd_share_html", { projectId }),

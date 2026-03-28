@@ -29,6 +29,7 @@ import { PreflightCard } from "@/components/preflight-card"
 import { ExportDropdown } from "@/components/prd-toolbar"
 import { PrdExportResult } from "@/components/prd-export-result"
 import { PdfCoverDialog } from "@/components/pdf-cover-dialog"
+import { DocxRecipeDialog } from "@/components/docx-recipe-dialog"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -347,10 +348,17 @@ export function PrdPage() {
     }
   }, [displayMarkdown])
 
-  // Export actions via pipeline
+  // DOCX export with recipe dialog
+  const [docxRecipeDialogOpen, setDocxRecipeDialogOpen] = useState(false)
+
   const handleExportDocx = useCallback(() => {
+    setDocxRecipeDialogOpen(true)
+  }, [])
+
+  const handleDocxRecipeConfirm = useCallback((recipe: string) => {
+    setDocxRecipeDialogOpen(false)
     exportPipeline.startExport(async () => {
-      const path = await api.exportPrdDocx(projectId)
+      const path = await api.exportPrdDocx(projectId, recipe)
       return { path }
     })
   }, [projectId, exportPipeline])
@@ -837,6 +845,13 @@ export function PrdPage() {
         open={pdfCoverDialogOpen}
         onConfirm={handlePdfCoverConfirm}
         onCancel={() => setPdfCoverDialogOpen(false)}
+      />
+
+      {/* DOCX recipe selection dialog */}
+      <DocxRecipeDialog
+        open={docxRecipeDialogOpen}
+        onConfirm={handleDocxRecipeConfirm}
+        onCancel={() => setDocxRecipeDialogOpen(false)}
       />
 
       {/* Sample PRD reference dialog */}
