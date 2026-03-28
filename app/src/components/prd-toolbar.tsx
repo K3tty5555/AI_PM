@@ -12,6 +12,7 @@ export interface ExportDropdownProps {
   copied: boolean
   onPrint: () => void
   onExportDocx: () => void
+  onExportPdf?: () => void
   onExportShareHtml: () => void
   exporting: boolean
 }
@@ -21,6 +22,7 @@ function ExportDropdown({
   copied,
   onPrint,
   onExportDocx,
+  onExportPdf,
   onExportShareHtml,
   exporting,
 }: ExportDropdownProps) {
@@ -80,6 +82,14 @@ function ExportDropdown({
           >
             导出 DOCX
           </button>
+          {onExportPdf && (
+            <button
+              onClick={() => handleItem(onExportPdf)}
+              className="w-full px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
+            >
+              导出 PDF
+            </button>
+          )}
           <div className="my-1 h-px bg-[var(--border)]" />
           <button
             onClick={() => handleItem(onExportShareHtml)}
