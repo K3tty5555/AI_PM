@@ -12,6 +12,7 @@ import { PHASE_META } from "@/lib/phase-meta"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
+import { PreflightCard } from "@/components/preflight-card"
 
 const PROTOTYPE_FILE = "06-prototype.html"
 
@@ -675,6 +676,7 @@ export function PrototypePage() {
             ))}
           </select>
         </div>
+        <PreflightCard projectId={projectId!} phaseId="prototype" className="mx-1 my-3" />
         <PhaseEmptyState
           phaseLabel="PROTOTYPE"
           description="交互原型"

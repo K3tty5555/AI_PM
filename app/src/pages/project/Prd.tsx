@@ -25,6 +25,7 @@ import { PrdAssistPanel } from "@/components/prd-assist-panel"
 import { consumeAdoptionQueue } from "@/components/review-grouped-view"
 import { ExportPreflightDialog } from "@/components/export-preflight-dialog"
 import { useExportPipeline } from "@/hooks/use-export-pipeline"
+import { PreflightCard } from "@/components/preflight-card"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -542,6 +543,7 @@ export function PrdPage() {
               </select>
             </div>
           )}
+          <PreflightCard projectId={projectId!} phaseId="prd" className="mx-1 my-3" />
           <KnowledgeRecommendPanel projectId={projectId!} timing="before_prd" visible={!existingMarkdown} />
           <PhaseEmptyState
             phaseLabel="PRD"
