@@ -1,0 +1,140 @@
+{
+  "covers": {
+    "fullbleed": {
+      "label": "深色全幅",
+      "category": "general",
+      "features": "深色背景 + 点阵网格装饰",
+      "bgColor": "#1a1a2e",
+      "textColor": "#ffffff",
+      "accentPosition": "grid-overlay"
+    },
+    "split": {
+      "label": "分栏提案",
+      "category": "formal",
+      "features": "左 42% 色块 + 右 58% 内容区",
+      "bgColor": "#ffffff",
+      "textColor": "#1a1a1a",
+      "accentPosition": "left-block"
+    },
+    "typographic": {
+      "label": "字体主导",
+      "category": "academic",
+      "features": "超大首词 + 下划线装饰",
+      "bgColor": "#fafaf9",
+      "textColor": "#292524",
+      "accentPosition": "underline"
+    },
+    "atmospheric": {
+      "label": "光晕暗调",
+      "category": "academic",
+      "features": "近黑背景 + 径向光晕效果",
+      "bgColor": "#0f0f1a",
+      "textColor": "#e2e8f0",
+      "accentPosition": "radial-glow"
+    },
+    "minimal": {
+      "label": "极简侧线",
+      "category": "general",
+      "features": "8px 左侧强调条 + 大量留白",
+      "bgColor": "#ffffff",
+      "textColor": "#374151",
+      "accentPosition": "left-bar"
+    },
+    "stripe": {
+      "label": "三色带",
+      "category": "creative",
+      "features": "三条水平色带装饰",
+      "bgColor": "#ffffff",
+      "textColor": "#1f2937",
+      "accentPosition": "horizontal-stripes"
+    },
+    "diagonal": {
+      "label": "斜切创意",
+      "category": "creative",
+      "features": "SVG 对角切割双色区域",
+      "bgColor": "#ffffff",
+      "textColor": "#1a1a1a",
+      "accentPosition": "diagonal-cut"
+    },
+    "frame": {
+      "label": "边框证书",
+      "category": "formal",
+      "features": "内缩边框 + 角饰装饰",
+      "bgColor": "#fffdf7",
+      "textColor": "#44403c",
+      "accentPosition": "border-frame"
+    },
+    "editorial": {
+      "label": "编辑出版",
+      "category": "creative",
+      "features": "幽灵首字母 + 全宽布局",
+      "bgColor": "#ffffff",
+      "textColor": "#18181b",
+      "accentPosition": "ghost-letter"
+    },
+    "magazine": {
+      "label": "杂志风",
+      "category": "special",
+      "features": "暖奶油底色 + 主图位置",
+      "bgColor": "#fef9ef",
+      "textColor": "#292524",
+      "accentPosition": "hero-image"
+    },
+    "darkroom": {
+      "label": "暗房影调",
+      "category": "special",
+      "features": "海军蓝背景 + 灰度滤镜",
+      "bgColor": "#0c1929",
+      "textColor": "#cbd5e1",
+      "accentPosition": "navy-overlay"
+    },
+    "terminal": {
+      "label": "极客终端",
+      "category": "special",
+      "features": "近黑背景 + 霓虹绿文字",
+      "bgColor": "#0a0a0a",
+      "textColor": "#22c55e",
+      "accentPosition": "monospace-grid"
+    },
+    "poster": {
+      "label": "海报风",
+      "category": "creative",
+      "features": "白底 + 粗左边栏色块",
+      "bgColor": "#ffffff",
+      "textColor": "#1a1a1a",
+      "accentPosition": "bold-sidebar"
+    },
+    "report": {
+      "label": "正式报告",
+      "category": "general",
+      "features": "fullbleed 变体，适合年度报告",
+      "bgColor": "#1e293b",
+      "textColor": "#f1f5f9",
+      "accentPosition": "header-band"
+    },
+    "proposal": {
+      "label": "商业提案",
+      "category": "formal",
+      "features": "split 变体，正式商务提案",
+      "bgColor": "#ffffff",
+      "textColor": "#1e293b",
+      "accentPosition": "top-band"
+    }
+  },
+  "categories": {
+    "general": { "label": "通用", "order": 1, "items": ["fullbleed", "minimal", "report"] },
+    "formal": { "label": "正式", "order": 2, "items": ["split", "proposal", "frame"] },
+    "creative": { "label": "创意", "order": 3, "items": ["diagonal", "stripe", "poster", "editorial"] },
+    "academic": { "label": "学术", "order": 4, "items": ["typographic", "atmospheric"] },
+    "special": { "label": "特殊", "order": 5, "items": ["magazine", "darkroom", "terminal"] }
+  },
+  "industryDefaults": {
+    "general": "minimal",
+    "finance": "split",
+    "healthcare": "minimal",
+    "tech": "fullbleed",
+    "education": "typographic",
+    "ecommerce": "poster",
+    "enterprise": "report"
+  }
+}

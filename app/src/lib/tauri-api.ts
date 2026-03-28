@@ -417,6 +417,11 @@ export const api = {
   checkPhasePrerequisites: (projectId: string, phaseId: string) =>
     safeInvoke<PrerequisiteItem[]>("check_phase_prerequisites", { projectId, phaseId }),
 
+  // PDF covers
+  listPdfCovers: () => safeInvoke<Record<string, unknown>>("list_pdf_covers"),
+  exportPrdPdf: (projectId: string, coverStyle?: string, accentColor?: string) =>
+    safeInvoke<string>("export_prd_pdf", { projectId, coverStyle, accentColor }),
+
   // Projects dir
   getProjectsDir: () => safeInvoke<string>("get_projects_dir"),
   saveProjectsDir: (path: string) => safeInvoke<{ ok: boolean }>("save_projects_dir", { path }),
