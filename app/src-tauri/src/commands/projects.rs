@@ -50,6 +50,7 @@ pub struct ProjectSummary {
     pub completed_phases: Vec<String>,
     pub status: String,
     pub project_type: String,
+    pub industry: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -65,6 +66,7 @@ pub struct ProjectDetail {
     pub team_mode: bool,
     pub status: String,
     pub project_type: String,
+    pub industry: String,
     pub phases: Vec<ProjectPhase>,
 }
 
@@ -78,7 +80,8 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
             "SELECT p.id, p.name, p.description, p.current_phase, p.output_dir, p.created_at, p.updated_at, p.status,
                     COUNT(CASE WHEN pp.status = 'completed' THEN 1 END) as completed_count,
                     GROUP_CONCAT(CASE WHEN pp.status = 'completed' THEN pp.phase END) as completed_phases,
-                    COALESCE(p.project_type, 'general') as project_type
+                    COALESCE(p.project_type, 'general') as project_type,
+                    COALESCE(p.industry, 'general') as industry
              FROM projects p
              LEFT JOIN project_phases pp ON pp.project_id = p.id
              GROUP BY p.id
@@ -107,6 +110,7 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
                     .map(String::from)
                     .collect(),
                 project_type: row.get::<_, Option<String>>(10)?.unwrap_or_else(|| "general".to_string()),
+                industry: row.get::<_, Option<String>>(11)?.unwrap_or_else(|| "general".to_string()),
             })
         })
         .map_err(|e| e.to_string())?
@@ -123,6 +127,7 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
     let output_dir = state.projects_base().join(&args.name).to_string_lossy().to_string();
     let team_mode_int: i64 = if args.team_mode.unwrap_or(false) { 1 } else { 0 };
     let project_type = args.project_type.unwrap_or_else(|| "general".to_string());
+    let industry = args.industry.unwrap_or_else(|| "general".to_string());
 
     // Phase 1: Create project directory (no lock needed)
     fs::create_dir_all(&output_dir).map_err(|e| e.to_string())?;
@@ -133,9 +138,9 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
 
         // Insert project
         db.execute(
-            "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode, project_type)
-             VALUES (?1, ?2, NULL, 'office-hours', ?3, ?4, ?4, ?5, ?6)",
-            params![&id, &args.name, &output_dir, &now, &team_mode_int, &project_type],
+            "INSERT INTO projects (id, name, description, current_phase, output_dir, created_at, updated_at, team_mode, project_type, industry)
+             VALUES (?1, ?2, NULL, 'office-hours', ?3, ?4, ?4, ?5, ?6, ?7)",
+            params![&id, &args.name, &output_dir, &now, &team_mode_int, &project_type, &industry],
         )
         .map_err(|e| e.to_string())?;
 
@@ -181,6 +186,7 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
         team_mode: args.team_mode.unwrap_or(false),
         status: "active".to_string(),
         project_type: project_type,
+        industry: industry,
         phases,
     })
 }
@@ -188,18 +194,18 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
 #[tauri::command]
 pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectDetail>, String> {
     // Phase 1: query DB under the lock
-    let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, phases) = {
+    let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, phases) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
 
-        let result: rusqlite::Result<(String, String, Option<String>, String, String, String, String, i64, String, String)> =
+        let result: rusqlite::Result<(String, String, Option<String>, String, String, String, String, i64, String, String, String)> =
             db.query_row(
-                "SELECT id, name, description, current_phase, output_dir, created_at, updated_at, COALESCE(team_mode, 0), COALESCE(status, 'active'), COALESCE(project_type, 'general')
+                "SELECT id, name, description, current_phase, output_dir, created_at, updated_at, COALESCE(team_mode, 0), COALESCE(status, 'active'), COALESCE(project_type, 'general'), COALESCE(industry, 'general')
                  FROM projects WHERE id = ?1",
                 params![&id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?, row.get(8)?, row.get(9)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?, row.get(8)?, row.get(9)?, row.get(10)?)),
             );
 
-        let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val) = match result {
+        let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val) = match result {
             Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
             Err(e) => return Err(e.to_string()),
             Ok(row) => row,
@@ -228,7 +234,7 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
             .filter_map(|r| r.ok())
             .collect();
 
-        (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, phases)
+        (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, phases)
         // db guard drops here
     };
 
@@ -247,6 +253,7 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
         team_mode: team_mode_val != 0,
         status,
         project_type: project_type_val,
+        industry: industry_val,
         phases,
     }))
 }
@@ -383,6 +390,7 @@ pub struct CreateProjectArgs {
     pub name: String,
     pub team_mode: Option<bool>,
     pub project_type: Option<String>,
+    pub industry: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
