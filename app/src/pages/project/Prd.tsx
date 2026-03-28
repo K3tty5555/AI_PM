@@ -24,6 +24,7 @@ import { PrdScoreBadge, PrdScorePanel } from "@/components/prd-score-panel"
 import { PrdAssistPanel } from "@/components/prd-assist-panel"
 import { consumeAdoptionQueue } from "@/components/review-grouped-view"
 import { SensitiveScanDialog } from "@/components/sensitive-scan-dialog"
+import { MermaidRenderDialog, type MermaidBlock, type MermaidExportChoices } from "@/components/mermaid-render-dialog"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -48,6 +49,47 @@ function extractSectionIds(markdown: string): string[] {
     else if (h3) ids.push(slugify(h3[1].trim()))
   }
   return ids
+}
+
+// ---------------------------------------------------------------------------
+// Mermaid detection helpers
+// ---------------------------------------------------------------------------
+
+function detectMermaidType(code: string): string {
+  const firstLine = code.trim().split("\n")[0].trim()
+  for (const type of ["sequenceDiagram", "flowchart", "classDiagram", "graph"]) {
+    if (firstLine.startsWith(type)) return type
+  }
+  return "graph"
+}
+
+const STYLE_RECOMMENDATIONS: Record<string, { layout: string; style: string }> = {
+  graph:           { layout: "linear-progression", style: "corporate-memphis" },
+  flowchart:       { layout: "linear-progression", style: "corporate-memphis" },
+  sequenceDiagram: { layout: "linear-progression", style: "technical-schematic" },
+  classDiagram:    { layout: "structural-breakdown", style: "technical-schematic" },
+}
+
+function extractMermaidBlocks(markdown: string): MermaidBlock[] {
+  const blocks: MermaidBlock[] = []
+  const regex = /```mermaid\s*\n([\s\S]*?)```/g
+  let match: RegExpExecArray | null
+  let index = 0
+  while ((match = regex.exec(markdown)) !== null) {
+    const lineNumber = markdown.substring(0, match.index).split("\n").length
+    const code = match[1].trim()
+    const chartType = detectMermaidType(code)
+    const rec = STYLE_RECOMMENDATIONS[chartType] || STYLE_RECOMMENDATIONS["graph"]
+    blocks.push({
+      index: index++,
+      lineNumber,
+      code,
+      chartType,
+      recommendedLayout: rec.layout,
+      recommendedStyle: rec.style,
+    })
+  }
+  return blocks
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +207,11 @@ export function PrdPage() {
   const [sensitiveMatches, setSensitiveMatches] = useState<SensitiveMatch[]>([])
   const [sensitiveDialogOpen, setSensitiveDialogOpen] = useState(false)
   const [pendingExportAction, setPendingExportAction] = useState<(() => Promise<void>) | null>(null)
+
+  // Mermaid render dialog
+  const [mermaidBlocks, setMermaidBlocks] = useState<MermaidBlock[]>([])
+  const [mermaidDialogOpen, setMermaidDialogOpen] = useState(false)
+  const [pendingMermaidExportAction, setPendingMermaidExportAction] = useState<((choices?: MermaidExportChoices) => Promise<void>) | null>(null)
 
   // PRD style selector
   const [prdStyles, setPrdStyles] = useState<PrdStyleEntry[]>([])
@@ -457,41 +504,53 @@ export function PrdPage() {
     }
   }, [projectId, toast])
 
-  // Sensitive-scan wrapper: scan first, prompt if matches found
-  const withSensitiveScan = useCallback(
-    (exportFn: () => Promise<void>) => {
+  // Export preflight: sensitive scan + mermaid detection → dialogs → export
+  const withExportPreflight = useCallback(
+    (exportFn: (mermaidChoices?: MermaidExportChoices) => Promise<void>) => {
       return async () => {
         setExporting(true)
-        try {
-          const matches = await api.scanSensitive(projectId)
-          if (matches.length === 0) {
-            // No sensitive content — proceed directly
-            setExporting(false)
-            await exportFn()
+
+        // Parallel preflight: sensitive scan + mermaid detection
+        const [sensitiveResult] = await Promise.allSettled([
+          Promise.race([
+            api.scanSensitive(projectId),
+            new Promise<never>((_, reject) => setTimeout(() => reject("timeout"), 10000)),
+          ]),
+        ])
+        const matches = sensitiveResult.status === "fulfilled" ? sensitiveResult.value : []
+        const blocks = extractMermaidBlocks(displayMarkdown || "")
+
+        setExporting(false)
+
+        const proceedWithMermaid = async () => {
+          if (blocks.length > 0) {
+            setMermaidBlocks(blocks)
+            setPendingMermaidExportAction(() => exportFn)
+            setMermaidDialogOpen(true)
           } else {
-            // Show dialog for user decision
-            setExporting(false)
-            setSensitiveMatches(matches)
-            setPendingExportAction(() => exportFn)
-            setSensitiveDialogOpen(true)
+            await exportFn()
           }
-        } catch {
-          // Scan failed — fall through to export directly
-          setExporting(false)
-          await exportFn()
+        }
+
+        if (matches.length > 0) {
+          setSensitiveMatches(matches)
+          setPendingExportAction(() => proceedWithMermaid)
+          setSensitiveDialogOpen(true)
+        } else {
+          await proceedWithMermaid()
         }
       }
     },
-    [projectId],
+    [projectId, displayMarkdown],
   )
 
   const handleExportDocx = useCallback(() => {
-    withSensitiveScan(doExportDocx)()
-  }, [withSensitiveScan, doExportDocx])
+    withExportPreflight(doExportDocx)()
+  }, [withExportPreflight, doExportDocx])
 
   const handleExportShareHtml = useCallback(() => {
-    withSensitiveScan(doExportShareHtml)()
-  }, [withSensitiveScan, doExportShareHtml])
+    withExportPreflight(doExportShareHtml)()
+  }, [withExportPreflight, doExportShareHtml])
 
   // Sensitive dialog callbacks
   const handleSensitiveRedactExport = useCallback(() => {
@@ -513,6 +572,20 @@ export function PrdPage() {
     setSensitiveDialogOpen(false)
     setPendingExportAction(null)
     setSensitiveMatches([])
+  }, [])
+
+  // Mermaid dialog callbacks
+  const handleMermaidConfirm = useCallback((choices: MermaidExportChoices) => {
+    setMermaidDialogOpen(false)
+    pendingMermaidExportAction?.(choices)
+    setPendingMermaidExportAction(null)
+    setMermaidBlocks([])
+  }, [pendingMermaidExportAction])
+
+  const handleMermaidCancel = useCallback(() => {
+    setMermaidDialogOpen(false)
+    setPendingMermaidExportAction(null)
+    setMermaidBlocks([])
   }, [])
 
   /** Save PRD & mark phase complete */
@@ -1001,6 +1074,14 @@ export function PrdPage() {
         onRedactExport={handleSensitiveRedactExport}
         onRawExport={handleSensitiveRawExport}
         onCancel={handleSensitiveCancel}
+      />
+
+      {/* Mermaid render dialog */}
+      <MermaidRenderDialog
+        open={mermaidDialogOpen}
+        blocks={mermaidBlocks}
+        onConfirm={handleMermaidConfirm}
+        onCancel={handleMermaidCancel}
       />
     </div>
     </PhaseShell>
