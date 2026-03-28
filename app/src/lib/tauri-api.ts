@@ -172,6 +172,13 @@ export interface UiSpecContent {
   tokensRaw: string | null
 }
 
+export interface PrdSample {
+  id: string
+  label: string
+  industry: string
+  lineCount: number
+}
+
 export interface WeeklyReportMeta {
   filename: string
   date: string
@@ -500,6 +507,8 @@ export const api = {
     safeInvoke<void>("delete_ui_spec", { name }),
   deletePrdStyle: (name: string) =>
     safeInvoke<void>("delete_prd_style", { name }),
+  listPrdSamples: () => safeInvoke<PrdSample[]>("list_prd_samples"),
+  getPrdSampleContent: (sampleId: string) => safeInvoke<string>("get_prd_sample_content", { sampleId }),
   renameProject: (id: string, newName: string) =>
     safeInvoke<void>("rename_project", { id, newName }),
 
