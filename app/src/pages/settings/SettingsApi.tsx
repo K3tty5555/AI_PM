@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
-import { api } from "@/lib/tauri-api"
+import { api, type IllustrationConfigState } from "@/lib/tauri-api"
 import { EnvChecker } from "@/components/env-checker"
 
 interface ConfigState {
@@ -50,6 +50,19 @@ export function SettingsApi() {
     message: string
   } | null>(null)
 
+  // Illustration config state
+  const [illConfig, setIllConfig] = useState<IllustrationConfigState | null>(null)
+  const [illProvider, setIllProvider] = useState("")
+  const [illModel, setIllModel] = useState("")
+  const [illApiKey, setIllApiKey] = useState("")
+  const [illSize, setIllSize] = useState("")
+  const [illTesting, setIllTesting] = useState(false)
+  const [illTestResult, setIllTestResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [illSaving, setIllSaving] = useState(false)
+  const [illSaved, setIllSaved] = useState(false)
+  const [illShowKey, setIllShowKey] = useState(false)
+  const illSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const fetchConfig = useCallback(async () => {
     try {
       const data = await api.getConfig()
@@ -67,6 +80,21 @@ export function SettingsApi() {
   useEffect(() => {
     fetchConfig()
   }, [fetchConfig])
+
+  // Fetch illustration config
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const data = await api.getIllustrationConfig()
+        setIllConfig(data)
+        setIllProvider(data.provider)
+        setIllModel(data.model)
+        setIllSize(data.defaultSize)
+      } catch (err) {
+        console.error("Failed to fetch illustration config:", err)
+      }
+    })()
+  }, [])
 
   const handleTest = async () => {
     setTesting(true)
@@ -136,6 +164,80 @@ export function SettingsApi() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  // ── Illustration helpers ──
+
+  const currentIllProvider = illConfig?.availableProviders.find((p) => p.id === illProvider)
+
+  const saveIllustrationDebounced = useCallback(
+    (provider: string, model: string, key: string, size: string) => {
+      if (illSaveTimer.current) clearTimeout(illSaveTimer.current)
+      illSaveTimer.current = setTimeout(async () => {
+        setIllSaving(true)
+        setIllSaved(false)
+        try {
+          await api.saveIllustrationConfig({
+            provider,
+            model,
+            ...(key ? { apiKey: key } : {}),
+            defaultSize: size,
+          })
+          setIllSaved(true)
+          setTimeout(() => setIllSaved(false), 2000)
+        } catch (err) {
+          console.error("Failed to save illustration config:", err)
+        } finally {
+          setIllSaving(false)
+        }
+      }, 500)
+    },
+    [],
+  )
+
+  const handleIllProviderChange = (newProvider: string) => {
+    setIllProvider(newProvider)
+    const providerDef = illConfig?.availableProviders.find((p) => p.id === newProvider)
+    const firstModel = providerDef?.models[0]?.id ?? ""
+    const firstSize = providerDef?.sizes[0] ?? ""
+    setIllModel(firstModel)
+    setIllSize(firstSize)
+    saveIllustrationDebounced(newProvider, firstModel, illApiKey, firstSize)
+  }
+
+  const handleIllModelChange = (newModel: string) => {
+    setIllModel(newModel)
+    saveIllustrationDebounced(illProvider, newModel, illApiKey, illSize)
+  }
+
+  const handleIllSizeChange = (newSize: string) => {
+    setIllSize(newSize)
+    saveIllustrationDebounced(illProvider, illModel, illApiKey, newSize)
+  }
+
+  const handleIllApiKeyChange = (newKey: string) => {
+    setIllApiKey(newKey)
+    saveIllustrationDebounced(illProvider, illModel, newKey, illSize)
+  }
+
+  const handleIllTest = async () => {
+    setIllTesting(true)
+    setIllTestResult(null)
+    try {
+      const data = await api.testIllustrationKey(illApiKey || undefined)
+      if (data.valid) {
+        setIllTestResult({ ok: true, message: data.message || "连接成功" })
+      } else {
+        setIllTestResult({ ok: false, message: data.message || "连接失败" })
+      }
+    } catch (err) {
+      setIllTestResult({
+        ok: false,
+        message: typeof err === "string" ? err : err instanceof Error ? err.message : "请求异常",
+      })
+    } finally {
+      setIllTesting(false)
     }
   }
 
@@ -421,6 +523,161 @@ export function SettingsApi() {
           )}
         </CardFooter>
       </Card>
+
+      {/* Illustration Config Card */}
+      {illConfig && (
+        <Card className="hover:shadow-none">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <CardTitle>AI 图片生成</CardTitle>
+              {illSaving && (
+                <span className="flex items-center gap-1 text-xs text-[var(--text-secondary)]">
+                  <Loader2 className="size-3 animate-spin" />
+                </span>
+              )}
+              {illSaved && (
+                <span
+                  className="flex items-center gap-1 text-xs text-[var(--success)]"
+                  style={{ animation: "fadeInUp 0.3s cubic-bezier(0.16,1,0.3,1)" }}
+                >
+                  <CheckCircle2 className="size-3" />
+                  已保存
+                </span>
+              )}
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="flex flex-col gap-5">
+              {/* Provider */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-[var(--text-primary)]">服务商</label>
+                <select
+                  value={illProvider}
+                  onChange={(e) => handleIllProviderChange(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+                >
+                  {illConfig.availableProviders.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Model */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-[var(--text-primary)]">模型</label>
+                <select
+                  value={illModel}
+                  onChange={(e) => handleIllModelChange(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+                >
+                  {currentIllProvider?.models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* API Key */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-[var(--text-primary)]">API Key</label>
+                  {illConfig.apiKeySource === "env" || illConfig.apiKeySource === "env_file" ? (
+                    <Badge variant="success">来源：.env</Badge>
+                  ) : illConfig.apiKeySource === "config" ? (
+                    <Badge variant="default">来源：应用配置</Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                      未配置
+                    </Badge>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={illShowKey ? "text" : "password"}
+                    value={illApiKey}
+                    onChange={(e) => handleIllApiKeyChange(e.target.value)}
+                    readOnly={illConfig.apiKeySource === "env" || illConfig.apiKeySource === "env_file"}
+                    placeholder={illConfig.apiKeyMasked || "输入 API Key"}
+                    className={`h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 pr-10 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)] ${
+                      illConfig.apiKeySource === "env" || illConfig.apiKeySource === "env_file"
+                        ? "cursor-not-allowed opacity-60"
+                        : ""
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIllShowKey(!illShowKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                    aria-label={illShowKey ? "隐藏密钥" : "显示密钥"}
+                  >
+                    {illShowKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                {(illConfig.apiKeySource === "env" || illConfig.apiKeySource === "env_file") && (
+                  <span className="text-xs text-[var(--text-secondary)]">
+                    如需更改请编辑 ~/.baoyu-skills/.env
+                  </span>
+                )}
+              </div>
+
+              {/* Default Size */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-[var(--text-primary)]">默认尺寸</label>
+                <select
+                  value={illSize}
+                  onChange={(e) => handleIllSizeChange(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+                >
+                  {currentIllProvider?.sizes.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </CardContent>
+
+          <CardFooter className="flex-col items-stretch gap-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="default"
+                onClick={handleIllTest}
+                disabled={illTesting}
+                className="gap-2"
+              >
+                {illTesting && <Loader2 className="size-4 animate-spin" />}
+                测试连接
+              </Button>
+            </div>
+
+            {illTestResult && (
+              <div
+                className="flex items-center gap-2 text-sm"
+                style={{ animation: "fadeInUp 0.3s cubic-bezier(0.16,1,0.3,1)" }}
+              >
+                {illTestResult.ok ? (
+                  <CheckCircle2 className="size-4 shrink-0 text-[var(--success)]" />
+                ) : (
+                  <XCircle className="size-4 shrink-0 text-[var(--destructive)]" />
+                )}
+                <span
+                  className={
+                    illTestResult.ok ? "text-[var(--success)]" : "text-[var(--destructive)]"
+                  }
+                >
+                  {illTestResult.message}
+                </span>
+              </div>
+            )}
+          </CardFooter>
+        </Card>
+      )}
 
       {/* Runtime Environment Card */}
       <Card className="hover:shadow-none">
