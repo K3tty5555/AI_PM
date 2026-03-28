@@ -1406,3 +1406,89 @@ pub fn clear_project_prompts(
     ).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+// ── Phase prerequisites check ────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrerequisiteItem {
+    pub id: String,
+    pub label: String,
+    pub passed: bool,
+    pub check_type: String,  // "auto" | "manual"
+    pub hint: Option<String>,
+    pub navigate_to: Option<String>,
+}
+
+#[tauri::command]
+pub fn check_phase_prerequisites(
+    state: State<'_, AppState>,
+    project_id: String,
+    phase_id: String,
+) -> Result<Vec<PrerequisiteItem>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            rusqlite::params![&project_id],
+            |row| row.get(0),
+        ).map_err(|_| "项目不存在".to_string())?
+    };
+
+    let dir = PathBuf::from(&output_dir);
+    let mut items = Vec::new();
+
+    match phase_id.as_str() {
+        "prd" => {
+            // Check analysis report exists
+            let analysis_exists = dir.join("02-analysis-report.md").exists();
+            items.push(PrerequisiteItem {
+                id: "analysis".to_string(),
+                label: "需求分析报告".to_string(),
+                passed: analysis_exists,
+                check_type: "auto".to_string(),
+                hint: if analysis_exists { None } else { Some("建议先完成需求分析（Phase 2）".to_string()) },
+                navigate_to: Some("analysis".to_string()),
+            });
+
+            // Check competitor report exists
+            let competitor_exists = dir.join("03-competitor-report.md").exists();
+            items.push(PrerequisiteItem {
+                id: "research".to_string(),
+                label: "竞品研究报告".to_string(),
+                passed: competitor_exists,
+                check_type: "auto".to_string(),
+                hint: if competitor_exists { None } else { Some("建议先完成竞品研究（Phase 3）".to_string()) },
+                navigate_to: Some("research".to_string()),
+            });
+
+            // Check user stories exists
+            let stories_exists = dir.join("04-user-stories.md").exists();
+            items.push(PrerequisiteItem {
+                id: "stories".to_string(),
+                label: "用户故事".to_string(),
+                passed: stories_exists,
+                check_type: "auto".to_string(),
+                hint: if stories_exists { None } else { Some("建议先完成用户故事（Phase 4）".to_string()) },
+                navigate_to: Some("stories".to_string()),
+            });
+        }
+        "prototype" => {
+            // Check PRD exists
+            let prd_exists = dir.join("05-prd").join("05-PRD-v1.0.md").exists();
+            items.push(PrerequisiteItem {
+                id: "prd".to_string(),
+                label: "PRD 文档".to_string(),
+                passed: prd_exists,
+                check_type: "auto".to_string(),
+                hint: if prd_exists { None } else { Some("需要先生成 PRD（Phase 5）".to_string()) },
+                navigate_to: Some("prd".to_string()),
+            });
+        }
+        _ => {
+            // Other phases: no prerequisites
+        }
+    }
+
+    Ok(items)
+}
