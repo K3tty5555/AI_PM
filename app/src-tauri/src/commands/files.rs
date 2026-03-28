@@ -932,3 +932,110 @@ pub fn scan_sensitive(
     let content = fs::read_to_string(&prd_path).map_err(|e| e.to_string())?;
     Ok(scan_prd_sensitive(&content))
 }
+
+// ── Placeholder scanning ─────────────────────────────────────────
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaceholderMatch {
+    pub line: usize,
+    pub column: usize,
+    pub matched_text: String,
+    pub context: String,
+    pub rule_name: String,
+}
+
+struct PlaceholderRule {
+    name: &'static str,
+    pattern: Regex,
+}
+
+static PLACEHOLDER_RULES: Lazy<Vec<PlaceholderRule>> = Lazy::new(|| {
+    vec![
+        PlaceholderRule {
+            name: "chinese_placeholder",
+            pattern: Regex::new(r"\[(?:待补充|此处填写|待确认|待定|请填写|待更新)[^\]]*\]").unwrap(),
+        },
+        PlaceholderRule {
+            name: "english_placeholder",
+            pattern: Regex::new(r"(?i)\b(?:TBD|TODO|FIXME|Lorem\s+ipsum)\b").unwrap(),
+        },
+        PlaceholderRule {
+            name: "template_variable",
+            pattern: Regex::new(r"\{\{[^}]+\}\}").unwrap(),
+        },
+        PlaceholderRule {
+            name: "generic_placeholder",
+            pattern: Regex::new(r"\[(?:Feature Name|产品名|公司名|产品名称|项目名称)\]").unwrap(),
+        },
+        PlaceholderRule {
+            name: "xxxx_placeholder",
+            pattern: Regex::new(r"\bxxxx\b").unwrap(),
+        },
+    ]
+});
+
+/// Regex to detect Markdown links — matches inside these should be excluded
+static MD_LINK_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\[[^\]]*\]\([^)]+\)").unwrap()
+});
+
+fn scan_prd_placeholders(content: &str) -> Vec<PlaceholderMatch> {
+    let mut matches = Vec::new();
+    for (line_idx, line) in content.lines().enumerate() {
+        // Collect Markdown link ranges to exclude
+        let link_ranges: Vec<(usize, usize)> = MD_LINK_RE
+            .find_iter(line)
+            .map(|m| (m.start(), m.end()))
+            .collect();
+
+        for rule in PLACEHOLDER_RULES.iter() {
+            for mat in rule.pattern.find_iter(line) {
+                // Skip if match is inside a Markdown link
+                let in_link = link_ranges.iter().any(|(s, e)| mat.start() >= *s && mat.end() <= *e);
+                if in_link {
+                    continue;
+                }
+
+                let ctx_start = line.floor_char_boundary(mat.start().saturating_sub(30));
+                let ctx_end = line.ceil_char_boundary((mat.end() + 30).min(line.len()));
+                let context = line[ctx_start..ctx_end].to_string();
+
+                matches.push(PlaceholderMatch {
+                    line: line_idx + 1,
+                    column: mat.start() + 1,
+                    matched_text: mat.as_str().to_string(),
+                    context,
+                    rule_name: rule.name.to_string(),
+                });
+            }
+        }
+    }
+    matches
+}
+
+#[tauri::command]
+pub fn scan_placeholders(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<Vec<PlaceholderMatch>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ).map_err(|_| "项目不存在".to_string())?
+    };
+
+    let prd_path = std::path::PathBuf::from(&output_dir)
+        .join("05-prd")
+        .join("05-PRD-v1.0.md");
+
+    if !prd_path.exists() {
+        return Ok(vec![]);
+    }
+
+    let content = fs::read_to_string(&prd_path).map_err(|e| e.to_string())?;
+    Ok(scan_prd_placeholders(&content))
+}
