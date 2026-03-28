@@ -20,6 +20,7 @@ import { ToolDataPage }      from "./pages/tools/Data"
 import { ToolInterviewPage } from "./pages/tools/Interview"
 import { ToolDesignSpecPage } from "./pages/tools/DesignSpec"
 import { ToolIllustrationPage } from "./pages/tools/Illustration"
+import { ToolPptxPage } from "./pages/tools/Pptx"
 
 export const router = createBrowserRouter([
   {
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
       { path: "/tools/interview",         element: <ToolInterviewPage /> },
       { path: "/tools/design-spec",       element: <ToolDesignSpecPage /> },
       { path: "/tools/illustration",     element: <ToolIllustrationPage /> },
+      { path: "/tools/pptx",              element: <ToolPptxPage /> },
       { path: "*",                         element: <Navigate to="/" replace /> },
     ],
   },

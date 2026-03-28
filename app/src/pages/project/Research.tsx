@@ -11,12 +11,13 @@ import { RevealContainer } from "@/components/RevealContainer"
 import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
-import { api } from "@/lib/tauri-api"
+import { api, type ScreenshotAnalysisMode, ANALYSIS_MODE_META } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus } from "@/lib/utils"
 import { invalidateProject } from "@/lib/project-cache"
 import { PHASE_META } from "@/lib/phase-meta"
+import { SegmentedControl } from "@/components/ui/segmented-control"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -462,10 +463,52 @@ export function ResearchPage() {
   const hasContent = !!displayContent
   const canAdvance = hasContent && !isStreaming && !advancing
 
+  // ── Screenshot analysis tab state ──────────────────────────────────
+  const [researchTab, setResearchTab] = useState<"text" | "screenshot">("text")
+  const [screenshotUrl, setScreenshotUrl] = useState("")
+  const [screenshotMode, setScreenshotMode] = useState<ScreenshotAnalysisMode>("ui-review")
+  const [screenshotFile, setScreenshotFile] = useState<string | null>(null)
+  const [screenshotAnalyzing, setScreenshotAnalyzing] = useState(false)
+  const [screenshotResult, setScreenshotResult] = useState<string | null>(null)
+
+  const handleAnalyzeScreenshot = useCallback(async () => {
+    const imagePath = screenshotFile
+    if (!imagePath) {
+      toast("请先上传截图或输入 URL", "error")
+      return
+    }
+    setScreenshotAnalyzing(true)
+    setScreenshotResult(null)
+    try {
+      const result = await api.analyzeScreenshot(imagePath, screenshotMode)
+      setScreenshotResult(result.markdown)
+    } catch (err) {
+      toast(String(err), "error")
+    } finally {
+      setScreenshotAnalyzing(false)
+    }
+  }, [screenshotFile, screenshotMode, toast])
+
+  const handleCaptureUrl = useCallback(async () => {
+    if (!screenshotUrl || !projectId) return
+    setScreenshotAnalyzing(true)
+    try {
+      const proj = await api.getProject(projectId)
+      if (!proj) throw new Error("项目不存在")
+      const path = await api.captureUrlScreenshot(screenshotUrl, proj.outputDir)
+      setScreenshotFile(path)
+      toast("截图完成", "success")
+    } catch (err) {
+      toast(String(err), "error")
+    } finally {
+      setScreenshotAnalyzing(false)
+    }
+  }, [screenshotUrl, projectId, toast])
+
   return (
     <div className="layout-focus page-enter">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">竞品研究</h1>
         <Button
           variant="ghost"
@@ -477,6 +520,84 @@ export function ResearchPage() {
         </Button>
       </div>
 
+      {/* Tab switcher */}
+      <div className="mb-4">
+        <SegmentedControl
+          items={[
+            { key: "text" as const, label: "文本研究" },
+            { key: "screenshot" as const, label: "截图分析" },
+          ]}
+          value={researchTab}
+          onChange={(v) => setResearchTab(v as "text" | "screenshot")}
+        />
+      </div>
+
+      {/* Screenshot analysis tab */}
+      {researchTab === "screenshot" && (
+        <div className="space-y-4 pb-8">
+          {/* Upload / URL input */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-[var(--text-secondary)] mb-1 block">URL 截图</label>
+              <div className="flex gap-2">
+                <input
+                  value={screenshotUrl}
+                  onChange={e => setScreenshotUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="flex-1 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]"
+                />
+                <Button size="sm" onClick={handleCaptureUrl} disabled={!screenshotUrl || screenshotAnalyzing}>
+                  截图
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-[var(--text-secondary)] mb-1 block">或拖拽上传图片</label>
+              <div
+                className="border-2 border-dashed border-[var(--border)] rounded-lg p-6 text-center text-sm text-[var(--text-tertiary)] cursor-pointer hover:border-[var(--accent)]/50 transition-colors"
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => {
+                  e.preventDefault()
+                  const file = e.dataTransfer.files[0]
+                  if (file) setScreenshotFile((file as unknown as { path?: string }).path || file.name)
+                }}
+              >
+                {screenshotFile ? (
+                  <span className="text-[var(--text-primary)]">{screenshotFile.split("/").pop()}</span>
+                ) : "将图片拖拽到此处"}
+              </div>
+            </div>
+          </div>
+
+          {/* Analysis mode */}
+          <div>
+            <label className="text-xs text-[var(--text-secondary)] mb-1 block">分析模式</label>
+            <select
+              value={screenshotMode}
+              onChange={e => setScreenshotMode(e.target.value as ScreenshotAnalysisMode)}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]"
+            >
+              {(Object.entries(ANALYSIS_MODE_META) as [ScreenshotAnalysisMode, { label: string; description: string }][]).map(([key, meta]) => (
+                <option key={key} value={key}>{meta.label} — {meta.description}</option>
+              ))}
+            </select>
+          </div>
+
+          <Button onClick={handleAnalyzeScreenshot} disabled={!screenshotFile || screenshotAnalyzing} className="w-full">
+            {screenshotAnalyzing ? "分析中..." : "分析"}
+          </Button>
+
+          {/* Result */}
+          {screenshotResult && (
+            <div className="border border-[var(--border)] rounded-lg p-4">
+              <PrdViewer markdown={screenshotResult} isStreaming={false} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Text research tab (original content) */}
+      {researchTab === "text" && <>
       <div className="h-px bg-[var(--border)]" />
 
       <ContextPills
@@ -609,6 +730,7 @@ export function ResearchPage() {
           )}
         </div>
       </div>
+      </>}
     </div>
   )
 }
