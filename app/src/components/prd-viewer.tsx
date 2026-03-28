@@ -3,7 +3,10 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeRaw from "rehype-raw"
 import { MermaidRenderer } from "@/components/mermaid-renderer"
+import { LocalImage } from "@/components/local-image"
+import { Lightbox } from "@/components/lightbox"
 import { slugify } from "@/components/prd-toc"
+import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
@@ -181,7 +184,8 @@ function EditableBlock({
 function createMarkdownComponents(
   editor: ReturnType<typeof useBlockEditor>,
   editable: boolean,
-  counter: { value: number }
+  counter: { value: number },
+  onImageClick?: (src: string, alt: string) => void,
 ) {
   // Reset counter each time components are created (each render)
   counter.value = 0
@@ -433,6 +437,47 @@ function createMarkdownComponents(
         {children}
       </a>
     ),
+
+    // Images — use LocalImage for illustration paths (local files)
+    img: ({ src, alt, ...props }: React.ComponentProps<"img">) => {
+      if (!src) return null
+
+      // Local illustration images: paths containing "11-illustrations/" or
+      // absolute paths pointing to the output directory
+      const isLocalImage =
+        src.includes("11-illustrations/") ||
+        src.startsWith("/") ||
+        src.startsWith("output/")
+
+      if (isLocalImage) {
+        return (
+          <span className="my-3 block">
+            <LocalImage
+              src={src}
+              alt={alt}
+              className="max-w-full"
+              onClick={onImageClick ? () => onImageClick(src, alt ?? "") : undefined}
+            />
+            {alt && (
+              <span className="mt-1 block text-center text-[12px] text-[var(--text-tertiary)]">
+                {alt}
+              </span>
+            )}
+          </span>
+        )
+      }
+
+      // Remote / external images — render as normal <img>
+      return (
+        <img
+          src={src}
+          alt={alt ?? ""}
+          className="my-3 max-w-full rounded-lg"
+          loading="lazy"
+          {...props}
+        />
+      )
+    },
   }
 }
 
@@ -446,10 +491,33 @@ function PrdViewer({ markdown, isStreaming, editable: editableProp, onEdit }: Pr
   const blockCounterRef = useRef({ value: 0 })
   const [onboarded, setOnboarded] = useState(() => !!localStorage.getItem("prd-edit-onboarded"))
 
+  // ── Image lightbox state ──────────────────────────────────────────────
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null)
+  const [lightboxDataUrl, setLightboxDataUrl] = useState<string | null>(null)
+
+  const handleImageClick = useCallback((src: string, alt: string) => {
+    setLightbox({ src, alt })
+  }, [])
+
+  // Load full-resolution data URL when lightbox opens
+  useEffect(() => {
+    if (!lightbox) {
+      setLightboxDataUrl(null)
+      return
+    }
+    let cancelled = false
+    api.readLocalImage(lightbox.src).then((dataUrl) => {
+      if (!cancelled) setLightboxDataUrl(dataUrl)
+    }).catch(() => {
+      if (!cancelled) setLightboxDataUrl(null)
+    })
+    return () => { cancelled = true }
+  }, [lightbox])
+
   const components = useMemo(
-    () => createMarkdownComponents(editor, editable, blockCounterRef.current),
+    () => createMarkdownComponents(editor, editable, blockCounterRef.current, handleImageClick),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editor.editingBlock, editor.editValue, editable]
+    [editor.editingBlock, editor.editValue, editable, handleImageClick]
   )
 
   if (!markdown && !isStreaming) {
@@ -495,6 +563,17 @@ function PrdViewer({ markdown, isStreaming, editable: editableProp, onEdit }: Pr
 
       {/* Typing cursor at end during streaming */}
       {isStreaming && <TypingCursor />}
+
+      {/* Image lightbox for inline illustrations */}
+      {lightbox && lightboxDataUrl && (
+        <Lightbox
+          open
+          src={lightboxDataUrl}
+          alt={lightbox.alt}
+          fileName={lightbox.src.split("/").pop()}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </div>
   )
 }
