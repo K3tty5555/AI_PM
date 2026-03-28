@@ -12,22 +12,7 @@ import { cn } from "@/lib/utils"
 
 type InputMode = "mermaid" | "natural"
 
-// ─── Mermaid Detection & Style Recommendations ──────────────────────────────
-
-function detectMermaidType(code: string): string {
-  const firstLine = code.trim().split("\n")[0].trim()
-  for (const type of ["sequenceDiagram", "flowchart", "classDiagram", "graph"]) {
-    if (firstLine.startsWith(type)) return type
-  }
-  return "graph"
-}
-
-const STYLE_RECOMMENDATIONS: Record<string, { layout: string; style: string; label: string }> = {
-  graph:           { layout: "linear-progression", style: "corporate-memphis", label: "线性流程 × 扁平商务" },
-  flowchart:       { layout: "linear-progression", style: "corporate-memphis", label: "线性流程 × 扁平商务" },
-  sequenceDiagram: { layout: "linear-progression", style: "technical-schematic", label: "线性流程 × 技术图示" },
-  classDiagram:    { layout: "structural-breakdown", style: "technical-schematic", label: "层级结构 × 技术图示" },
-}
+import { detectMermaidType, STYLE_RECOMMENDATIONS } from "@/lib/mermaid-utils"
 
 const ALL_STYLES = [
   { layout: "linear-progression", style: "corporate-memphis", label: "线性流程 × 扁平商务" },
