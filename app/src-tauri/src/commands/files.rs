@@ -193,6 +193,7 @@ pub async fn export_prd_docx(
     app: AppHandle,
     state: State<'_, AppState>,
     project_id: String,
+    recipe: Option<String>,
 ) -> Result<String, String> {
     // Resolve project output directory
     let output_dir: String = {
@@ -230,6 +231,15 @@ pub async fn export_prd_docx(
         .arg(&docx_path);
     if manifest_path.exists() {
         cmd.arg(&manifest_path);
+    }
+    if let Some(r) = &recipe {
+        let recipe_file = state.templates_base()
+            .join("presets")
+            .join("docx-recipes.json");
+        if recipe_file.exists() {
+            cmd.arg(format!("--recipe={}", r));
+            cmd.arg(format!("--recipe-file={}", recipe_file.display()));
+        }
     }
 
     let output = cmd.output().await.map_err(|e| {
@@ -373,6 +383,17 @@ fn html_escape(s: &str) -> String {
 }
 
 // ── PDF cover templates ──────────────────────────────────────────
+
+#[tauri::command]
+pub fn list_docx_recipes(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let path = state.templates_base()
+        .join("presets")
+        .join("docx-recipes.json");
+    let content = fs::read_to_string(&path)
+        .map_err(|_| "DOCX 配方文件不存在".to_string())?;
+    serde_json::from_str(&content)
+        .map_err(|e| format!("DOCX 配方文件格式错误: {}", e))
+}
 
 #[tauri::command]
 pub fn list_pdf_covers(state: State<'_, AppState>) -> Result<serde_json::Value, String> {

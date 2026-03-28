@@ -189,6 +189,7 @@ pub fn run() {
             commands::files::score_prd,
             commands::files::scan_sensitive,
             commands::files::scan_placeholders,
+            commands::files::list_docx_recipes,
             commands::files::list_pdf_covers,
             commands::files::export_prd_pdf,
             commands::env::check_env,
