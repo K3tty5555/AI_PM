@@ -604,3 +604,80 @@ pub fn import_legacy_ui_specs(
 
     Ok(TemplateImportResult { imported, skipped })
 }
+
+// ─── PRD Sample commands ──────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrdSample {
+    pub id: String,
+    pub label: String,
+    pub industry: String,
+    pub line_count: usize,
+}
+
+#[tauri::command]
+pub fn list_prd_samples(state: State<'_, AppState>) -> Result<Vec<PrdSample>, String> {
+    let templates_dir = state.templates_base().join("prd-styles").join("default");
+    let mut samples = Vec::new();
+
+    if let Ok(entries) = fs::read_dir(&templates_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !name.starts_with("sample-") || !name.ends_with(".md") {
+                continue;
+            }
+            let id = name
+                .strip_prefix("sample-")
+                .unwrap()
+                .strip_suffix(".md")
+                .unwrap()
+                .to_string();
+            let content = fs::read_to_string(entry.path()).unwrap_or_default();
+            let line_count = content.lines().count();
+            // Extract label from first # heading
+            let label = content
+                .lines()
+                .find(|l| l.starts_with("# "))
+                .map(|l| l.trim_start_matches("# ").to_string())
+                .unwrap_or_else(|| id.clone());
+            // Map id to industry
+            let industry = match id.as_str() {
+                "b2b-saas" => "tech",
+                "consumer-app" => "ecommerce",
+                "internal-tool" => "enterprise",
+                _ => "general",
+            }
+            .to_string();
+
+            samples.push(PrdSample {
+                id,
+                label,
+                industry,
+                line_count,
+            });
+        }
+    }
+    samples.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(samples)
+}
+
+#[tauri::command]
+pub fn get_prd_sample_content(
+    state: State<'_, AppState>,
+    sample_id: String,
+) -> Result<String, String> {
+    // Whitelist validation
+    if !sample_id
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-')
+    {
+        return Err("无效的样例 ID".to_string());
+    }
+    let path = state
+        .templates_base()
+        .join("prd-styles")
+        .join("default")
+        .join(format!("sample-{}.md", sample_id));
+    fs::read_to_string(&path).map_err(|_| format!("样例文件不存在: sample-{}.md", sample_id))
+}
