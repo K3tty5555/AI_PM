@@ -1,7 +1,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { SegmentedControl } from "@/components/ui/segmented-control"
+import { Lightbox } from "@/components/lightbox"
 import { useIllustration } from "@/hooks/use-illustration"
+import { useToast } from "@/hooks/use-toast"
+import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -33,9 +37,33 @@ const ALL_STYLES = [
   { layout: "structural-breakdown", style: "technical-schematic", label: "层级结构 × 技术图示" },
 ]
 
+// ─── Progress text helper ───────────────────────────────────────────────────
+
+function getProgressText(elapsedSec: number): string {
+  if (elapsedSec < 30) return "AI 绘制中..."
+  if (elapsedSec < 60) return "生成时间较长，请耐心等待..."
+  return "生成时间较长..."
+}
+
+// ─── Error hint helper ──────────────────────────────────────────────────────
+
+function getErrorHint(error: string): { text: string; link?: string } | null {
+  const lower = error.toLowerCase()
+  if (lower.includes("api key") || lower.includes("apikey") || lower.includes("unauthorized") || lower.includes("未配置")) {
+    return { text: "前往 API 配置", link: "/settings?tab=api" }
+  }
+  if (lower.includes("network") || lower.includes("timeout") || lower.includes("连接")) {
+    return { text: "请检查网络连接后重试" }
+  }
+  return null
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export function ToolIllustrationPage() {
+  const navigate = useNavigate()
+  const { toast } = useToast()
+
   const [mode, setMode] = useState<InputMode>("mermaid")
   const [input, setInput] = useState("")
   const { generating, result, error, generate, cancel, reset } = useIllustration()
@@ -46,6 +74,59 @@ export function ToolIllustrationPage() {
   const [customStyle, setCustomStyle] = useState("")
   const [customSelected, setCustomSelected] = useState(false)
   const radioGroupRef = useRef<HTMLDivElement>(null)
+
+  // API Key warning
+  const [apiKeyMissing, setApiKeyMissing] = useState(false)
+
+  // Progress timer
+  const [elapsedSec, setElapsedSec] = useState(0)
+
+  // Image preview
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+
+  // Last generation args (for retry)
+  const lastArgsRef = useRef<{ prompt: string; stylePreset?: string; layout?: string } | null>(null)
+
+  // ── Check API Key on mount ──────────────────────────────────────────────
+  useEffect(() => {
+    api.getIllustrationConfig().then((config) => {
+      if (config.apiKeySource === "none") {
+        setApiKeyMissing(true)
+      }
+    }).catch(() => {
+      // Silently ignore — config fetch failure is not critical here
+    })
+  }, [])
+
+  // ── Progress timer ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!generating) {
+      setElapsedSec(0)
+      return
+    }
+    setElapsedSec(0)
+    const timer = setInterval(() => {
+      setElapsedSec((prev) => prev + 1)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [generating])
+
+  // ── Load image preview when result changes ──────────────────────────────
+  useEffect(() => {
+    if (!result) {
+      setPreviewSrc(null)
+      return
+    }
+    let cancelled = false
+    api.readLocalImage(result.filePath).then((dataUrl) => {
+      if (!cancelled) setPreviewSrc(dataUrl)
+    }).catch(() => {
+      // Fall back — preview unavailable
+      if (!cancelled) setPreviewSrc(null)
+    })
+    return () => { cancelled = true }
+  }, [result])
 
   // Detect mermaid type and compute recommended style
   const recommendedStyle = useMemo(() => {
@@ -70,12 +151,20 @@ export function ToolIllustrationPage() {
   const handleGenerate = useCallback(() => {
     const text = input.trim()
     if (!text) return
-    generate({
+    const args = {
       prompt: text,
       stylePreset: customStyle || selectedStyle?.style || recommendedStyle.style,
       layout: selectedStyle?.layout || recommendedStyle.layout,
-    })
+    }
+    lastArgsRef.current = args
+    generate(args)
   }, [input, generate, customStyle, selectedStyle, recommendedStyle])
+
+  const handleRetry = useCallback(() => {
+    if (lastArgsRef.current) {
+      generate(lastArgsRef.current)
+    }
+  }, [generate])
 
   const handleReset = useCallback(() => {
     reset()
@@ -83,7 +172,37 @@ export function ToolIllustrationPage() {
     setSelectedStyle(null)
     setCustomStyle("")
     setCustomSelected(false)
+    setPreviewSrc(null)
   }, [reset])
+
+  const handleRegenerate = useCallback(() => {
+    // Keep input, just re-generate
+    reset()
+    setPreviewSrc(null)
+    handleGenerate()
+  }, [reset, handleGenerate])
+
+  const handleCopyReference = useCallback(() => {
+    if (!result) return
+    // Extract relative path (from output/ onwards)
+    const outputIdx = result.filePath.indexOf("output/")
+    const relativePath = outputIdx >= 0 ? result.filePath.slice(outputIdx) : result.filePath
+    const markdown = `![插图](${relativePath})`
+    navigator.clipboard.writeText(markdown).then(() => {
+      toast("已复制到剪贴板", "success")
+    }).catch(() => {
+      toast("复制失败", "error")
+    })
+  }, [result, toast])
+
+  const handleCopyPath = useCallback(() => {
+    if (!result) return
+    navigator.clipboard.writeText(result.filePath).then(() => {
+      toast("路径已复制", "success")
+    }).catch(() => {
+      toast("复制失败", "error")
+    })
+  }, [result, toast])
 
   const handleStyleSelect = (layout: string, style: string) => {
     setSelectedStyle({ layout, style })
@@ -126,6 +245,24 @@ export function ToolIllustrationPage() {
         <span className="text-sm text-[var(--text-secondary)]">当前支持 Mermaid 流程图和自然语言描述生成</span>
       </div>
       <div className="h-px bg-[var(--border)]" />
+
+      {/* API Key missing warning */}
+      {apiKeyMissing && (
+        <div className="mt-4 flex items-center gap-3 rounded-lg border border-amber-300/40 bg-amber-50/60 px-4 py-2.5 dark:border-amber-500/30 dark:bg-amber-900/15">
+          <svg className="size-4 shrink-0 text-amber-600 dark:text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          </svg>
+          <span className="text-sm text-amber-800 dark:text-amber-300">
+            请先在设置中配置图片生成 API Key
+          </span>
+          <button
+            onClick={() => navigate("/settings?tab=api")}
+            className="ml-auto text-[13px] font-medium text-amber-700 hover:underline dark:text-amber-400"
+          >
+            前往设置
+          </button>
+        </div>
+      )}
 
       {/* Input mode toggle */}
       <SegmentedControl
@@ -313,14 +450,24 @@ export function ToolIllustrationPage() {
         </div>
       </div>
 
-      {/* Generating state */}
+      {/* Generating state — dynamic progress text + optional cancel */}
       {generating && (
         <div className="mt-6 flex flex-col items-center justify-center py-12">
           <svg className="size-6 animate-spin text-[var(--accent-color)]" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <p className="mt-3 text-sm text-[var(--text-secondary)]">AI 绘制中...</p>
+          <p className="mt-3 text-sm text-[var(--text-secondary)]">
+            {getProgressText(elapsedSec)}
+          </p>
+          {elapsedSec >= 60 && (
+            <button
+              onClick={cancel}
+              className="mt-2 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] underline underline-offset-2 transition-colors"
+            >
+              取消
+            </button>
+          )}
         </div>
       )}
 
@@ -328,26 +475,93 @@ export function ToolIllustrationPage() {
       {error && (
         <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[color-mix(in_srgb,var(--destructive)_5%,transparent)] px-4 py-3">
           <p className="text-sm text-[var(--destructive)]">{error}</p>
-          <Button variant="ghost" size="sm" onClick={handleReset} className="mt-2">
-            重置
-          </Button>
+          {(() => {
+            const hint = getErrorHint(error)
+            if (!hint) return null
+            return hint.link ? (
+              <button
+                onClick={() => navigate(hint.link!)}
+                className="mt-1 text-[13px] text-[var(--accent-color)] hover:underline"
+              >
+                {hint.text}
+              </button>
+            ) : (
+              <p className="mt-1 text-[13px] text-[var(--text-secondary)]">{hint.text}</p>
+            )
+          })()}
+          <div className="mt-2 flex gap-2">
+            <Button variant="ghost" size="sm" onClick={handleRetry}>
+              重试
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleReset}>
+              重置
+            </Button>
+          </div>
         </div>
       )}
 
-      {/* Success state */}
+      {/* Success state — image preview + actions */}
       {result && !generating && (
         <div className="mt-6">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-[13px] text-[var(--text-secondary)]">生成完成</span>
-            <Button variant="ghost" size="sm" onClick={handleReset}>
-              重新生成
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={handleCopyReference}>
+                复制引用
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleRegenerate}>
+                重新生成
+              </Button>
+            </div>
           </div>
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-4 py-8 text-center">
-            <p className="text-sm text-[var(--text-primary)]">插图已生成</p>
-            <p className="mt-1 text-[12px] text-[var(--text-tertiary)] break-all">{result.filePath}</p>
+
+          {/* Image preview card */}
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--secondary)] overflow-hidden">
+            {previewSrc ? (
+              <div className="flex justify-center px-4 py-6">
+                <img
+                  src={previewSrc}
+                  alt="生成的插图"
+                  onClick={() => setLightboxOpen(true)}
+                  className="max-h-[420px] w-auto rounded-lg object-contain cursor-pointer transition-shadow hover:shadow-lg"
+                  draggable={false}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center px-4 py-12">
+                <div className="h-[200px] w-[300px] animate-pulse rounded-lg bg-[var(--border)]" />
+              </div>
+            )}
+
+            {/* File info bar */}
+            <div className="flex items-center gap-3 border-t border-[var(--border)] px-4 py-2.5">
+              <p
+                className="flex-1 truncate text-[12px] text-[var(--text-tertiary)] cursor-pointer hover:text-[var(--text-secondary)] transition-colors"
+                onClick={handleCopyPath}
+                title="点击复制路径"
+              >
+                {result.filePath}
+              </p>
+              {result.width > 0 && result.height > 0 && (
+                <span className="shrink-0 text-[11px] text-[var(--text-tertiary)]">
+                  {result.width} x {result.height}
+                </span>
+              )}
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Lightbox */}
+      {previewSrc && result && (
+        <Lightbox
+          open={lightboxOpen}
+          src={previewSrc}
+          alt="生成的插图"
+          fileName={result.filePath.split("/").pop()}
+          dimensions={result.width > 0 && result.height > 0 ? `${result.width} x ${result.height}` : undefined}
+          onClose={() => setLightboxOpen(false)}
+        />
       )}
 
       {/* History gallery placeholder */}
