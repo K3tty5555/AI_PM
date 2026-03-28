@@ -3,19 +3,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { SegmentedControl } from "@/components/ui/segmented-control"
 import { cn } from "@/lib/utils"
+import type { MermaidBlock } from "@/lib/mermaid-utils"
+export type { MermaidBlock }
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-export interface MermaidBlock {
-  index: number
-  lineNumber: number
-  code: string
-  chartType: string
-  recommendedLayout: string
-  recommendedStyle: string
-}
 
 export interface MermaidExportChoices {
   renderModes: Record<number, "ai" | "local" | "skip">

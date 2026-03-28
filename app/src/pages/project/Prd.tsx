@@ -24,7 +24,8 @@ import { PrdScoreBadge, PrdScorePanel } from "@/components/prd-score-panel"
 import { PrdAssistPanel } from "@/components/prd-assist-panel"
 import { consumeAdoptionQueue } from "@/components/review-grouped-view"
 import { SensitiveScanDialog } from "@/components/sensitive-scan-dialog"
-import { MermaidRenderDialog, type MermaidBlock, type MermaidExportChoices } from "@/components/mermaid-render-dialog"
+import { MermaidRenderDialog, type MermaidExportChoices } from "@/components/mermaid-render-dialog"
+import { type MermaidBlock, extractMermaidBlocks } from "@/lib/mermaid-utils"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -52,45 +53,7 @@ function extractSectionIds(markdown: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Mermaid detection helpers
-// ---------------------------------------------------------------------------
-
-function detectMermaidType(code: string): string {
-  const firstLine = code.trim().split("\n")[0].trim()
-  for (const type of ["sequenceDiagram", "flowchart", "classDiagram", "graph"]) {
-    if (firstLine.startsWith(type)) return type
-  }
-  return "graph"
-}
-
-const STYLE_RECOMMENDATIONS: Record<string, { layout: string; style: string }> = {
-  graph:           { layout: "linear-progression", style: "corporate-memphis" },
-  flowchart:       { layout: "linear-progression", style: "corporate-memphis" },
-  sequenceDiagram: { layout: "linear-progression", style: "technical-schematic" },
-  classDiagram:    { layout: "structural-breakdown", style: "technical-schematic" },
-}
-
-function extractMermaidBlocks(markdown: string): MermaidBlock[] {
-  const blocks: MermaidBlock[] = []
-  const regex = /```mermaid\s*\n([\s\S]*?)```/g
-  let match: RegExpExecArray | null
-  let index = 0
-  while ((match = regex.exec(markdown)) !== null) {
-    const lineNumber = markdown.substring(0, match.index).split("\n").length
-    const code = match[1].trim()
-    const chartType = detectMermaidType(code)
-    const rec = STYLE_RECOMMENDATIONS[chartType] || STYLE_RECOMMENDATIONS["graph"]
-    blocks.push({
-      index: index++,
-      lineNumber,
-      code,
-      chartType,
-      recommendedLayout: rec.layout,
-      recommendedStyle: rec.style,
-    })
-  }
-  return blocks
-}
+// Mermaid detection helpers — imported from @/lib/mermaid-utils
 
 // ---------------------------------------------------------------------------
 // Export dropdown
