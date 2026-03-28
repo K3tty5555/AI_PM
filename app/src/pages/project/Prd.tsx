@@ -24,6 +24,7 @@ import { PrdScoreBadge, PrdScorePanel } from "@/components/prd-score-panel"
 import { PrdAssistPanel } from "@/components/prd-assist-panel"
 import { consumeAdoptionQueue } from "@/components/review-grouped-view"
 import { ExportPreflightDialog } from "@/components/export-preflight-dialog"
+import { SamplePrdDialog } from "@/components/sample-prd-dialog"
 import { useExportPipeline } from "@/hooks/use-export-pipeline"
 import { PreflightCard } from "@/components/preflight-card"
 
@@ -184,6 +185,9 @@ export function PrdPage() {
   const [scoreStale, setScoreStale] = useState(false)
   const [scorePanelOpen, setScorePanelOpen] = useState(false)
   const scoreCheckedRef = useRef(false)
+
+  // Sample PRD dialog
+  const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
 
   // AI assist input
   const [assistInput, setAssistInput] = useState("")
@@ -665,6 +669,9 @@ export function PrdPage() {
               )}
             </>
           )}
+          <Button variant="ghost" size="sm" onClick={() => setSampleDialogOpen(true)}>
+            参考样例
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -937,6 +944,9 @@ export function PrdPage() {
         onExport={exportPipeline.confirmPreflight}
         onCancel={exportPipeline.cancel}
       />
+
+      {/* Sample PRD reference dialog */}
+      <SamplePrdDialog open={sampleDialogOpen} onClose={() => setSampleDialogOpen(false)} />
     </div>
     </PhaseShell>
   )
