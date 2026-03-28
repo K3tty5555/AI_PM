@@ -1,0 +1,51 @@
+{
+  "general": {
+    "label": "通用/不指定",
+    "accent": "#374151",
+    "bg": "#F9FAFB",
+    "font": "system",
+    "keywords": "中性、灵活"
+  },
+  "finance": {
+    "label": "金融/法律",
+    "accent": "#1E3A5F",
+    "bg": "#F5F5F0",
+    "font": "serif",
+    "keywords": "权威、稳重"
+  },
+  "healthcare": {
+    "label": "医疗/健康",
+    "accent": "#0D7377",
+    "bg": "#F0F9F4",
+    "font": "sans-serif",
+    "keywords": "信任、洁净"
+  },
+  "tech": {
+    "label": "科技/互联网",
+    "accent": "#4F46E5",
+    "bg": "#F8FAFC",
+    "font": "sans-serif",
+    "keywords": "创新、简洁"
+  },
+  "education": {
+    "label": "教育",
+    "accent": "#1B4F72",
+    "bg": "#FDF6EC",
+    "font": "mixed",
+    "keywords": "严谨、亲和"
+  },
+  "ecommerce": {
+    "label": "电商/零售",
+    "accent": "#DC2626",
+    "bg": "#FFFBEB",
+    "font": "bold-sans",
+    "keywords": "活力、促销感"
+  },
+  "enterprise": {
+    "label": "企业内部工具",
+    "accent": "#374151",
+    "bg": "#F9FAFB",
+    "font": "system",
+    "keywords": "克制、高效"
+  }
+}
