@@ -6,9 +6,9 @@
 
 ## 功能
 
-扫描所有技能文件，检查 15 项一致性指标，输出健康报告。
+扫描所有技能文件，检查 22 项一致性指标，输出健康报告。
 
-## 检查项（5 类共 15 项）
+## 检查项（6 类共 22 项）
 
 ### 命令路由一致性（3 项）
 
@@ -39,6 +39,16 @@
 
 14. **frontmatter 完整性**: 检查每个技能的 SKILL.md 是否有标准的 YAML frontmatter（name, description）
 15. **manifest 版本**: 如果存在 `skill-manifest.json`，检查 version 字段是否与内容匹配
+
+### 资源与安全（7 项）
+
+16. **技能描述触发条件**: 检查每个技能 SKILL.md 的 description 字段是否包含用户说的话（搜索"当用户说"或类似触发关键词），缺失则警告
+17. **技能文件行数**: 扫描 `.claude/skills/` 下所有 SKILL.md，超过 500 行的文件标记为 ⚠️ 警告，建议拆分
+18. **模板文件可读性**: 验证 `templates/` 下关键文件（`prd-styles/default/feishu-template.md`、`presets/industry-style-presets.json`、`presets/copywriting-frameworks.md`）是否可访问（文件存在且非空）
+19. **样例 PRD 字段一致性**: 读取 `templates/prd-styles/default/sample-*.md`，检查是否包含 feishu-template.md 中定义的核心章节（二、需求分析 / 三、功能清单 / 四、产品流程 / 六、详细功能设计）
+20. **硬编码密钥扫描**: 用精确正则 `sk-[a-zA-Z0-9]{20,}` 和 `AKIA[0-9A-Z]{16}` 扫描 `.claude/skills/` 和 `templates/` 目录下的所有文件，排除 `docs/` 和 `MEMORY.md`，匹配到则标记为 ❌ 错误
+21. **行业预设完整性**: 读取 `templates/presets/industry-style-presets.json`，检查 JSON 是否包含 7 个行业（general/finance/healthcare/tech/education/ecommerce/enterprise），每个行业必须有 label/accent/bg/font/keywords 字段
+22. **SKILL.md 路由表路径存在性**: 从 `ai-pm/SKILL.md` 的命令路由表中提取引用的子技能名（如 `ai-pm-analyze`、`ai-pm-research`），检查 `.claude/skills/{技能名}/SKILL.md` 是否存在
 
 ## 执行方式
 
