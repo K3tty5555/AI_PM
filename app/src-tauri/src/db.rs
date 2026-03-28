@@ -89,5 +89,15 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
         conn.execute("UPDATE schema_version SET version = 3 WHERE id = 1", [])?;
     }
 
+    // Version 4: add industry column
+    if current_version < 4 {
+        conn.execute("ALTER TABLE projects ADD COLUMN industry TEXT DEFAULT 'general'", [])
+            .map_err(|e| {
+                eprintln!("Migration v4 failed (industry): {e}");
+                e
+            })?;
+        conn.execute("UPDATE schema_version SET version = 4 WHERE id = 1", [])?;
+    }
+
     Ok(conn)
 }
