@@ -340,9 +340,40 @@ def add_table(doc, lines, screenshot_map=None):
     apply_col_widths(table, len(headers))
     doc.add_paragraph()
 
-def convert(prd_path, output_path, manifest_path=None):
+def _find_available_font(font_list):
+    """从字体 fallback 链中找到第一个系统可用的字体"""
+    for font in font_list:
+        if font in ('serif', 'sans-serif', 'monospace', 'system'):
+            return font  # CSS generic — 用 fallback 默认
+        try:
+            result = subprocess.run(['fc-list', font], capture_output=True, text=True, timeout=5)
+            if result.stdout.strip():
+                return font
+        except Exception:
+            pass
+    return font_list[0] if font_list else 'PingFang SC'
+
+
+def _parse_pt(val):
+    """Parse '11pt' → 11, '16pt' → 16"""
+    if isinstance(val, (int, float)):
+        return int(val)
+    m = re.match(r'(\d+(?:\.\d+)?)\s*pt', str(val))
+    return int(float(m.group(1))) if m else 11
+
+
+def convert(prd_path, output_path, manifest_path=None, recipe_config=None):
     prd_path = Path(prd_path)
     project_dir = prd_path.parent.parent
+
+    # Recipe defaults
+    body_font = 'PingFang SC'
+    body_size = 11
+    if recipe_config:
+        body_font_chain = recipe_config.get('bodyFont', ['PingFang SC'])
+        body_font = _find_available_font(body_font_chain)
+        body_size = _parse_pt(recipe_config.get('bodySize', '11pt'))
+        print(f'  配方字体: {body_font} ({body_size}pt)')
 
     # 加载截图映射 label → 本地路径
     screenshot_map = {}
@@ -356,9 +387,9 @@ def convert(prd_path, output_path, manifest_path=None):
 
     doc = Document()
     style = doc.styles['Normal']
-    style.font.name = 'PingFang SC'
-    style.font.size = Pt(11)
-    style.element.rPr.rFonts.set(qn('w:eastAsia'), 'PingFang SC')
+    style.font.name = body_font
+    style.font.size = Pt(body_size)
+    style.element.rPr.rFonts.set(qn('w:eastAsia'), body_font)
 
     md = prd_path.read_text(encoding='utf-8')
     lines = md.split('\n')
@@ -515,8 +546,30 @@ def convert(prd_path, output_path, manifest_path=None):
     print(f'✅ DOCX 已生成: {output_path}')
 
 if __name__ == '__main__':
-    # 用法: python3 md2docx.py <prd.md> <output.docx> [manifest.json]
+    # 用法: python3 md2docx.py <prd.md> <output.docx> [manifest.json] [--recipe=NAME] [--recipe-file=PATH]
     if len(sys.argv) < 3:
-        print('用法: python3 md2docx.py <prd.md> <output.docx> [manifest.json]')
+        print('用法: python3 md2docx.py <prd.md> <output.docx> [manifest.json] [--recipe=NAME] [--recipe-file=PATH]')
         sys.exit(1)
-    convert(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
+
+    positional = [a for a in sys.argv[1:] if not a.startswith('--')]
+    named = {a.split('=', 1)[0]: a.split('=', 1)[1] for a in sys.argv[1:] if '=' in a and a.startswith('--')}
+
+    prd_file = positional[0]
+    out_file = positional[1]
+    manifest_file = positional[2] if len(positional) > 2 else None
+
+    recipe_cfg = None
+    recipe_name = named.get('--recipe')
+    recipe_file = named.get('--recipe-file')
+    if recipe_name and recipe_file and Path(recipe_file).exists():
+        try:
+            all_recipes = json.loads(Path(recipe_file).read_text())
+            recipe_cfg = all_recipes.get('recipes', {}).get(recipe_name)
+            if recipe_cfg:
+                print(f'  使用配方: {recipe_name} ({recipe_cfg.get("label", "")})')
+            else:
+                print(f'  ⚠️ 配方 "{recipe_name}" 不存在，使用默认样式')
+        except Exception as e:
+            print(f'  ⚠️ 读取配方文件失败: {e}，使用默认样式')
+
+    convert(prd_file, out_file, manifest_file, recipe_config=recipe_cfg)
