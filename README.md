@@ -1,111 +1,161 @@
-# AI PM
+<p align="center">
+  <img src="app/src-tauri/icons/128x128@2x.png" width="96" alt="AI PM">
+</p>
+<h1 align="center">AI PM</h1>
+<p align="center">
+  AI-powered product manager — from idea to PRD, prototype, and review in minutes.
+</p>
+<p align="center">
+  <a href="https://github.com/K3tty5555/AI_PM/releases"><img src="https://img.shields.io/github/v/release/K3tty5555/AI_PM?style=flat-square" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
+</p>
+<p align="center">
+  <a href="README.md">English</a> | <a href="README_zh-CN.md">简体中文</a>
+</p>
 
-AI 产品经理工具。输入需求，输出 PRD、原型、评审报告。
+---
 
-有两种使用方式，功能互补：
+## What is AI PM?
 
-| | Claude Code 版 | 桌面客户端 |
+AI PM is an AI product manager toolkit. Describe your product idea in one sentence, and it will walk you through the entire product workflow — requirement analysis, competitive research, user stories, PRD writing, prototype design, and a six-role review meeting — all automated.
+
+Two ways to use it, complementary to each other:
+
+| | Claude Code Edition | Desktop App |
 |---|---|---|
-| 形态 | Claude Code 内的技能集 | 独立桌面应用（macOS / Windows） |
-| 交互 | 命令行对话 | GUI 可视化操作 |
-| 前置条件 | [Claude Code](https://claude.ai/code) 订阅 | API Key 或本地 Claude CLI |
-| 核心优势 | 工具链强：网页搜索、脚本执行、多 Agent 并行 | 体验好：进度可视化、拖拽排序、设备预览、暗色模式 |
+| Form | Skill set inside Claude Code | Standalone desktop app (macOS / Windows) |
+| Interface | CLI conversation | Visual GUI |
+| Prerequisite | [Claude Code](https://claude.ai/code) subscription | API Key or local Claude CLI |
+| Strength | Powerful toolchain: web search, script execution, multi-agent parallel | Great UX: progress visualization, drag-and-drop, device preview, dark mode |
 
-## 能做什么
+## Features
 
-- **完整产品流程** — 需求分析 → 竞品研究 → 用户故事 → PRD → 原型 → 六角色评审，每阶段独立保存
-- **PRD 多格式导出** — Markdown / PDF / DOCX（可导入飞书），一次生成全套
-- **需求优先级评估** — 四维打分（业务价值/实现成本/用户影响/战略契合），输出排序和回复模板
-- **工作周报** — 随意描述本周工作，输出向上汇报版或团队同步版
-- **现场调研** — 结构化访谈 + 实时记录，现场生成 PRD
-- **数据洞察** — 上传 Excel/CSV，挖掘业务洞察，生成交互式仪表盘
-- **产品分身** — 学习你的 PRD 写作风格，让 AI 输出越来越像你
-- **设计规范** — 加载公司 UI 规范，原型自动遵守设计标准
-- **知识库** — 沉淀设计模式、决策记录、踩坑经验，自动推荐
+### Full Product Workflow (9 Phases)
 
-## 快速开始
+```
+Requirement → Analysis → Competitive Research → User Stories → PRD → Analytics Design → Prototype → 6-Role Review → Retrospective
+```
 
-### 方式一：Claude Code 版
+Each phase saves independently. Resume anytime. Skip phases that don't apply.
+
+### PRD Multi-Format Export
+- **Markdown** — native format, always generated
+- **PDF** — 15 cover templates, Chrome headless rendering
+- **DOCX** — 13 recipe styles, directly importable to Feishu/Lark
+- **PPT** — 18 color schemes, 5 page types, auto-generated from PRD
+- **Share Page** — standalone HTML for stakeholder sharing
+
+### Toolbox
+| Tool | What it does |
+|------|-------------|
+| **Priority Assessment** | 4-dimension scoring (business value / cost / user impact / strategic fit), batch processing |
+| **Weekly Report** | Describe your week casually, get a structured report for leadership or team sync |
+| **On-site Interview** | Structured interview guide + real-time recording → PRD on the spot |
+| **Data Insight** | Upload Excel/CSV → interactive dashboard + business insights |
+| **Product Persona** | Learn your PRD writing style, make AI output more like you |
+| **Design Spec** | Load your company's UI spec, prototypes auto-comply |
+| **Knowledge Base** | Accumulate design patterns, decisions, pitfalls — auto-recommended in context |
+| **AI Illustration** | Generate flowcharts and diagrams with Seedream AI |
+| **PPT Generation** | PRD → PowerPoint with industry-matched color schemes |
+| **Screenshot Analysis** | Competitive UI analysis — 5 modes: describe, OCR, UI review, chart data, object detect |
+
+### Desktop App Highlights
+- Project Dashboard with search, filter, favorites, and progress bars
+- User story drag-and-drop reordering (StoryBoard)
+- PRD table-of-contents navigation + Mermaid live rendering
+- Prototype device simulation (Mobile / Tablet / Desktop)
+- Motion intensity selector for prototypes (low / medium / high)
+- Six-role review results with tab switching
+- CLI enhanced mode: web search for research, multi-file prototype
+- Progressive reveal: content fades in paragraph by paragraph
+- Generation progress: real-time tool call status + token cost display
+- Dark mode, keyboard shortcuts (⌘K / ⌘B / ⌘1-9)
+
+## Quick Start
+
+### Option 1: Claude Code Edition
 
 ```bash
 git clone https://github.com/K3tty5555/AI_PM.git
 cd AI_PM
-claude  # 打开 Claude Code
+claude  # Open Claude Code in this directory
 ```
 
 ```
-/ai-pm "我想做一个记账小程序，帮助年轻人管理日常开支"
+/ai-pm "I want to build a personal finance app for young people"
 ```
 
-AI 会引导你完成需求澄清，然后逐步推进到 PRD 和原型。
+AI will guide you through requirement clarification, then progressively advance to PRD and prototype.
 
-### 方式二：桌面客户端
+### Option 2: Desktop App
 
-从 [Releases](https://github.com/K3tty5555/AI_PM/releases) 下载安装包：
-- macOS：`AI.PM_x.x.x_universal.dmg`
-- Windows：`AI.PM_x.x.x_x64-setup.exe`
+Download from [Releases](https://github.com/K3tty5555/AI_PM/releases):
+- macOS: `AI.PM_x.x.x_universal.dmg`
+- Windows: `AI.PM_x.x.x_x64-setup.exe`
 
-首次启动后在设置页面配置 AI 后端（三选一）：
-- **Anthropic API** — 填写 API Key
-- **OpenAI 兼容接口** — 填写 Base URL + Key（支持中转）
-- **Claude CLI** — 复用本机已登录的 Claude Code，无需额外 Key
+On first launch, configure your AI backend in Settings (pick one):
+- **Anthropic API** — enter your API Key
+- **OpenAI-compatible endpoint** — enter Base URL + Key (supports proxies)
+- **Claude CLI** — reuse your locally logged-in Claude Code, no extra key needed
 
-## Claude Code 版技能列表
+## Claude Code Commands
 
-| 命令 | 说明 |
-|------|------|
-| `/ai-pm [需求]` | 完整流程：需求 → PRD → 原型 → 评审 |
-| `/ai-pm --team [需求]` | 复杂需求，多 Agent 并行协作 |
-| `/ai-pm continue` | 恢复上次未完成的项目 |
-| `/ai-pm priority` | 需求优先级评估 |
-| `/ai-pm weekly` | 工作周报生成 |
-| `/ai-pm interview` | 现场调研 / 客户访谈 |
-| `/ai-pm data [文件]` | 数据洞察分析 |
-| `/ai-pm persona` | 产品分身（风格学习） |
-| `/ai-pm design-spec` | 设计规范管理 |
-| `/ai-pm knowledge` | 产品知识库 |
+| Command | Description |
+|---------|-------------|
+| `/ai-pm [idea]` | Full workflow: requirement → PRD → prototype → review |
+| `/ai-pm --team [idea]` | Complex requirements, multi-agent parallel collaboration |
+| `/ai-pm continue` | Resume the last unfinished project |
+| `/ai-pm priority` | Requirement priority assessment |
+| `/ai-pm weekly` | Weekly report generation |
+| `/ai-pm interview` | On-site interview mode |
+| `/ai-pm data [file]` | Data insight analysis |
+| `/ai-pm persona` | Product persona (style learning) |
+| `/ai-pm design-spec` | Design spec management |
+| `/ai-pm knowledge` | Product knowledge base |
+| `/ai-pm pptx` | Generate PPT presentation |
 
-独立技能：`/ai-pm-analyze`、`/ai-pm-research`、`/ai-pm-story`、`/ai-pm-prd`、`/ai-pm-prototype`、`/ai-pm-review`
+Standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/ai-pm-prd`, `/ai-pm-prototype`, `/ai-pm-review`, `/ai-pm-pptx`
 
-## 桌面客户端功能
+## Feature Comparison
 
-### 项目阶段（9 步）
-需求收集 → 需求分析 → 竞品研究 → 用户故事 → PRD → 埋点设计 → 原型 → 评审 → 复盘
+| Capability | Claude Code | Desktop App |
+|-----------|:---:|:---:|
+| Web search (competitive research) | Native | CLI mode |
+| Script execution (data analysis) | Native | CLI mode |
+| Multi-agent parallel | Yes | Planned |
+| Playwright web analysis | Yes | Requires local setup |
+| Visual Dashboard | - | Yes |
+| Drag-and-drop editing | - | Yes |
+| Device simulation preview | - | Yes |
+| Brainstorm mode | Natural conversation | Dedicated mode |
+| Offline use | Online required | API mode online |
 
-每个阶段支持「先聊聊」模式——先与 AI 多轮讨论，达成共识后再生成。
+## Tech Stack
 
-### 工具箱
-需求优先级 · 工作周报 · 数据洞察 · 现场调研 · 知识库 · 产品分身 · 设计规范
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, TypeScript 5, Vite 6, TailwindCSS 4, Mermaid 11 |
+| Backend | Tauri 2, Rust, SQLite |
+| AI Skills | Claude Code Skills (Markdown-based, 23 skills) |
+| Export Scripts | Python 3 (python-docx, python-pptx, Pillow) |
+| CI/CD | GitHub Actions, macOS universal binary + Windows x64 |
 
-### 客户端独有
-- 项目 Dashboard（搜索/过滤/收藏/进度条）
-- 用户故事拖拽排序（StoryBoard）
-- PRD 目录导航 + Mermaid 实时渲染
-- 原型设备模拟预览（Mobile / Tablet / Desktop）
-- 六角色评审结果 Tab 切换
-- CLI 增强模式：竞品研究自动搜索网页，原型生成支持多文件
-- 分段渐现：内容按段落 fade-in 渐次呈现
-- 生成进度：工具调用实时状态 + 费用显示
-- 暗色模式 · 快捷键（⌘K / ⌘B / ⌘1-9）
+## Project Structure
 
-## 两个版本的差异
+```
+.claude/skills/          # 23 AI skills (Claude Code)
+app/src/                 # React frontend (13 pages, 9 tools, 63 components)
+app/src-tauri/           # Rust backend (13 command modules)
+templates/               # PRD styles, UI specs, knowledge base, presets
+docs/                    # Design system, implementation plans
+output/                  # Per-project output (git-ignored)
+AI_PM_教程中心.html       # Interactive tutorial (open in browser, offline)
+```
 
-| 能力 | Claude Code 版 | 客户端 |
-|------|:---:|:---:|
-| 网页搜索（竞品研究） | ✅ 原生 | ✅ CLI 模式 |
-| 脚本执行（数据分析） | ✅ | ✅ CLI 模式 |
-| 多 Agent 并行 | ✅ | 二期 |
-| Playwright 网页分析 | ✅ | 需本地配置 |
-| 可视化 Dashboard | ❌ | ✅ |
-| 拖拽编辑 | ❌ | ✅ |
-| 设备模拟预览 | ❌ | ✅ |
-| 先聊聊（Brainstorm） | 天然对话 | ✅ 专属模式 |
-| 离线使用 | 需在线 | API 模式需在线 |
+## Tutorial
 
-## 使用教程
-
-打开项目根目录的 `AI_PM_教程中心.html`（浏览器直接打开，无需网络），包含两个版本的完整使用指南。
+Open `AI_PM_教程中心.html` in your browser (works offline) for a visual guide covering both the Claude Code edition and the desktop app.
 
 ## License
 
-MIT
+[MIT](LICENSE)
