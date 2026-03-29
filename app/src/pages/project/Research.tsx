@@ -120,6 +120,48 @@ export function ResearchPage() {
   const [urls, setUrls] = useState<UrlEntry[]>([])
   const [fetchingUrls, setFetchingUrls] = useState(false)
 
+  // Screenshot analysis tab
+  const [researchTab, setResearchTab] = useState<"text" | "screenshot">("text")
+  const [screenshotUrl, setScreenshotUrl] = useState("")
+  const [screenshotMode, setScreenshotMode] = useState<ScreenshotAnalysisMode>("ui-review")
+  const [screenshotFile, setScreenshotFile] = useState<string | null>(null)
+  const [screenshotAnalyzing, setScreenshotAnalyzing] = useState(false)
+  const [screenshotResult, setScreenshotResult] = useState<string | null>(null)
+
+  const handleAnalyzeScreenshot = useCallback(async () => {
+    const imagePath = screenshotFile
+    if (!imagePath) {
+      toast("请先上传截图或输入 URL", "error")
+      return
+    }
+    setScreenshotAnalyzing(true)
+    setScreenshotResult(null)
+    try {
+      const result = await api.analyzeScreenshot(imagePath, screenshotMode)
+      setScreenshotResult(result.markdown)
+    } catch (err) {
+      toast(String(err), "error")
+    } finally {
+      setScreenshotAnalyzing(false)
+    }
+  }, [screenshotFile, screenshotMode, toast])
+
+  const handleCaptureUrl = useCallback(async () => {
+    if (!screenshotUrl || !projectId) return
+    setScreenshotAnalyzing(true)
+    try {
+      const proj = await api.getProject(projectId)
+      if (!proj) throw new Error("项目不存在")
+      const path = await api.captureUrlScreenshot(screenshotUrl, proj.outputDir)
+      setScreenshotFile(path)
+      toast("截图完成", "success")
+    } catch (err) {
+      toast(String(err), "error")
+    } finally {
+      setScreenshotAnalyzing(false)
+    }
+  }, [screenshotUrl, projectId, toast])
+
   useEffect(() => {
     api.getConfig().then(cfg => {
       const apiMode = cfg.backend === "api"
@@ -462,48 +504,6 @@ export function ResearchPage() {
 
   const hasContent = !!displayContent
   const canAdvance = hasContent && !isStreaming && !advancing
-
-  // ── Screenshot analysis tab state ──────────────────────────────────
-  const [researchTab, setResearchTab] = useState<"text" | "screenshot">("text")
-  const [screenshotUrl, setScreenshotUrl] = useState("")
-  const [screenshotMode, setScreenshotMode] = useState<ScreenshotAnalysisMode>("ui-review")
-  const [screenshotFile, setScreenshotFile] = useState<string | null>(null)
-  const [screenshotAnalyzing, setScreenshotAnalyzing] = useState(false)
-  const [screenshotResult, setScreenshotResult] = useState<string | null>(null)
-
-  const handleAnalyzeScreenshot = useCallback(async () => {
-    const imagePath = screenshotFile
-    if (!imagePath) {
-      toast("请先上传截图或输入 URL", "error")
-      return
-    }
-    setScreenshotAnalyzing(true)
-    setScreenshotResult(null)
-    try {
-      const result = await api.analyzeScreenshot(imagePath, screenshotMode)
-      setScreenshotResult(result.markdown)
-    } catch (err) {
-      toast(String(err), "error")
-    } finally {
-      setScreenshotAnalyzing(false)
-    }
-  }, [screenshotFile, screenshotMode, toast])
-
-  const handleCaptureUrl = useCallback(async () => {
-    if (!screenshotUrl || !projectId) return
-    setScreenshotAnalyzing(true)
-    try {
-      const proj = await api.getProject(projectId)
-      if (!proj) throw new Error("项目不存在")
-      const path = await api.captureUrlScreenshot(screenshotUrl, proj.outputDir)
-      setScreenshotFile(path)
-      toast("截图完成", "success")
-    } catch (err) {
-      toast(String(err), "error")
-    } finally {
-      setScreenshotAnalyzing(false)
-    }
-  }, [screenshotUrl, projectId, toast])
 
   return (
     <div className="layout-focus page-enter">
