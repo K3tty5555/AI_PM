@@ -442,6 +442,64 @@ body {
 /* Decorative geo element */
 .wf-geo { position: absolute; bottom: 28px; right: 72px; opacity: 0.06; pointer-events: none; }
 
+/* ===== CLIENT APP ===== */
+#client { padding: 88px 80px; background: var(--light); }
+.client-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px; margin-top: 36px;
+}
+.client-card {
+  background: var(--white); border: 1px solid var(--border);
+  padding: 28px 24px; position: relative;
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+}
+.client-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+.client-card::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+  background: var(--yellow); opacity: 0; transition: opacity 0.25s;
+}
+.client-card:hover::before { opacity: 1; }
+.client-icon { font-size: 24px; margin-bottom: 12px; display: block; }
+.client-name {
+  font-family: var(--font-sans); font-size: 14px; font-weight: 700;
+  color: var(--text-title); letter-spacing: 0.3px; margin-bottom: 6px;
+}
+.client-desc { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+.client-cat {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px;
+  color: var(--text-muted); margin-bottom: 20px; display: block;
+}
+.client-cta {
+  margin-top: 40px; display: flex; align-items: center; justify-content: center; gap: 16px;
+  flex-wrap: wrap;
+}
+.client-cta a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 32px; font-family: var(--font-mono); font-size: 12px;
+  font-weight: bold; letter-spacing: 1.5px; text-decoration: none;
+  transition: all 0.2s;
+}
+.client-cta .cta-primary { background: var(--yellow); color: var(--dark); }
+.client-cta .cta-primary:hover { background: #333; color: #fff; }
+.client-cta .cta-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.client-cta .cta-secondary:hover { border-color: var(--yellow); background: var(--yellow-dim); }
+
+.client-backends {
+  margin-top: 36px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+}
+.backend-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border: 1px solid var(--border); background: var(--white);
+  font-size: 12px; color: var(--text-muted);
+}
+.backend-chip .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+@media (max-width: 768px) {
+  #client { padding: 48px 20px; }
+  .client-grid { gap: 14px; }
+  .client-card { padding: 20px 16px; }
+}
+
 /* ===== FOOTER ===== */
 #footer {
   background: var(--dark);
@@ -1466,74 +1524,115 @@ body {
   </div>
   <p class="skills-subtitle sec-reveal" id="sr-cl">独立桌面应用，macOS / Windows 双平台，v0.4.0</p>
 
-  <div class="hud-box sec-reveal" style="margin-top:32px;">
-    <div class="hud-corner tl"></div>
-    <div class="hud-corner tr"></div>
-    <div class="hud-corner bl"></div>
-    <div class="hud-corner br"></div>
-
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:28px; padding:8px 0;">
-
-      <div>
-        <div style="font-family:var(--font-mono); font-size:10px; letter-spacing:1.5px; color:var(--text-muted); margin-bottom:12px;">// 核心体验</div>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div style="font-size:13px; line-height:1.6;">
-            <span style="font-weight:700; color:var(--text-title);">先聊聊模式</span>
-            <span style="color:var(--text-muted);"> — 每个阶段可先和 AI 多轮讨论，达成共识后再生成文档。像真人协作一样。</span>
-          </div>
-          <div style="font-size:13px; line-height:1.6;">
-            <span style="font-weight:700; color:var(--text-title);">分段渐现</span>
-            <span style="color:var(--text-muted);"> — 内容按段落 fade-in 渐次呈现，不再是「等半天然后突然全出来」。可随时 Esc 跳过。</span>
-          </div>
-          <div style="font-size:13px; line-height:1.6;">
-            <span style="font-weight:700; color:var(--text-title);">工具调用进度</span>
-            <span style="color:var(--text-muted);"> — CLI 模式下，AI 搜索网页、执行脚本时，实时显示工具状态和费用。</span>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <div style="font-family:var(--font-mono); font-size:10px; letter-spacing:1.5px; color:var(--text-muted); margin-bottom:12px;">// 可视化</div>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div style="font-size:13px; line-height:1.6;">
-            <span style="font-weight:700; color:var(--text-title);">项目 Dashboard</span>
-            <span style="color:var(--text-muted);"> — 卡片视图，搜索/过滤/收藏/进度条，一目了然。</span>
-          </div>
-          <div style="font-size:13px; line-height:1.6;">
-            <span style="font-weight:700; color:var(--text-title);">故事拖拽排序</span>
-            <span style="color:var(--text-muted);"> — StoryBoard 卡片拖拽，双击编辑，像 Trello 一样管理用户故事。</span>
-          </div>
-          <div style="font-size:13px; line-height:1.6;">
-            <span style="font-weight:700; color:var(--text-title);">原型设备模拟</span>
-            <span style="color:var(--text-muted);"> — 生成的原型可在 Mobile / Tablet / Desktop 三种视口下预览。</span>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <div style="font-family:var(--font-mono); font-size:10px; letter-spacing:1.5px; color:var(--text-muted); margin-bottom:12px;">// CLI 增强</div>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div style="font-size:13px; line-height:1.6;">
-            <span style="font-weight:700; color:var(--text-title);">网页搜索</span>
-            <span style="color:var(--text-muted);"> — 竞品研究时 AI 自动搜索网页获取最新信息，不再局限于训练数据。</span>
-          </div>
-          <div style="font-size:13px; line-height:1.6;">
-            <span style="font-weight:700; color:var(--text-title);">分阶段工具白名单</span>
-            <span style="color:var(--text-muted);"> — 竞品研究开放搜索，原型开放文件写入，其他阶段只读，安全受控。</span>
-          </div>
-          <div style="font-size:13px; line-height:1.6;">
-            <span style="font-weight:700; color:var(--text-title);">三种 AI 后端</span>
-            <span style="color:var(--text-muted);"> — Anthropic API / OpenAI 兼容接口 / Claude CLI，按需选择。</span>
-          </div>
-        </div>
-      </div>
-
+  <!-- 核心体验 -->
+  <span class="client-cat sec-reveal">// 核心体验</span>
+  <div class="client-grid sec-reveal">
+    <div class="client-card">
+      <span class="client-icon">💬</span>
+      <div class="client-name">先聊聊模式</div>
+      <div class="client-desc">每个阶段可先和 AI 多轮讨论，达成共识后再生成文档。像真人协作一样。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">✨</span>
+      <div class="client-name">分段渐现</div>
+      <div class="client-desc">内容按段落 fade-in 渐次呈现，不再是等半天然后突然全出来。可随时 Esc 跳过。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">⚡</span>
+      <div class="client-name">工具调用进度</div>
+      <div class="client-desc">AI 搜索网页、执行脚本时，实时显示工具状态和 Token 费用。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">🌙</span>
+      <div class="client-name">暗色模式</div>
+      <div class="client-desc">深色界面一键切换，护眼同时保持所有功能可用。⌘D 快捷切换。</div>
     </div>
   </div>
 
-  <div style="margin-top:32px; display:flex; justify-content:center;">
-    <a href="https://github.com/K3tty5555/AI_PM/releases" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:12px 28px; background:var(--yellow); color:var(--dark); font-family:var(--font-mono); font-size:12px; font-weight:bold; letter-spacing:1.5px; text-decoration:none; transition:all 0.2s;">
+  <!-- 可视化 -->
+  <span class="client-cat sec-reveal">// 可视化</span>
+  <div class="client-grid sec-reveal">
+    <div class="client-card">
+      <span class="client-icon">📋</span>
+      <div class="client-name">项目 Dashboard</div>
+      <div class="client-desc">卡片视图，搜索/过滤/收藏/进度条，所有项目状态一目了然。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">🔀</span>
+      <div class="client-name">故事拖拽排序</div>
+      <div class="client-desc">StoryBoard 卡片拖拽，双击编辑，像 Trello 一样管理用户故事。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">📱</span>
+      <div class="client-name">原型设备模拟</div>
+      <div class="client-desc">生成的原型可在 iPhone / iPad / Laptop / Desktop 四种设备下预览。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">🎚️</span>
+      <div class="client-name">动效档位选择</div>
+      <div class="client-desc">原型三档动效强度：低·克制（B端）/ 中·平衡（C端）/ 高·丰富（营销页）。</div>
+    </div>
+  </div>
+
+  <!-- 导出能力 -->
+  <span class="client-cat sec-reveal">// 导出能力</span>
+  <div class="client-grid sec-reveal">
+    <div class="client-card">
+      <span class="client-icon">📄</span>
+      <div class="client-name">PDF 导出</div>
+      <div class="client-desc">15 套封面模板，Chrome 无头渲染，一键生成专业 PDF 文档。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">📝</span>
+      <div class="client-name">DOCX 导出</div>
+      <div class="client-desc">13 套配方风格，可直接导入飞书/Lark，格式完美适配。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">📊</span>
+      <div class="client-name">PPT 导出</div>
+      <div class="client-desc">18 套配色方案按行业匹配，5 种页面类型，大纲可调整后一键生成。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">🔗</span>
+      <div class="client-name">分享页</div>
+      <div class="client-desc">独立 HTML 分享页，发给干系人直接浏览器打开，无需安装任何工具。</div>
+    </div>
+  </div>
+
+  <!-- CLI 增强 -->
+  <span class="client-cat sec-reveal">// CLI 增强</span>
+  <div class="client-grid sec-reveal">
+    <div class="client-card">
+      <span class="client-icon">🌐</span>
+      <div class="client-name">网页搜索</div>
+      <div class="client-desc">竞品研究时 AI 自动搜索网页获取最新信息，不再局限于训练数据。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">🛡️</span>
+      <div class="client-name">分阶段工具白名单</div>
+      <div class="client-desc">竞品研究开放搜索，原型开放文件写入，其他阶段只读，安全受控。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">🔌</span>
+      <div class="client-name">三种 AI 后端</div>
+      <div class="client-desc">Anthropic API / OpenAI 兼容接口 / Claude CLI，按需选择。</div>
+    </div>
+  </div>
+
+  <!-- 后端配置提示 -->
+  <div class="client-backends sec-reveal">
+    <div class="backend-chip"><span class="chip-dot"></span> Anthropic API</div>
+    <div class="backend-chip"><span class="chip-dot"></span> OpenAI 兼容接口</div>
+    <div class="backend-chip"><span class="chip-dot"></span> Claude CLI</div>
+  </div>
+
+  <!-- 下载 CTA -->
+  <div class="client-cta sec-reveal">
+    <a href="https://github.com/K3tty5555/AI_PM/releases" target="_blank" class="cta-primary ripple-host">
       DOWNLOAD v0.4.0 <span style="font-size:14px;">↗</span>
+    </a>
+    <a href="https://github.com/K3tty5555/AI_PM" target="_blank" class="cta-secondary">
+      VIEW SOURCE <span style="font-size:14px;">↗</span>
     </a>
   </div>
 </section>
