@@ -4,7 +4,7 @@ import {
   Plus, ChevronLeft,
   Sun, Moon,
   Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone, MessageSquare,
-  Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette, Sparkles, Presentation,
+  Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette, LayoutGrid,
   CheckCircle2, SkipForward, Settings2,
   FolderOpen, Pencil, Trash2, ArrowRight, RefreshCw, FileText,
   Star,
@@ -83,11 +83,10 @@ const TOOLS_ACTION = [
 ]
 
 const TOOLS_RESOURCE = [
-  { path: "/tools/knowledge",   label: "知识库",   icon: Library  },
-  { path: "/tools/persona",     label: "产品分身", icon: Bot      },
-  { path: "/tools/design-spec", label: "设计规范", icon: Palette  },
-  { path: "/tools/illustration", label: "AI 插图", icon: Sparkles },
-  { path: "/tools/pptx",         label: "演示文稿", icon: Presentation },
+  { path: "/tools/knowledge",   label: "知识库",   icon: Library    },
+  { path: "/tools/persona",     label: "产品分身", icon: Bot        },
+  { path: "/tools/design-spec", label: "设计规范", icon: Palette    },
+  { path: "/tools/plaza",       label: "功能广场", icon: LayoutGrid },
 ]
 
 function PhaseIcon({ phaseId, status }: { phaseId: string; status: SidebarPhase["status"] }) {
