@@ -198,6 +198,10 @@ impl ClaudeCliProvider {
 
     /// 按阶段返回工具白名单（用于 --allowedTools）
     fn tools_for_stream_key(stream_key: &str) -> &'static str {
+        // Plaza skills need full tool access (image gen, file write, web fetch, etc.)
+        if stream_key.starts_with("plaza:") {
+            return "Read,Write,Bash,WebSearch,WebFetch";
+        }
         // stream_key format: "generate:{project_id}:{phase}"
         let phase = stream_key.rsplit(':').next().unwrap_or("");
         match phase {
