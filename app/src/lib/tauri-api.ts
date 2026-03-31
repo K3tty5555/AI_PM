@@ -264,6 +264,12 @@ export interface IllustrationConfigState {
   availableProviders: ProviderDef[]
 }
 
+export interface MermaidBlock {
+  index: number
+  code: string
+  lineStart: number
+}
+
 export interface ProviderDef {
   id: string
   name: string
@@ -570,6 +576,14 @@ export const api = {
     safeInvoke<TestKeyResult>("test_illustration_key", { apiKey: apiKey ?? null }),
   deleteIllustration: (path: string) =>
     safeInvoke<void>("delete_illustration", { path }),
+  scanPrdMermaid: (prdPath: string) =>
+    safeInvoke<MermaidBlock[]>("scan_prd_mermaid", { prdPath }),
+  embedIllustrationInPrd: (args: {
+    prdPath: string
+    mermaidLineStart: number
+    imageRelativePath: string
+    altText: string
+  }) => safeInvoke<void>("embed_illustration_in_prd", args),
 }
 
 // ─── Updater ────────────────────────────────────────────────────────────────

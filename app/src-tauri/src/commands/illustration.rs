@@ -655,3 +655,119 @@ pub fn delete_illustration(path: String) -> Result<(), String> {
     let _ = fs::remove_file(parent.join(format!("{}.meta.json", stem)));
     Ok(())
 }
+
+// ── PRD Mermaid 扫描 + 插图嵌入 ─────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MermaidBlock {
+    pub index: usize,
+    pub code: String,
+    pub line_start: usize,
+}
+
+/// 扫描 PRD markdown 文件，返回所有 Mermaid 代码块
+#[tauri::command]
+pub fn scan_prd_mermaid(prd_path: String) -> Result<Vec<MermaidBlock>, String> {
+    let path = std::path::Path::new(&prd_path);
+    if !path.is_absolute() {
+        return Err("PRD 路径必须是绝对路径".to_string());
+    }
+    if !path.exists() {
+        return Err(format!("PRD 文件不存在: {prd_path}"));
+    }
+
+    let content = fs::read_to_string(&prd_path)
+        .map_err(|e| format!("无法读取 PRD 文件: {e}"))?;
+
+    let mut blocks = Vec::new();
+    let mut in_mermaid = false;
+    let mut current_code = String::new();
+    let mut block_start = 0usize;
+    let mut index = 0usize;
+
+    for (line_num, line) in content.lines().enumerate() {
+        if !in_mermaid && line.trim() == "```mermaid" {
+            in_mermaid = true;
+            current_code.clear();
+            block_start = line_num;
+        } else if in_mermaid && line.trim() == "```" {
+            blocks.push(MermaidBlock {
+                index,
+                code: current_code.trim().to_string(),
+                line_start: block_start,
+            });
+            index += 1;
+            in_mermaid = false;
+            current_code.clear();
+        } else if in_mermaid {
+            current_code.push_str(line);
+            current_code.push('\n');
+        }
+    }
+
+    Ok(blocks)
+}
+
+/// 在 Mermaid 块后嵌入图片引用。
+/// 必须按**倒序**调用（最后一个块先处理），以保持行号正确。
+/// image_relative_path 格式必须为 11-illustrations/{name}.png
+#[tauri::command]
+pub fn embed_illustration_in_prd(
+    prd_path: String,
+    mermaid_line_start: usize,
+    image_relative_path: String,
+    alt_text: String,
+) -> Result<(), String> {
+    use std::io::Write;
+
+    // 安全校验：绝对路径
+    let path = std::path::Path::new(&prd_path);
+    if !path.is_absolute() {
+        return Err("PRD 路径必须是绝对路径".to_string());
+    }
+
+    // 安全校验：image_relative_path 格式白名单
+    // 只允许 11-illustrations/{lowercase-slug}.png
+    if !image_relative_path.starts_with("11-illustrations/")
+        || !image_relative_path.ends_with(".png")
+        || image_relative_path.contains("..")
+        || image_relative_path.matches('/').count() > 1
+    {
+        return Err(format!("非法图片路径格式: {image_relative_path}"));
+    }
+
+    let content = fs::read_to_string(&prd_path)
+        .map_err(|e| format!("无法读取 PRD: {e}"))?;
+
+    let lines: Vec<&str> = content.lines().collect();
+
+    // 找到 mermaid_line_start 之后的 ``` 闭合行
+    let mut close_line = mermaid_line_start;
+    for i in (mermaid_line_start + 1)..lines.len() {
+        if lines[i].trim() == "```" {
+            close_line = i;
+            break;
+        }
+    }
+
+    let img_ref = format!("![{}]({})", alt_text, image_relative_path);
+    let mut new_lines: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+    new_lines.insert(close_line + 1, img_ref);
+    new_lines.insert(close_line + 1, String::new()); // 空行
+
+    let new_content = new_lines.join("\n");
+
+    // 原子写入：写 tmp 再 rename
+    let tmp_path = path.with_extension("md.tmp");
+    {
+        let mut f = std::fs::File::create(&tmp_path)
+            .map_err(|e| format!("创建临时文件失败: {e}"))?;
+        f.write_all(new_content.as_bytes())
+            .map_err(|e| format!("写入临时文件失败: {e}"))?;
+    }
+    std::fs::rename(&tmp_path, &prd_path)
+        .map_err(|e| format!("原子替换失败: {e}"))?;
+
+    Ok(())
+}
