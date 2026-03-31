@@ -310,20 +310,6 @@ export interface ReferenceFileEntry {
   size: number
 }
 
-// ── PPT ─────────────────────────────────────────────────────────────
-
-export interface PptxOutlineSlide {
-  pageType: "cover" | "section" | "content" | "chart" | "end"
-  title: string
-  bullets: string[]
-  subLayout?: string
-}
-
-export interface PptxResult {
-  path: string
-  slideCount: number
-}
-
 // ── Screenshot Analysis ─────────────────────────────────────────────
 
 export type ScreenshotAnalysisMode = "describe" | "ocr" | "ui-review" | "chart-data" | "object-detect"
@@ -502,13 +488,6 @@ export const api = {
   // Motion intensity
   setMotionIntensity: (id: string, intensity: MotionIntensity) =>
     safeInvoke<void>("set_motion_intensity", { args: { id, intensity } }),
-
-  // PPT
-  generatePptx: (projectId: string, outline: PptxOutlineSlide[], colorScheme: string, style: string) =>
-    safeInvoke<PptxResult>("generate_pptx", { projectId, outline, colorScheme, style }),
-  generatePptxOutline: (projectId: string) =>
-    safeInvoke<PptxOutlineSlide[]>("generate_pptx_outline", { projectId }),
-  listPptxColorSchemes: () => safeInvoke<Record<string, unknown>>("list_pptx_color_schemes"),
 
   // Screenshot analysis
   analyzeScreenshot: (imagePath: string, mode: ScreenshotAnalysisMode, context?: string) =>
