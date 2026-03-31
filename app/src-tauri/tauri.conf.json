@@ -29,7 +29,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "resources": ["resources/skills/**/*", "resources/templates/**/*"],
+    "resources": [
+      "resources/plaza-manifest.json",
+      "resources/skills/**/*",
+      "resources/templates/**/*"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
