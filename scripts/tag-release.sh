@@ -49,13 +49,16 @@ echo "✅ TypeScript 无错误"
 
 # ── 4. Rust 编译检查 ─────────────────────────────────────
 echo "🦀 Rust 编译检查..."
-cargo check --manifest-path "$APP/src-tauri/Cargo.toml" --quiet 2>&1 | grep -E "^error" && exit 1 || true
+if ! cargo check --manifest-path "$APP/src-tauri/Cargo.toml" --quiet 2>&1; then
+  echo "❌ Rust 编译失败"
+  exit 1
+fi
 echo "✅ Rust 无错误"
 
 # ── 5. Commit ────────────────────────────────────────────
 echo "💾 提交版本变更..."
 cd "$ROOT"
-git add app/src-tauri/tauri.conf.json app/src-tauri/Cargo.toml app/package.json app/package-lock.json
+git add app/src-tauri/tauri.conf.json app/src-tauri/Cargo.toml app/src-tauri/Cargo.lock app/package.json app/package-lock.json
 git diff --cached --quiet && echo "⚠️  无变更可提交（版本号已是 $VERSION）" || \
   git commit -m "chore: bump version to $VERSION"
 
