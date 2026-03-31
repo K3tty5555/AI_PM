@@ -174,6 +174,69 @@ export function PrdPage() {
       .finally(() => setScoreLoading(false))
   }, [isStreaming, text, projectId])
 
+  // -------------------------------------------------------------------------
+  // Batch illustration runner (倒序处理，避免行号偏移)
+  // -------------------------------------------------------------------------
+
+  const runBatchIllustration = useCallback(async (prdPath: string, outputDir: string) => {
+    let blocks: import("@/lib/tauri-api").MermaidBlock[]
+    try {
+      blocks = await api.scanPrdMermaid(prdPath)
+    } catch (err) {
+      toast(String(err), "error")
+      return
+    }
+
+    if (blocks.length === 0) {
+      toast("PRD 中未发现 Mermaid 流程图，跳过配图", "info")
+      return
+    }
+
+    setBatchIllustrationState({ total: blocks.length, done: 0, failed: [] })
+
+    // 倒序处理：embed 时从后往前插入，不影响前面块的行号
+    const reversed = [...blocks].reverse()
+
+    for (const block of reversed) {
+      if (cancelledRef.current) break
+      try {
+        const imgResult = await api.generateIllustration({
+          prompt: `将以下 Mermaid 流程图渲染为高清技术插图，简洁清晰，蓝白配色：\n\n${block.code}`,
+          projectDir: outputDir,
+        })
+        const filePath = imgResult.filePath
+        const imgName = filePath.split("/").pop() ?? filePath
+        await api.embedIllustrationInPrd({
+          prdPath,
+          mermaidLineStart: block.lineStart,
+          imageRelativePath: `11-illustrations/${imgName}`,
+          altText: `流程图 ${block.index + 1}`,
+        })
+        setBatchIllustrationState((prev) =>
+          prev ? { ...prev, done: prev.done + 1 } : prev
+        )
+      } catch (err) {
+        console.error("[Prd] illustration block failed:", err)
+        setBatchIllustrationState((prev) =>
+          prev
+            ? { ...prev, failed: [...prev.failed, { index: block.index, lineStart: block.lineStart }] }
+            : prev
+        )
+      }
+    }
+
+    // 完成后汇报并清空进度
+    setBatchIllustrationState((prev) => {
+      if (prev) {
+        const msg = prev.failed.length > 0
+          ? `配图完成 ${prev.done}/${prev.total} 张，${prev.failed.length} 张失败`
+          : `已生成 ${prev.done} 张配图并嵌入 PRD`
+        toast(msg, prev.failed.length > 0 ? "error" : "success")
+      }
+      return null
+    })
+  }, [])
+
   // Auto-illustration: trigger after main PRD stream completes
   useEffect(() => {
     if (isStreaming || !text || !autoIllustration) return
@@ -188,8 +251,7 @@ export function PrdPage() {
     }).catch((err) => {
       console.error("[Prd] illustration: getProject failed", err)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStreaming, text, autoIllustration, projectId, currentVersion])
+  }, [isStreaming, text, autoIllustration, projectId, currentVersion, runBatchIllustration])
 
   // Track assist streaming state
   useEffect(() => {
@@ -484,69 +546,6 @@ export function PrdPage() {
       setSaving(false)
     }
   }, [projectId, displayMarkdown, navigate])
-
-  // -------------------------------------------------------------------------
-  // Batch illustration runner (倒序处理，避免行号偏移)
-  // -------------------------------------------------------------------------
-
-  async function runBatchIllustration(prdPath: string, outputDir: string) {
-    let blocks: import("@/lib/tauri-api").MermaidBlock[]
-    try {
-      blocks = await api.scanPrdMermaid(prdPath)
-    } catch (err) {
-      toast(String(err), "error")
-      return
-    }
-
-    if (blocks.length === 0) {
-      toast("PRD 中未发现 Mermaid 流程图，跳过配图", "info")
-      return
-    }
-
-    setBatchIllustrationState({ total: blocks.length, done: 0, failed: [] })
-
-    // 倒序处理：embed 时从后往前插入，不影响前面块的行号
-    const reversed = [...blocks].reverse()
-
-    for (const block of reversed) {
-      if (cancelledRef.current) break
-      try {
-        const imgResult = await api.generateIllustration({
-          prompt: `将以下 Mermaid 流程图渲染为高清技术插图，简洁清晰，蓝白配色：\n\n${block.code}`,
-          projectDir: outputDir,
-        })
-        const filePath = imgResult.filePath
-        const imgName = filePath.split("/").pop() ?? filePath
-        await api.embedIllustrationInPrd({
-          prdPath,
-          mermaidLineStart: block.lineStart,
-          imageRelativePath: `11-illustrations/${imgName}`,
-          altText: `流程图 ${block.index + 1}`,
-        })
-        setBatchIllustrationState((prev) =>
-          prev ? { ...prev, done: prev.done + 1 } : prev
-        )
-      } catch (err) {
-        console.error("[Prd] illustration block failed:", err)
-        setBatchIllustrationState((prev) =>
-          prev
-            ? { ...prev, failed: [...prev.failed, { index: block.index, lineStart: block.lineStart }] }
-            : prev
-        )
-      }
-    }
-
-    // 完成后汇报并清空进度
-    setBatchIllustrationState((prev) => {
-      if (prev) {
-        const msg = prev.failed.length > 0
-          ? `配图完成 ${prev.done}/${prev.total} 张，${prev.failed.length} 张失败`
-          : `已生成 ${prev.done} 张配图并嵌入 PRD`
-        toast(msg, prev.failed.length > 0 ? "error" : "success")
-      }
-      return null
-    })
-  }
 
   // -------------------------------------------------------------------------
   // Loading state
