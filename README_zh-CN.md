@@ -112,9 +112,8 @@ AI 会引导你完成需求澄清，然后逐步推进到 PRD 和原型。
 | `/ai-pm persona` | 产品分身（风格学习） |
 | `/ai-pm design-spec` | 设计规范管理 |
 | `/ai-pm knowledge` | 产品知识库 |
-| `/ai-pm pptx` | 生成 PPT 演示文稿 |
 
-独立技能：`/ai-pm-analyze`、`/ai-pm-research`、`/ai-pm-story`、`/ai-pm-prd`、`/ai-pm-prototype`、`/ai-pm-review`、`/ai-pm-pptx`
+独立技能：`/ai-pm-analyze`、`/ai-pm-research`、`/ai-pm-story`、`/ai-pm-prd`、`/ai-pm-prototype`、`/ai-pm-review`
 
 ## 两版功能对比
 
