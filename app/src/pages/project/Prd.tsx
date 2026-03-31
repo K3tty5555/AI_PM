@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
+import { PrdIllustrationDialog, PRD_ILLUSTRATION_SKIP_KEY } from "@/components/prd-illustration-dialog"
+import { Sparkles } from "lucide-react"
 import { PrdViewer } from "@/components/prd-viewer"
 import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
@@ -104,6 +106,20 @@ export function PrdPage() {
   // Sample PRD dialog
   const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
 
+  // AI illustration dialog + batch state
+  const [illustrationDialogOpen, setIllustrationDialogOpen] = useState(false)
+  const [autoIllustration, setAutoIllustration] = useState(false)
+  const [batchIllustrationState, setBatchIllustrationState] = useState<{
+    total: number
+    done: number
+    failed: Array<{ index: number; lineStart: number }>
+  } | null>(null)
+  const cancelledRef = useRef(false)
+  // Track last completed stream text to avoid re-triggering
+  const lastIllustrationTextRef = useRef<string>("")
+  // Callback stored when showing illustration dialog
+  const illustrationConfirmRef = useRef<((enabled: boolean) => void) | null>(null)
+
   // AI assist input
   const [assistInput, setAssistInput] = useState("")
   const [isAssistStreaming, setIsAssistStreaming] = useState(false)
@@ -157,6 +173,23 @@ export function PrdPage() {
     }).catch((err) => console.error("[Prd] scorePrd:", err))
       .finally(() => setScoreLoading(false))
   }, [isStreaming, text, projectId])
+
+  // Auto-illustration: trigger after main PRD stream completes
+  useEffect(() => {
+    if (isStreaming || !text || !autoIllustration) return
+    if (text === lastIllustrationTextRef.current) return
+    lastIllustrationTextRef.current = text
+    // Fetch output dir then run batch
+    api.getProject(projectId).then((project) => {
+      if (!project) return
+      const prdPath = `${project.outputDir}/${prdFile(currentVersion)}`
+      cancelledRef.current = false
+      runBatchIllustration(prdPath, project.outputDir)
+    }).catch((err) => {
+      console.error("[Prd] illustration: getProject failed", err)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStreaming, text, autoIllustration, projectId, currentVersion])
 
   // Track assist streaming state
   useEffect(() => {
@@ -313,8 +346,10 @@ export function PrdPage() {
     setEditedMarkdown(newMarkdown)
   }, [])
 
-  /** Generate PRD for the first time */
-  const handleGenerate = useCallback(() => {
+  /** Core: actually start the PRD stream */
+  const startPrdStream = useCallback((withIllustration: boolean) => {
+    setAutoIllustration(withIllustration)
+    lastIllustrationTextRef.current = ""
     startedRef.current = true
     start([{ role: "user", content: "请生成 PRD" }], {
       excludedContext,
@@ -322,8 +357,10 @@ export function PrdPage() {
     })
   }, [start, excludedContext, selectedStyle])
 
-  /** Regenerate the entire PRD */
-  const handleRegenerate = useCallback(() => {
+  /** Core: actually start the PRD re-generation stream */
+  const startPrdRegenStream = useCallback((withIllustration: boolean) => {
+    setAutoIllustration(withIllustration)
+    lastIllustrationTextRef.current = ""
     reset()
     assistReset()
     setExistingMarkdown(null)
@@ -334,6 +371,40 @@ export function PrdPage() {
       : "请重新生成 PRD"
     start([{ role: "user", content: prompt }], { excludedContext })
   }, [reset, assistReset, start, excludedContext, reviewContent])
+
+  /** Decide whether to show illustration dialog or go straight to stream */
+  const maybeShowIllustrationDialog = useCallback((onConfirm: (enabled: boolean) => void) => {
+    if (localStorage.getItem(PRD_ILLUSTRATION_SKIP_KEY)) {
+      onConfirm(false)
+    } else {
+      // Store the callback on a ref so the Dialog's onConfirm can call it
+      illustrationConfirmRef.current = onConfirm
+      setIllustrationDialogOpen(true)
+    }
+  }, [])
+
+  /** Generate PRD for the first time */
+  const handleGenerate = useCallback(() => {
+    maybeShowIllustrationDialog((enabled) => {
+      setIllustrationDialogOpen(false)
+      startPrdStream(enabled)
+    })
+  }, [maybeShowIllustrationDialog, startPrdStream])
+
+  /** Regenerate the entire PRD */
+  const handleRegenerate = useCallback(() => {
+    maybeShowIllustrationDialog((enabled) => {
+      setIllustrationDialogOpen(false)
+      startPrdRegenStream(enabled)
+    })
+  }, [maybeShowIllustrationDialog, startPrdRegenStream])
+
+  /** Called by PrdIllustrationDialog */
+  const handleIllustrationConfirm = useCallback((enabled: boolean) => {
+    setIllustrationDialogOpen(false)
+    illustrationConfirmRef.current?.(enabled)
+    illustrationConfirmRef.current = null
+  }, [])
 
   /** Save PRD and go back */
   const handleBack = useCallback(() => {
@@ -413,6 +484,69 @@ export function PrdPage() {
       setSaving(false)
     }
   }, [projectId, displayMarkdown, navigate])
+
+  // -------------------------------------------------------------------------
+  // Batch illustration runner (倒序处理，避免行号偏移)
+  // -------------------------------------------------------------------------
+
+  async function runBatchIllustration(prdPath: string, outputDir: string) {
+    let blocks: import("@/lib/tauri-api").MermaidBlock[]
+    try {
+      blocks = await api.scanPrdMermaid(prdPath)
+    } catch (err) {
+      toast(String(err), "error")
+      return
+    }
+
+    if (blocks.length === 0) {
+      toast("PRD 中未发现 Mermaid 流程图，跳过配图", "info")
+      return
+    }
+
+    setBatchIllustrationState({ total: blocks.length, done: 0, failed: [] })
+
+    // 倒序处理：embed 时从后往前插入，不影响前面块的行号
+    const reversed = [...blocks].reverse()
+
+    for (const block of reversed) {
+      if (cancelledRef.current) break
+      try {
+        const imgResult = await api.generateIllustration({
+          prompt: `将以下 Mermaid 流程图渲染为高清技术插图，简洁清晰，蓝白配色：\n\n${block.code}`,
+          projectDir: outputDir,
+        })
+        const filePath = imgResult.filePath
+        const imgName = filePath.split("/").pop() ?? filePath
+        await api.embedIllustrationInPrd({
+          prdPath,
+          mermaidLineStart: block.lineStart,
+          imageRelativePath: `11-illustrations/${imgName}`,
+          altText: `流程图 ${block.index + 1}`,
+        })
+        setBatchIllustrationState((prev) =>
+          prev ? { ...prev, done: prev.done + 1 } : prev
+        )
+      } catch (err) {
+        console.error("[Prd] illustration block failed:", err)
+        setBatchIllustrationState((prev) =>
+          prev
+            ? { ...prev, failed: [...prev.failed, { index: block.index, lineStart: block.lineStart }] }
+            : prev
+        )
+      }
+    }
+
+    // 完成后汇报并清空进度
+    setBatchIllustrationState((prev) => {
+      if (prev) {
+        const msg = prev.failed.length > 0
+          ? `配图完成 ${prev.done}/${prev.total} 张，${prev.failed.length} 张失败`
+          : `已生成 ${prev.done} 张配图并嵌入 PRD`
+        toast(msg, prev.failed.length > 0 ? "error" : "success")
+      }
+      return null
+    })
+  }
 
   // -------------------------------------------------------------------------
   // Loading state
@@ -661,6 +795,28 @@ export function PrdPage() {
         </div>
       )}
 
+      {/* 批量配图进度条 */}
+      {batchIllustrationState && (
+        <div className="mt-4 px-1">
+          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] mb-1">
+            <span className="flex items-center gap-1">
+              <Sparkles className="size-3 text-[var(--accent-color)]" />
+              AI 配图中 {batchIllustrationState.done}/{batchIllustrationState.total}
+            </span>
+            <button
+              onClick={() => { cancelledRef.current = true }}
+              className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              取消
+            </button>
+          </div>
+          <ProgressBar
+            value={Math.round((batchIllustrationState.done / batchIllustrationState.total) * 100)}
+            animated
+          />
+        </div>
+      )}
+
       {/* Error display */}
       {(error || assistError) && (
         <div className="mt-4 rounded-lg border-l-[3px] border-l-[var(--destructive)] bg-[var(--destructive)]/5 px-4 py-3">
@@ -857,6 +1013,12 @@ export function PrdPage() {
 
       {/* Sample PRD reference dialog */}
       <SamplePrdDialog open={sampleDialogOpen} onClose={() => setSampleDialogOpen(false)} />
+
+      {/* PRD AI 配图确认 Dialog */}
+      <PrdIllustrationDialog
+        open={illustrationDialogOpen}
+        onConfirm={handleIllustrationConfirm}
+      />
     </div>
     </PhaseShell>
   )
