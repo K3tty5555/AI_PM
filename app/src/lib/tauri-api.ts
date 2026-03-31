@@ -272,6 +272,15 @@ export interface MermaidBlock {
 
 // ── Plaza ─────────────────────────────────────────────────────────────────────
 
+export interface PlazaApiConfigState {
+  arkApiKeyMasked: string | null
+  arkApiKeySource: "env" | "env_file" | "none"
+  minimaxApiKeyMasked: string | null
+  minimaxApiKeySource: "env" | "env_file" | "none"
+  minimaxGroupIdMasked: string | null
+  minimaxGroupIdSource: "env" | "env_file" | "none"
+}
+
 export interface PlazaSkill {
   id: string
   displayName: string
@@ -613,6 +622,13 @@ export const api = {
     safeInvoke<PlazaManifest>("load_plaza_manifest"),
   runPlazaSkill: (args: { skillId: string; userInput: string }) =>
     safeInvoke<void>("run_plaza_skill", { args }),
+  getPlazaApiConfig: () =>
+    safeInvoke<PlazaApiConfigState>("get_plaza_api_config"),
+  savePlazaApiConfig: (args: {
+    arkApiKey?: string
+    minimaxApiKey?: string
+    minimaxGroupId?: string
+  }) => safeInvoke<void>("save_plaza_api_config", { args }),
 }
 
 // ─── Updater ────────────────────────────────────────────────────────────────
