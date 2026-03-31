@@ -36,7 +36,7 @@ export function ToolInterviewPage() {
   const initialProjectId = searchParams.get("projectId") ?? localStorage.getItem("tool-binding:interview") ?? null
   const [boundProjectId, setBoundProjectId] = useState<string | null>(initialProjectId)
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } =
-    useToolStream("ai-pm-interview", boundProjectId ?? undefined)
+    useToolStream("ai-pm-interview", { projectId: boundProjectId ?? undefined })
 
   const handleStart = useCallback(() => {
     if (!context.trim()) return
