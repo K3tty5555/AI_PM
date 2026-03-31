@@ -1,7 +1,8 @@
 use serde::Deserialize;
 use std::path::Path;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
+use crate::providers::AiProvider;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
