@@ -19,6 +19,7 @@ import { ToolPersonaPage }   from "./pages/tools/Persona"
 import { ToolDataPage }      from "./pages/tools/Data"
 import { ToolInterviewPage } from "./pages/tools/Interview"
 import { ToolDesignSpecPage } from "./pages/tools/DesignSpec"
+import { ToolPlazaPage } from "./pages/tools/Plaza"
 
 export const router = createBrowserRouter([
   {
@@ -43,8 +44,8 @@ export const router = createBrowserRouter([
       { path: "/tools/data",              element: <ToolDataPage /> },
       { path: "/tools/interview",         element: <ToolInterviewPage /> },
       { path: "/tools/design-spec",       element: <ToolDesignSpecPage /> },
-      { path: "/tools/plaza",          element: <div className="p-6 text-sm text-zinc-400">功能广场（即将上线）</div> },
-      { path: "/tools/plaza/:skillId", element: <div className="p-6 text-sm text-zinc-400">功能广场（即将上线）</div> },
+      { path: "/tools/plaza",          element: <ToolPlazaPage /> },
+      { path: "/tools/plaza/:skillId", element: <div className="flex items-center justify-center h-full text-sm text-[var(--text-tertiary)]">该技能页面正在开发中</div> },
       { path: "*",                         element: <Navigate to="/" replace /> },
     ],
   },
