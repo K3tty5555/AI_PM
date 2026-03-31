@@ -6,7 +6,11 @@ import { Sparkles } from "lucide-react"
 // Storage key — 用 localStorage 记住「本项目跳过」偏好
 // ---------------------------------------------------------------------------
 
+/** @deprecated 使用 getIllustrationSkipKey(projectId) */
 export const PRD_ILLUSTRATION_SKIP_KEY = "prd_illustration_skip"
+export function getIllustrationSkipKey(projectId: string): string {
+  return `prd_illustration_skip_${projectId}`
+}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -14,6 +18,7 @@ export const PRD_ILLUSTRATION_SKIP_KEY = "prd_illustration_skip"
 
 interface Props {
   open: boolean
+  projectId: string
   onConfirm: (enabled: boolean) => void
 }
 
@@ -21,7 +26,7 @@ interface Props {
 // Component
 // ---------------------------------------------------------------------------
 
-export function PrdIllustrationDialog({ open, onConfirm }: Props) {
+export function PrdIllustrationDialog({ open, projectId, onConfirm }: Props) {
   const [remember, setRemember] = useState(false)
 
   // Escape 键 = 跳过
@@ -39,7 +44,7 @@ export function PrdIllustrationDialog({ open, onConfirm }: Props) {
 
   function handle(enabled: boolean) {
     if (remember && !enabled) {
-      localStorage.setItem(PRD_ILLUSTRATION_SKIP_KEY, "1")
+      localStorage.setItem(getIllustrationSkipKey(projectId), "1")
     }
     onConfirm(enabled)
   }
