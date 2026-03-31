@@ -30,9 +30,14 @@ export function MinimaxMultimodalAVPage() {
   const [ttsVoice, setTtsVoice] = useState(TTS_VOICES[0])
   const [ttsSpeed, setTtsSpeed] = useState(1.0)
 
-  const { text, isStreaming, error, run, reset } = useToolStream("minimax-multimodal-video", {
+  const videoStream = useToolStream("minimax-multimodal-video", {
     streamKeyPrefix: "plaza",
   })
+  const audioStream = useToolStream("minimax-multimodal-audio", {
+    streamKeyPrefix: "plaza",
+  })
+
+  const { text, isStreaming, error } = mode === "video" ? videoStream : audioStream
 
   function handleRun() {
     let input = `--mode ${mode} `
@@ -47,11 +52,13 @@ export function MinimaxMultimodalAVPage() {
       if (!ttsText.trim()) return
       input += `--voice "${ttsVoice}" --speed ${ttsSpeed} "${ttsText.trim()}"`
     }
+    const run = mode === "video" ? videoStream.run : audioStream.run
     run(input)
   }
 
   function handleClear() {
-    reset()
+    videoStream.reset()
+    audioStream.reset()
     setVideoPrompt("")
     setVideoRefPath(null)
     setMusicText("")
