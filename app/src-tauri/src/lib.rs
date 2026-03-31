@@ -267,6 +267,8 @@ pub fn run() {
             commands::illustration::embed_illustration_in_prd,
             commands::plaza::load_plaza_manifest,
             commands::plaza::run_plaza_skill,
+            commands::plaza::get_plaza_api_config,
+            commands::plaza::save_plaza_api_config,
             commands::tools::analyze_screenshot,
             commands::tools::capture_url_screenshot,
             commands::projects::set_motion_intensity,
