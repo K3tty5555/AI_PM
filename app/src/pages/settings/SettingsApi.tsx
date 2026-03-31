@@ -3,7 +3,7 @@ import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Info } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
-import { api, type IllustrationConfigState } from "@/lib/tauri-api"
+import { api, type IllustrationConfigState, type PlazaApiConfigState } from "@/lib/tauri-api"
 import { EnvChecker } from "@/components/env-checker"
 
 interface ConfigState {
@@ -63,6 +63,16 @@ export function SettingsApi() {
   const [illShowKey, setIllShowKey] = useState(false)
   const illSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Plaza API config state
+  const [plazaConfig, setPlazaConfig] = useState<PlazaApiConfigState | null>(null)
+  const [arkKey, setArkKey] = useState("")
+  const [minimaxKey, setMinimaxKey] = useState("")
+  const [minimaxGroupId, setMinimaxGroupId] = useState("")
+  const [plazaSaving, setPlazaSaving] = useState(false)
+  const [plazaSaved, setPlazaSaved] = useState(false)
+  const [showArkKey, setShowArkKey] = useState(false)
+  const [showMinimaxKey, setShowMinimaxKey] = useState(false)
+
   const fetchConfig = useCallback(async () => {
     try {
       const data = await api.getConfig()
@@ -92,6 +102,17 @@ export function SettingsApi() {
         setIllSize(data.defaultSize)
       } catch (err) {
         console.error("Failed to fetch illustration config:", err)
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const data = await api.getPlazaApiConfig()
+        setPlazaConfig(data)
+      } catch (err) {
+        console.error("Failed to fetch plaza api config:", err)
       }
     })()
   }, [])
@@ -240,6 +261,29 @@ export function SettingsApi() {
       setIllTesting(false)
     }
   }
+
+  const handleSavePlazaConfig = useCallback(async () => {
+    setPlazaSaving(true)
+    setPlazaSaved(false)
+    try {
+      await api.savePlazaApiConfig({
+        ...(arkKey ? { arkApiKey: arkKey } : {}),
+        ...(minimaxKey ? { minimaxApiKey: minimaxKey } : {}),
+        ...(minimaxGroupId ? { minimaxGroupId } : {}),
+      })
+      setPlazaSaved(true)
+      setArkKey("")
+      setMinimaxKey("")
+      setMinimaxGroupId("")
+      const data = await api.getPlazaApiConfig()
+      setPlazaConfig(data)
+      setTimeout(() => setPlazaSaved(false), 2000)
+    } catch (err) {
+      console.error("Failed to save plaza api config:", err)
+    } finally {
+      setPlazaSaving(false)
+    }
+  }, [arkKey, minimaxKey, minimaxGroupId])
 
   // Loading skeleton
   if (loading) {
@@ -678,6 +722,140 @@ export function SettingsApi() {
           </CardFooter>
         </Card>
       )}
+
+      {/* Plaza API Config Card */}
+      <Card className="hover:shadow-none">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <CardTitle>功能广场 API</CardTitle>
+            {plazaSaving && (
+              <span className="flex items-center gap-1 text-xs text-[var(--text-secondary)]">
+                <Loader2 className="size-3 animate-spin" />
+              </span>
+            )}
+            {plazaSaved && (
+              <span
+                className="flex items-center gap-1 text-xs text-[var(--success)]"
+                style={{ animation: "fadeInUp 0.3s cubic-bezier(0.16,1,0.3,1)" }}
+              >
+                <CheckCircle2 className="size-3" />
+                已保存
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
+            baoyu 系技能（图像/漫画等）需要火山引擎 ARK_API_KEY，MiniMax 系技能需要 MiniMax 凭证。
+            配置后写入{" "}
+            <code className="text-xs bg-[var(--bg-secondary)] px-1 rounded">~/.baoyu-skills/.env</code>。
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-5">
+            {/* ARK API Key */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-[var(--text-primary)]">
+                  ARK_API_KEY{" "}
+                  <span className="text-xs font-normal text-[var(--text-tertiary)]">（baoyu 系 · 火山引擎）</span>
+                </label>
+                {plazaConfig && (
+                  plazaConfig.arkApiKeySource !== "none" ? (
+                    <Badge variant="success">已配置</Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">未配置</Badge>
+                  )
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type={showArkKey ? "text" : "password"}
+                  value={arkKey}
+                  onChange={(e) => setArkKey(e.target.value)}
+                  placeholder={plazaConfig?.arkApiKeyMasked ?? "输入火山引擎 API Key"}
+                  className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 pr-10 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowArkKey(!showArkKey)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                >
+                  {showArkKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+              <span className="text-xs text-[var(--text-secondary)]">
+                AI 图片生成的 Seedream 使用同一 Key，配置一次全部生效
+              </span>
+            </div>
+            {/* MiniMax API Key */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-[var(--text-primary)]">
+                  MINIMAX_API_KEY{" "}
+                  <span className="text-xs font-normal text-[var(--text-tertiary)]">（MiniMax 系技能）</span>
+                </label>
+                {plazaConfig && (
+                  plazaConfig.minimaxApiKeySource !== "none" ? (
+                    <Badge variant="success">已配置</Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">未配置</Badge>
+                  )
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type={showMinimaxKey ? "text" : "password"}
+                  value={minimaxKey}
+                  onChange={(e) => setMinimaxKey(e.target.value)}
+                  placeholder={plazaConfig?.minimaxApiKeyMasked ?? "输入 MiniMax API Key"}
+                  className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 pr-10 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMinimaxKey(!showMinimaxKey)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                >
+                  {showMinimaxKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </div>
+            {/* MiniMax Group ID */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-[var(--text-primary)]">
+                  MINIMAX_GROUP_ID{" "}
+                  <span className="text-xs font-normal text-[var(--text-tertiary)]">（MiniMax 系技能）</span>
+                </label>
+                {plazaConfig && (
+                  plazaConfig.minimaxGroupIdSource !== "none" ? (
+                    <Badge variant="success">已配置</Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">未配置</Badge>
+                  )
+                )}
+              </div>
+              <input
+                type="text"
+                value={minimaxGroupId}
+                onChange={(e) => setMinimaxGroupId(e.target.value)}
+                placeholder={plazaConfig?.minimaxGroupIdMasked ?? "输入 MiniMax Group ID"}
+                className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors duration-200 focus:border-[var(--accent-color)] focus:ring-2 focus:ring-[var(--accent-ring)]"
+              />
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button
+            variant="primary"
+            size="default"
+            onClick={handleSavePlazaConfig}
+            disabled={plazaSaving || (!arkKey && !minimaxKey && !minimaxGroupId)}
+            className="gap-2"
+          >
+            {plazaSaving && <Loader2 className="size-4 animate-spin" />}
+            保存配置
+          </Button>
+        </CardFooter>
+      </Card>
 
       {/* Runtime Environment Card */}
       <Card className="hover:shadow-none">
