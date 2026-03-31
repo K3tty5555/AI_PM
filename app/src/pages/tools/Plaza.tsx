@@ -12,6 +12,11 @@ export function ToolPlazaPage() {
   const initialCategory = searchParams.get("category") ?? "image"
   const [activeCategory, setActiveCategory] = useState(initialCategory)
 
+  function handleCategoryChange(catId: string) {
+    setActiveCategory(catId)
+    navigate(`/tools/plaza?category=${catId}`, { replace: true })
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-[var(--text-tertiary)]">
@@ -56,7 +61,7 @@ export function ToolPlazaPage() {
         {categories.map((cat) => (
           <button
             key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
+            onClick={() => handleCategoryChange(cat.id)}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
               activeCategory === cat.id
