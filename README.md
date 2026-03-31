@@ -112,9 +112,8 @@ On first launch, configure your AI backend in Settings (pick one):
 | `/ai-pm persona` | Product persona (style learning) |
 | `/ai-pm design-spec` | Design spec management |
 | `/ai-pm knowledge` | Product knowledge base |
-| `/ai-pm pptx` | Generate PPT presentation |
 
-Standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/ai-pm-prd`, `/ai-pm-prototype`, `/ai-pm-review`, `/ai-pm-pptx`
+Standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/ai-pm-prd`, `/ai-pm-prototype`, `/ai-pm-review`
 
 ## Feature Comparison
 
