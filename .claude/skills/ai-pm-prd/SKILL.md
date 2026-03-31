@@ -30,6 +30,23 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm
 
 ## 执行步骤
 
+### 步骤 0：AI 配图模式确认
+
+在开始生成 PRD 之前，询问用户：
+
+```
+是否开启 AI 配图模式？
+开启后，PRD 生成完毕时会自动扫描所有 Mermaid 流程图，调用 Seedream API 渲染成高清插图并嵌入 PRD。
+
+⚠️ 会产生 API 费用，每张图约 0.1–0.3 元。
+
+1. 开启（推荐，PRD 更直观）
+2. 跳过（保持 Mermaid 代码）
+```
+
+- 用户选 1 → 设置内部标志 `ai_illustration_mode = true`，继续步骤 1
+- 用户选 2 → `ai_illustration_mode = false`，继续步骤 1
+
 ### 步骤1：询问导出格式（生成前确认）
 
 **先检测** `06-prototype/screenshots/manifest.json` 是否存在，决定是否展示含截图选项。
@@ -130,6 +147,33 @@ mkdir -p {项目目录}/05-prd/
 ✅ {格式A} → 05-prd/05-PRD-v1.0.{ext}
 ✅ {格式B} → 05-prd/05-PRD-v1.0.{ext}   （全套时）
 ```
+
+### 步骤 6：批量 AI 配图（仅 ai_illustration_mode=true 时执行）
+
+1. 扫描 `05-prd/05-PRD-v1.0.md`，提取所有 Mermaid 代码块（以 ` ```mermaid ` 开头的代码块）
+2. 展示扫描结果：
+
+```
+发现 {N} 个 Mermaid 流程图，预计费用约 {N×0.2} 元。
+
+确认逐一生成？（y/n）
+```
+
+3. 用户确认后，对每个 Mermaid 块：
+   a. 解析内容，调用 `illustration.md` 中的逻辑生成图片
+   b. 图片保存至 `11-illustrations/{编号}-{slug}.png`
+   c. 在对应 Mermaid 代码块下方插入图片引用（**从最后一个块开始倒序处理**，避免行号偏移）：
+      ```
+      ![{流程图描述}](../11-illustrations/{编号}-{slug}.png)
+      ```
+
+4. 所有图片生成完毕后输出汇总：
+
+```
+✅ 已生成 {N} 张配图并嵌入 PRD
+```
+
+---
 
 ## PRD 8 章结构
 
