@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::path::Path;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -153,4 +154,134 @@ pub async fn run_plaza_skill(
             Err(e)
         }
     }
+}
+
+// ── Plaza API Config ─────────────────────────────────────────────────────────
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlazaApiConfigState {
+    pub ark_api_key_masked: Option<String>,
+    pub ark_api_key_source: String,
+    pub minimax_api_key_masked: Option<String>,
+    pub minimax_api_key_source: String,
+    pub minimax_group_id_masked: Option<String>,
+    pub minimax_group_id_source: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SavePlazaApiConfigArgs {
+    pub ark_api_key: Option<String>,
+    pub minimax_api_key: Option<String>,
+    pub minimax_group_id: Option<String>,
+}
+
+fn mask_plaza_key(key: &str) -> String {
+    if key.len() <= 8 {
+        "****".into()
+    } else {
+        format!("{}****{}", &key[..4], &key[key.len() - 4..])
+    }
+}
+
+fn read_plaza_key(env_var: &str) -> (Option<String>, String) {
+    if let Ok(val) = std::env::var(env_var) {
+        if !val.is_empty() {
+            return (Some(val), "env".into());
+        }
+    }
+    if let Some(home) = dirs::home_dir() {
+        let env_file = home.join(".baoyu-skills/.env");
+        if env_file.exists() {
+            if let Ok(iter) = dotenvy::from_path_iter(&env_file) {
+                for item in iter.flatten() {
+                    if item.0 == env_var {
+                        return (Some(item.1), "env_file".into());
+                    }
+                }
+            }
+        }
+    }
+    (None, "none".into())
+}
+
+#[tauri::command]
+pub fn get_plaza_api_config() -> PlazaApiConfigState {
+    let (ark_key, ark_source) = read_plaza_key("ARK_API_KEY");
+    let (minimax_key, minimax_source) = read_plaza_key("MINIMAX_API_KEY");
+    let (minimax_group, minimax_group_source) = read_plaza_key("MINIMAX_GROUP_ID");
+
+    PlazaApiConfigState {
+        ark_api_key_masked: ark_key.as_deref().map(mask_plaza_key),
+        ark_api_key_source: ark_source,
+        minimax_api_key_masked: minimax_key.as_deref().map(mask_plaza_key),
+        minimax_api_key_source: minimax_source,
+        minimax_group_id_masked: minimax_group.as_deref().map(mask_plaza_key),
+        minimax_group_id_source: minimax_group_source,
+    }
+}
+
+#[tauri::command]
+pub fn save_plaza_api_config(args: SavePlazaApiConfigArgs) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Cannot find home directory")?;
+    let env_dir = home.join(".baoyu-skills");
+    std::fs::create_dir_all(&env_dir).map_err(|e| e.to_string())?;
+    let env_path = env_dir.join(".env");
+
+    let existing = if env_path.exists() {
+        std::fs::read_to_string(&env_path).unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let mut env_map: HashMap<String, String> = HashMap::new();
+    let mut key_order: Vec<String> = Vec::new();
+
+    for line in existing.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            key_order.push(format!("\x00{}", line));
+            continue;
+        }
+        if let Some((k, v)) = trimmed.split_once('=') {
+            let k = k.trim().to_string();
+            if !key_order.contains(&k) {
+                key_order.push(k.clone());
+            }
+            env_map.insert(k, v.trim().trim_matches('"').to_string());
+        }
+    }
+
+    let update_key = |env_map: &mut HashMap<String, String>, key_order: &mut Vec<String>, k: &str, v: &str| {
+        if !key_order.contains(&k.to_string()) {
+            key_order.push(k.to_string());
+        }
+        env_map.insert(k.to_string(), v.to_string());
+    };
+
+    if let Some(key) = &args.ark_api_key {
+        if !key.is_empty() { update_key(&mut env_map, &mut key_order, "ARK_API_KEY", key); }
+    }
+    if let Some(key) = &args.minimax_api_key {
+        if !key.is_empty() { update_key(&mut env_map, &mut key_order, "MINIMAX_API_KEY", key); }
+    }
+    if let Some(gid) = &args.minimax_group_id {
+        if !gid.is_empty() { update_key(&mut env_map, &mut key_order, "MINIMAX_GROUP_ID", gid); }
+    }
+
+    let mut lines: Vec<String> = Vec::new();
+    for key in &key_order {
+        if key.starts_with('\x00') {
+            lines.push(key[1..].to_string());
+        } else if let Some(val) = env_map.get(key) {
+            lines.push(format!("{}={}", key, val));
+        }
+    }
+    let content = lines.join("\n") + "\n";
+
+    let tmp = env_path.with_extension("tmp");
+    std::fs::write(&tmp, content).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &env_path).map_err(|e| e.to_string())?;
+    Ok(())
 }
