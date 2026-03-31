@@ -1,0 +1,245 @@
+{
+  "skills": [
+    {
+      "id": "baoyu-imagine",
+      "displayName": "AI 文生图",
+      "description": "多服务商 AI 文生图，支持参考图和多种比例",
+      "category": "image",
+      "source": "baoyu",
+      "icon": "image-plus",
+      "inputs": ["prompt", "ref_image", "aspect_ratio"]
+    },
+    {
+      "id": "baoyu-cover-image",
+      "displayName": "文章封面",
+      "description": "生成高质量文章封面图（16:9 / 1:1）",
+      "category": "image",
+      "source": "baoyu",
+      "icon": "layout-template",
+      "inputs": ["prompt", "aspect"]
+    },
+    {
+      "id": "baoyu-article-illustrator",
+      "displayName": "文章配图",
+      "description": "分析文章结构，为每个段落生成插图",
+      "category": "image",
+      "source": "baoyu",
+      "icon": "newspaper",
+      "inputs": ["article_text"]
+    },
+    {
+      "id": "baoyu-infographic",
+      "displayName": "信息图",
+      "description": "21 种布局的专业信息图生成",
+      "category": "image",
+      "source": "baoyu",
+      "icon": "bar-chart-3",
+      "inputs": ["content", "layout", "style"]
+    },
+    {
+      "id": "baoyu-xhs-images",
+      "displayName": "小红书图片",
+      "description": "生成小红书风格系列图片（1-10 张）",
+      "category": "image",
+      "source": "baoyu",
+      "icon": "image",
+      "inputs": ["content", "style"]
+    },
+    {
+      "id": "baoyu-comic",
+      "displayName": "知识漫画",
+      "description": "多种风格的知识/教育漫画创作",
+      "category": "image",
+      "source": "baoyu",
+      "icon": "book-open",
+      "inputs": ["content", "style", "panels"]
+    },
+    {
+      "id": "gif-sticker-maker",
+      "displayName": "GIF 贴纸",
+      "description": "将照片转为 Funko Pop 风格动态 GIF 贴纸",
+      "category": "image",
+      "source": "minimax",
+      "icon": "sticker",
+      "inputs": ["image", "caption"]
+    },
+    {
+      "id": "minimax-multimodal-image",
+      "displayName": "MiniMax 图像",
+      "description": "MiniMax 文生图 / 图生图（含角色参考）",
+      "category": "image",
+      "source": "minimax",
+      "icon": "wand-sparkles",
+      "inputs": ["prompt", "ref_image", "mode"]
+    },
+    {
+      "id": "minimax-multimodal-video",
+      "displayName": "AI 视频生成",
+      "description": "文生视频、图生视频、多场景长视频",
+      "category": "video",
+      "source": "minimax",
+      "icon": "video",
+      "inputs": ["prompt", "ref_image", "mode"]
+    },
+    {
+      "id": "minimax-multimodal-audio",
+      "displayName": "语音 & 音乐",
+      "description": "TTS 语音合成、音乐生成、语音克隆",
+      "category": "video",
+      "source": "minimax",
+      "icon": "music",
+      "inputs": ["text", "mode", "voice"]
+    },
+    {
+      "id": "pptx-generator",
+      "displayName": "PPT 生成",
+      "description": "PptxGenJS 驱动，可编辑的 PowerPoint 文件",
+      "category": "document",
+      "source": "minimax",
+      "icon": "presentation",
+      "inputs": ["content", "style"]
+    },
+    {
+      "id": "baoyu-slide-deck",
+      "displayName": "图片幻灯片",
+      "description": "每页 AI 生成图片的视觉幻灯片（16 种风格）",
+      "category": "document",
+      "source": "baoyu",
+      "icon": "gallery-horizontal",
+      "inputs": ["content", "style", "slide_count"]
+    },
+    {
+      "id": "minimax-pdf",
+      "displayName": "PDF 生成",
+      "description": "15 种封面样式的专业 PDF 文档",
+      "category": "document",
+      "source": "minimax",
+      "icon": "file-text",
+      "inputs": ["content", "cover_style"]
+    },
+    {
+      "id": "minimax-docx",
+      "displayName": "Word 文档",
+      "description": "OpenXML 专业 Word 文档生成与格式化",
+      "category": "document",
+      "source": "minimax",
+      "icon": "file-type",
+      "inputs": ["content", "template"]
+    },
+    {
+      "id": "minimax-xlsx",
+      "displayName": "Excel 表格",
+      "description": "Excel 文件创建、分析、编辑（零格式损失）",
+      "category": "document",
+      "source": "minimax",
+      "icon": "table",
+      "inputs": ["content_or_file"]
+    },
+    {
+      "id": "baoyu-translate",
+      "displayName": "翻译",
+      "description": "三模式翻译：快速 / 普通 / 精翻，支持自定义术语",
+      "category": "content",
+      "source": "baoyu",
+      "icon": "languages",
+      "inputs": ["text", "source_lang", "target_lang", "mode"]
+    },
+    {
+      "id": "baoyu-format-markdown",
+      "displayName": "Markdown 美化",
+      "description": "自动添加标题、摘要、加粗、代码块等格式",
+      "category": "content",
+      "source": "baoyu",
+      "icon": "align-left",
+      "inputs": ["text"]
+    },
+    {
+      "id": "baoyu-markdown-to-html",
+      "displayName": "微信 HTML",
+      "description": "Markdown 转微信公众号兼容 HTML（外链转底部引用）",
+      "category": "content",
+      "source": "baoyu",
+      "icon": "code",
+      "inputs": ["markdown"]
+    },
+    {
+      "id": "baoyu-url-to-markdown",
+      "displayName": "网页转 Markdown",
+      "description": "Chrome CDP 渲染网页，转为干净 Markdown",
+      "category": "content",
+      "source": "baoyu",
+      "icon": "link",
+      "inputs": ["url", "wait_mode"]
+    },
+    {
+      "id": "baoyu-youtube-transcript",
+      "displayName": "YouTube 字幕",
+      "description": "提取 YouTube 视频字幕、封面图，支持多语言",
+      "category": "content",
+      "source": "baoyu",
+      "icon": "youtube",
+      "inputs": ["url", "language"]
+    },
+    {
+      "id": "vision-analysis",
+      "displayName": "图像分析",
+      "description": "MiniMax VL 图像描述 / OCR / UI 审查 / 图表提取",
+      "category": "content",
+      "source": "minimax",
+      "icon": "scan-eye",
+      "inputs": ["image", "mode"]
+    },
+    {
+      "id": "baoyu-compress-image",
+      "displayName": "图片压缩",
+      "description": "压缩为 WebP / PNG，自动选择最优工具",
+      "category": "content",
+      "source": "baoyu",
+      "icon": "minimize-2",
+      "inputs": ["image", "format"]
+    },
+    {
+      "id": "baoyu-post-to-wechat",
+      "displayName": "发布公众号",
+      "description": "将 HTML/Markdown 文章发布到微信公众号",
+      "category": "social",
+      "source": "baoyu",
+      "icon": "send",
+      "inputs": ["content", "post_type"]
+    },
+    {
+      "id": "baoyu-post-to-weibo",
+      "displayName": "发布微博",
+      "description": "发布文字 / 图片 / 视频到微博，支持头条文章",
+      "category": "social",
+      "source": "baoyu",
+      "icon": "send",
+      "inputs": ["content", "media"]
+    },
+    {
+      "id": "baoyu-post-to-x",
+      "displayName": "发布 X",
+      "description": "发布推文 / X Articles 长文到 X（Twitter）",
+      "category": "social",
+      "source": "baoyu",
+      "icon": "twitter",
+      "inputs": ["content", "media"]
+    },
+    {
+      "id": "baoyu-danger-x-to-markdown",
+      "displayName": "推文转 Markdown",
+      "description": "X 推文 / 文章转 Markdown（含 YAML 元数据）",
+      "category": "social",
+      "source": "baoyu",
+      "icon": "file-down",
+      "inputs": ["url"]
+    }
+  ],
+  "categories": [
+    { "id": "image",    "label": "图像创作", "icon": "image"      },
+    { "id": "video",    "label": "视频音频", "icon": "video"      },
+    { "id": "document", "label": "文档生成", "icon": "file-text"  },
+    { "id": "content",  "label": "内容处理", "icon": "align-left" },
+    { "id": "social",   "label": "社交发布", "icon": "send"       }
+  ]
+}
