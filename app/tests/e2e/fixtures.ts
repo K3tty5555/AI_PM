@@ -135,6 +135,15 @@ async function injectTauriMock(page: Page) {
       clear_brainstorm: () => {},
       brainstorm_message_count: () => 0,
       brainstorm_chat: () => {},
+      load_plaza_manifest: () => ({
+        skills: [
+          { id: "baoyu-imagine", displayName: "AI 文生图", description: "mock", category: "image", source: "baoyu", command: "/baoyu-imagine" },
+        ],
+        categories: [
+          { id: "image", label: "图像创作", icon: "Image" },
+        ],
+      }),
+      run_plaza_skill: () => {},
     }
 
     ;(window as any).__TAURI_INTERNALS__ = {
