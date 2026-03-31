@@ -14,7 +14,16 @@ interface UseToolStreamReturn {
   reset: () => void
 }
 
-export function useToolStream(toolName: string, projectId?: string): UseToolStreamReturn {
+interface UseToolStreamOptions {
+  projectId?: string
+  /** Stream key prefix — default "tool". Pass "plaza" for plaza skill pages. */
+  streamKeyPrefix?: string
+}
+
+export function useToolStream(toolName: string, options?: string | UseToolStreamOptions): UseToolStreamReturn {
+  const projectId = typeof options === "string" ? options : options?.projectId
+  const streamKeyPrefix = (typeof options === "string" ? "tool" : options?.streamKeyPrefix) ?? "tool"
+
   const [text, setText] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,7 +60,7 @@ export function useToolStream(toolName: string, projectId?: string): UseToolStre
       setStreamMeta(null)
       setIsStreaming(true)
 
-      const expectedKey = `tool:${toolName}`
+      const expectedKey = `${streamKeyPrefix}:${toolName}`
 
       Promise.all([
         listen<StreamChunkPayload>("stream_chunk", (event) => {
@@ -85,15 +94,24 @@ export function useToolStream(toolName: string, projectId?: string): UseToolStre
         }),
       ]).then((unlisteners) => {
         unlistenersRef.current = unlisteners
-        api.runTool({ toolName, userInput, filePath, projectId, mode }).catch((err: unknown) => {
-          unlistenersRef.current.forEach((fn) => fn())
-          unlistenersRef.current = []
-          setIsStreaming(false)
-          setError(String(err))
-        })
+        if (streamKeyPrefix === "plaza") {
+          api.runPlazaSkill({ skillId: toolName, userInput }).catch((err: unknown) => {
+            unlistenersRef.current.forEach((fn) => fn())
+            unlistenersRef.current = []
+            setIsStreaming(false)
+            setError(String(err))
+          })
+        } else {
+          api.runTool({ toolName, userInput, filePath, projectId, mode }).catch((err: unknown) => {
+            unlistenersRef.current.forEach((fn) => fn())
+            unlistenersRef.current = []
+            setIsStreaming(false)
+            setError(String(err))
+          })
+        }
       })
     },
-    [toolName, projectId]
+    [toolName, projectId, streamKeyPrefix]
   )
 
   return { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset }
