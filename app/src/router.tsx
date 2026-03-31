@@ -20,6 +20,15 @@ import { ToolDataPage }      from "./pages/tools/Data"
 import { ToolInterviewPage } from "./pages/tools/Interview"
 import { ToolDesignSpecPage } from "./pages/tools/DesignSpec"
 import { ToolPlazaPage } from "./pages/tools/Plaza"
+// Wave 4 — 图像创作
+import { BaoyuImaginePage }            from "./pages/tools/plaza/BaoyuImaginePage"
+import { BaoyuCoverImagePage }         from "./pages/tools/plaza/BaoyuCoverImagePage"
+import { BaoyuArticleIllustratorPage } from "./pages/tools/plaza/BaoyuArticleIllustratorPage"
+import { BaoyuInfographicPage }        from "./pages/tools/plaza/BaoyuInfographicPage"
+import { BaoyuXhsImagesPage }          from "./pages/tools/plaza/BaoyuXhsImagesPage"
+import { BaoyuComicPage }              from "./pages/tools/plaza/BaoyuComicPage"
+import { GifStickerMakerPage }         from "./pages/tools/plaza/GifStickerMakerPage"
+import { MinimaxImagePage }            from "./pages/tools/plaza/MinimaxImagePage"
 
 export const router = createBrowserRouter([
   {
@@ -44,7 +53,17 @@ export const router = createBrowserRouter([
       { path: "/tools/data",              element: <ToolDataPage /> },
       { path: "/tools/interview",         element: <ToolInterviewPage /> },
       { path: "/tools/design-spec",       element: <ToolDesignSpecPage /> },
-      { path: "/tools/plaza",          element: <ToolPlazaPage /> },
+      { path: "/tools/plaza",             element: <ToolPlazaPage /> },
+      // Wave 4 — 图像创作
+      { path: "/tools/plaza/baoyu-imagine",             element: <BaoyuImaginePage /> },
+      { path: "/tools/plaza/baoyu-cover-image",         element: <BaoyuCoverImagePage /> },
+      { path: "/tools/plaza/baoyu-article-illustrator", element: <BaoyuArticleIllustratorPage /> },
+      { path: "/tools/plaza/baoyu-infographic",         element: <BaoyuInfographicPage /> },
+      { path: "/tools/plaza/baoyu-xhs-images",          element: <BaoyuXhsImagesPage /> },
+      { path: "/tools/plaza/baoyu-comic",               element: <BaoyuComicPage /> },
+      { path: "/tools/plaza/gif-sticker-maker",         element: <GifStickerMakerPage /> },
+      { path: "/tools/plaza/minimax-multimodal-image",  element: <MinimaxImagePage /> },
+      // 其余 plaza skill 页面（Wave 5-7，待实现）
       { path: "/tools/plaza/:skillId", element: <div className="flex items-center justify-center h-full text-sm text-[var(--text-tertiary)]">该技能页面正在开发中</div> },
       { path: "*",                         element: <Navigate to="/" replace /> },
     ],
