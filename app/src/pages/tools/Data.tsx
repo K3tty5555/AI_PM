@@ -21,7 +21,7 @@ export function ToolDataPage() {
   const initialProjectId = searchParams.get("projectId") ?? localStorage.getItem("tool-binding:data") ?? null
   const [boundProjectId, setBoundProjectId] = useState<string | null>(initialProjectId)
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, run, reset } =
-    useToolStream("ai-pm-data", boundProjectId ?? undefined)
+    useToolStream("ai-pm-data", { projectId: boundProjectId ?? undefined })
 
   const [prdContext, setPrdContext] = useState<{ projectName: string; content: string } | null>(null)
   const [prdLoading, setPrdLoading] = useState(false)

@@ -20,9 +20,9 @@ interface UseToolStreamOptions {
   streamKeyPrefix?: string
 }
 
-export function useToolStream(toolName: string, options?: string | UseToolStreamOptions): UseToolStreamReturn {
-  const projectId = typeof options === "string" ? options : options?.projectId
-  const streamKeyPrefix = (typeof options === "string" ? "tool" : options?.streamKeyPrefix) ?? "tool"
+export function useToolStream(toolName: string, options?: UseToolStreamOptions): UseToolStreamReturn {
+  const projectId = options?.projectId
+  const streamKeyPrefix = options?.streamKeyPrefix ?? "tool"
 
   const [text, setText] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
