@@ -204,6 +204,15 @@ export function PrdPage() {
           prompt: `将以下 Mermaid 流程图渲染为高清技术插图，简洁清晰，蓝白配色：\n\n${block.code}`,
           projectDir: outputDir,
         })
+        // 防御性校验：跳过无效结果
+        if (!imgResult?.filePath) {
+          console.warn(`[Prd] illustration result missing filePath, skipping block ${block.index}`)
+          setBatchIllustrationState((prev) =>
+            prev ? { ...prev, failed: [...prev.failed, { index: block.index, lineStart: block.lineStart }] } : prev
+          )
+          continue
+        }
+
         const filePath = imgResult.filePath
         const imgName = filePath.split("/").pop() ?? filePath
         await api.embedIllustrationInPrd({
