@@ -265,6 +265,8 @@ pub fn run() {
             commands::illustration::delete_illustration,
             commands::illustration::scan_prd_mermaid,
             commands::illustration::embed_illustration_in_prd,
+            commands::plaza::load_plaza_manifest,
+            commands::plaza::run_plaza_skill,
             commands::tools::analyze_screenshot,
             commands::tools::capture_url_screenshot,
             commands::projects::set_motion_intensity,
