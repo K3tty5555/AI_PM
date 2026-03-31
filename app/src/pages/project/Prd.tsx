@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
-import { PrdIllustrationDialog, PRD_ILLUSTRATION_SKIP_KEY } from "@/components/prd-illustration-dialog"
+import { PrdIllustrationDialog, getIllustrationSkipKey } from "@/components/prd-illustration-dialog"
 import { Sparkles } from "lucide-react"
 import { PrdViewer } from "@/components/prd-viewer"
 import { PrdToc, slugify } from "@/components/prd-toc"
@@ -374,7 +374,7 @@ export function PrdPage() {
 
   /** Decide whether to show illustration dialog or go straight to stream */
   const maybeShowIllustrationDialog = useCallback((onConfirm: (enabled: boolean) => void) => {
-    if (localStorage.getItem(PRD_ILLUSTRATION_SKIP_KEY)) {
+    if (localStorage.getItem(getIllustrationSkipKey(projectId))) {
       onConfirm(false)
     } else {
       // Store the callback on a ref so the Dialog's onConfirm can call it
@@ -1017,6 +1017,7 @@ export function PrdPage() {
       {/* PRD AI 配图确认 Dialog */}
       <PrdIllustrationDialog
         open={illustrationDialogOpen}
+        projectId={projectId}
         onConfirm={handleIllustrationConfirm}
       />
     </div>
