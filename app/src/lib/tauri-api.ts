@@ -270,6 +270,29 @@ export interface MermaidBlock {
   lineStart: number
 }
 
+// ── Plaza ─────────────────────────────────────────────────────────────────────
+
+export interface PlazaSkill {
+  id: string
+  displayName: string
+  description: string
+  category: string
+  source: "baoyu" | "minimax"
+  icon: string
+  inputs: string[]
+}
+
+export interface PlazaCategory {
+  id: string
+  label: string
+  icon: string
+}
+
+export interface PlazaManifest {
+  skills: PlazaSkill[]
+  categories: PlazaCategory[]
+}
+
 export interface ProviderDef {
   id: string
   name: string
@@ -584,6 +607,12 @@ export const api = {
     imageRelativePath: string
     altText: string
   }) => safeInvoke<void>("embed_illustration_in_prd", args),
+
+  // ── Plaza ───────────────────────────────────────────────────────
+  loadPlazaManifest: () =>
+    safeInvoke<PlazaManifest>("load_plaza_manifest"),
+  runPlazaSkill: (args: { skillId: string; userInput: string }) =>
+    safeInvoke<void>("run_plaza_skill", { args }),
 }
 
 // ─── Updater ────────────────────────────────────────────────────────────────
