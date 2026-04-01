@@ -59,15 +59,20 @@
 
 **4.1 构造 prompt**
 
-基础 prompt 格式（与 SKILL.md 步骤6.2 保持一致）：
+基础 prompt 格式（与 ai-pm-prd/SKILL.md 步骤6.2 的 prompt 格式保持一致）：
 
 ```
-专业产品流程信息图，扁平矢量 {风格} 风格，纯白色背景(#FFFFFF)，蓝色系配色(主色#1D4ED8)，{布局} 布局，{内容描述}，无文字水印，高分辨率，2560x1440
+专业产品流程信息图，扁平矢量 corporate-memphis 风格，纯白色背景(#FFFFFF)，蓝色系配色(主色#1D4ED8)。中文标注，清晰可读，简洁专业，适合嵌入PRD文档。充足留白，节点间用带箭头连接线。布局类型：{根据用户选择的风格填入}。
+
+流程内容（基于以下 Mermaid 代码转化为可视化信息图）：
+{Mermaid 代码内容，去掉标记只保留代码本体}
+
+图表标题：{从内容提炼的标题}
 ```
 
 **4.2 创建 prompt 文件**
 
-将 prompt 写入 `/tmp/mermaid-prompts/{编号}-prompt.md`。
+将 prompt 写入 `/tmp/mermaid-prompts/{编号}-prompt.md`（目录不存在则先 `mkdir -p`）。
 
 **4.3 构建 batch.json**
 
@@ -75,16 +80,18 @@
 {
   "tasks": [
     {
-      "id": "{编号}",
-      "prompt": "{构造好的 prompt}",
-      "output": "{项目目录}/11-illustrations/{编号}-{slug}.png",
-      "size": "2560x1440"
+      "id": "flow1",
+      "promptFiles": ["/tmp/mermaid-prompts/flow1-prompt.md"],
+      "image": "{项目目录绝对路径}/11-illustrations/flow1-{slug}.png",
+      "provider": "seedream",
+      "ar": "16:9",
+      "quality": "2k"
     }
   ]
 }
 ```
 
-将 batch.json 写入 `/tmp/mermaid-prompts/batch.json`。
+按实际图片数量生成对应数量的 tasks 条目。将 batch.json 写入 `/tmp/mermaid-prompts/batch.json`（所有路径均为绝对路径）。
 
 **4.4 调用 baoyu-imagine**
 
