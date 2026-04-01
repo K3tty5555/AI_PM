@@ -99,8 +99,9 @@ mkdir -p {项目目录}/05-prd/
 
 PRD 中包含 Mermaid 代码块时，生成方式取决于执行环境：
 
-- **Claude Code 环境**：步骤6 负责调用 baoyu-imagine 批量生成 AI 图片，不走 md2docx.py 内部渲染
-- **用户手动在终端执行 md2docx.py（TTY 模式）**：脚本逐个询问 A（AI高清/Seedream）或 B（本地Chrome），按用户选择执行
+- **Claude Code 环境（`ai_illustration_mode=true`）**：步骤6 负责调用 baoyu-imagine 批量生成 AI 图片，不走 md2docx.py 内部渲染
+- **Claude Code 环境（`ai_illustration_mode=false`）**：Mermaid 代码块保留原样写入 DOCX/PDF，不触发任何渲染
+- **用户手动在终端执行 md2docx.py（TTY 模式）**：脚本逐个询问 A（AI高清/Seedream）或 B（本地Chrome），按用户选择执行；选 A 生成失败后不自动重试（避免重复扣费），需用户手动确认后再试
 
 ### 步骤4.5b：导出前敏感信息扫描
 
