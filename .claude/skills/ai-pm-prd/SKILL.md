@@ -496,35 +496,31 @@ rm "{项目目录}/05-prd/_tmp.html"
 
 #### 路径 B：含原型截图 + 流程图版（30-40 秒）
 
-> 先执行 Mermaid 预处理，再构建 HTML（使用 `_tmp_preprocessed.md`）。
+> 输入文件由 `ai_illustration_mode` 决定：`true` 时使用步骤6生成的 `_export_tmp.md`（Mermaid 块已替换为 AI 图片引用）；`false` 时直接使用原始 PRD `05-PRD-v1.0.md`。
 
 ```bash
-# 1. Mermaid 预处理
-python3 "$SKILL_DIR/preprocess_mermaid.py" \
-  "{项目目录}/05-prd/05-PRD-v1.0.md" \
-  "{项目目录}/05-prd/_tmp_preprocessed.md"
-
-# 2. 构建 HTML（用预处理后的 MD）
+# 1. 构建 HTML
+# ai_illustration_mode=true  → INPUT="{项目目录}/05-prd/_export_tmp.md"
+# ai_illustration_mode=false → INPUT="{项目目录}/05-prd/05-PRD-v1.0.md"
 node -e "
 const { buildHtml } = require('./build-pdf-html.js');
 const fs = require('fs');
 const html = buildHtml(
-  '{项目目录}/05-prd/_tmp_preprocessed.md',
+  '$INPUT',
   'templates/prd-styles/default/pdf-style.css',
   true    // ← 嵌入原型截图
 );
 fs.writeFileSync('{项目目录}/05-prd/_tmp_illustrated.html', html);
 "
 
-# 3. 打印 PDF
+# 2. 打印 PDF
 "$CHROME" --headless=new --no-sandbox --disable-gpu \
   --print-to-pdf="{项目目录}/05-prd/05-PRD-v1.0-illustrated.pdf" \
   --print-to-pdf-no-header \
   "file://{项目目录}/05-prd/_tmp_illustrated.html" 2>/dev/null
 
-# 4. 清理临时文件
+# 3. 清理临时文件
 rm "{项目目录}/05-prd/_tmp_illustrated.html"
-rm "{项目目录}/05-prd/_tmp_preprocessed.md"
 ```
 
 #### 路径 C：先文字版，后截图版
