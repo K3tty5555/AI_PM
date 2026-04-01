@@ -36,7 +36,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm
 
 ```
 是否开启 AI 配图模式？
-开启后，PRD 生成完毕时会自动扫描所有 Mermaid 流程图，调用 Seedream API 渲染成高清插图并嵌入 PRD。
+开启后，PRD 生成完毕时会自动扫描所有 Mermaid 流程图，调用 AI 配图服务（baoyu-imagine）渲染成高清插图并嵌入 PRD。
 
 ⚠️ 会产生 API 费用，每张图约 0.1–0.3 元。
 
@@ -189,21 +189,19 @@ prompt 内容格式（中文，清晰描述流程图）：
       "id": "flow1",
       "promptFiles": ["/tmp/mermaid-prompts/flow1-prompt.md"],
       "image": "{项目目录绝对路径}/11-illustrations/flow1-scene-routing.png",
-      "provider": "seedream",
-      "ar": "16:9",
-      "quality": "2k"
+      "ar": "16:9"
     },
     {
       "id": "flow2",
       "promptFiles": ["/tmp/mermaid-prompts/flow2-prompt.md"],
       "image": "{项目目录绝对路径}/11-illustrations/flow2-quiz-generation.png",
-      "provider": "seedream",
-      "ar": "16:9",
-      "quality": "2k"
+      "ar": "16:9"
     }
   ]
 }
 ```
+
+> provider/model/quality 不要硬编码，由 baoyu-imagine 从用户 EXTEND.md 读取。
 
 `11-illustrations` 目录路径：`{项目目录}/11-illustrations/`（不存在则先 `mkdir -p` 创建）。
 image 字段格式：`{项目目录绝对路径}/11-illustrations/{id}-{slug}.png`，按实际 Mermaid 块数量生成对应条目。
