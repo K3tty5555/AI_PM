@@ -6,7 +6,7 @@
 
 ## 功能
 
-用 AI（Seedream）生成高质量信息图/流程图。支持 Mermaid 代码和自然语言两种输入，自动检测。
+用 AI（baoyu-imagine）生成高质量信息图/流程图。支持 Mermaid 代码和自然语言两种输入，自动检测。
 
 ## 输入自动检测
 
@@ -55,7 +55,42 @@
 
 ### 4. 生成图片
 
-调用 Seedream API（`doubao-seedream-4-5-251128`）生成。
+用户确认风格后，构造 prompt 并通过 baoyu-imagine 生成图片：
+
+**4.1 构造 prompt**
+
+基础 prompt 格式（与 SKILL.md 步骤6.2 保持一致）：
+
+```
+专业产品流程信息图，扁平矢量 {风格} 风格，纯白色背景(#FFFFFF)，蓝色系配色(主色#1D4ED8)，{布局} 布局，{内容描述}，无文字水印，高分辨率，2560x1440
+```
+
+**4.2 创建 prompt 文件**
+
+将 prompt 写入 `/tmp/mermaid-prompts/{编号}-prompt.md`。
+
+**4.3 构建 batch.json**
+
+```json
+{
+  "tasks": [
+    {
+      "id": "{编号}",
+      "prompt": "{构造好的 prompt}",
+      "output": "{项目目录}/11-illustrations/{编号}-{slug}.png",
+      "size": "2560x1440"
+    }
+  ]
+}
+```
+
+将 batch.json 写入 `/tmp/mermaid-prompts/batch.json`。
+
+**4.4 调用 baoyu-imagine**
+
+```bash
+~/.bun/bin/bun ~/.claude/skills/baoyu-imagine/scripts/main.ts --batchfile /tmp/mermaid-prompts/batch.json
+```
 
 **错误处理**：
 - API Key 未配置 → 提示设置 `~/.baoyu-skills/.env` 中的 `ARK_API_KEY`
@@ -64,7 +99,7 @@
 
 ### 5. 保存图片
 
-保存到当前项目 `11-illustrations/{编号}-{slug}.png`。
+baoyu-imagine 将图片直接输出到 batch.json 中指定的路径（`{项目目录}/11-illustrations/{编号}-{slug}.png`）。
 
 编号规则：扫描目录已有文件最大编号 +1。slug 从内容提取 2-4 个关键词（kebab-case）。
 
@@ -78,17 +113,8 @@
 ![授权流程](../11-illustrations/04-auth-flow.png)
 ```
 
-## API 配置
-
-| 项目 | 值 |
-|------|---|
-| 模型 | `doubao-seedream-4-5-251128` |
-| Key | `~/.baoyu-skills/.env` 中的 `ARK_API_KEY` |
-| 默认尺寸 | `2560x1440`（16:9） |
-| Endpoint | `https://ark.cn-beijing.volces.com/api/v3/images/generations` |
-
 ## 与导出流程的关系
 
 - **独立命令**：用户主动调用，不需要费用确认（主动调用即视为同意）
 - **导出流程**：md2docx.py 检测到 Mermaid 时询问 A（AI付费）/ B（本地免费），选 A 后确认风格
-- 两者共用同一套 Seedream API 调用函数和风格推荐逻辑
+- 两者共用同一套风格推荐逻辑，图片生成均通过 baoyu-imagine 完成（保持与 SKILL.md 步骤6相同的质量和配置）
