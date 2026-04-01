@@ -399,17 +399,10 @@ CSS_PATH="templates/prd-styles/default/pdf-style.css"
 SKILL_DIR=".claude/skills/ai-pm-prd"
 ```
 
-**含图片路径（B/C/D/E）的 Mermaid 预处理**（在 HTML 构建之前执行）：
+**含图片路径（B/C/D/E）的输入文件选择**：
 
-```bash
-# 预渲染 Mermaid 流程图 → 生成临时 MD（mermaid 块替换为 base64 <img>）
-python3 "$SKILL_DIR/preprocess_mermaid.py" \
-  "{项目目录}/05-prd/05-PRD-v1.0.md" \
-  "{项目目录}/05-prd/_tmp_preprocessed.md"
-
-# 后续 HTML 构建使用 _tmp_preprocessed.md 而非原始 MD
-# 最终清理：rm "{项目目录}/05-prd/_tmp_preprocessed.md"
-```
+- `ai_illustration_mode=true`：步骤6 已生成 `_export_tmp.md`（Mermaid 块已替换为图片引用），HTML 构建使用 `_export_tmp.md`
+- `ai_illustration_mode=false`：直接使用原始 PRD `05-PRD-v1.0.md`，Mermaid 代码块保留原样
 
 ```javascript
 // build-pdf-html.js（通用 HTML 构建，withPrototype 参数控制是否嵌图）

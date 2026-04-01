@@ -63,6 +63,28 @@ function buildHtml(prdPath, cssPath, withPrototype = false) {
   }
   let html = htmlLines.join('\n');
 
+  // 嵌入 Markdown 图片：![alt](path) → <figure><img base64><figcaption></figcaption></figure>
+  const prdDir = path.dirname(path.resolve(prdPath));
+  const supportedExts = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
+  const extMimeMap = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, imgPath) => {
+    try {
+      const absPath = path.isAbsolute(imgPath) ? imgPath : path.resolve(prdDir, imgPath);
+      const ext = path.extname(absPath).toLowerCase();
+      if (!supportedExts.includes(ext)) return match;
+      if (!fs.existsSync(absPath)) return match;
+      const b64 = fs.readFileSync(absPath).toString('base64');
+      const mime = extMimeMap[ext];
+      return '<figure>'
+        + '<img src="data:' + mime + ';base64,' + b64 + '" alt="' + alt + '" '
+        + 'style="max-width:100%;display:block;margin:0 auto;">'
+        + '<figcaption style="text-align:center;color:#666;font-size:0.9em;margin-top:4px;">' + alt + '</figcaption>'
+        + '</figure>';
+    } catch (e) {
+      return match;
+    }
+  });
+
   // 标题
   html = html
     .replace(/^#### (.+)$/gm, (_, t) => '<h4>' + t + '</h4>')
