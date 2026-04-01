@@ -95,15 +95,12 @@ mkdir -p {项目目录}/05-prd/
 
 生成 `05-PRD-v1.0.md` 并创建 `README.md`（说明目录用途）。
 
-### 步骤4.5a：流程图生成方式选择
+### 步骤4.5a：流程图生成方式
 
-导出 DOCX 时，如果 PRD 中包含 Mermaid 代码块，md2docx.py 会逐个询问生成方式：
-- **A. AI 生成高清信息图**（Seedream，会产生 API 费用）→ 需确认风格后生成，图片同时保存到 `11-illustrations/`
-- **B. 本地渲染**（Chrome headless，免费但质量一般）→ 默认选项
+PRD 中包含 Mermaid 代码块时，生成方式取决于执行环境：
 
-选择 A 后需二次确认风格（推荐布局×风格组合 + 确认），确认后才调用 API。生成失败不自动重试（避免双倍费用）。
-
-非交互模式（客户端调用）自动走 B 本地渲染，不弹确认。
+- **Claude Code 环境**：步骤6 负责调用 baoyu-imagine 批量生成 AI 图片，不走 md2docx.py 内部渲染
+- **用户手动在终端执行 md2docx.py（TTY 模式）**：脚本逐个询问 A（AI高清/Seedream）或 B（本地Chrome），按用户选择执行
 
 ### 步骤4.5b：导出前敏感信息扫描
 
