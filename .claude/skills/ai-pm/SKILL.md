@@ -81,7 +81,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm retrospective` | 项目复盘，生成 10-retrospective.md |
 | `/ai-pm instinct [list\|review\|import\|reset]` | 习惯直觉管理（自动学习的偏好） |
 | `/ai-pm doctor` | 技能健康检查（15 项一致性扫描） |
-| `/ai-pm illustration [输入]` | AI 流程图生成（Seedream，支持 Mermaid 和自然语言） |
+| `/ai-pm illustration [输入]` | AI 流程图生成（baoyu-imagine，支持 Mermaid 和自然语言） |
 | `/ai-pm config style` | PRD 写作风格管理 |
 | `/ai-pm config ui` | UI 设计规范管理 |
 | `/ai-pm [URL]` | 分析参考网页（Playwright MCP 抓取） |
