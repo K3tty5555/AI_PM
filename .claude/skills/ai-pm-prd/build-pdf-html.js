@@ -33,7 +33,7 @@ function buildHtml(prdPath, cssPath, withPrototype = false) {
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
-    // mermaid 代码块：已预处理为 <img>（preprocess_mermaid.py），直接原样输出
+    // mermaid 代码块：降级显示为代码框（![alt](path) 图片引用已在步骤6生成，由上方正则处理）
     if (line.trim().startsWith('```mermaid')) {
       let block = [];
       i++;
