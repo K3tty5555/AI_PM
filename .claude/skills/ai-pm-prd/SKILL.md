@@ -148,27 +148,91 @@ PRD 中包含 Mermaid 代码块时，生成方式取决于执行环境：
 
 ### 步骤 6：批量 AI 配图（仅 ai_illustration_mode=true 时执行）
 
-1. 扫描 `05-prd/05-PRD-v1.0.md`，提取所有 Mermaid 代码块（以 ` ```mermaid ` 开头的代码块）
-2. 展示扫描结果：
+步骤6执行条件：仅在 `ai_illustration_mode=true` 时运行。
+
+#### 6.1 扫描 PRD，提取所有 Mermaid 块
+
+读取 PRD 文件（`{项目目录}/05-prd/05-PRD-v1.0.md`），找到所有 ` ```mermaid ... ``` ` 代码块。
+
+为每个代码块按顺序编号，结合代码内容生成 slug，格式为 `flow1`、`flow2`、…（如 `flow1-scene-routing`）。
+
+#### 6.2 为每个 Mermaid 块构建 prompt 文件
+
+在 `/tmp/mermaid-prompts/` 目录（不存在则先 `mkdir -p`）下，为每个 Mermaid 块创建对应的 prompt 文件：
 
 ```
-发现 {N} 个 Mermaid 流程图，预计费用约 {N×0.2} 元。
-
-确认逐一生成？（y/n）
+/tmp/mermaid-prompts/{编号}-prompt.md
 ```
 
-3. 用户确认后，对每个 Mermaid 块：
-   a. 解析内容，调用 `illustration.md` 中的逻辑生成图片
-   b. 图片保存至 `11-illustrations/{编号}-{slug}.png`
-   c. 在对应 Mermaid 代码块下方插入图片引用（**从最后一个块开始倒序处理**，避免行号偏移）：
-      ```
-      ![{流程图描述}](../11-illustrations/{编号}-{slug}.png)
-      ```
-
-4. 所有图片生成完毕后输出汇总：
+prompt 内容格式（中文，清晰描述流程图）：
 
 ```
-✅ 已生成 {N} 张配图并嵌入 PRD
+专业产品流程信息图，扁平矢量 corporate-memphis 风格，纯白色背景(#FFFFFF)，蓝色系配色(主色#1D4ED8)。中文标注，清晰可读，简洁专业，适合嵌入PRD文档。充足留白，节点间用带箭头连接线。布局类型：{根据流程形态选择 linear-progression 水平从左到右 / tree-branching 双分支并列 / diamond-decision 菱形决策 等}。
+
+流程内容（基于以下 Mermaid 代码转化为可视化信息图）：
+{Mermaid 代码内容，去掉 ```mermaid ... ``` 标记，只保留代码本体}
+
+图表标题：{从 Mermaid 代码内容提炼一个简短标题}
+```
+
+#### 6.3 构建 batch.json 并调用 baoyu-imagine
+
+在 `/tmp/mermaid-prompts/batch.json` 写入以下格式（所有路径均为绝对路径）：
+
+```json
+{
+  "jobs": 3,
+  "tasks": [
+    {
+      "id": "flow1",
+      "promptFiles": ["/tmp/mermaid-prompts/flow1-prompt.md"],
+      "image": "{项目目录绝对路径}/11-illustrations/flow1-{slug}.png",
+      "provider": "seedream",
+      "ar": "16:9",
+      "quality": "2k"
+    }
+  ]
+}
+```
+
+`11-illustrations` 目录路径：`{项目目录}/11-illustrations/`（不存在则先 `mkdir -p` 创建）。
+
+按实际 Mermaid 块数量生成对应数量的 tasks 条目。
+
+然后执行以下命令，等待所有图片生成完毕（最多等待 10 分钟）：
+
+```bash
+~/.bun/bin/bun ~/.claude/skills/baoyu-imagine/scripts/main.ts --batchfile /tmp/mermaid-prompts/batch.json
+```
+
+#### 6.4 生成临时导出副本
+
+在 PRD 文件同目录（`{项目目录}/05-prd/`）下创建 `_export_tmp.md`，内容为 PRD 文件的完整拷贝，但将每个 Mermaid 代码块替换为对应的图片引用：
+
+```
+![{图表标题}](../11-illustrations/{编号}-{slug}.png)
+```
+
+**注意：原始 PRD 文件（`05-PRD-v1.0.md`）保持不变，`_export_tmp.md` 仅作为导出临时文件。**
+
+#### 6.5 后续导出使用副本
+
+- **DOCX 导出**：`md2docx.py` 使用 `_export_tmp.md` 而非原始 PRD
+- **PDF 导出**：`build-pdf-html.js` 使用 `_export_tmp.md` 而非原始 PRD
+
+#### 6.6 清理
+
+导出完成后，删除临时文件：
+
+```bash
+rm "{项目目录}/05-prd/_export_tmp.md"
+rm -rf /tmp/mermaid-prompts/
+```
+
+所有图片生成完毕后输出汇总：
+
+```
+✅ 已生成 {N} 张配图并嵌入导出版本
 ```
 
 ---
