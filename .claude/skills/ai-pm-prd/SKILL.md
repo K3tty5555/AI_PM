@@ -499,9 +499,14 @@ rm "{项目目录}/05-prd/_tmp.html"
 > 输入文件由 `ai_illustration_mode` 决定：`true` 时使用步骤6生成的 `_export_tmp.md`（Mermaid 块已替换为 AI 图片引用）；`false` 时直接使用原始 PRD `05-PRD-v1.0.md`。
 
 ```bash
-# 1. 构建 HTML
-# ai_illustration_mode=true  → INPUT="{项目目录}/05-prd/_export_tmp.md"
-# ai_illustration_mode=false → INPUT="{项目目录}/05-prd/05-PRD-v1.0.md"
+# 1. 选择输入文件
+if [ "$ai_illustration_mode" = "true" ]; then
+  INPUT="{项目目录}/05-prd/_export_tmp.md"
+else
+  INPUT="{项目目录}/05-prd/05-PRD-v1.0.md"
+fi
+
+# 2. 构建 HTML
 node -e "
 const { buildHtml } = require('./build-pdf-html.js');
 const fs = require('fs');

@@ -64,21 +64,22 @@ function buildHtml(prdPath, cssPath, withPrototype = false) {
   let html = htmlLines.join('\n');
 
   // 嵌入 Markdown 图片：![alt](path) → <figure><img base64><figcaption></figcaption></figure>
+  // 注意：此替换必须在标题/粗体等行内 Markdown 转换之前执行
   const prdDir = path.dirname(path.resolve(prdPath));
-  const supportedExts = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
   const extMimeMap = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
+  const escHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, imgPath) => {
     try {
       const absPath = path.isAbsolute(imgPath) ? imgPath : path.resolve(prdDir, imgPath);
       const ext = path.extname(absPath).toLowerCase();
-      if (!supportedExts.includes(ext)) return match;
+      if (!extMimeMap[ext]) return match;
       if (!fs.existsSync(absPath)) return match;
       const b64 = fs.readFileSync(absPath).toString('base64');
-      const mime = extMimeMap[ext];
+      const safeAlt = escHtml(alt);
       return '<figure>'
-        + '<img src="data:' + mime + ';base64,' + b64 + '" alt="' + alt + '" '
+        + '<img src="data:' + extMimeMap[ext] + ';base64,' + b64 + '" alt="' + safeAlt + '" '
         + 'style="max-width:100%;display:block;margin:0 auto;">'
-        + '<figcaption style="text-align:center;color:#666;font-size:0.9em;margin-top:4px;">' + alt + '</figcaption>'
+        + '<figcaption style="text-align:center;color:#666;font-size:0.9em;margin-top:4px;">' + safeAlt + '</figcaption>'
         + '</figure>';
     } catch (e) {
       return match;
