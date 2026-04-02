@@ -5,6 +5,8 @@
 
 ## Checkpoint 子步骤定义
 
+> **注**：共 9 步，验收标准已整合至「功能规格」步骤内，不单独列为子步骤。
+
 PRD 生成过程按以下子步骤推进，每步开始前更新 `_status.json` 中的 `checkpoints.prd`：
 
 | 步骤 ID | 步骤名称 | 说明 |
@@ -121,7 +123,7 @@ mkdir -p {project_dir}/_summaries/
 
 ### 4. 更新 _status.json
 
-在 `_status.json` 的 `checkpoints` 字段下新增（或更新）：
+在 `_status.json` 的**顶层**新增（或更新）`summaries` 字段：
 ```json
 "summaries": {
   "prd": "{ISO8601 时间戳}"
