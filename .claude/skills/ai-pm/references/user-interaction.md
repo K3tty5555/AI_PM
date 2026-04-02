@@ -176,7 +176,8 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
     "phases": {},
     "total_estimate": 0
   },
-  "agent_errors": {}
+  "agent_errors": {},
+  "summaries": {}
 }
 ```
 
@@ -335,6 +336,8 @@ phases.review      = true  → 写完 08-review-report-v1.md 后
 - `✅` → 已完成
 - `⏳` → 进行中（当前 phase）
 - `░░` → 未开始
+
+> **注**：Phase 7.5（完整性审计）作为原型阶段的内置子步骤（`audit_running`/`audit_done`）呈现，不在主进度条单独列出。
 
 **当前状态行** 格式：
 - 若有 checkpoint：`当前：{phase 中文名} · {步骤中文名}（{完成数}/{总步数}）`
