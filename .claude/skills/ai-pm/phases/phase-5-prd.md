@@ -3,6 +3,15 @@
 **输入**: `01-requirement-draft.md` + `02-analysis-report.md` + `03-competitor-report.md` + `04-user-stories.md`
 **输出**: `05-prd/05-PRD-v1.0.md`
 
+## 知识库推荐触发（Plan Mode 前执行）
+
+在展示 Plan Mode 前，先检查是否有相关知识可推荐：
+
+1. 从 `01-requirement-draft.md` 提取业务关键词（3–6 个）
+2. 调用 `ai-pm-knowledge suggest {关键词}` 搜索相关踩坑/模式
+3. **有匹配结果** → 展示推荐，等待用户「查看详情」或「跳过」
+4. **无匹配结果** → 静默跳过，直接进入 Plan Mode
+
 ## Plan Mode 前置展示（执行前必须展示）
 
 用户触发 PRD 生成后，**先展示执行计划**并等待确认：
