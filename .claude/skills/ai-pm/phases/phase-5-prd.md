@@ -56,7 +56,7 @@ PRD 生成过程按以下子步骤推进，每步开始前更新 `_status.json` 
 | `data_schema` | 数据结构 | 写核心数据字段/流转 |
 | `ui_flows` | 交互流程 | 写页面流程/状态机 |
 | `non_functional` | 非功能需求 | 写性能/安全/兼容性 |
-| `prd_done` | PRD 完成 | 文件落盘，写摘要 |
+| `prd_done` | PRD 完成 | 文件落盘，写摘要，写成本记录 |
 
 **checkpoint 更新时机**：
 
