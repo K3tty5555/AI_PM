@@ -118,6 +118,49 @@ Agent → subagent-Review
 - subagent 的所有输入（文件路径、项目目录）在 Agent tool 调用时传入，不能运行时询问
 - subagent 产出必须落文件，主线程读文件做汇总，不依赖 subagent 的返回文本
 
+## Wave 容错规范
+
+### 失败记录
+
+当某 subagent 执行失败（超时、报错、文件未落盘）时：
+
+1. **不中断整个 Wave**；同 Wave 的其他 subagent 继续执行
+2. 将失败信息写入项目 `_status.json` 的 `agent_errors` 字段：
+
+```json
+"agent_errors": {
+  "{wave_id}_{agent_role}": {
+    "error": "{错误摘要，不超过 100 字}",
+    "timestamp": "{ISO8601}",
+    "retryable": true
+  }
+}
+```
+
+命名规则：key 为 `wave{N}_{role}`，例如 `wave1_analyst`、`wave2_prd`。
+
+3. Wave 结束后向用户汇报结果：
+
+```
+Wave 1 完成（1 个 subagent 失败）：
+  ✅ subagent-PM → 02-analysis-report.md
+  ❌ subagent-Analyst → 竞品数据获取超时（可重试）
+
+继续 Wave 2？或重试失败项？
+  继续 / 重试
+```
+
+### --retry 参数
+
+`/ai-pm --team --retry=wave1`：
+
+1. 读 `_status.json.agent_errors`，筛选 key 以 `wave1_` 开头且 `retryable: true` 的条目
+2. **仅重跑失败的 subagent**，已成功的 subagent 输出文件保留不变
+3. 重跑成功后，清除 `agent_errors` 中对应条目
+4. 重新执行后续 Wave（依赖被修复输出的 Wave）
+
+**限制**：`--retry` 只能重跑有错误记录的 Wave，不支持强制重跑已成功的 Wave。
+
 ## 任务分解与角色分配
 
 | 任务类型 | 所需角色 | 推荐模式 |
@@ -140,4 +183,6 @@ Agent → subagent-Review
 | `/agent-team --mode=agile "需求"` | 敏捷模式 |
 | `/agent-team --roles=pm,architect "需求"` | 仅启用指定角色 |
 | `/agent-team --skip-review "需求"` | 跳过评审阶段 |
+| `/ai-pm --team --retry=wave1` | 重跑 Wave 1 中失败的 subagent（保留已成功输出） |
+| `/ai-pm --team --retry=wave2` | 重跑 Wave 2 中失败的 subagent |
 | `/ai-pm --team "需求"` | 推荐方式：经由 ai-pm 自动调度 |
