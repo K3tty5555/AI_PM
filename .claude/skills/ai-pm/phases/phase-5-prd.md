@@ -3,6 +3,34 @@
 **输入**: `01-requirement-draft.md` + `02-analysis-report.md` + `03-competitor-report.md` + `04-user-stories.md`
 **输出**: `05-prd/05-PRD-v1.0.md`
 
+## Plan Mode 前置展示（执行前必须展示）
+
+用户触发 PRD 生成后，**先展示执行计划**并等待确认：
+
+```
+即将开始：PRD 生成
+─────────────────────────────
+执行步骤（共 9 步）：
+  1. PRD 生成前确认
+  2. 写作风格选择
+  3. 产品概述
+  4. 用户角色
+  5. 功能规格   ← 最耗时，约占 50%
+  6. 数据结构
+  7. 交互流程
+  8. 非功能需求
+  9. 落盘 + 摘要 + 成本记录
+
+读取文件：01-requirement-draft.md, 02-analysis-report.md,
+         03-competitor-report.md, 04-user-stories.md
+写入文件：05-prd/05-PRD-v1.0.md（及摘要，若 ≥20KB）
+
+继续？[Y/n]
+```
+
+- 用户回复 Y / 回车 / 「继续」 → 执行 Checkpoint 子步骤（从 preflight_confirm 开始）
+- 用户回复 n / 「取消」 → 返回主菜单，不写入任何文件
+
 ## Checkpoint 子步骤定义
 
 > **注**：共 9 步，验收标准已整合至「功能规格」步骤内，不单独列为子步骤。
@@ -127,5 +155,27 @@ mkdir -p {project_dir}/_summaries/
 ```json
 "summaries": {
   "prd": "{ISO8601 时间戳}"
+}
+```
+
+### 5. 写入成本记录
+
+```bash
+# 获取 PRD 文件字节数
+wc -c {project_dir}/05-prd/05-PRD-v1.0.md
+```
+
+将字节数 × 0.25 作为 `tokens_estimate`，写入 `_status.json`：
+
+```json
+"cost": {
+  "phases": {
+    "prd": {
+      "model": "claude-sonnet-4-6",
+      "tokens_estimate": {file_bytes * 0.25},
+      "completed_at": "{ISO8601 时间戳}"
+    }
+  },
+  "total_estimate": {累加所有 phases 的 tokens_estimate}
 }
 ```

@@ -272,6 +272,28 @@ phases.review      = true  → 写完 08-review-report-v1.md 后
 2. 遍历所有项目，逐个读 `_status.json`
 3. 如某项目无 `_status.json`，降级为文件存在性检查
 
+### /ai-pm list 展示格式
+
+每个项目展示一行：
+
+```
+{项目名}        Phase {完成数}/8   ~{total}K tokens   {updated}
+```
+
+- `total` 来自 `_status.json.cost.total_estimate`，除以 1000 取整，格式 `~45K`
+- 无 cost 记录的老项目显示 `无记录`
+- `total_estimate` 超过 100000 时，在数字前添加 🔴 标注
+- 按 `updated` 降序排列（最新在上）
+
+**示例**：
+```
+── 所有项目（3 个）──
+
+教育超级智能体   Phase 5/8   🔴 ~130K tokens   2026-03-27
+新版考试答题卡   Phase 4/8   ~100K tokens      2026-03-13
+web端考试阅卷    Phase 7/8   ~92K tokens       2026-03-13
+```
+
 ### 无项目时（欢迎界面）
 
 ```
