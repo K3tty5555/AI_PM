@@ -63,7 +63,20 @@ function SidebarShell({
           else if (backendStatus === "skipped") status = "skipped"
           else if (backendStatus === "in_progress") status = "in-progress"
           else if (id === currentPhase) status = "current"
-          return { id, label: PHASE_LABELS[id] ?? id, status }
+
+          let checkpoint: SidebarPhase["checkpoint"] | undefined
+          if (status === "in-progress") {
+            const phaseData = project.phases.find((p: any) => p.phase === id)
+            if (phaseData?.checkpoint?.pendingStep && phaseData.checkpoint.totalSteps > 0) {
+              checkpoint = {
+                pendingStep: phaseData.checkpoint.pendingStep,
+                completedCount: phaseData.checkpoint.completedSteps.length,
+                totalSteps: phaseData.checkpoint.totalSteps,
+              }
+            }
+          }
+
+          return { id, label: PHASE_LABELS[id] ?? id, status, checkpoint }
         })
 
         setProjectPhases(phases)
