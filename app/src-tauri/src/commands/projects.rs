@@ -23,6 +23,14 @@ fn sanitize_phase(phase: &str) -> &str {
     }
 }
 
+#[derive(Debug, Serialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PhaseCheckpoint {
+    pub pending_step: String,
+    pub completed_steps: Vec<String>,
+    pub total_steps: u32,
+}
+
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectPhase {
@@ -33,6 +41,8 @@ pub struct ProjectPhase {
     pub output_file: Option<String>,
     pub started_at: Option<String>,
     pub completed_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checkpoint: Option<PhaseCheckpoint>,
 }
 
 #[derive(Debug, Serialize)]
@@ -596,6 +606,41 @@ fn write_status_json(output_dir: &str, phases: &[ProjectPhase], last_phase: &str
     if let Ok(json) = serde_json::to_string_pretty(&status) {
         let _ = fs::write(path, json);
     }
+}
+
+/// 读取 _status.json 并反序列化为 Value（失败时返回 None，不影响主流程）
+fn read_status_json(output_dir: &str) -> Option<serde_json::Value> {
+    let path = Path::new(output_dir).join("_status.json");
+    let raw = fs::read_to_string(&path).ok()?;
+    serde_json::from_str(&raw).ok()
+}
+
+/// 从已解析的 status_json 中提取指定 phase 的 checkpoint
+fn extract_checkpoint(status_json: &Option<serde_json::Value>, phase: &str) -> Option<PhaseCheckpoint> {
+    let v = status_json.as_ref()?;
+    let cp = v.get("checkpoints")?.get(phase)?;
+    let pending_step = cp.get("pending_step")?.as_str()?.to_string();
+    let completed_steps: Vec<String> = cp
+        .get("completed_steps")?
+        .as_array()?
+        .iter()
+        .filter_map(|s| s.as_str().map(String::from))
+        .collect();
+    let total_steps = match phase {
+        "prd" => 9u32,
+        "prototype" => 8u32,
+        _ => 0u32,
+    };
+    if pending_step.is_empty() || total_steps == 0 {
+        return None;
+    }
+    Some(PhaseCheckpoint { pending_step, completed_steps, total_steps })
+}
+
+/// 从 _status.json 读取 cost.total_estimate
+fn read_total_tokens_from_status(output_dir: &str) -> Option<u64> {
+    let v = read_status_json(output_dir)?;
+    v.get("cost")?.get("total_estimate")?.as_u64().filter(|&n| n > 0)
 }
 
 #[derive(Debug, Deserialize)]
