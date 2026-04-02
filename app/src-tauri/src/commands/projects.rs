@@ -180,6 +180,7 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
                 output_file: None,
                 started_at: started_at.map(|s| s.to_string()),
                 completed_at: None,
+                checkpoint: None,
             });
         }
         phases
@@ -243,6 +244,7 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
                     output_file: row.get(4)?,
                     started_at: row.get(5)?,
                     completed_at: row.get(6)?,
+                    checkpoint: None,
                 })
             })
             .map_err(|e| e.to_string())?
@@ -256,6 +258,18 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
     // Phase 2: file I/O outside the lock
     // Auto-migrate legacy review file (07 → 08)
     migrate_review_file(&output_dir);
+
+    // Read _status.json once, attach checkpoint to in-progress phases
+    let status_json = read_status_json(&output_dir);
+    let phases = phases
+        .into_iter()
+        .map(|mut p| {
+            if p.status == "in_progress" {
+                p.checkpoint = extract_checkpoint(&status_json, &p.phase);
+            }
+            p
+        })
+        .collect::<Vec<_>>();
 
     Ok(Some(ProjectDetail {
         id: pid,
@@ -566,6 +580,7 @@ pub fn advance_phase(state: State<AppState>, id: String) -> Result<Option<String
                     output_file: None,
                     started_at: None,
                     completed_at: None,
+                    checkpoint: None,
                 }
             })
             .collect();
