@@ -152,7 +152,7 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
 ```json
 {
   "project": "项目名",
-  "updated": "YYYY-MM-DD",
+  "updated": "2026-04-02T10:30:00Z",
   "phases": {
     "requirement": false,
     "analysis": false,
@@ -163,9 +163,75 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
     "audit": false,
     "review": false
   },
-  "last_phase": "init"
+  "last_phase": "init",
+  "checkpoints": {
+    "prd": {
+      "step": "product_overview",
+      "completed_steps": [],
+      "pending_step": "product_overview",
+      "last_updated": "2026-04-02T10:30:00Z"
+    }
+  },
+  "cost": {
+    "phases": {}
+  },
+  "agent_errors": {}
 }
 ```
+
+### checkpoints 字段规范
+
+记录进行中 phase 的子步骤状态，支持 Phase 内断点恢复。
+
+- `step`：当前正在执行的子步骤名（英文 snake_case）
+- `completed_steps`：已完成的子步骤数组
+- `pending_step`：下次恢复时从此步骤继续
+- 仅在 phase 执行过程中存在对应 checkpoint；phase 完成后可清除
+
+**phase 恢复规则**：
+- `/ai-pm continue` 时，读 `checkpoints[last_phase].pending_step`
+- 直接跳到 pending_step，跳过 completed_steps 中的步骤
+
+---
+
+### cost 字段规范
+
+按阶段记录 token 消耗估算，用于 `/ai-pm list` 展示。
+
+```json
+"cost": {
+  "phases": {
+    "prd": {
+      "model": "claude-sonnet-4-6",
+      "tokens_estimate": 45000,
+      "completed_at": "2026-04-02T11:00:00Z"
+    }
+  },
+  "total_estimate": 45000
+}
+```
+
+**Token 估算方法**：读取阶段输出文件字节数 × 0.25（中文约 1.5 bytes/token，context 含输入输出约 4x 系数）。`/ai-pm list` 展示时格式：`~45K tokens`。
+
+---
+
+### agent_errors 字段规范
+
+记录 agent-team Wave 中失败的 subagent 信息，支持 `--retry` 重跑。
+
+```json
+"agent_errors": {
+  "wave1_analyst": {
+    "error": "竞品数据获取超时",
+    "timestamp": "2026-04-02T10:15:00Z",
+    "retryable": true
+  }
+}
+```
+
+**清除规则**：对应 Wave 重跑成功后清除该条错误记录。
+
+---
 
 ### phase 写入规则
 
