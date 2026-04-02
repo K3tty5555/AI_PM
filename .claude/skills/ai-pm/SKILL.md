@@ -105,7 +105,9 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 ├── 07-references/               参考资源（URL/截图）
 ├── 08-review-report-v1.md       评审报告
 ├── 09-analytics-requirement.md  埋点方案（可选）
-└── 10-retrospective.md          项目复盘（可选）
+├── 10-retrospective.md          项目复盘（可选）
+└── _summaries/                  阶段摘要（自动生成，用于上下文压缩）
+    └── prd-summary.md           PRD 摘要（PRD ≥ 20KB 时自动生成）
 ```
 
 ---
