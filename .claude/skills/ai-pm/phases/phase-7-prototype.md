@@ -86,3 +86,20 @@ PRD 版本: v1.0
 - 如果覆盖率 < 100%，提示可选操作："是否要补充未覆盖的功能到原型中？"
 - 用户选择补充 → 将未覆盖功能点作为补充需求，触发新一轮完整原型生成
 - 用户选择跳过 → 继续进入 Phase 8 评审
+
+## Checkpoint 子步骤定义
+
+原型生成过程按以下子步骤推进，每步开始前更新 `_status.json` 中的 `checkpoints.prototype`：
+
+| 步骤 ID | 步骤名称 | 说明 |
+|---------|---------|------|
+| `preflight_confirm` | 原型生成前确认 | 用户确认 token 消耗 |
+| `motion_select` | 动效档位选择 | 用户选择动效强度 |
+| `layout_structure` | 页面框架搭建 | 生成 HTML 骨架 + 导航 |
+| `page_generation` | 各页面生成 | 逐页生成交互内容 |
+| `style_polish` | 样式精修 | CSS 整体调整 |
+| `prototype_done` | 原型落盘 | 写入 06-prototype/index.html |
+| `audit_running` | 完整性审计 | Phase 7.5 自动执行 |
+| `audit_done` | 审计完成 | 写入 07-audit-report.md |
+
+checkpoint 更新规则同 `phase-5-prd.md`，字段为 `checkpoints.prototype`。
