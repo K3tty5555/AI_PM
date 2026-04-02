@@ -39,6 +39,12 @@ export const PROJECT_TYPE_META: Record<ProjectType, { label: string; description
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
+export interface PhaseCheckpoint {
+  pendingStep: string
+  completedSteps: string[]
+  totalSteps: number
+}
+
 export interface ProjectPhase {
   id: string
   projectId: string
@@ -47,6 +53,7 @@ export interface ProjectPhase {
   outputFile: string | null
   startedAt: string | null
   completedAt: string | null
+  checkpoint?: PhaseCheckpoint
 }
 
 export interface ProjectSummary {
@@ -64,6 +71,7 @@ export interface ProjectSummary {
   projectType?: string
   industry?: Industry
   motionIntensity?: MotionIntensity
+  totalTokens?: number
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'completedCount' | 'totalPhases' | 'completedPhases'> {
