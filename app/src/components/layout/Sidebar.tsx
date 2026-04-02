@@ -26,6 +26,11 @@ export interface SidebarPhase {
   id: string
   label: string
   status: "completed" | "in-progress" | "current" | "pending" | "skipped"
+  checkpoint?: {
+    pendingStep: string
+    completedCount: number
+    totalSteps: number
+  }
 }
 
 interface SidebarProps {
