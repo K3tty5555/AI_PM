@@ -47,7 +47,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm [需求描述]` | 创建新项目，进入需求澄清 |
 | `/ai-pm --team [需求]` | 启用多代理协作处理复杂需求 |
 | `/ai-pm` | 显示当前项目状态 / 欢迎界面 |
-| `/ai-pm continue` | 恢复进行中的项目 |
+| `/ai-pm continue` | 恢复进行中的项目（从最后 checkpoint 子步骤继续） |
 | `/ai-pm list` | 列出所有项目 |
 | `/ai-pm new [项目名]` | 创建新项目 |
 | `/ai-pm switch [项目名]` | 切换项目 |
@@ -139,6 +139,13 @@ Phase 8（可选）: 需求评审（六角色并行）
     ↓  → 生成 08-review-report-v1.md
 项目完成: 触发知识沉淀（knowledge sync）
 ```
+
+### continue 命令执行规范
+
+1. 读 `_status.json` 的 `last_phase` 和 `checkpoints[last_phase]`
+2. 若有 `pending_step` → 展示恢复点："从上次断点继续：{phase 中文名} · {pending_step 中文名}"
+3. 若无 checkpoint（旧项目）→ 按 phase 级别恢复（原有逻辑）
+4. 展示进度条后开始执行
 
 ---
 
