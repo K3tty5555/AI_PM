@@ -86,3 +86,5 @@ wc -c {project_dir}/04-user-stories.md
   }
 }
 ```
+
+并更新 `cost.total_estimate`（累加所有已有 phases 的 tokens_estimate）。

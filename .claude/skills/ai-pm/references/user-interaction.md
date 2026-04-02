@@ -290,7 +290,7 @@ phases.review      = true  → 写完 08-review-report-v1.md 后
 ── 所有项目（3 个）──
 
 教育超级智能体   Phase 5/8   🔴 ~130K tokens   2026-03-27
-新版考试答题卡   Phase 4/8   ~100K tokens      2026-03-13
+新版考试答题卡   Phase 4/8   ~98K tokens       2026-03-13
 web端考试阅卷    Phase 7/8   ~92K tokens       2026-03-13
 ```
 
