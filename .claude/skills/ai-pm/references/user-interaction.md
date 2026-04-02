@@ -252,7 +252,7 @@ phases.audit       = true  → 写完 07-audit-report.md 后
 phases.review      = true  → 写完 08-review-report-v1.md 后
 ```
 
-新项目创建时，在项目目录下生成初始 `_status.json`：phases 全部为 false，last_phase 为 "init"，checkpoints 为 `{}`，cost 为 `{ "phases": {}, "total_estimate": 0 }`，agent_errors 为 `{}`。
+新项目创建时，在项目目录下生成初始 `_status.json`：phases 全部为 false，last_phase 为 "init"，checkpoints 为 `{}`，cost 为 `{ "phases": {}, "total_estimate": 0 }`，agent_errors 为 `{}`，summaries 为 `{}`。
 
 ---
 
