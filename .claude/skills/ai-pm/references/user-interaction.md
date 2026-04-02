@@ -173,7 +173,8 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
     }
   },
   "cost": {
-    "phases": {}
+    "phases": {},
+    "total_estimate": 0
   },
   "agent_errors": {}
 }
@@ -235,6 +236,8 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
 
 ### phase 写入规则
 
+**`updated` 字段写入格式**：ISO 8601（`YYYY-MM-DDTHH:MM:SSZ`），每次更新 `_status.json` 时同步刷新。
+
 **每个阶段完成、文件落盘后，立即更新 `_status.json`：**
 
 ```
@@ -248,7 +251,7 @@ phases.audit       = true  → 写完 07-audit-report.md 后
 phases.review      = true  → 写完 08-review-report-v1.md 后
 ```
 
-新项目创建时，在项目目录下生成初始 `_status.json`（所有 phases 为 false，last_phase 为 "init"）。
+新项目创建时，在项目目录下生成初始 `_status.json`：phases 全部为 false，last_phase 为 "init"，checkpoints 为 `{}`，cost 为 `{ "phases": {}, "total_estimate": 0 }`，agent_errors 为 `{}`。
 
 ---
 
