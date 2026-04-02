@@ -174,7 +174,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 
 | 文件 | 内容 |
 |------|------|
-| `references/user-interaction.md` | 项目路径解析、启动界面、快捷指令、_status.json 规范、多代理、记忆迁移、现有文档处理 |
+| `references/user-interaction.md` | 项目路径解析、启动界面、快捷指令、_status.json 规范、多代理、记忆迁移、现有文档处理、进度条渲染（render_progress） |
 | `references/symptom-index.md` | 常见场景速查 + Anti-Pattern |
 | `doctor.md` | 技能健康检查（22 项） |
 | `illustration.md` | AI 流程图生成 |
