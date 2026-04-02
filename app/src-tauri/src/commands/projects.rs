@@ -62,6 +62,8 @@ pub struct ProjectSummary {
     pub project_type: String,
     pub industry: String,
     pub motion_intensity: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_tokens: Option<u64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -84,51 +86,79 @@ pub struct ProjectDetail {
 
 #[tauri::command]
 pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, String> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
+    // Phase 1: DB query under the lock — collect raw row tuples
+    type RowTuple = (String, String, Option<String>, String, String, String, String, String, i64, String, String, String, String);
+    let rows: Vec<RowTuple> = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db
+            .prepare(
+                "SELECT p.id, p.name, p.description, p.current_phase, p.output_dir, p.created_at, p.updated_at, p.status,
+                        COUNT(CASE WHEN pp.status = 'completed' THEN 1 END) as completed_count,
+                        GROUP_CONCAT(CASE WHEN pp.status = 'completed' THEN pp.phase END) as completed_phases,
+                        COALESCE(p.project_type, 'general') as project_type,
+                        COALESCE(p.industry, 'general') as industry,
+                        COALESCE(p.motion_intensity, 'medium') as motion_intensity
+                 FROM projects p
+                 LEFT JOIN project_phases pp ON pp.project_id = p.id
+                 GROUP BY p.id
+                 ORDER BY p.updated_at DESC",
+            )
+            .map_err(|e| e.to_string())?;
 
-    // Fix 3: Replace N+1 queries with a single JOIN query
-    let mut stmt = db
-        .prepare(
-            "SELECT p.id, p.name, p.description, p.current_phase, p.output_dir, p.created_at, p.updated_at, p.status,
-                    COUNT(CASE WHEN pp.status = 'completed' THEN 1 END) as completed_count,
-                    GROUP_CONCAT(CASE WHEN pp.status = 'completed' THEN pp.phase END) as completed_phases,
-                    COALESCE(p.project_type, 'general') as project_type,
-                    COALESCE(p.industry, 'general') as industry,
-                    COALESCE(p.motion_intensity, 'medium') as motion_intensity
-             FROM projects p
-             LEFT JOIN project_phases pp ON pp.project_id = p.id
-             GROUP BY p.id
-             ORDER BY p.updated_at DESC",
-        )
-        .map_err(|e| e.to_string())?;
+        let collected: Vec<RowTuple> = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, String>(6)?,
+                    row.get::<_, Option<String>>(7)?.unwrap_or_else(|| "active".to_string()),
+                    row.get::<_, i64>(8)?,
+                    row.get::<_, Option<String>>(9)?.unwrap_or_default(),
+                    row.get::<_, Option<String>>(10)?.unwrap_or_else(|| "general".to_string()),
+                    row.get::<_, Option<String>>(11)?.unwrap_or_else(|| "general".to_string()),
+                    row.get::<_, Option<String>>(12)?.unwrap_or_else(|| "medium".to_string()),
+                ))
+            })
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+        collected
+        // db guard drops here
+    };
 
-    let projects: Vec<ProjectSummary> = stmt
-        .query_map([], |row| {
-            let raw_phase: String = row.get(3)?;
-            Ok(ProjectSummary {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                description: row.get(2)?,
+    // Phase 2: enrich with _status.json data (file I/O outside the lock)
+    let projects = rows
+        .into_iter()
+        .map(|(id, name, description, raw_phase, output_dir, created_at, updated_at,
+               status, completed_count, completed_phases_raw,
+               project_type, industry, motion_intensity)| {
+            let total_tokens = read_total_tokens_from_status(&output_dir);
+            ProjectSummary {
+                id,
+                name,
+                description,
                 current_phase: sanitize_phase(&raw_phase).to_string(),
-                output_dir: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-                status: row.get::<_, Option<String>>(7)?.unwrap_or_else(|| "active".to_string()),
-                completed_count: row.get(8)?,
+                output_dir,
+                created_at,
+                updated_at,
+                status,
+                completed_count,
                 total_phases: PHASES.len() as i64,
-                completed_phases: row.get::<_, Option<String>>(9)?
-                    .unwrap_or_default()
+                completed_phases: completed_phases_raw
                     .split(',')
                     .filter(|s| !s.is_empty())
                     .map(String::from)
                     .collect(),
-                project_type: row.get::<_, Option<String>>(10)?.unwrap_or_else(|| "general".to_string()),
-                industry: row.get::<_, Option<String>>(11)?.unwrap_or_else(|| "general".to_string()),
-                motion_intensity: row.get::<_, Option<String>>(12)?.unwrap_or_else(|| "medium".to_string()),
-            })
+                project_type,
+                industry,
+                motion_intensity,
+                total_tokens,
+            }
         })
-        .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
         .collect();
 
     Ok(projects)
