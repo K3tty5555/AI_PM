@@ -67,6 +67,34 @@ function safePhase(phase: string): string {
   return VALID_PHASES.has(phase) ? phase : "requirement"
 }
 
+const PRD_STEPS: Record<string, string> = {
+  preflight_confirm: '生成前确认',
+  style_select:      '写作风格',
+  product_overview:  '产品概述',
+  user_roles:        '用户角色',
+  functional_spec:   '功能规格',
+  data_schema:       '数据结构',
+  ui_flows:          '交互流程',
+  non_functional:    '非功能需求',
+  prd_done:          '完成落盘',
+}
+
+const PROTOTYPE_STEPS: Record<string, string> = {
+  preflight_confirm: '生成前确认',
+  motion_select:     '动效选择',
+  layout_structure:  '页面框架',
+  page_generation:   '页面生成',
+  style_polish:      '样式精修',
+  prototype_done:    '原型落盘',
+  audit_running:     '完整性审计',
+  audit_done:        '审计完成',
+}
+
+const PHASE_STEP_MAPS: Record<string, Record<string, string>> = {
+  prd: PRD_STEPS,
+  prototype: PROTOTYPE_STEPS,
+}
+
 const PHASE_ICONS: Record<string, React.ElementType> = {
   "office-hours": MessageSquare,
   requirement:   Inbox,
@@ -238,20 +266,32 @@ function Sidebar({
                       />
                     )}
                     <PhaseIcon phaseId={phase.id} status={phase.status} />
-                    <span
-                      className={cn(
-                        "text-sm",
-                        activePhase === phase.id
-                          ? "font-medium text-[var(--text-primary)]"
-                          : phase.status === "completed"
-                            ? "text-[var(--text-secondary)]"
-                            : phase.status === "skipped"
-                              ? "text-[var(--text-tertiary)] opacity-50 line-through"
-                              : "text-[var(--text-tertiary)]",
-                      )}
-                    >
-                      {phase.label}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className={cn(
+                          "text-sm",
+                          activePhase === phase.id
+                            ? "font-medium text-[var(--text-primary)]"
+                            : phase.status === "completed"
+                              ? "text-[var(--text-secondary)]"
+                              : phase.status === "skipped"
+                                ? "text-[var(--text-tertiary)] opacity-50 line-through"
+                                : "text-[var(--text-tertiary)]",
+                        )}
+                      >
+                        {phase.label}
+                      </span>
+                      {phase.status === "in-progress" && phase.checkpoint && (() => {
+                        const stepMap = PHASE_STEP_MAPS[phase.id]
+                        const stepName = stepMap?.[phase.checkpoint.pendingStep]
+                        if (!stepName) return null
+                        return (
+                          <p className="text-[11px] text-[var(--text-tertiary)] truncate leading-tight">
+                            {stepName} · {phase.checkpoint.completedCount}/{phase.checkpoint.totalSteps}步
+                          </p>
+                        )
+                      })()}
+                    </div>
                   </button>
                   </ContextMenu>
                 </li>
