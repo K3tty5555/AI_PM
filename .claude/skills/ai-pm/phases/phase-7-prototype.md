@@ -61,6 +61,25 @@
 
 **行业自动推荐**：finance/enterprise → 低·克制，tech/education → 中·平衡，ecommerce → 高·丰富
 
+## 原型落盘后：写入成本记录
+
+```bash
+# 获取原型文件字节数
+wc -c {project_dir}/06-prototype/index.html
+```
+
+将字节数 × 0.25 作为 `tokens_estimate`，追加写入 `_status.json` 的 `cost.phases`：
+
+```json
+"prototype": {
+  "model": "claude-sonnet-4-6",
+  "tokens_estimate": {file_bytes * 0.25},
+  "completed_at": "{ISO8601 时间戳}"
+}
+```
+
+并更新 `cost.total_estimate`（累加所有已有 phases 的 tokens_estimate）。
+
 ## Phase 7.5: 原型完整性审计（自动触发）
 
 **前提条件**: Phase 5（PRD）和 Phase 7（原型）均已完成，即 `05-prd/05-PRD-v1.0.md` 和 `06-prototype.html`（或 `06-prototype/index.html`）都存在。
@@ -112,25 +131,6 @@ PRD 版本: v1.0
 - 如果覆盖率 < 100%，提示可选操作："是否要补充未覆盖的功能到原型中？"
 - 用户选择补充 → 将未覆盖功能点作为补充需求，触发新一轮完整原型生成
 - 用户选择跳过 → 继续进入 Phase 8 评审
-
-## 原型落盘后：写入成本记录
-
-```bash
-# 获取原型文件字节数
-wc -c {project_dir}/06-prototype/index.html
-```
-
-将字节数 × 0.25 作为 `tokens_estimate`，追加写入 `_status.json` 的 `cost.phases`：
-
-```json
-"prototype": {
-  "model": "claude-sonnet-4-6",
-  "tokens_estimate": {file_bytes * 0.25},
-  "completed_at": "{ISO8601 时间戳}"
-}
-```
-
-并更新 `cost.total_estimate`（累加所有已有 phases 的 tokens_estimate）。
 
 ## Checkpoint 子步骤定义
 

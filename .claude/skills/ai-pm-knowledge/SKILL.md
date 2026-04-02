@@ -22,7 +22,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep)
 | `search {词}` | 搜索知识库 |
 | `list` | 列出所有分类统计 |
 | `sync` | 从当前项目提取可沉淀知识 |
-| `suggest {词}` | 推荐相关知识（ai-pm 内部调用） |
+| `suggest {词}` | 推荐相关知识（Phase 5 自动调用 / 用户直接调用，详见文末规范） |
 | 无参数 | 执行 list |
 
 ---
@@ -165,24 +165,6 @@ confidence: low
 
 ---
 
-## suggest — 推荐相关知识
-
-由 Phase 5/8 内部调用，也支持直接命令调用。
-
-1. 接收关键词（逗号或空格分隔）
-2. 匹配所有知识文件（文件名 + tags + 标题 + 问题场景）
-3. 有匹配时展示（最多 3 条）：
-```
-{N} 条相关经验：
-
-  1  [PATTERN-001]  渐进式功能引导  ← {关键词}
-
-数字查看，回车跳过
-```
-4. 无匹配 → 静默
-
----
-
 ## Anti-Pattern
 
 - 不存储敏感信息（账号、内部数据、客户隐私）
@@ -196,11 +178,19 @@ confidence: low
 
 ### 调用方式
 
-由 ai-pm Phase 5 在 PRD 生成前自动调用（非用户手动触发）：
-
+**Phase 5 自动调用（主要场景）**：
 ```
 suggest {需求关键词列表}
 ```
+由 ai-pm Phase 5 在 PRD 生成前自动触发。
+
+**用户直接调用**：
+```
+/ai-pm knowledge suggest {关键词}
+```
+手动查询知识库相关推荐。
+
+---
 
 关键词提取规则：从 `01-requirement-draft.md` 中提取：
 - 业务领域名词（如：考试、权限、发布、成绩）
