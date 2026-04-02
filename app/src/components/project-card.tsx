@@ -253,11 +253,14 @@ export const ProjectCard = memo(function ProjectCard({
         <ProgressBar value={progress} className="h-[2px]" />
       </div>
 
-      {/* Footer: phase dots + date */}
+      {/* Footer: phase dots + date + tokens */}
       <div className="flex items-center justify-between">
         <PhaseMiniMap completedPhases={project.completedPhases} />
         <span className="text-[11px] text-[var(--text-tertiary)]">
           {formatDate(project.updatedAt)}
+          {!!project.totalTokens && project.totalTokens > 0 && (
+            <> · {project.totalTokens > 100000 ? '🔴 ' : ''}~{Math.round(project.totalTokens / 1000)}K tokens</>
+          )}
         </span>
       </div>
     </div>
