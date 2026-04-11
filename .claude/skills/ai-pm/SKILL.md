@@ -7,7 +7,7 @@ description: >-
   当用户说「我有个产品想法」「帮我做个产品」「从零开始做需求」「全流程出PRD」
   「做一个App/小程序/系统」「产品立项」时，立即使用此技能。
 argument-hint: "[需求描述 | 命令]"
-allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(test) Bash(python3) Bash(grep) Bash(find) Bash(head) Agent
+allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(test) Bash(python3) Bash(grep) Bash(find) Bash(head) Bash(wc) Agent
 ---
 
 # AI 产品经理主控
