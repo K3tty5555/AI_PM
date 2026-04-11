@@ -57,6 +57,7 @@ PRD 生成过程按以下子步骤推进，每步开始前更新 `_status.json` 
 | `ui_flows` | 交互流程 | 写页面流程/状态机 |
 | `non_functional` | 非功能需求 | 写性能/安全/兼容性 |
 | `prd_done` | PRD 完成 | 文件落盘，写摘要，写成本记录 |
+| `memory_write` | 决策记忆写入 | 写入 L1-decisions.md（3–5 条关键取舍） |
 
 **checkpoint 更新时机**：
 
@@ -188,3 +189,27 @@ wc -c {project_dir}/05-prd/05-PRD-v1.0.md
   "total_estimate": {累加所有 phases 的 tokens_estimate}
 }
 ```
+
+## memory_write 步骤：写入 L1 决策记忆
+
+`prd_done` 子步骤完成（含摘要 + 成本记录落盘）之后，执行 `memory_write` 步骤：
+
+1. `mkdir -p {project_dir}/_memory/`（若不存在则创建）
+2. 从 `05-prd/05-PRD-v1.0.md` 的「功能规格」章节提取关键取舍决策：
+   - 选择了什么方案，以及原因（来自「背景」「设计说明」「注意」等段落）
+   - 明确排除的功能及原因（来自「不在范围内」「禁止」等）
+   - 典型场景：采用侧边栏而非弹窗、分步表单而非单页表单等
+
+3. 以**追加**方式写入 `_memory/L1-decisions.md`（`test -f` 检查：不存在则创建，存在则在末尾追加）：
+   每条决策格式：
+   ```
+   ## {YYYY-MM-DD}: {决策标题}
+   **决策**：{内容}
+   **原因**：{为什么}
+   **范围**：{影响功能/页面}
+
+   ---
+   ```
+   提取 3-5 条最关键的决策即可，不要穷举。
+
+格式参考 `references/project-memory.md` 的 L1-decisions.md 格式。
