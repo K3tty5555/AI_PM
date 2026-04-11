@@ -146,7 +146,7 @@ mkdir -p {project_dir}/_memory/
 > 提取时间：{YYYY-MM-DD HH:MM}
 > status: ok  （或 failed / partial）
 
-## 设计 Token / 色值
+## SCSS 色值变量
 ```css
 /* 来源：{相对路径}/css-var.scss（或同等文件）*/
 --primary-color: #05C1AE;
@@ -162,12 +162,14 @@ mkdir -p {project_dir}/_memory/
 
 ## 路由页面列表
 - {路由路径}：{页面名/功能描述}
-（列出从路由文件提取的主要路由，最多 20 条）
+（列出从 `router/index.ts` 或 `grep -l "createRouter"` 定位的路由文件提取，最多 20 条）
 
 ## 核心 UI 组件模式
-组件名：{文件名}
-Props：{关键 props 类型声明}
-结构：{根元素直接子元素，不超过 10 行}
+```html
+<!-- 组件名：{文件名} -->
+<!-- Props：{关键 props 类型声明} -->
+{根元素直接子元素，不超过 10 行，只保留 HTML 结构，去掉 Vue 指令细节}
+```
 ```
 
 ## /ai-pm continue 读取规范
@@ -188,7 +190,7 @@ Props：{关键 props 类型声明}
 ```
 ── 项目：{项目名} · 恢复上下文 ──
 
-产品：{L0「产品定位」内容，一句话}
+产品：{L0「产品定位」章节第一行内容，一句话}
 上次完成：{last_phase 中文名}（{_status.json.updated 的日期部分}）
 当前阶段：{推荐下一步}
 
