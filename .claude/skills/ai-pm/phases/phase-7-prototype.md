@@ -155,7 +155,7 @@ wc -c {project_dir}/06-prototype/index.html
 
 **步骤**:
 1. 读取 `05-prd/05-PRD-v1.0.md`，提取所有功能模块和功能点（解析 ## 级标题和功能列表）
-2. 读取 `06-prototype.html`（或 `06-prototype/index.html`）的 HTML 源码
+2. 读取 `06-prototype/index.html` 的 HTML 源码
 3. 如果存在 `06-prototype/screenshots/manifest.json`，也读取以获取多页面信息
 4. 逐个功能点检查是否在原型中有对应的页面/视图/交互元素体现
 5. 生成审计报告
