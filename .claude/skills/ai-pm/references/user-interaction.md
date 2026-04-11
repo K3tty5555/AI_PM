@@ -177,9 +177,17 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
     "total_estimate": 0
   },
   "agent_errors": {},
-  "summaries": {}
+  "summaries": {},
+  "memory": {
+    "codebase_path": ""
+  }
 }
 ```
+
+**`memory` 字段规范：**
+- **不存布尔标记**：L0/L1/L2 等文件是否存在，运行时用 `test -f {project_dir}/_memory/L0-identity.md` 检查，不在 `_status.json` 中维护布尔值（避免双重真相源）
+- `codebase_path`：设计指纹代码仓路径，无法从文件存在性推断，单独记录，首次 `--codebase` 时写入
+- **老项目兼容**：若 `memory` 字段完全不存在，视同 `{ "codebase_path": "" }`，就地补全后继续，不报错不中断
 
 ### checkpoints 字段规范
 
@@ -253,6 +261,28 @@ phases.review      = true  → 写完 08-review-report-v1.md 后
 ```
 
 新项目创建时，在项目目录下生成初始 `_status.json`：phases 全部为 false，last_phase 为 "init"，checkpoints 为 `{}`，cost 为 `{ "phases": {}, "total_estimate": 0 }`，agent_errors 为 `{}`，summaries 为 `{}`。
+
+新项目创建时，同时执行 `_memory/` 初始化：
+
+1. `mkdir -p {project_dir}/_memory/`
+2. **若指定 `--preset={名}`**：
+   - 先 `test -f templates/presets/{名}.md`，不存在则报错并列出可用预设（`ls templates/presets/*.md`），不降级
+   - 读取 preset 文件，**复制**全部内容写入 `_memory/L0-identity.md`
+   - 创建 `_memory/L1-decisions.md`，内容只含 `# {项目名} · 关键决策` 标题行
+   - 终端提示："已复制预设内容到 {项目名}/_memory/L0-identity.md，后续修改预设文件不影响此项目。"
+3. **若不指定 `--preset`**：
+   - 不预先创建 L0/L1，由各 phase 在写入时自行创建
+
+---
+
+## /ai-pm continue 执行规范（含记忆加载）
+
+1. 读取 `_status.json`（若 `memory` 字段不存在，就地补全为 `{ "codebase_path": "" }`，不中断）
+2. 加载项目记忆（详见 `references/project-memory.md` 的「/ai-pm continue 读取规范」）：
+   - 任何文件不存在（`test -f` 失败）均**静默跳过**，不报错
+   - 老项目无 `_memory/` 目录时，跳过所有记忆加载，直接按现有 checkpoint 逻辑恢复
+3. 若有 `pending_step` → 展示恢复点 + 记忆摘要后继续执行
+4. 若无 checkpoint → 展示记忆摘要后按 phase 级别恢复
 
 ---
 
