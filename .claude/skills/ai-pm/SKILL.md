@@ -7,7 +7,7 @@ description: >-
   当用户说「我有个产品想法」「帮我做个产品」「从零开始做需求」「全流程出PRD」
   「做一个App/小程序/系统」「产品立项」时，立即使用此技能。
 argument-hint: "[需求描述 | 命令]"
-allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(test) Bash(python3) Agent
+allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(test) Bash(python3) Bash(grep) Bash(find) Bash(head) Agent
 ---
 
 # AI 产品经理主控
@@ -49,7 +49,8 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm` | 显示当前项目状态 / 欢迎界面 |
 | `/ai-pm continue` | 恢复进行中的项目（从最后 checkpoint 子步骤继续） |
 | `/ai-pm list` | 列出所有项目 |
-| `/ai-pm new [项目名]` | 创建新项目 |
+| `/ai-pm new [项目名]` | 创建新项目（无 preset） |
+| `/ai-pm new [项目名] --preset=[预设名]` | 创建新项目并应用预设（内容复制到 _memory/L0-identity.md） |
 | `/ai-pm switch [项目名]` | 切换项目 |
 | `/ai-pm reset` | 清空当前项目重新开始 |
 | `/ai-pm delete [项目名]` | 删除指定项目 |
@@ -63,7 +64,8 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm research` | 竞品研究 |
 | `/ai-pm story` | 用户故事 |
 | `/ai-pm prd` | 生成 PRD |
-| `/ai-pm prototype` | 生成原型 |
+| `/ai-pm prototype` | 生成原型（若已有 layout-shell.md 则自动应用） |
+| `/ai-pm prototype --codebase=[路径]` | 首次指定代码仓，提取设计指纹后生成原型 |
 | `/ai-pm review` | 需求评审（六角色并行） |
 | `/ai-pm review --round=2` | 第二轮评审 |
 
@@ -107,7 +109,13 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 ├── 09-analytics-requirement.md  埋点方案（可选）
 ├── 10-retrospective.md          项目复盘（可选）
 └── _summaries/                  阶段摘要（自动生成，用于上下文压缩）
-    └── prd-summary.md           PRD 摘要（PRD ≥ 20KB 时自动生成）
+│   └── prd-summary.md           PRD 摘要（PRD ≥ 20KB 时自动生成）
+└── _memory/                     项目记忆（自动维护，勿手动删除）
+    ├── L0-identity.md           产品定位/用户/约束（~100 tokens）
+    ├── L1-decisions.md          关键决策 + why（~300 tokens）
+    ├── L2-analysis.md           分析/竞品洞察（按需）
+    ├── L2-prototype.md          原型设计记录（按需）
+    └── layout-shell.md          代码仓设计指纹（--codebase 提取）
 ```
 
 ---
@@ -176,6 +184,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 |------|------|
 | `references/user-interaction.md` | 项目路径解析、启动界面、快捷指令、_status.json 规范、多代理、记忆迁移、现有文档处理、进度条渲染（render_progress） |
 | `references/symptom-index.md` | 常见场景速查 + Anti-Pattern |
+| `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
 | `doctor.md` | 技能健康检查（22 项） |
 | `illustration.md` | AI 流程图生成 |
 | `instinct.md` | 自学习系统 |
