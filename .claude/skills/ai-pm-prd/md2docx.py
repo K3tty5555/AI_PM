@@ -34,25 +34,36 @@ def _load_ark_api_key():
     return None
 
 def generate_seedream(prompt, size=SEEDREAM_SIZE):
-    """调用 Seedream API 生成图片，返回临时文件路径或 None"""
+    """调用 Seedream API 生成图片，返回临时文件路径或 None。
+    使用 curl 子进程绕过 macOS Python urllib SSL 握手问题。"""
     api_key = _load_ark_api_key()
     if not api_key:
         print('  ⚠️ 未找到 ARK_API_KEY，无法使用 AI 生成')
         return None
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {api_key}'
-    }
-    data = json.dumps({
+    payload = json.dumps({
         'model': SEEDREAM_MODEL,
         'prompt': prompt,
         'size': size,
         'response_format': 'b64_json'
-    }).encode()
+    })
+    tmp_payload = tempfile.mktemp(suffix='.json', dir='/tmp')
+    tmp_resp = tempfile.mktemp(suffix='.json', dir='/tmp')
+    with open(tmp_payload, 'w') as f:
+        f.write(payload)
     try:
-        req = urllib.request.Request(SEEDREAM_URL, data=data, headers=headers)
-        resp = urllib.request.urlopen(req, timeout=120)
-        result = json.loads(resp.read())
+        subprocess.run(
+            ['curl', '-s', '--max-time', '120',
+             '-X', 'POST', SEEDREAM_URL,
+             '-H', 'Content-Type: application/json',
+             '-H', f'Authorization: Bearer {api_key}',
+             '-d', f'@{tmp_payload}',
+             '-o', tmp_resp],
+            timeout=130, capture_output=True, check=True
+        )
+        result = json.loads(open(tmp_resp).read())
+        if 'error' in result:
+            print(f'  ⚠️ Seedream API 错误: {result["error"]}')
+            return None
         img_data = base64.b64decode(result['data'][0]['b64_json'])
         out_png = tempfile.mktemp(suffix='.png', dir='/tmp')
         with open(out_png, 'wb') as f:
@@ -61,6 +72,10 @@ def generate_seedream(prompt, size=SEEDREAM_SIZE):
     except Exception as e:
         print(f'  ⚠️ Seedream 生成失败: {e}')
         return None
+    finally:
+        for f in [tmp_payload, tmp_resp]:
+            try: os.unlink(f)
+            except: pass
 
 def _detect_mermaid_type(code):
     first_line = code.strip().split('\n')[0].strip()
