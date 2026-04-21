@@ -43,6 +43,7 @@ mkdir -p {project_dir}/_memory/
 
 若不用 preset：
 1. 不预先创建 L0/L1（留给对应 phase 写入）
+2. `L2-prd-versions.md` 由首次阶段命令触发扫描时自动创建，无需手动初始化
 
 ## L0-identity.md 格式
 
@@ -133,6 +134,24 @@ mkdir -p {project_dir}/_memory/
 - {假设2}：...
 ```
 
+### L2-prd-versions.md（DOCX 导入时自动写入/更新）
+
+记录项目所有 PRD 版本的索引，供各阶段命令加载历史上下文。**追加不覆盖**，新版本追加到末尾。
+
+格式：
+
+```markdown
+# {项目名} · PRD 版本索引
+
+## {版本标识} · {文件名（去扩展名）}
+- 文件：{filename}.md
+- 时间：{从文件名或转换时间提取，格式 YYYY-MM}
+- 范围摘要：{ai-pm 从 MD 前200行提取的一句话，≤30字}
+- 关键变化：{相对上一版的核心差异；首版写"初版"}
+```
+
+**更新时机**：任何阶段命令执行前，扫描 05-prd/ 时发现新 DOCX→MD 转换完成后自动追加。
+
 ## layout-shell.md 格式（B 方向专用）
 
 由 `/ai-pm prototype --codebase=` 命令触发生成，描述从代码仓提取的设计指纹。
@@ -182,6 +201,9 @@ mkdir -p {project_dir}/_memory/
 3. **按需加载**：先**确认用户即将执行的阶段**（通过 pending_step 或用户输入），再加载对应 `L2-{phase}.md`（`last_phase` 仅作 fallback 推断）：
    - 目标阶段为 `analysis` / `competitor` → 用 `test -f` 检查加载 `L2-analysis.md`
    - 目标阶段为 `prototype` → 用 `test -f` 检查加载 `L2-prototype.md`
+3.5 **按需加载**：若目标阶段为 `prd` / `prototype` / `review`，用 `test -f` 检查 `_memory/L2-prd-versions.md`：
+   - 存在 → 加载全文（版本索引通常 < 500 tokens，全量读取）
+   - 不存在 → 静默跳过
 4. **按需加载**：若 `_memory/layout-shell.md` 存在（`test -f`）且目标阶段为 `prototype` → 加载
 5. **任何 test -f 失败均静默跳过，不报错，不中断 continue 流程**
 
