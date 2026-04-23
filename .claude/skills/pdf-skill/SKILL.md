@@ -1,9 +1,9 @@
 ---
 name: pdf
 description: >-
-  PDF 处理工具箱。提取 PDF 文字和表格、创建新 PDF、合并/拆分文档、填写 PDF 表单、PDF 加水印、OCR 扫描件。
-  只要涉及 PDF 文件操作就必须使用此技能，包括：读取 PDF 内容、PDF 转文字、合并多个 PDF、
-  按页拆分、填写 PDF 表单、给 PDF 加密/解密、处理扫描版 PDF。
+  当需要操作 PDF 文件时使用：读取/提取 PDF 内容、PDF 转文字、合并/拆分 PDF、
+  填写 PDF 表单、加水印、OCR 扫描件、PDF 加密解密。
+  当用户说「读取PDF」「提取PDF内容」「合并PDF」「PDF转文字」「处理PDF」「OCR」时，立即使用此技能。
 license: Proprietary. LICENSE.txt has complete terms
 ---
 
