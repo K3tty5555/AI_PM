@@ -1,11 +1,10 @@
 ---
 name: ai-pm
 description: >-
-  AI 产品经理。输入需求，引导完善，输出 PRD + 原型。
-  支持需求分析、竞品研究、用户故事、PRD、原型、评审全流程。
-  多项目管理，断点续传。复杂需求自动启用多代理协作（/ai-pm --team）。
+  当需要从零开始走完完整产品立项流程（需求→分析→竞品→用户故事→PRD→原型→评审）时使用。
+  支持多项目管理和断点续传，复杂需求可启用多代理协作。
   当用户说「我有个产品想法」「帮我做个产品」「从零开始做需求」「全流程出PRD」
-  「做一个App/小程序/系统」「产品立项」时，立即使用此技能。
+  「做一个App/小程序/系统」「产品立项」「继续上次的项目」「切换项目」时，立即使用此技能。
 argument-hint: "[需求描述 | 命令]"
 allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(test) Bash(python3) Bash(grep) Bash(find) Bash(head) Bash(wc) Agent
 ---
