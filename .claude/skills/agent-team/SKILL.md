@@ -1,10 +1,8 @@
 ---
 name: agent-team
 description: >-
-  多代理协作引擎。通常由 ai-pm 主控自动调度（/ai-pm --team 触发）。
-  并行派出产品经理、架构师、UI设计师、数据分析师、文档工程师协同完成复杂产品项目。
-  也可直接调用：/agent-team [需求描述]。
-  当用户说「多代理模式」「并行执行」「需求很复杂需要团队协作」「--team模式」时使用此技能。
+  需求复杂、需要多角色并行协作时使用（通常由 ai-pm --team 自动调度，也可直接调用）。
+  当用户说「多代理模式」「并行执行」「需求很复杂需要团队协作」「--team模式」「多角色协同」时使用此技能。
 argument-hint: "[需求描述] [--mode=serial|parallel|agile] [--roles=pm,architect,designer]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Agent
 ---
