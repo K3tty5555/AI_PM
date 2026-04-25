@@ -154,14 +154,17 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
   "project": "项目名",
   "updated": "2026-04-02T10:30:00Z",
   "phases": {
+    "office-hours": false,
     "requirement": false,
     "analysis": false,
     "competitor": false,
     "stories": false,
     "prd": false,
+    "analytics": false,
     "prototype": false,
     "audit": false,
-    "review": false
+    "review": false,
+    "retrospective": false
   },
   "last_phase": "init",
   "checkpoints": {
@@ -250,14 +253,17 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
 **每个阶段完成、文件落盘后，立即更新 `_status.json`：**
 
 ```
-phases.requirement = true  → 写完 01-requirement-draft.md 后
-phases.analysis    = true  → 写完 02-analysis-report.md 后
-phases.competitor  = true  → 写完 03-competitor-report.md 后
-phases.stories     = true  → 写完 04-user-stories.md 后
-phases.prd         = true  → 写完 05-prd/05-PRD-v1.0.md 后
-phases.prototype   = true  → 写完 06-prototype/index.html 后
-phases.audit       = true  → 写完 07-audit-report.md 后
-phases.review      = true  → 写完 08-review-report-v1.md 后
+phases.office-hours  = true  → 写完 00-office-hours.md 后（可选）
+phases.requirement   = true  → 写完 01-requirement-draft.md 后
+phases.analysis      = true  → 写完 02-analysis-report.md 后
+phases.competitor    = true  → 写完 03-competitor-report.md 后
+phases.stories       = true  → 写完 04-user-stories.md 后
+phases.prd           = true  → 写完 05-prd/05-PRD-v1.0.md 后
+phases.analytics     = true  → 写完 09-analytics-requirement.md 后（可选）
+phases.prototype     = true  → 写完 06-prototype/index.html 后
+phases.audit         = true  → 写完 07-audit-report.md 后
+phases.review        = true  → 写完 08-review-report-v1.md 后
+phases.retrospective = true  → 写完 10-retrospective.md 后（可选）
 ```
 
 新项目创建时，在项目目录下生成初始 `_status.json`：phases 全部为 false，last_phase 为 "init"，checkpoints 为 `{}`，cost 为 `{ "phases": {}, "total_estimate": 0 }`，agent_errors 为 `{}`，summaries 为 `{}`。
