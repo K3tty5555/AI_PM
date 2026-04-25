@@ -105,6 +105,25 @@ console.log('hello');
 > - phase-5-prd.md 根据 `_memory/L1-decisions.md` 的 `product_type` 字段决定是否在标记位置展开 `agent-supplement.md` 对应章节
 > - 详见 `templates/prd-styles/default/agent-supplement.md`
 
+> **飞书友好写法规范（强制遵守）**
+>
+> PRD 最终目标是导入飞书云文档（直接 .md 上传 或 md2docx.py → docx 路径）。所有写法以飞书渲染效果为准，**不参考 IDE preview**。
+>
+> ✅ **该用**：
+> - 表格 cell 内多条要点：`**标题**：内容<br>**标题2**：内容2` —— 加粗作为视觉锚点
+> - 加粗：标准 `**xxx**`
+> - 换行：标准 `<br>`（飞书 + md2docx.py 都支持）
+> - 列表：标准 `- xxx` / `1. xxx`
+>
+> ❌ **不用**：
+> - `<br/>` `<u>` `<sup>` 等 HTML 标签的非标准变体或装饰标签 —— 飞书会忽略当字面量
+> - `▸` `·` `⭐` 等 Unicode 装饰符做 bullet —— 不同字体显示不一致，且对阅读无帮助
+> - 表格 cell 内嵌 markdown 列表（`- xxx`）—— GFM 不支持表格 cell 内多行
+>
+> ⚠️ **超长 cell 的处理（5+ 条 bullet 或单条 > 100 字）**：
+> - 拆出表格，用 `##### 小节标题 + 标准列表` 替代
+> - 表格只留"短 cell"（单值或 ≤ 4 条短 bullet），保持紧凑紧凑
+
 ```markdown
 # {{产品名称}}功能需求文档
 
