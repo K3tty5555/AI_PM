@@ -1,6 +1,8 @@
 # Agent 增量包 (agent-supplement.md)
 
 > 本文件是 `feishu-template.md` 的 Agent 增量包，用于在 PRD 中描述 AI 自主决策、对话流、能力归属等传统模板覆盖不到的内容。
+>
+> **写法规范**：本文件生成的所有 §A 章节遵守 `feishu-template.md` 顶部的"飞书友好写法规范"——表格 cell 多 bullet 用 `**标题**：内容<br>` 格式；不用 `<u>` `<br/>` `▸` 等非标记号；超长 cell（5+ 条或单条 > 100 字）拆出表格用列表。
 
 ---
 
