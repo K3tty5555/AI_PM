@@ -154,7 +154,7 @@ console.log('hello');
 
 **优先级评估**：{{P0/P1/P2}}（{{说明}}）
 
-<!-- agent-supplement: §A10 为什么不用 Agent，仅 agent/hybrid 产品在此注入 §2.3 -->
+<!-- agent-supplement: §A10 Agent 边界声明，仅 agent/hybrid 产品在此注入 §2.3 -->
 
 ---
 
