@@ -101,22 +101,23 @@ ls "{project_dir}/05-prd/"*.docx 2>/dev/null
 
 ## Checkpoint 子步骤定义
 
-> **注**：共 9 步，验收标准已整合至「功能规格」步骤内，不单独列为子步骤。
+> **注**：传统产品共 10 步；agent / hybrid 产品共 11 步（多 `agent_design`）。验收标准已整合至「功能规格」步骤内，不单独列为子步骤。
 
 PRD 生成过程按以下子步骤推进，每步开始前更新 `_status.json` 中的 `checkpoints.prd`：
 
-| 步骤 ID | 步骤名称 | 说明 |
-|---------|---------|------|
-| `preflight_confirm` | PRD 生成前确认 | 用户确认内容无误 |
-| `style_select` | 写作风格选择 | 用户选择风格 |
-| `product_overview` | 产品概述 | 写产品背景/定位/目标 |
-| `user_roles` | 用户角色 | 写用户画像/角色定义 |
-| `functional_spec` | 功能规格 | 写详细功能设计（最耗时） |
-| `data_schema` | 数据结构 | 写核心数据字段/流转 |
-| `ui_flows` | 交互流程 | 写页面流程/状态机 |
-| `non_functional` | 非功能需求 | 写性能/安全/兼容性 |
-| `prd_done` | PRD 完成 | 文件落盘，写摘要，写成本记录 |
-| `memory_write` | 决策记忆写入 | 写入 L1-decisions.md（3–5 条关键取舍） |
+| 步骤 ID | 步骤名称 | 说明 | 适用产品类型 |
+|---------|---------|------|------------|
+| `preflight_confirm` | PRD 生成前确认 | 用户确认内容无误 + 确认 product_type | 全部 |
+| `style_select` | 写作风格选择 | 用户选择风格 | 全部 |
+| `product_overview` | 产品概述 | 写产品背景/定位/目标（hybrid/agent 含 §2.3 为什么不用 Agent）| 全部 |
+| `user_roles` | 用户角色 | 写用户画像/角色定义 | 全部 |
+| `functional_spec` | 功能规格 | 写详细功能设计（最耗时）| 全部 |
+| `data_schema` | 数据结构 | 写核心数据字段/流转 | 全部 |
+| `ui_flows` | 交互流程 | 写页面流程/状态机（hybrid 含 §5.6 AI 入口与权限边界）| 全部 |
+| `non_functional` | 非功能需求 | 写性能/安全/兼容性 | 全部 |
+| `agent_design` | Agent 专项设计 | 写第九章（§A1–§A8 完整 / 最小集 §A2/A4/A5/A7）| **仅 agent / hybrid** |
+| `prd_done` | PRD 完成 | 文件落盘，写摘要，写成本记录 | 全部 |
+| `memory_write` | 决策记忆写入 | 写入 L1-decisions.md（3–5 条关键取舍）| 全部 |
 
 **checkpoint 更新时机**：
 
@@ -146,7 +147,33 @@ checkpoints.prd.pending_step = "{下一步骤 ID}"
 
 询问："以上内容有需要调整的吗？没问题回复「没问题」或「生成」，有调整直接说。"
 
-等用户确认内容无误后，执行步骤 B。
+等用户确认内容无误后，执行步骤 A.1。
+
+**步骤 A.1：产品类型确认（决定模板拼装）**
+
+读取 `_memory/L1-decisions.md` 中的 `product_type` 字段：
+
+```bash
+grep -E "^product_type:" {project_dir}/_memory/L1-decisions.md 2>/dev/null
+```
+
+- **已有值**（traditional / agent / hybrid）→ 展示给用户："本项目识别为 **{product_type}** 产品。继续？[Y/n]" → Y/回车确认；n 进入手动选择
+- **无值**（旧项目 / 未识别）→ 进入手动选择：
+
+```
+本项目的产品类型？这决定了 PRD 模板的章节结构。
+
+  1. 传统产品 — 用户主动操作走流程（CRUD、后台、运营工具）
+  2. Agent 产品 — 用户表达意图，AI 替他决策执行（独立 Copilot、智能体）
+  3. 混合产品 — 传统功能 + AI 助手嵌入（带 AI 入口的现有业务系统）
+
+请选择 [1/2/3]：
+```
+
+用户选择后：
+- 写入 `_memory/L1-decisions.md`：在文件顶部添加 `product_type: {traditional|agent|hybrid}`
+- 写入 `_status.json` 的 `checkpoints.prd.product_type` 字段（供恢复使用）
+- 展示选择结果：例如 "已记录为 hybrid 产品，本次 PRD 将注入 Agent 增量包（§A2/A4/A5/A7/A9 必填，§A3/A10 推荐）"
 
 **步骤 B：写作风格选择**
 
@@ -155,6 +182,94 @@ checkpoints.prd.pending_step = "{下一步骤 ID}"
 - 自定义风格（若已配置 persona，列出可用风格名）
 
 用户选择后执行 PRD 写入。
+
+## 模板拼装逻辑（步骤 B 之后，执行写入前）
+
+根据 `product_type` 决定章节注入：
+
+### 传统产品（traditional）
+
+- 直接使用 `templates/prd-styles/default/feishu-template.md`
+- 跳过所有 `<!-- agent-supplement: §AX -->` 标记位置（什么都不注入）
+- **不执行** `agent_design` 子步骤
+- 检查点列表 = 10 步
+
+### Agent 产品（agent）
+
+- 使用 `feishu-template.md` 作为骨架
+- 注入位置：
+  - §2.3 后注入 §A10「为什么不用 Agent」（推荐写）
+  - §5.6 **跳过**（独立 agent 产品无嵌入式入口问题）
+  - 文末追加完整第九章 §A1–§A8（必填）
+- **执行** `agent_design` 子步骤，写完整 8 节
+- 检查点列表 = 11 步
+
+### 混合产品（hybrid）
+
+- 使用 `feishu-template.md` 作为骨架
+- 注入位置：
+  - §2.3 后注入 §A10「为什么不用 Agent」（推荐写）
+  - §5.5 后注入 §5.6「AI 入口与权限边界」（必填）⭐
+  - 文末追加最小集第九章 §A2/§A4/§A5/§A7（必填）+ §A3 推荐
+- **执行** `agent_design` 子步骤，写最小集
+- 检查点列表 = 11 步
+
+### 注入实现规范
+
+写 PRD 时按以下顺序处理 `feishu-template.md` 中的注释标记：
+
+```
+1. 扫描模板里的 <!-- agent-supplement: §AX --> 标记
+2. 对每个标记，检查当前 product_type 是否需要注入
+3. 需要 → 读 templates/prd-styles/default/agent-supplement.md 中对应 §AX 的内容，替换标记
+4. 不需要 → 删除标记（连同注释一起），不留空行
+```
+
+**写完后验证**：grep PRD 文件，不应该残留任何 `<!-- agent-supplement` 字样。
+
+```bash
+grep -n "agent-supplement" {project_dir}/05-prd/05-PRD-v1.0.md && echo "❌ 残留挂接位标记" || echo "✅ 标记清理干净"
+```
+
+## agent_design 子步骤详细执行（仅 agent / hybrid 产品）
+
+`non_functional` 完成后、`prd_done` 之前执行此步。
+
+**输入**：
+- `_memory/L1-decisions.md` 中的 `product_type`
+- `templates/prd-styles/default/agent-supplement.md` 完整内容
+- 已写好的 §1-§8 章节内容（用于上下文一致性）
+
+**执行步骤**：
+
+1. **读 agent-supplement.md**，根据 product_type 确定要写的章节：
+   - agent → §A1, §A2, §A3, §A4, §A5, §A6, §A7, §A8
+   - hybrid → §A2, §A4, §A5, §A7（最小集必填）+ §A3, §A6, §A8（推荐，按需）
+
+2. **依次写每节**：
+   - 用 §A1-§A8 的模板结构作为骨架
+   - 内容来源：从 §1-§8 已写章节中提取相关信息（如 §A1 意图清单 → 从 §6 详细功能里提取）
+   - 不要硬塞模板示例，要用本项目实际场景填充
+   - 拿不到的字段标 `> ⚠️ 待补充：{字段名} - {为什么待补充}`
+
+3. **追加到 PRD 文件末尾**（在 §8 非功能需求之后、文档元信息之前）：
+   ```
+   ---
+   
+   # 第九章 Agent 专项设计
+   
+   ## 9.1 意图分类与触发
+   ...
+   ```
+
+4. **写完后自检**（对照 agent-supplement.md 末尾的"7 问自检卡"）：
+   - 7 个问题逐条核对当前 PRD 能不能答上
+   - 答不上的项写到 §九 末尾的「⚠️ 待评审前补全清单」
+
+5. **更新 checkpoint**：
+   ```json
+   "checkpoints.prd.completed_steps": [..., "agent_design"]
+   ```
 
 ## FAB 功能描述
 
