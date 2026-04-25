@@ -309,11 +309,84 @@ def set_col_width(cell, width_cm):
     tcW.set(qn('w:type'), 'dxa')
     tcPr.append(tcW)
 
-def apply_col_widths(table, num_cols):
-    """A4 正文宽约 16cm；2列时标题列4cm，内容列12cm；多列均分"""
+def _char_weight(s):
+    """计算字符串视觉权重：中文 1.5x，英文 1.0x，去除 markdown/html 干扰标记"""
+    clean = re.sub(r'\*\*|<br\s*/?>|`', '', s)
+    weight = 0.0
+    for ch in clean:
+        weight += 1.5 if ord(ch) > 127 else 1.0
+    return weight
+
+def compute_smart_widths(rows_cells, total_width=16.0, min_width=1.5, max_width=6.0, narrow_threshold=6):
+    """混合策略列宽计算（方案 3，迭代版保证总宽 = total_width）
+    1) 识别窄列（max 字符权重 ≤ narrow_threshold）→ 固定 min_width
+    2) 宽列按字符权重比例分配剩余宽度
+    3) 任一宽列 raw < min_width 或 > max_width → 固定为边界值，从分配池扣除
+    4) 迭代直到所有未固定列的 raw 都在 [min, max] 内，正式分配
+    5) 收尾：若仍有 ε 误差（浮点累积），补到第一个宽列
+    """
+    if not rows_cells:
+        return []
+    n_cols = len(rows_cells[0])
+
+    col_max_weights = []
+    col_total_weights = []
+    for j in range(n_cols):
+        weights = [_char_weight(row[j]) if j < len(row) else 0 for row in rows_cells]
+        col_max_weights.append(max(weights) if weights else 0)
+        col_total_weights.append(sum(weights))
+
+    # 第一步：识别窄列固定 min_width
+    fixed = {j: min_width for j in range(n_cols) if col_max_weights[j] <= narrow_threshold}
+
+    # 迭代分配宽列（处理 min/max 救援边界）
+    for _ in range(n_cols + 2):  # 最多迭代 n_cols 次必收敛，+2 是安全裕度
+        wide_cols = [j for j in range(n_cols) if j not in fixed]
+        if not wide_cols:
+            break
+        remaining = total_width - sum(fixed.values())
+        wide_weight_sum = sum(col_total_weights[j] for j in wide_cols)
+        if wide_weight_sum == 0:
+            for j in wide_cols:
+                fixed[j] = remaining / len(wide_cols)
+            break
+        # 试算每列 raw
+        new_fix = False
+        for j in wide_cols:
+            raw = remaining * col_total_weights[j] / wide_weight_sum
+            if raw < min_width:
+                fixed[j] = min_width
+                new_fix = True
+            elif raw > max_width:
+                fixed[j] = max_width
+                new_fix = True
+        if not new_fix:
+            # 所有宽列 raw 都在 [min, max] 内，正式分配
+            for j in wide_cols:
+                fixed[j] = remaining * col_total_weights[j] / wide_weight_sum
+            break
+
+    widths = [fixed[j] for j in range(n_cols)]
+    # 收尾：余量补回宽列（少列场景所有宽列顶到 max 时允许突破 max 等分）
+    diff = total_width - sum(widths)
+    if diff > 0.001:
+        wide_cols = [j for j in range(n_cols) if col_max_weights[j] > narrow_threshold]
+        if wide_cols:
+            add_each = diff / len(wide_cols)
+            for j in wide_cols:
+                widths[j] += add_each
+    return widths
+
+def apply_col_widths(table, rows_cells):
+    """A4 正文宽 16cm；2 列保留 4+12cm（标题-内容惯例），多列按内容字符权重智能分配（方案 3）"""
     from docx.shared import Cm as _Cm
-    PAGE_W = 16.0
-    widths = [4.0, 12.0] if num_cols == 2 else [PAGE_W / num_cols] * num_cols
+    n_cols = len(rows_cells[0]) if rows_cells else 0
+    if n_cols == 0:
+        return
+    if n_cols == 2:
+        widths = [4.0, 12.0]
+    else:
+        widths = compute_smart_widths(rows_cells)
     # 设置 w:tblGrid（飞书优先读取此处）
     for i, col in enumerate(table.columns):
         if i < len(widths):
@@ -324,6 +397,16 @@ def apply_col_widths(table, num_cols):
             if i < len(widths):
                 set_col_width(cell, widths[i])
 
+def apply_header_repeat(table):
+    """设置表头跨页重复（w:tblHeader）"""
+    if not table.rows:
+        return
+    hrow = table.rows[0]
+    trPr = hrow._tr.get_or_add_trPr()
+    tblHeader = OxmlElement('w:tblHeader')
+    tblHeader.set(qn('w:val'), 'true')
+    trPr.append(tblHeader)
+
 def add_table(doc, lines, screenshot_map=None):
     """解析 Markdown 表格并插入 DOCX，支持单元格内插图"""
     rows = [l for l in lines if not re.match(r'^\|[-| :]+\|$', l)]
@@ -333,6 +416,8 @@ def add_table(doc, lines, screenshot_map=None):
         return [c.strip() for c in row.split('|')[1:-1]]
 
     headers = cells(rows[0])
+    all_rows_cells = [headers]  # 收集全部行用于智能列宽计算
+
     table = doc.add_table(rows=1, cols=len(headers))
     table.style = 'Table Grid'
 
@@ -346,13 +431,15 @@ def add_table(doc, lines, screenshot_map=None):
     # 数据行
     for row_data in rows[1:]:
         row_cells = cells(row_data)
+        all_rows_cells.append(row_cells)
         row = table.add_row()
         for i, val in enumerate(row_cells):
             if i < len(row.cells):
                 fill_cell(row.cells[i], val, screenshot_map=screenshot_map)
 
-    # 设置列宽
-    apply_col_widths(table, len(headers))
+    # 智能列宽（基于实际内容） + 表头跨页重复
+    apply_col_widths(table, all_rows_cells)
+    apply_header_repeat(table)
     doc.add_paragraph()
 
 def _find_available_font(font_list):
