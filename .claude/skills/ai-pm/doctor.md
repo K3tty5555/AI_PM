@@ -8,7 +8,7 @@
 
 扫描所有技能文件，检查 22 项一致性指标，输出健康报告。
 
-## 检查项（6 类共 22 项）
+## 检查项（6 类共 23 项）
 
 ### 命令路由一致性（3 项）
 
@@ -49,6 +49,7 @@
 20. **硬编码密钥扫描**: 用精确正则 `sk-[a-zA-Z0-9]{20,}` 和 `AKIA[0-9A-Z]{16}` 扫描 `.claude/skills/` 和 `templates/` 目录下的所有文件，排除 `docs/` 和 `MEMORY.md`，匹配到则标记为 ❌ 错误
 21. **行业预设完整性**: 读取 `templates/presets/industry-style-presets.json`，检查 JSON 是否包含 7 个行业（general/finance/healthcare/tech/education/ecommerce/enterprise），每个行业必须有 label/accent/bg/font/keywords 字段
 22. **SKILL.md 路由表路径存在性**: 从 `ai-pm/SKILL.md` 的命令路由表和 Phase 路由表中提取引用的所有路径（子技能 `.claude/skills/{技能名}/SKILL.md` + Phase 文件 `phases/phase-N-xxx.md` + reference 文件 `references/*.md`），逐一检查文件是否存在
+23. **原型截图覆盖率**（仅当项目存在 PRD 时执行）：扫描最新版本 PRD MD 中 `## 六` 级别下的所有详细设计表格，统计含 `原型示意` 行的表格占比；低于 80% 且无 `无界面交互` 备注说明时，标记为 ⚠️ 警告，建议补全 Phase 7.6 截图插入
 
 ## 执行方式
 
