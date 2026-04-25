@@ -7,6 +7,34 @@
 
 交互式访谈，每次只问 1-2 个最关键的问题。
 
+## 产品类型识别（兜底闸 · 必问）
+
+**触发条件**：本阶段开始时检查 `_memory/L1-decisions.md` 中是否有 `product_type` 字段。
+
+```bash
+grep -E "^product_type:" {project_dir}/_memory/L1-decisions.md 2>/dev/null
+```
+
+- **已存在**（如 office-hours 已记录）→ 静默跳过，直接进入交互式访谈
+- **不存在** → **必须作为第一个问题问用户**：
+
+```
+在开始之前，先确认一下产品类型 —— 这决定了 PRD 模板的章节结构：
+
+  1. 传统产品 — 用户主动操作走流程（CRUD、后台、运营工具）
+  2. Agent 产品 — 用户表达意图，AI 替他决策执行（独立 Copilot、智能体）
+  3. 混合产品 — 传统功能 + AI 助手嵌入（带 AI 入口的现有业务系统）
+
+请选择 [1/2/3]：
+```
+
+用户选择后：
+1. 写入 `_memory/L1-decisions.md` 顶部：`product_type: {traditional|agent|hybrid}`
+2. 简短确认："已记录为 {类型} 产品。继续访谈。"
+3. 进入正常的交互式访谈流程
+
+**中途修正机制**：访谈过程中若发现产品类型识别错了（例如最初选了"传统"但访谈中暴露大量 AI 决策场景），允许用户主动说"产品类型改成 X"，覆写 L1-decisions.md 对应字段，**phase-5-prd.md 拼装时以最新值为准**。
+
 ## 有现成文档时
 
 引导放入 `07-references/`，读取后跳过访谈，直接生成 01-requirement-draft.md。
