@@ -109,7 +109,7 @@ PRD 生成过程按以下子步骤推进，每步开始前更新 `_status.json` 
 |---------|---------|------|------------|
 | `preflight_confirm` | PRD 生成前确认 | 用户确认内容无误 + 确认 product_type | 全部 |
 | `style_select` | 写作风格选择 | 用户选择风格 | 全部 |
-| `product_overview` | 产品概述 | 写产品背景/定位/目标（hybrid/agent 含 §2.3 为什么不用 Agent）| 全部 |
+| `product_overview` | 产品概述 | 写产品背景/定位/目标（hybrid/agent 含 §2.3 Agent 边界声明）| 全部 |
 | `user_roles` | 用户角色 | 写用户画像/角色定义 | 全部 |
 | `functional_spec` | 功能规格 | 写详细功能设计（最耗时）| 全部 |
 | `data_schema` | 数据结构 | 写核心数据字段/流转 | 全部 |
@@ -198,7 +198,7 @@ grep -E "^product_type:" {project_dir}/_memory/L1-decisions.md 2>/dev/null
 
 - 使用 `feishu-template.md` 作为骨架
 - 注入位置：
-  - §2.3 后注入 §A10「为什么不用 Agent」（推荐写）
+  - §2.3 后注入 §A10「Agent 边界声明」（推荐写）
   - §5.6 **跳过**（独立 agent 产品无嵌入式入口问题）
   - 文末追加完整第九章 §A1–§A8（必填）
 - **执行** `agent_design` 子步骤，写完整 8 节
@@ -208,7 +208,7 @@ grep -E "^product_type:" {project_dir}/_memory/L1-decisions.md 2>/dev/null
 
 - 使用 `feishu-template.md` 作为骨架
 - 注入位置：
-  - §2.3 后注入 §A10「为什么不用 Agent」（推荐写）
+  - §2.3 后注入 §A10「Agent 边界声明」（推荐写）
   - §5.5 后注入 §5.6「AI 入口与权限边界」（必填）⭐
   - 文末追加最小集第九章 §A2/§A4/§A5/§A7（必填）+ §A3 推荐
 - **执行** `agent_design` 子步骤，写最小集
