@@ -25,7 +25,9 @@ cd AI_PM
 ## 项目结构
 
 ```
-.claude/                   Claude 配置（技能、Hooks、权限设置）
+.claude/
+├── agents/                自定义 sub-agent（含 pm-agent KettyWu 灵魂）
+└── skills/                技能集合（ai-pm 主控 / ai-pm-prd / ai-pm-driver / ...）
 output/                    项目输出（不纳入版本库）
 templates/                 模板库（PRD 风格、设计规范等）
 AI_PM_教程中心.html          可视化使用指南，直接用浏览器打开
@@ -46,6 +48,36 @@ README.md                  项目介绍
 | `/ai-pm persona` | 产品分身（学习你的写作风格） |
 | `/ai-pm design-spec` | 设计规范（加载公司/团队 UI 规范） |
 | `/ai-pm knowledge` | 知识库管理 |
+| `/ai-pm driver [PRD]` | PM 风格 lint（评审前体检），pm-agent 的命令糖衣 |
+
+## PRD 写作专项（PM Agent 4 层体系）
+
+写 PRD 章节遵循 4 层架构（完整方法见 `.claude/skills/ai-pm/references/pm-judgment-card.md`）：
+
+1. **判断卡**（`references/pm-judgment-card.md`）—— 9 章节 PM 风格手册：角色定位 / 6 条 PM 直觉 / 越界红线 / 责任分工 / Agent 5 件事写法 / 模板使用原则 / 篇幅指引 / 修订日志规则 / 9 项 checklist
+2. **pm-agent**（`agents/pm-agent.md`）—— KettyWu sub-agent 内化判断卡 + 越界红线 + 填空模板 + 9 项自检。**写每个 PRD 章节前优先调用** `Agent(subagent_type=pm-agent, prompt=...)`
+3. **写作脚手架**（`phase-5-prd.md` 内嵌）—— 填空模板 + 7 组反例对比库 + 自检三连问；pm-agent 不可用时主对话回退路径
+4. **driver**（`ai-pm-driver/`）—— PM 风格 lint，pm-agent 的 thin wrapper。**评审前 / 大改后 / 历史 PRD 回归** 跑一次，不每章节都跑
+
+**铁律（PM 必守）**：
+
+| 维度 | 必写 | 禁写 |
+|------|------|------|
+| 技术细节 | "由研发与 X 对齐" | 技术栈 / 接口字段名/路径/枚举值 / 数据库表 |
+| 视觉细节 | "风格与 Z 一致"或不写 | 毫秒 / 像素 / 色号 / hover/fade/光环/闪烁 等动画词 |
+| 算法实现 | "由算法侧定义"，Few-shot 标 `[算法补完]` | prompt 文案 / 模型名 / chunk_size / RAG 检索器 |
+| 异常处理 | 用户能感知到的失败（业务数据不足、答错等）| 接口超时 / Schema 校验 / 缓存未命中（研发自决）|
+| 用户话术 | "暂时不支持 + 替代方案" | 透露版本号 / 上线时间（V1.5、下个迭代）|
+
+**结构必备（迭代版本）**：
+- 复用对照表（§4.x，4 列：复用对象 / 复用方式 / 本期改动点 / 不改动项）
+- 影响范围（每个改动列受影响的页面/接口/角色/已存量场景）
+- 暂不纳入本期（单列章节：反馈 / 原因 / 后续计划）
+- 附录 B「待 X 对齐」（技术字段 / 接口设计 / 算法实现等待对齐项）
+
+**修订日志规则**：保留 PM-评审反馈迭代版本（v1.0 → v1.x），不保留 PM-AI 协作过程版本（PM 跟 AI 反复改的内部版本）。
+
+**篇幅指引**（武凯迪范本）：单功能补丁 80-150 行 / 中等场景 200-300 行 / 复杂含 Agent 章节 300-500 行 / 500+ 警戒。
 
 ## 设计与研发自动审视
 
