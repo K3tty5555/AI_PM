@@ -1,6 +1,6 @@
 # AI 协作入口
 
-本项目采用 **Claude-first，Codex 辅助** 的协作模式。Claude Code 仍是主要开发与产品工作流；Codex 读取并遵守 Claude 已沉淀的 skills、agents、hooks 背后的脚本逻辑和项目级 memory，在需要时补充实现、审查和整理。
+本项目采用 **Claude 与 Codex 并重** 的协作模式。Claude Code 与 Codex 都可以承担主要开发与产品工作流；Codex 读取并遵守 Claude 已沉淀的 skills、agents、hooks 背后的脚本逻辑和项目级 memory，同时沉淀 Codex 侧可复用经验，二者共同维护项目上下文与交付质量。
 
 ## 必读来源
 
@@ -14,11 +14,12 @@ Codex 进入本项目后，优先读取以下上下文：
 
 `.ai-shared/` 是桥接层，不替代 Claude 原始资产。索引过期时，以本机 Claude memory、skills、agents 原始文件为准。
 
-## 主事实源
+## 事实源协作
 
-- Claude 项目 memory 是主事实源。
-- Codex memory 是镜像、摘要或待合并材料，不反向覆盖 Claude memory。
-- Codex 产生的新经验先写入 `.ai-shared/pending-memory/`，由用户确认后再合并进 Claude memory。
+- Claude 项目 memory 仍是已沉淀历史上下文的主事实源之一。
+- Codex memory 可作为并列工作上下文、摘要或待合并材料使用，不自动反向覆盖 Claude memory。
+- Codex 产生的新经验先写入 `.ai-shared/pending-memory/`，由用户确认后再合并进 Claude memory 或项目级共享文档。
+- 当 Claude 与 Codex 的上下文发生冲突时，以用户最新明确指令和项目内最新文档为准。
 - 不自动同步 secrets、API Key、token、cookie、私钥等敏感信息。
 
 ## 优先级
