@@ -14,6 +14,8 @@ import {
   BarChart2,
   Mic,
   Palette,
+  ImagePlus,
+  Stethoscope,
   Search,
   BookOpen,
   FileText,
@@ -212,7 +214,9 @@ function CommandPalette({
       { id: "persona", label: "产品分身", icon: Bot, action: nav("/tools/persona"), group: "工具" },
       { id: "data", label: "数据洞察", icon: BarChart2, action: nav("/tools/data"), group: "工具" },
       { id: "interview", label: "现场调研", icon: Mic, action: nav("/tools/interview"), group: "工具" },
+      { id: "illustration", label: "流程图配图", icon: ImagePlus, action: nav("/tools/illustration"), group: "工具" },
       { id: "design-spec", label: "设计规范", icon: Palette, action: nav("/tools/design-spec"), group: "工具" },
+      { id: "doctor", label: "诊断中心", icon: Stethoscope, action: nav("/tools/doctor"), group: "工具" },
     ]
 
     return [...staticCommands, ...projectCommands, ...toolCommands]

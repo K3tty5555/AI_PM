@@ -11,6 +11,7 @@ interface PrdAssistPanelProps {
   currentMarkdown: string
   onApply: (newMarkdown: string) => void
   initialInput?: string
+  initialInputVersion?: number
 }
 
 interface ChatRound {
@@ -31,7 +32,7 @@ function parseSummaryAndText(raw: string): { summary: string; fullText: string }
   return null
 }
 
-export function PrdAssistPanel({ projectId, currentMarkdown, onApply, initialInput }: PrdAssistPanelProps) {
+export function PrdAssistPanel({ projectId, currentMarkdown, onApply, initialInput, initialInputVersion }: PrdAssistPanelProps) {
   const { toast } = useToast()
   const [expanded, setExpanded] = useState(false)
   const [input, setInput] = useState(initialInput ?? "")
@@ -51,7 +52,7 @@ export function PrdAssistPanel({ projectId, currentMarkdown, onApply, initialInp
       setInput(initialInput)
       setExpanded(true)
     }
-  }, [initialInput])
+  }, [initialInput, initialInputVersion])
 
   // When assist finishes, parse response
   useEffect(() => {

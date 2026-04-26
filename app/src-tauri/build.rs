@@ -18,11 +18,18 @@ fn copy_dir(src: &Path, dst: &Path) {
     }
 }
 
+fn sync_dir(src: &Path, dst: &Path) {
+    if dst.exists() {
+        fs::remove_dir_all(dst).expect("Failed to clear generated skills dir");
+    }
+    copy_dir(src, dst);
+}
+
 fn main() {
     let skills_src = Path::new("../../.claude/skills");
 
     // 1. 复制到 resources/skills/ — 用于打包安装包
-    copy_dir(skills_src, Path::new("resources/skills"));
+    sync_dir(skills_src, Path::new("resources/skills"));
 
     // 2. 复制到 target/{profile}/skills/ — 用于 dev 模式运行时读取
     //    OUT_DIR 形如 target/debug/build/ai-pm-xxx/out/，上溯 3 级得到 target/debug/
@@ -32,7 +39,7 @@ fn main() {
             .nth(3)
             .map(|p| p.to_path_buf());
         if let Some(dir) = profile_dir {
-            copy_dir(skills_src, &dir.join("skills"));
+            sync_dir(skills_src, &dir.join("skills"));
         }
     }
 

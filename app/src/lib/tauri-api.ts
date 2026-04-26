@@ -183,6 +183,16 @@ export interface UiSpecContent {
   tokensRaw: string | null
 }
 
+export interface CodebaseFingerprint {
+  status: string
+  codebasePath: string
+  layoutPath: string
+  extractedAt: string
+  cached: boolean
+  summary: string[]
+  warnings: string[]
+}
+
 export interface PrdSample {
   id: string
   label: string
@@ -210,7 +220,7 @@ export interface PriorityReportMeta {
 
 export interface DiagnosticItem {
   name: string
-  category: "dependency" | "connectivity" | "local" | "config"
+  category: "dependency" | "connectivity" | "local" | "config" | "ai_context"
   status: "ok" | "warning" | "error" | "timeout"
   message: string
   fixHint: string | null
@@ -470,6 +480,8 @@ export const api = {
 
   // Instincts
   listInstincts: () => safeInvoke<InstinctEntry[]>("list_instincts"),
+  recordInstinctCandidate: (args: { type: "writing" | "workflow"; description: string; sourceProject?: string }) =>
+    safeInvoke<InstinctEntry>("record_instinct_candidate", { args }),
   confirmInstinct: (id: string) => safeInvoke<void>("confirm_instinct", { id }),
   deleteInstinct: (id: string) => safeInvoke<void>("delete_instinct", { id }),
 
@@ -534,6 +546,12 @@ export const api = {
   // Motion intensity
   setMotionIntensity: (id: string, intensity: MotionIntensity) =>
     safeInvoke<void>("set_motion_intensity", { args: { id, intensity } }),
+  getCodebaseFingerprint: (projectId: string) =>
+    safeInvoke<CodebaseFingerprint | null>("get_codebase_fingerprint", { projectId }),
+  extractCodebaseFingerprint: (projectId: string, codebasePath: string, force = false) =>
+    safeInvoke<CodebaseFingerprint>("extract_codebase_fingerprint", {
+      args: { projectId, codebasePath, force },
+    }),
 
   // Screenshot analysis
   analyzeScreenshot: (imagePath: string, mode: ScreenshotAnalysisMode, context?: string) =>

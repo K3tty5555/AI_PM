@@ -6,6 +6,7 @@ source "$ROOT/scripts/ai-sync/_env.sh"
 MEMORY_DIR="$(ai_pm_resolve_claude_memory_dir "$ROOT")"
 SKILLS_DIR="${CLAUDE_SKILLS_DIR:-$ROOT/.claude/skills}"
 AGENTS_DIR="${CLAUDE_AGENTS_DIR:-$ROOT/.claude/agents}"
+TAURI_RESOURCE_SKILLS="$ROOT/app/src-tauri/resources/skills"
 
 fail=0
 
@@ -29,6 +30,64 @@ check_newer() {
   fi
 }
 
+check_required_client_skills() {
+  local skills_dir="$1"
+  shift
+  local missing=()
+
+  local skill
+  for skill in "$@"; do
+    if [[ ! -f "$skills_dir/$skill/SKILL.md" ]]; then
+      missing+=("$skill")
+    fi
+  done
+
+  if [[ "${#missing[@]}" -gt 0 ]]; then
+    echo "MISSING: client-required Claude skills: ${missing[*]}"
+    fail=1
+  else
+    echo "OK: all client-required Claude skills exist"
+  fi
+}
+
+check_no_tracked_generated_skills() {
+  local tracked
+  tracked="$(git -C "$ROOT" ls-files 'app/src-tauri/resources/skills/*' || true)"
+  if [[ -n "$tracked" ]]; then
+    echo "STALE: generated Tauri skill copies are still tracked:"
+    echo "$tracked" | sed 's/^/  - /'
+    echo "Run: git rm --cached -r app/src-tauri/resources/skills"
+    fail=1
+  else
+    echo "OK: generated Tauri skill copies are not tracked"
+  fi
+}
+
+check_resource_skill_drift() {
+  [[ -d "$TAURI_RESOURCE_SKILLS" ]] || return 0
+
+  local resource_only source_only
+  resource_only="$(
+    comm -13 \
+      <(find "$SKILLS_DIR" -maxdepth 2 -name 'SKILL.md' -type f | sed "s#^$SKILLS_DIR/##; s#/SKILL.md##" | sort) \
+      <(find "$TAURI_RESOURCE_SKILLS" -maxdepth 2 -name 'SKILL.md' -type f | sed "s#^$TAURI_RESOURCE_SKILLS/##; s#/SKILL.md##" | sort)
+  )"
+  source_only="$(
+    comm -23 \
+      <(find "$SKILLS_DIR" -maxdepth 2 -name 'SKILL.md' -type f | sed "s#^$SKILLS_DIR/##; s#/SKILL.md##" | sort) \
+      <(find "$TAURI_RESOURCE_SKILLS" -maxdepth 2 -name 'SKILL.md' -type f | sed "s#^$TAURI_RESOURCE_SKILLS/##; s#/SKILL.md##" | sort)
+  )"
+
+  if [[ -n "$resource_only" || -n "$source_only" ]]; then
+    echo "INFO: app/src-tauri/resources/skills differs from .claude/skills"
+    [[ -n "$resource_only" ]] && { echo "  resource only:"; echo "$resource_only" | sed 's/^/    - /'; }
+    [[ -n "$source_only" ]] && { echo "  source only:"; echo "$source_only" | sed 's/^/    - /'; }
+    echo "  Generated resources are ignored; Tauri build.rs will regenerate them from .claude/skills."
+  else
+    echo "OK: generated Tauri skill copies match Claude skills"
+  fi
+}
+
 [[ -d "$MEMORY_DIR" ]] || { echo "MISSING: Claude memory dir $MEMORY_DIR"; echo "Set CLAUDE_MEMORY_DIR to your local Claude project memory path."; fail=1; }
 [[ -d "$SKILLS_DIR" ]] || { echo "MISSING: Claude skills dir $SKILLS_DIR"; fail=1; }
 [[ -d "$AGENTS_DIR" ]] || { echo "MISSING: Claude agents dir $AGENTS_DIR"; fail=1; }
@@ -44,6 +103,30 @@ if [[ -d "$MEMORY_DIR" ]]; then
 fi
 if [[ -d "$SKILLS_DIR" ]]; then
   check_newer "$SKILLS_DIR" 'SKILL.md' "$ROOT/.ai-shared/skill-index.md" "skill"
+  check_required_client_skills "$SKILLS_DIR" \
+    ai-pm \
+    ai-pm-analyze \
+    ai-pm-brainstorm \
+    ai-pm-data \
+    ai-pm-design-spec \
+    ai-pm-driver \
+    ai-pm-interview \
+    ai-pm-knowledge \
+    ai-pm-persona \
+    ai-pm-prd \
+    ai-pm-priority \
+    ai-pm-prototype \
+    ai-pm-research \
+    ai-pm-retrospective \
+    ai-pm-review \
+    ai-pm-review-modify \
+    ai-pm-story \
+    ai-pm-weekly \
+    Humanizer-zh \
+    frontend-design \
+    ui-ux-pro-max
+  check_no_tracked_generated_skills
+  check_resource_skill_drift
 fi
 if [[ -d "$AGENTS_DIR" ]]; then
   check_newer "$AGENTS_DIR" '*.md' "$ROOT/.ai-shared/agent-index.md" "agent"

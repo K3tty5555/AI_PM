@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
+import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
+import { FileText, FolderOpen, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { useAiStream } from "@/hooks/use-ai-stream"
-import { api, type UiSpecEntry, type MotionIntensity } from "@/lib/tauri-api"
+import { api, type UiSpecEntry, type MotionIntensity, type CodebaseFingerprint } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus } from "@/lib/utils"
@@ -164,6 +166,82 @@ function parseAuditReport(md: string): AuditReport {
     coverage: { covered, total: items.length },
     items,
   }
+}
+
+function CodebaseFingerprintPanel({
+  fingerprint,
+  extracting,
+  onExtract,
+  onReveal,
+}: {
+  fingerprint: CodebaseFingerprint | null
+  extracting: boolean
+  onExtract: () => void
+  onReveal: () => void
+}) {
+  const statusLabel =
+    fingerprint?.status === "ok" ? "已套用"
+      : fingerprint?.status === "partial" ? "部分套用"
+        : fingerprint?.status === "failed" ? "提取失败"
+          : "未绑定"
+  const statusClass =
+    fingerprint?.status === "ok" ? "text-[var(--success)] bg-[var(--success-light)] border-[var(--success)]/20"
+      : fingerprint?.status === "partial" ? "text-[var(--warning)] bg-[var(--warning)]/10 border-[var(--warning)]/20"
+        : fingerprint?.status === "failed" ? "text-[var(--destructive)] bg-[var(--destructive)]/10 border-[var(--destructive)]/20"
+          : "text-[var(--text-secondary)] bg-[var(--secondary)] border-[var(--border)]"
+
+  return (
+    <div className="border-b border-[var(--border)] px-1 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-[var(--text-secondary)]">代码仓指纹</span>
+            <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", statusClass)}>
+              {statusLabel}
+            </span>
+            {fingerprint?.extractedAt && (
+              <span className="text-[11px] text-[var(--text-tertiary)]">{fingerprint.extractedAt}</span>
+            )}
+          </div>
+          {fingerprint?.codebasePath ? (
+            <p className="mt-1 truncate text-[12px] text-[var(--text-secondary)]" title={fingerprint.codebasePath}>
+              {fingerprint.codebasePath}
+            </p>
+          ) : (
+            <p className="mt-1 text-[12px] text-[var(--text-tertiary)]">
+              选择真实产品代码仓后，原型生成会优先复用布局、色值、路由与组件密度。
+            </p>
+          )}
+          {fingerprint?.summary?.length ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {fingerprint.summary.map((item) => (
+                <span key={item} className="rounded-full bg-[var(--secondary)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
+                  {item}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {fingerprint?.warnings?.length ? (
+            <p className="mt-2 text-[12px] text-[var(--warning)]">
+              {fingerprint.warnings.slice(0, 2).join("；")}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {fingerprint?.layoutPath && (
+            <Button variant="ghost" size="sm" onClick={onReveal} disabled={extracting}>
+              <FileText className="size-3.5" />
+              查看
+            </Button>
+          )}
+          <Button variant={fingerprint ? "ghost" : "primary"} size="sm" onClick={onExtract} disabled={extracting}>
+            {extracting ? <RefreshCw className="size-3.5 animate-spin" /> : <FolderOpen className="size-3.5" />}
+            {fingerprint ? "重新提取" : "绑定代码仓"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ── Audit Card component ──────────────────────────────────────────────
@@ -362,6 +440,8 @@ export function PrototypePage() {
   const [excludedContext, setExcludedContext] = useState<string[]>([])
   const [protoDir, setProtoDir] = useState("")
   const startedRef = useRef(false)
+  const [fingerprint, setFingerprint] = useState<CodebaseFingerprint | null>(null)
+  const [extractingFingerprint, setExtractingFingerprint] = useState(false)
 
   // Design spec selector
   const [designSpecs, setDesignSpecs] = useState<UiSpecEntry[]>([])
@@ -397,6 +477,10 @@ export function PrototypePage() {
     api.getProject(projectId).then((proj) => {
       if (proj?.motionIntensity) setMotionIntensity(proj.motionIntensity)
     }).catch(() => {})
+
+    api.getCodebaseFingerprint(projectId)
+      .then((result) => setFingerprint(result))
+      .catch((err) => console.error("[Prototype] fingerprint load:", err))
   }, [projectId])
 
   const [searchParams] = useSearchParams()
@@ -588,6 +672,41 @@ export function PrototypePage() {
     start([{ role: "user", content: "请生成产品原型" }], { excludedContext, designSpec: selectedSpec })
   }, [start, excludedContext, selectedSpec])
 
+  const handleExtractFingerprint = useCallback(async () => {
+    if (!projectId) return
+    const selected = await dialogOpen({
+      directory: true,
+      multiple: false,
+      title: "选择真实产品代码仓",
+    })
+    if (!selected || typeof selected !== "string") return
+
+    setExtractingFingerprint(true)
+    try {
+      const result = await api.extractCodebaseFingerprint(projectId, selected, true)
+      setFingerprint(result)
+      if (result.status === "failed") {
+        toast("设计指纹提取失败，原型会继续使用默认风格", "warning")
+      } else if (result.status === "partial") {
+        toast("已提取部分设计指纹", "warning")
+      } else {
+        toast("已提取代码仓设计指纹", "success")
+      }
+    } catch (err) {
+      console.error("[Prototype] extract fingerprint:", err)
+      toast(err instanceof Error ? err.message : "设计指纹提取失败", "error")
+    } finally {
+      setExtractingFingerprint(false)
+    }
+  }, [projectId, toast])
+
+  const handleRevealFingerprint = useCallback(() => {
+    if (!fingerprint?.layoutPath) return
+    api.revealFile(fingerprint.layoutPath).catch(() => {
+      api.openFile(fingerprint.layoutPath).catch((err) => console.error("[Prototype] open fingerprint:", err))
+    })
+  }, [fingerprint])
+
   const handleRegenerate = useCallback(() => {
     reset()
     setExistingHtml(null)
@@ -652,6 +771,12 @@ export function PrototypePage() {
           className="border-b border-[var(--border)]"
         />
         <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
+        <CodebaseFingerprintPanel
+          fingerprint={fingerprint}
+          extracting={extractingFingerprint}
+          onExtract={handleExtractFingerprint}
+          onReveal={handleRevealFingerprint}
+        />
         <div className="flex items-center gap-2 px-1 py-3 border-b border-[var(--border)]">
           <span className="text-xs text-[var(--text-secondary)] shrink-0">设计规范</span>
           <select
@@ -745,6 +870,12 @@ export function PrototypePage() {
         className="border-b border-[var(--border)]"
       />
       <ReferenceFiles projectId={projectId!} className="px-1 py-2 border-b border-[var(--border)]" />
+      <CodebaseFingerprintPanel
+        fingerprint={fingerprint}
+        extracting={extractingFingerprint}
+        onExtract={handleExtractFingerprint}
+        onReveal={handleRevealFingerprint}
+      />
 
       {/* Streaming progress */}
       {isStreaming && (
