@@ -81,6 +81,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm knowledge` | 知识库管理（add/search/list/sync/suggest） |
 | `/ai-pm retrospective` | 项目复盘，生成 10-retrospective.md |
 | `/ai-pm instinct [list\|review\|import\|reset]` | 习惯直觉管理（自动学习的偏好） |
+| `/ai-pm driver [PRD路径]` | PM 风格 lint 命令入口（pm-agent 的 thin wrapper，单一事实源在 pm-agent）。仅用于历史 PRD 体检 / 大改后回归 / 评审前体检 |
 | `/ai-pm doctor` | 技能健康检查（15 项一致性扫描） |
 | `/ai-pm illustration [输入]` | AI 流程图生成（baoyu-imagine，支持 Mermaid 和自然语言） |
 | `/ai-pm config style` | PRD 写作风格管理 |
@@ -129,13 +130,18 @@ Phase 1: 需求澄清（交互式访谈，每次只问1-2个问题）
     ↓  → 生成 01-requirement-draft.md
 Phase 2+3（并行）: 需求分析 × 竞品研究
     ↓  → 生成 02-analysis-report.md + 03-competitor-report.md
-Phase 4: 用户故事（静默执行）
-    ↓  → 生成 04-user-stories.md
+Phase 4: 用户故事 / Agent 故事 / Agent 工作流（按 product_type 分支）
+    ↓  → 生成 04-user-stories.md（含三节，agent/hybrid 三件套，traditional 仅用户故事）
+    传统产品：用户故事 + INVEST 自检
+    Agent / 混合：+ Agent 故事（GRFD 自检）+ Agent 工作流（mermaid 状态机）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 关键确认节点（PRD 生成前统一确认）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Phase 5: PRD 生成（应用选定风格 + 设计规范）
+Phase 5: PRD 生成（**先过 PM 风格判断卡** + 应用选定风格 + 设计规范）
     ↓  → 生成 05-prd/05-PRD-v1.0.md
+    入口：强制读 references/pm-judgment-card.md
+    写作：phase-5-prd.md 内嵌「写作脚手架（填空模板）+ 7 组反例对比库 + 自检三连问」
+    落盘前：9 项 checklist 自检
 Phase 6（可选）: 数据埋点设计
     ↓  → 生成 09-analytics-requirement.md
 Phase 7: 原型生成（Token 消耗提示后确认）
@@ -181,6 +187,8 @@ Phase 8（可选）: 需求评审（六角色并行）
 
 | 文件 | 内容 |
 |------|------|
+| `references/pm-judgment-card.md` | **PM 风格判断卡 ⭐**——9 章节判断标准（角色 / 6 直觉 / 越界红线 / 责任分工 / Agent 5 件事写法 / 篇幅 / 修订日志 / 9 项 checklist），phase-5-prd 强制前置 |
+| `agents/pm-agent.md` | **KettyWu sub-agent ⭐**——内化判断卡 + 反例 + 填空模板，主对话调用 `Agent(subagent_type=pm-agent)` 写/审 PRD 单章节，比 driver 主动（driver 是 lint，pm-agent 是会写 PRD 的人）|
 | `references/user-interaction.md` | 项目路径解析、启动界面、快捷指令、_status.json 规范、多代理、记忆迁移、现有文档处理、进度条渲染（render_progress） |
 | `references/symptom-index.md` | 常见场景速查 + Anti-Pattern |
 | `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
