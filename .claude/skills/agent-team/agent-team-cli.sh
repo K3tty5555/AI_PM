@@ -13,9 +13,24 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 配置
-AI_PM_ROOT="<USER_HOME>/AI_PM"
-PROJECTS_DIR="$AI_PM_ROOT/output/projects"
-TEMPLATES_DIR="$AI_PM_ROOT/templates/agent-team"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -z "${AI_PM_ROOT:-}" ]; then
+    if AI_PM_GIT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"; then
+        AI_PM_ROOT="$AI_PM_GIT_ROOT"
+    else
+        SEARCH_DIR="$SCRIPT_DIR"
+        while [ "$SEARCH_DIR" != "/" ]; do
+            if [ -f "$SEARCH_DIR/README.md" ] && [ -d "$SEARCH_DIR/.claude" ]; then
+                AI_PM_ROOT="$SEARCH_DIR"
+                break
+            fi
+            SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+        done
+        AI_PM_ROOT="${AI_PM_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
+    fi
+fi
+PROJECTS_DIR="${AI_PM_PROJECTS_DIR:-$AI_PM_ROOT/output/projects}"
+TEMPLATES_DIR="${AI_PM_AGENT_TEMPLATES_DIR:-$AI_PM_ROOT/templates/agent-team}"
 
 # 显示帮助信息
 show_help() {
@@ -89,8 +104,30 @@ init_project() {
     mkdir -p "$project_dir/logs"
     mkdir -p "$project_dir/07-references"
 
-    # 复制状态模板
-    cp "$TEMPLATES_DIR/project-status-template.json" "$project_dir/project-status.json"
+    # 复制状态模板；公开仓缺少本地模板时使用内置最小模板，避免绝对路径导致 clone 后不可用。
+    if [ -f "$TEMPLATES_DIR/project-status-template.json" ]; then
+        cp "$TEMPLATES_DIR/project-status-template.json" "$project_dir/project-status.json"
+    else
+        cat > "$project_dir/project-status.json" << EOF
+{
+  "project_id": "$project_id",
+  "project_name": "$project_id",
+  "mode": "serial",
+  "description": "",
+  "status": "created",
+  "agents": {},
+  "phases": [],
+  "deliverables": {
+    "completed": [],
+    "in_progress": [],
+    "pending": []
+  },
+  "blockers": [],
+  "created_at": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')",
+  "updated_at": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+}
+EOF
+    fi
 
     # 初始化通信日志
     touch "$project_dir/logs/communication.jsonl"
