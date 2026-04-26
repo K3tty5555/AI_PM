@@ -1,9 +1,10 @@
-use serde::{Deserialize, Serialize};
-use std::process::Command;
-use std::fs;
-use tauri::{AppHandle, Emitter};
-use tokio::io::AsyncReadExt;
 use crate::providers::claude_cli::enriched_path;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use tauri::{AppHandle, Emitter, Manager};
+use tokio::io::AsyncReadExt;
 
 // ── Dependency descriptors ───────────────────────────────────────────────────
 
@@ -32,10 +33,34 @@ pub struct DepStatus {
 pub async fn check_env() -> Vec<DepStatus> {
     vec![
         check_python3(),
-        check_python_pkg("python-docx", "python-docx", "python_docx", true, "PRD 导出 Word 文档"),
-        check_python_pkg("Pillow",      "Pillow（图像处理）", "Pillow", false, "Word 文档中嵌入原型截图"),
-        check_python_pkg("python-pptx", "python-pptx", "pptx", true, "PRD 导出 PPT 演示文稿"),
-        check_python_pkg("markitdown",  "markitdown（PPT 验证）", "markitdown", false, "PPT 生成后内容完整性验证"),
+        check_python_pkg(
+            "python-docx",
+            "python-docx",
+            "python_docx",
+            true,
+            "PRD 导出 Word 文档",
+        ),
+        check_python_pkg(
+            "Pillow",
+            "Pillow（图像处理）",
+            "Pillow",
+            false,
+            "Word 文档中嵌入原型截图",
+        ),
+        check_python_pkg(
+            "python-pptx",
+            "python-pptx",
+            "pptx",
+            true,
+            "PRD 导出 PPT 演示文稿",
+        ),
+        check_python_pkg(
+            "markitdown",
+            "markitdown（PPT 验证）",
+            "markitdown",
+            false,
+            "PPT 生成后内容完整性验证",
+        ),
         check_claude_cli(),
         check_playwright_mcp_dep(),
     ]
@@ -57,7 +82,10 @@ fn detect_playwright_mcp() -> bool {
     if let Ok(raw) = fs::read_to_string(&plugins_json) {
         if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
             if let Some(plugins) = cfg.get("plugins").and_then(|v| v.as_object()) {
-                if plugins.keys().any(|k| k.to_lowercase().contains("playwright")) {
+                if plugins
+                    .keys()
+                    .any(|k| k.to_lowercase().contains("playwright"))
+                {
                     return true;
                 }
             }
@@ -69,7 +97,10 @@ fn detect_playwright_mcp() -> bool {
     if let Ok(raw) = fs::read_to_string(&claude_json) {
         if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
             if let Some(servers) = cfg.get("mcpServers").and_then(|v| v.as_object()) {
-                if servers.keys().any(|k| k.to_lowercase().contains("playwright")) {
+                if servers
+                    .keys()
+                    .any(|k| k.to_lowercase().contains("playwright"))
+                {
                     return true;
                 }
             }
@@ -102,8 +133,8 @@ fn check_playwright_mcp_dep() -> DepStatus {
 }
 
 fn check_python3() -> DepStatus {
-    let version = run_sync("python3", &["--version"])
-        .map(|s| s.trim_start_matches("Python ").to_string());
+    let version =
+        run_sync("python3", &["--version"]).map(|s| s.trim_start_matches("Python ").to_string());
     DepStatus {
         name: "python3".into(),
         label: "Python 3".into(),
@@ -116,7 +147,13 @@ fn check_python3() -> DepStatus {
     }
 }
 
-fn check_python_pkg(name: &str, label: &str, pkg_import: &str, required: bool, feature_hint: &str) -> DepStatus {
+fn check_python_pkg(
+    name: &str,
+    label: &str,
+    pkg_import: &str,
+    required: bool,
+    feature_hint: &str,
+) -> DepStatus {
     let script = format!(
         "import importlib.metadata; print(importlib.metadata.version('{}'))",
         pkg_import
@@ -208,20 +245,263 @@ fn dep_to_diagnostic(dep: &DepStatus) -> DiagnosticItem {
             "warning"
         }
         .to_string(),
-        message: dep
-            .version
-            .clone()
-            .unwrap_or_else(|| {
-                if dep.installed {
-                    "已安装".to_string()
-                } else {
-                    "未安装".to_string()
-                }
-            }),
+        message: dep.version.clone().unwrap_or_else(|| {
+            if dep.installed {
+                "已安装".to_string()
+            } else {
+                "未安装".to_string()
+            }
+        }),
         fix_hint: dep.manual_hint.clone(),
         auto_installable: dep.auto_installable,
         duration_ms: 0,
     }
+}
+
+fn diagnostic_item(
+    name: &str,
+    category: &str,
+    status: &str,
+    message: String,
+    fix_hint: Option<String>,
+) -> DiagnosticItem {
+    DiagnosticItem {
+        name: name.to_string(),
+        category: category.to_string(),
+        status: status.to_string(),
+        message,
+        fix_hint,
+        auto_installable: false,
+        duration_ms: 0,
+    }
+}
+
+fn emit_diagnostic(
+    app: &AppHandle,
+    item: DiagnosticItem,
+    total: &mut u32,
+    passed: &mut u32,
+    warnings: &mut u32,
+    errors: &mut u32,
+) {
+    *total += 1;
+    match item.status.as_str() {
+        "ok" => *passed += 1,
+        "warning" => *warnings += 1,
+        _ => *errors += 1,
+    }
+    let _ = app.emit("diagnostic_item", &item);
+}
+
+fn bundled_skills_dir(app: &AppHandle) -> Option<PathBuf> {
+    let base = app.path().resource_dir().ok()?;
+    let primary = base.join("resources/skills");
+    if primary.is_dir() {
+        return Some(primary);
+    }
+    let fallback = base.join("skills");
+    if fallback.is_dir() {
+        return Some(fallback);
+    }
+    None
+}
+
+fn find_repo_skills_dir() -> Option<PathBuf> {
+    let cwd = std::env::current_dir().ok()?;
+    for ancestor in cwd.ancestors() {
+        let candidate = ancestor.join(".claude/skills");
+        if candidate.is_dir() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+fn skill_exists(root: &Path, skill: &str) -> bool {
+    root.join(skill).join("SKILL.md").is_file()
+}
+
+fn collect_skill_names(root: &Path) -> Vec<String> {
+    let mut names: Vec<String> = fs::read_dir(root)
+        .map(|rd| {
+            rd.filter_map(|e| e.ok())
+                .filter(|e| e.path().join("SKILL.md").is_file())
+                .map(|e| e.file_name().to_string_lossy().to_string())
+                .collect()
+        })
+        .unwrap_or_default();
+    names.sort();
+    names
+}
+
+fn ai_context_diagnostics(app: &AppHandle) -> Vec<DiagnosticItem> {
+    const REQUIRED_SKILLS: &[&str] = &[
+        "ai-pm",
+        "ai-pm-analyze",
+        "ai-pm-brainstorm",
+        "ai-pm-data",
+        "ai-pm-design-spec",
+        "ai-pm-driver",
+        "ai-pm-interview",
+        "ai-pm-knowledge",
+        "ai-pm-persona",
+        "ai-pm-prd",
+        "ai-pm-priority",
+        "ai-pm-prototype",
+        "ai-pm-research",
+        "ai-pm-retrospective",
+        "ai-pm-review",
+        "ai-pm-review-modify",
+        "ai-pm-story",
+        "ai-pm-weekly",
+        "Humanizer-zh",
+        "frontend-design",
+        "ui-ux-pro-max",
+    ];
+
+    let mut items = Vec::new();
+
+    if let Some(root) = bundled_skills_dir(app) {
+        let missing: Vec<&str> = REQUIRED_SKILLS
+            .iter()
+            .copied()
+            .filter(|skill| !skill_exists(&root, skill))
+            .collect();
+        if missing.is_empty() {
+            items.push(diagnostic_item(
+                "客户端内置 Skills",
+                "ai_context",
+                "ok",
+                format!("{} 个必需 skill 已就绪", REQUIRED_SKILLS.len()),
+                None,
+            ));
+        } else {
+            items.push(diagnostic_item(
+                "客户端内置 Skills",
+                "ai_context",
+                "error",
+                format!("缺少 {}", missing.join("、")),
+                Some("重新构建客户端，确认 .claude/skills 中包含这些 skill".to_string()),
+            ));
+        }
+    } else {
+        items.push(diagnostic_item(
+            "客户端内置 Skills",
+            "ai_context",
+            "error",
+            "未找到打包 skills 目录".to_string(),
+            Some("检查 app/src-tauri/tauri.conf.json resources 配置".to_string()),
+        ));
+    }
+
+    if let Some(source_root) = find_repo_skills_dir() {
+        let missing_source: Vec<&str> = REQUIRED_SKILLS
+            .iter()
+            .copied()
+            .filter(|skill| !skill_exists(&source_root, skill))
+            .collect();
+        if missing_source.is_empty() {
+            items.push(diagnostic_item(
+                "Claude Skills 主源",
+                "ai_context",
+                "ok",
+                format!(
+                    "{} 个客户端依赖 skill 均在 .claude/skills 主源中",
+                    REQUIRED_SKILLS.len()
+                ),
+                None,
+            ));
+        } else {
+            items.push(diagnostic_item(
+                "Claude Skills 主源",
+                "ai_context",
+                "error",
+                format!(".claude/skills 缺少 {}", missing_source.join("、")),
+                Some("将客户端依赖的 skill 补回 .claude/skills，避免打包时丢失".to_string()),
+            ));
+        }
+
+        if let Some(resource_root) = bundled_skills_dir(app) {
+            let source_names = collect_skill_names(&source_root);
+            let resource_names = collect_skill_names(&resource_root);
+            let resource_only: Vec<String> = resource_names
+                .iter()
+                .filter(|name| !source_names.contains(name))
+                .cloned()
+                .collect();
+            if resource_only.is_empty() {
+                items.push(diagnostic_item(
+                    "Skills 漂移检查",
+                    "ai_context",
+                    "ok",
+                    "resources/skills 未发现主源外残留 skill".to_string(),
+                    None,
+                ));
+            } else {
+                items.push(diagnostic_item(
+                    "Skills 漂移检查",
+                    "ai_context",
+                    "warning",
+                    format!(
+                        "resources/skills 仍有主源外残留：{}",
+                        resource_only.join("、")
+                    ),
+                    Some("以 .claude/skills 为主源，同步或删除资源目录残留".to_string()),
+                ));
+            }
+        }
+    } else {
+        items.push(diagnostic_item(
+            "Claude Skills 主源",
+            "ai_context",
+            "warning",
+            "当前运行环境无法定位仓库 .claude/skills，只检查内置资源".to_string(),
+            None,
+        ));
+    }
+
+    items
+}
+
+fn instinct_diagnostics() -> Vec<DiagnosticItem> {
+    let mut items = Vec::new();
+    let base = crate::commands::instincts::instincts_dir();
+    if !base.exists() {
+        items.push(diagnostic_item(
+            "Instinct 存储",
+            "ai_context",
+            "warning",
+            "尚未创建 ~/.config/ai-pm/instincts，首次沉淀习惯时会自动创建".to_string(),
+            None,
+        ));
+        return items;
+    }
+
+    let mut missing = Vec::new();
+    for subdir in &["writing", "workflow", "archived"] {
+        if !base.join(subdir).is_dir() {
+            missing.push(*subdir);
+        }
+    }
+    if missing.is_empty() {
+        items.push(diagnostic_item(
+            "Instinct 存储",
+            "ai_context",
+            "ok",
+            "习惯直觉目录结构正常".to_string(),
+            None,
+        ));
+    } else {
+        items.push(diagnostic_item(
+            "Instinct 存储",
+            "ai_context",
+            "warning",
+            format!("缺少子目录：{}", missing.join("、")),
+            Some("进入「我的习惯」或从 PM 体检沉淀习惯后会自动补齐".to_string()),
+        ));
+    }
+
+    items
 }
 
 #[tauri::command]
@@ -234,21 +514,33 @@ pub async fn run_diagnostics(app: AppHandle, detailed: bool) -> Result<(), Strin
     // Basic dependency checks — reuse existing helpers
     let deps = vec![
         check_python3(),
-        check_python_pkg("python-docx", "python-docx", "python_docx", true, "PRD 导出 Word 文档"),
-        check_python_pkg("Pillow", "Pillow（图像处理）", "Pillow", false, "Word 文档中嵌入原型截图"),
+        check_python_pkg(
+            "python-docx",
+            "python-docx",
+            "python_docx",
+            true,
+            "PRD 导出 Word 文档",
+        ),
+        check_python_pkg(
+            "Pillow",
+            "Pillow（图像处理）",
+            "Pillow",
+            false,
+            "Word 文档中嵌入原型截图",
+        ),
         check_claude_cli(),
         check_playwright_mcp_dep(),
     ];
 
     for dep in &deps {
-        let item = dep_to_diagnostic(dep);
-        total += 1;
-        match item.status.as_str() {
-            "ok" => passed += 1,
-            "warning" => warnings += 1,
-            _ => errors += 1,
-        }
-        let _ = app.emit("diagnostic_item", &item);
+        emit_diagnostic(
+            &app,
+            dep_to_diagnostic(dep),
+            &mut total,
+            &mut passed,
+            &mut warnings,
+            &mut errors,
+        );
     }
 
     if detailed {
@@ -262,9 +554,35 @@ pub async fn run_diagnostics(app: AppHandle, detailed: bool) -> Result<(), Strin
             auto_installable: false,
             duration_ms: 0,
         };
-        total += 1;
-        passed += 1;
-        let _ = app.emit("diagnostic_item", &disk_item);
+        emit_diagnostic(
+            &app,
+            disk_item,
+            &mut total,
+            &mut passed,
+            &mut warnings,
+            &mut errors,
+        );
+
+        for item in ai_context_diagnostics(&app) {
+            emit_diagnostic(
+                &app,
+                item,
+                &mut total,
+                &mut passed,
+                &mut warnings,
+                &mut errors,
+            );
+        }
+        for item in instinct_diagnostics() {
+            emit_diagnostic(
+                &app,
+                item,
+                &mut total,
+                &mut passed,
+                &mut warnings,
+                &mut errors,
+            );
+        }
 
         // More deep checks can be added here later...
     }
@@ -350,12 +668,18 @@ pub async fn install_dep(app: AppHandle, args: InstallDepArgs) -> Result<(), Str
 
     if status.success() {
         let _ = app.emit("install_progress", format!("✓ {} 安装完成\n", args.dep));
-        let _ = app.emit("install_done", serde_json::json!({ "ok": true, "dep": args.dep }));
+        let _ = app.emit(
+            "install_done",
+            serde_json::json!({ "ok": true, "dep": args.dep }),
+        );
         Ok(())
     } else {
         let msg = format!("{} 安装失败（exit {:?}）", args.dep, status.code());
         let _ = app.emit("install_progress", format!("✗ {}\n", msg));
-        let _ = app.emit("install_done", serde_json::json!({ "ok": false, "dep": args.dep, "error": msg }));
+        let _ = app.emit(
+            "install_done",
+            serde_json::json!({ "ok": false, "dep": args.dep, "error": msg }),
+        );
         Err(msg)
     }
 }
@@ -364,7 +688,10 @@ fn build_install_cmd(dep: &str, use_mirror: bool) -> Result<(String, Vec<String>
     match dep {
         "python-docx" | "Pillow" => {
             let mut args = vec![
-                "-m".into(), "pip".into(), "install".into(), dep.into(),
+                "-m".into(),
+                "pip".into(),
+                "install".into(),
+                dep.into(),
                 "--quiet".into(),
             ];
             if use_mirror {
@@ -377,7 +704,8 @@ fn build_install_cmd(dep: &str, use_mirror: bool) -> Result<(String, Vec<String>
         }
         "claude-cli" => {
             let mut args = vec![
-                "install".into(), "-g".into(),
+                "install".into(),
+                "-g".into(),
                 "@anthropic-ai/claude-code".into(),
             ];
             if use_mirror {

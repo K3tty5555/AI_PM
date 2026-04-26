@@ -1,6 +1,6 @@
-mod providers;
 mod commands;
 mod db;
+mod providers;
 mod state;
 
 use db::init_db;
@@ -73,23 +73,31 @@ fn migrate_dir_structure_v2(projects_dir: &str, config_dir: &str, db: &rusqlite:
     }
 
     // Migrate project directories via DB
-    struct Row { id: String, name: String, output_dir: String }
+    struct Row {
+        id: String,
+        name: String,
+        output_dir: String,
+    }
 
     let rows: Vec<Row> = db
         .prepare("SELECT id, name, output_dir FROM projects")
         .and_then(|mut stmt| {
-            stmt.query_map([], |row| Ok(Row {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                output_dir: row.get(2)?,
-            }))
+            stmt.query_map([], |row| {
+                Ok(Row {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    output_dir: row.get(2)?,
+                })
+            })
             .map(|mapped| {
                 mapped
                     .filter_map(|r| r.ok())
                     .filter(|r| {
                         let prefix = format!("{}/", projects_dir);
                         r.output_dir.starts_with(&prefix)
-                            && !r.output_dir.starts_with(&format!("{}/projects/", projects_dir))
+                            && !r
+                                .output_dir
+                                .starts_with(&format!("{}/projects/", projects_dir))
                     })
                     .collect()
             })
@@ -111,7 +119,10 @@ fn migrate_dir_structure_v2(projects_dir: &str, config_dir: &str, db: &rusqlite:
             }
         } else {
             // Source doesn't exist on disk — skip both disk move and DB update
-            eprintln!("[migrate_v2] Skipping '{}': source dir not found on disk", row.name);
+            eprintln!(
+                "[migrate_v2] Skipping '{}': source dir not found on disk",
+                row.name
+            );
             continue;
         }
 
@@ -254,6 +265,7 @@ pub fn run() {
             commands::update::check_update,
             commands::update::download_and_install_update,
             commands::instincts::list_instincts,
+            commands::instincts::record_instinct_candidate,
             commands::instincts::confirm_instinct,
             commands::instincts::delete_instinct,
             commands::illustration::get_illustration_config,
@@ -265,6 +277,8 @@ pub fn run() {
             commands::illustration::delete_illustration,
             commands::illustration::scan_prd_mermaid,
             commands::illustration::embed_illustration_in_prd,
+            commands::prototype_context::get_codebase_fingerprint,
+            commands::prototype_context::extract_codebase_fingerprint,
             commands::plaza::load_plaza_manifest,
             commands::plaza::run_plaza_skill,
             commands::plaza::get_plaza_api_config,
@@ -344,8 +358,8 @@ pub fn run() {
                 app.on_menu_event(|app_handle, event| {
                     let id = event.id().as_ref();
                     match id {
-                        "new-project" | "toggle-sidebar" | "toggle-theme"
-                        | "command-palette" | "check-update" | "about" => {
+                        "new-project" | "toggle-sidebar" | "toggle-theme" | "command-palette"
+                        | "check-update" | "about" => {
                             let _ = app_handle.emit("menu-action", id);
                         }
                         _ => {}

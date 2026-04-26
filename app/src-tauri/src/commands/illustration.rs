@@ -180,26 +180,40 @@ fn read_saved_config(config_dir: &str) -> (String, String, String) {
         if let Ok(content) = fs::read_to_string(&config_path) {
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
                 return (
-                    json.get("illustrationProvider").and_then(|v| v.as_str()).unwrap_or("seedream").to_string(),
-                    json.get("illustrationModel").and_then(|v| v.as_str()).unwrap_or("doubao-seedream-4-5-251128").to_string(),
-                    json.get("illustrationSize").and_then(|v| v.as_str()).unwrap_or("2560x1440").to_string(),
+                    json.get("illustrationProvider")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("seedream")
+                        .to_string(),
+                    json.get("illustrationModel")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("doubao-seedream-4-5-251128")
+                        .to_string(),
+                    json.get("illustrationSize")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("2560x1440")
+                        .to_string(),
                 );
             }
         }
     }
-    ("seedream".into(), "doubao-seedream-4-5-251128".into(), "2560x1440".into())
+    (
+        "seedream".into(),
+        "doubao-seedream-4-5-251128".into(),
+        "2560x1440".into(),
+    )
 }
 
 // ── Config Commands ──────────────────────────────────────────────
 
 #[tauri::command]
-pub fn get_illustration_config(
-    state: tauri::State<'_, AppState>,
-) -> IllustrationConfigState {
+pub fn get_illustration_config(state: tauri::State<'_, AppState>) -> IllustrationConfigState {
     let providers = get_providers();
     let (saved_provider, saved_model, saved_size) = read_saved_config(&state.config_dir);
 
-    let provider_def = providers.iter().find(|p| p.id == saved_provider).cloned()
+    let provider_def = providers
+        .iter()
+        .find(|p| p.id == saved_provider)
+        .cloned()
         .unwrap_or_else(|| providers[0].clone());
     let (api_key, source) = load_api_key(&provider_def, &state.config_dir);
 
@@ -227,17 +241,26 @@ pub fn save_illustration_config(
     };
 
     let obj = json.as_object_mut().ok_or("Invalid config format")?;
-    obj.insert("illustrationProvider".into(), serde_json::json!(args.provider));
+    obj.insert(
+        "illustrationProvider".into(),
+        serde_json::json!(args.provider),
+    );
     obj.insert("illustrationModel".into(), serde_json::json!(args.model));
-    obj.insert("illustrationSize".into(), serde_json::json!(args.default_size));
+    obj.insert(
+        "illustrationSize".into(),
+        serde_json::json!(args.default_size),
+    );
     if let Some(key) = args.api_key {
         obj.insert("illustrationApiKey".into(), serde_json::json!(key));
     }
 
     fs::create_dir_all(&state.config_dir).map_err(|e| e.to_string())?;
     let tmp = config_path.with_extension("tmp");
-    fs::write(&tmp, serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?)
-        .map_err(|e| e.to_string())?;
+    fs::write(
+        &tmp,
+        serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
     fs::rename(&tmp, &config_path).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -248,8 +271,14 @@ fn build_prompt(raw: &str, style: &str, layout: &str) -> String {
     let trimmed = raw.trim();
     let first_line = trimmed.lines().next().unwrap_or("");
     let mermaid_prefixes = [
-        "graph ", "graph\n", "flowchart ", "flowchart\n",
-        "sequenceDiagram", "classDiagram", "stateDiagram", "erDiagram",
+        "graph ",
+        "graph\n",
+        "flowchart ",
+        "flowchart\n",
+        "sequenceDiagram",
+        "classDiagram",
+        "stateDiagram",
+        "erDiagram",
     ];
     let is_mermaid = mermaid_prefixes.iter().any(|p| first_line.starts_with(p));
 
@@ -451,7 +480,8 @@ pub async fn generate_illustration(
     };
     let meta_name = file_name.replace(".png", ".meta.json");
     let meta_path = out_dir.join(&meta_name);
-    let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| format!("序列化 meta 失败: {}", e))?;
+    let meta_json =
+        serde_json::to_string_pretty(&meta).map_err(|e| format!("序列化 meta 失败: {}", e))?;
     fs::write(&meta_path, meta_json).map_err(|e| format!("写入 meta 失败: {}", e))?;
 
     // 13. Return result
@@ -502,11 +532,19 @@ pub fn list_illustrations(
                 let content = fs::read_to_string(&meta_path).unwrap_or_default();
                 let meta: serde_json::Value = serde_json::from_str(&content).unwrap_or_default();
                 (
-                    meta.get("prompt").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                    meta.get("createdAt").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    meta.get("prompt")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    meta.get("createdAt")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
                 )
             } else {
-                let modified = e.metadata().ok()
+                let modified = e
+                    .metadata()
+                    .ok()
                     .and_then(|m| m.modified().ok())
                     .map(|t| {
                         let dt: chrono::DateTime<chrono::Utc> = t.into();
@@ -544,7 +582,9 @@ pub fn read_local_image(path: String) -> Result<String, String> {
     let file_path = Path::new(&path);
 
     let home = dirs::home_dir().ok_or("无法确定主目录")?;
-    let canonical = file_path.canonicalize().map_err(|_| "图片文件不存在或路径无效")?;
+    let canonical = file_path
+        .canonicalize()
+        .map_err(|_| "图片文件不存在或路径无效")?;
     if !canonical.starts_with(&home) {
         return Err("只能读取主目录下的图片文件".into());
     }
@@ -552,7 +592,8 @@ pub fn read_local_image(path: String) -> Result<String, String> {
         return Err("路径不允许包含 ..".into());
     }
 
-    let ext = file_path.extension()
+    let ext = file_path
+        .extension()
         .and_then(|e| e.to_str())
         .map(|e| e.to_lowercase())
         .unwrap_or_default();
@@ -565,7 +606,16 @@ pub fn read_local_image(path: String) -> Result<String, String> {
         return Err("图片文件过大（超过 20MB）".into());
     }
 
-    Ok(canonical.to_string_lossy().to_string())
+    let bytes = fs::read(&canonical).map_err(|_| "无法读取图片文件")?;
+    let mime = match ext.as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        _ => "application/octet-stream",
+    };
+    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+    Ok(format!("data:{};base64,{}", mime, encoded))
 }
 
 // ── Test Key Command ────────────────────────────────────────────
@@ -645,7 +695,8 @@ pub fn delete_illustration(path: String) -> Result<(), String> {
         return Err("路径不合法".into());
     }
 
-    let stem = canonical.file_stem()
+    let stem = canonical
+        .file_stem()
         .and_then(|s| s.to_str())
         .ok_or("无法解析文件名")?;
     let parent = canonical.parent().ok_or("无法确定父目录")?;
@@ -677,8 +728,7 @@ pub fn scan_prd_mermaid(prd_path: String) -> Result<Vec<MermaidBlock>, String> {
         return Err(format!("PRD 文件不存在: {prd_path}"));
     }
 
-    let content = fs::read_to_string(&prd_path)
-        .map_err(|e| format!("无法读取 PRD 文件: {e}"))?;
+    let content = fs::read_to_string(&prd_path).map_err(|e| format!("无法读取 PRD 文件: {e}"))?;
 
     let mut blocks = Vec::new();
     let mut in_mermaid = false;
@@ -737,8 +787,7 @@ pub fn embed_illustration_in_prd(
         return Err(format!("非法图片路径格式: {image_relative_path}"));
     }
 
-    let content = fs::read_to_string(&prd_path)
-        .map_err(|e| format!("无法读取 PRD: {e}"))?;
+    let content = fs::read_to_string(&prd_path).map_err(|e| format!("无法读取 PRD: {e}"))?;
 
     let lines: Vec<&str> = content.lines().collect();
 
@@ -761,13 +810,12 @@ pub fn embed_illustration_in_prd(
     // 原子写入：写 tmp 再 rename
     let tmp_path = path.with_extension("md.tmp");
     {
-        let mut f = std::fs::File::create(&tmp_path)
-            .map_err(|e| format!("创建临时文件失败: {e}"))?;
+        let mut f =
+            std::fs::File::create(&tmp_path).map_err(|e| format!("创建临时文件失败: {e}"))?;
         f.write_all(new_content.as_bytes())
             .map_err(|e| format!("写入临时文件失败: {e}"))?;
     }
-    std::fs::rename(&tmp_path, &prd_path)
-        .map_err(|e| format!("原子替换失败: {e}"))?;
+    std::fs::rename(&tmp_path, &prd_path).map_err(|e| format!("原子替换失败: {e}"))?;
 
     Ok(())
 }
