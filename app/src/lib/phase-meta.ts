@@ -26,9 +26,11 @@ export const TOOL_LABELS: Record<string, string> = {
   weekly: "工作周报",
   data: "数据洞察",
   interview: "调研访谈",
+  illustration: "流程图配图",
   knowledge: "知识库",
   persona: "产品分身",
   "design-spec": "设计规范",
+  doctor: "诊断中心",
 }
 
 export interface PhaseMeta {

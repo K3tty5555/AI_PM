@@ -1,12 +1,12 @@
+use crate::commands::config::{read_config_internal, Backend};
+use crate::commands::stream::ChatMessage;
+use crate::state::AppState;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
 use tauri::{AppHandle, Emitter, State};
-use crate::state::AppState;
-use crate::commands::config::{read_config_internal, Backend};
-use crate::commands::stream::ChatMessage;
 
 // C1: Allowlist of valid tool names — prevents path traversal via tool_name
 const VALID_TOOLS: &[&str] = &[
@@ -16,6 +16,8 @@ const VALID_TOOLS: &[&str] = &[
     "ai-pm-interview",
     "ai-pm-persona",
     "ai-pm-knowledge",
+    "ai-pm-design-spec",
+    "ai-pm-driver",
 ];
 
 #[derive(Debug, Deserialize)]
@@ -41,69 +43,103 @@ pub async fn run_tool(
     // C1: Reject unknown tool names before any path operations
     if !VALID_TOOLS.contains(&args.tool_name.as_str()) {
         let msg = format!("未知工具：{}", args.tool_name);
-        let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
+        let _ = app.emit(
+            "stream_error",
+            serde_json::json!({ "streamKey": &stream_key, "message": &msg }),
+        );
         return Err(msg);
     }
 
     // Load skill from bundled resources — I1: use shared load_skill (reads all sub-files)
-    let skills_root = crate::commands::stream::resolve_skills_root(&app)
-        .map_err(|e| {
-            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
-            e
-        })?;
+    let skills_root = crate::commands::stream::resolve_skills_root(&app).map_err(|e| {
+        let _ = app.emit(
+            "stream_error",
+            serde_json::json!({ "streamKey": &stream_key, "message": &e }),
+        );
+        e
+    })?;
 
     // I1: Replace manual SKILL.md read with shared load_skill that also loads sub-files.
     // I3: map_err emits stream_error before returning, satisfying Fix I3.
     let skill_content = crate::commands::stream::load_skill(&skills_root, &args.tool_name)
         .map_err(|e| {
-            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
+            let _ = app.emit(
+                "stream_error",
+                serde_json::json!({ "streamKey": &stream_key, "message": &e }),
+            );
             e
         })?;
 
     // Read config early — needed to determine file handling strategy
-    let config = read_config_internal(&state.config_dir)
-        .ok_or_else(|| {
-            let msg = "未配置 AI 后端 — 请前往「设置」页面完成配置后重试。".to_string();
-            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
-            msg
-        })?;
+    let config = read_config_internal(&state.config_dir).ok_or_else(|| {
+        let msg = "未配置 AI 后端 — 请前往「设置」页面完成配置后重试。".to_string();
+        let _ = app.emit(
+            "stream_error",
+            serde_json::json!({ "streamKey": &stream_key, "message": &msg }),
+        );
+        msg
+    })?;
 
     // If a file is attached, read it and append to user_input
     let user_input_full = if let Some(fpath) = &args.file_path {
         // C2: Canonicalize and verify path is under projects_dir
-        let canonical = std::fs::canonicalize(fpath)
-            .map_err(|e| {
-                let msg = format!("无法解析文件路径 {}: {}", fpath, e);
-                let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
-                msg
-            })?;
+        let canonical = std::fs::canonicalize(fpath).map_err(|e| {
+            let msg = format!("无法解析文件路径 {}: {}", fpath, e);
+            let _ = app.emit(
+                "stream_error",
+                serde_json::json!({ "streamKey": &stream_key, "message": &msg }),
+            );
+            msg
+        })?;
 
         // Read-only access: allow any path (user may upload templates from Desktop, Downloads, etc.)
         // Only write operations (not in this function) should enforce projects_dir restriction.
         if !canonical.is_file() {
             let msg = format!("文件不存在：{}", fpath);
-            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
+            let _ = app.emit(
+                "stream_error",
+                serde_json::json!({ "streamKey": &stream_key, "message": &msg }),
+            );
             return Err(msg);
         }
 
         // File size limit (10MB)
         let file_size = canonical.metadata().map(|m| m.len()).unwrap_or(0);
         if file_size > 10 * 1024 * 1024 {
-            let msg = format!("文件过大（{:.1}MB），上限 10MB", file_size as f64 / 1024.0 / 1024.0);
-            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
+            let msg = format!(
+                "文件过大（{:.1}MB），上限 10MB",
+                file_size as f64 / 1024.0 / 1024.0
+            );
+            let _ = app.emit(
+                "stream_error",
+                serde_json::json!({ "streamKey": &stream_key, "message": &msg }),
+            );
             return Err(msg);
         }
 
         // Block dotfiles (security: prevent reading ~/.ssh, ~/.env, etc.)
-        if canonical.file_name().and_then(|n| n.to_str()).map(|n| n.starts_with('.')).unwrap_or(false)
-            || canonical.components().any(|c| c.as_os_str().to_str().map(|s| s.starts_with('.')).unwrap_or(false))
+        if canonical
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.starts_with('.'))
+            .unwrap_or(false)
+            || canonical.components().any(|c| {
+                c.as_os_str()
+                    .to_str()
+                    .map(|s| s.starts_with('.'))
+                    .unwrap_or(false)
+            })
         {
             let msg = "不支持读取隐藏文件或隐藏目录中的文件".to_string();
-            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
+            let _ = app.emit(
+                "stream_error",
+                serde_json::json!({ "streamKey": &stream_key, "message": &msg }),
+            );
             return Err(msg);
         }
 
-        let is_excel = canonical.extension()
+        let is_excel = canonical
+            .extension()
             .and_then(|e| e.to_str())
             .map(|e| matches!(e.to_lowercase().as_str(), "xlsx" | "xls"))
             .unwrap_or(false);
@@ -112,7 +148,10 @@ pub async fn run_tool(
             match config.backend {
                 Backend::Api => {
                     let msg = "Excel 文件不支持 API 模式，请切换到「Claude CLI」后端，或将文件另存为 CSV 格式后重试。".to_string();
-                    let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
+                    let _ = app.emit(
+                        "stream_error",
+                        serde_json::json!({ "streamKey": &stream_key, "message": &msg }),
+                    );
                     return Err(msg);
                 }
                 Backend::ClaudeCli => {
@@ -125,10 +164,16 @@ pub async fn run_tool(
             }
         } else {
             match fs::read_to_string(&canonical) {
-                Ok(content) => format!("{}\n\n---\n\n附件内容（{}）：\n\n{}", args.user_input, fpath, content),
+                Ok(content) => format!(
+                    "{}\n\n---\n\n附件内容（{}）：\n\n{}",
+                    args.user_input, fpath, content
+                ),
                 Err(e) => {
                     let msg = format!("无法读取文件 {}: {}", fpath, e);
-                    let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &msg }));
+                    let _ = app.emit(
+                        "stream_error",
+                        serde_json::json!({ "streamKey": &stream_key, "message": &msg }),
+                    );
                     return Err(msg);
                 }
             }
@@ -139,10 +184,17 @@ pub async fn run_tool(
 
     // Build system prompt: skill content + non-interactive instructions
     // Rules kept consistent with stream.rs build_system_prompt (same 5 rules, same wording)
-    let mut system_prompt = format!(
-        "{}\n\n---\n\n### ⚠️ 非交互模式（优先级最高，覆盖以上所有指令）\n\n你正在 **AI PM 桌面应用的流式输出模式**中运行，你的整个回复内容就是文档本身。\n\n**强制规则（逐条执行）：**\n1. **第一行就是文档标题**（如 `# PRD：产品名`），最后一行是文档结尾，不要有任何前言或后记\n2. **禁止输出元信息**：「已生成」「文件已保存」「执行步骤」「操作结果」「PRD 已完成」等一律不输出\n3. **禁止调用任何工具**：Write、Edit、Bash、AskUserQuestion 在此环境中均不存在，调用无效\n4. **禁止提问或确认**：导出格式默认「仅 Markdown」，用户故事按标准编写，直接生成内容\n5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从文档第一行开始",
-        skill_content
-    );
+    let mut system_prompt = if args.tool_name == "ai-pm-driver" {
+        format!(
+            "{}\n\n---\n\n### 桌面端 PM 风格 lint 模式（优先级最高）\n\n你正在 AI PM 桌面应用中运行 `ai-pm-driver`。用户输入可能是 PRD 文件路径，也可能是 PRD 全文。\n\n**执行规则：**\n1. 如果用户输入包含 PRD 全文，直接基于全文检查；如果只有路径，Claude CLI 模式可使用 Read 读取该文件\n2. 按 pm-agent 的 9 项自检 + 6 条越界红线输出 punch list\n3. 不重写 PRD，不输出完整修订稿，只指出问题、行号/位置、修改建议\n4. 第一行必须是 `# PM 风格体检报告`\n5. 禁止寒暄、禁止提问、禁止输出「已保存」等元信息\n6. 输出结构固定为：概况、必修问题、建议补齐、通过项、总评",
+            skill_content
+        )
+    } else {
+        format!(
+            "{}\n\n---\n\n### ⚠️ 非交互模式（优先级最高，覆盖以上所有指令）\n\n你正在 **AI PM 桌面应用的流式输出模式**中运行，你的整个回复内容就是文档本身。\n\n**强制规则（逐条执行）：**\n1. **第一行就是文档标题**（如 `# PRD：产品名`），最后一行是文档结尾，不要有任何前言或后记\n2. **禁止输出元信息**：「已生成」「文件已保存」「执行步骤」「操作结果」「PRD 已完成」等一律不输出\n3. **禁止调用任何工具**：Write、Edit、Bash、AskUserQuestion 在此环境中均不存在，调用无效\n4. **禁止提问或确认**：导出格式默认「仅 Markdown」，用户故事按标准编写，直接生成内容\n5. **禁止过渡语句**：不要输出「好的我来生成」「首先我会」等，直接从文档第一行开始",
+            skill_content
+        )
+    };
 
     // Inject mode-specific instructions for data tool
     if args.tool_name == "ai-pm-data" {
@@ -157,10 +209,19 @@ pub async fn run_tool(
         }
     }
 
+    if args.tool_name == "ai-pm-driver" {
+        let instinct_prompt = crate::commands::instincts::active_instinct_prompt("review");
+        if !instinct_prompt.is_empty() {
+            system_prompt.push_str(&instinct_prompt);
+        }
+    }
+
     // Inject active PRD style for weekly and priority tools (persona carries over to tool outputs)
     if args.tool_name == "ai-pm-weekly" || args.tool_name == "ai-pm-priority" {
         let templates_base = state.templates_base();
-        if let Some(style) = crate::commands::templates::load_active_prd_style(&templates_base, None) {
+        if let Some(style) =
+            crate::commands::templates::load_active_prd_style(&templates_base, None)
+        {
             system_prompt.push_str(&format!("\n\n---\n\n{}", style));
         }
     }
@@ -168,22 +229,34 @@ pub async fn run_tool(
     let stream_start = Instant::now();
 
     // I2: Compute and create tools_dir BEFORE provider selection so it can be used as work_dir
-    let tools_dir = Path::new(&state.projects_dir).join("tools").join(&args.tool_name);
+    let tools_dir = Path::new(&state.projects_dir)
+        .join("tools")
+        .join(&args.tool_name);
     let _ = fs::create_dir_all(&tools_dir);
     let tools_dir_str = tools_dir.to_string_lossy().to_string();
 
     let provider: Box<dyn crate::providers::AiProvider> = match config.backend {
         Backend::ClaudeCli => Box::new(crate::providers::claude_cli::ClaudeCliProvider {
-            work_dir: tools_dir_str,  // I2: use tools_dir as work_dir, not projects_dir
+            work_dir: tools_dir_str, // I2: use tools_dir as work_dir, not projects_dir
         }),
         Backend::Api => {
-            let base_url = config.base_url.unwrap_or_else(|| "https://api.anthropic.com".to_string());
+            let base_url = config
+                .base_url
+                .unwrap_or_else(|| "https://api.anthropic.com".to_string());
             let api_key = config.api_key.unwrap_or_default();
             let model = config.model.clone();
             if crate::commands::config::is_anthropic(&base_url, &model) {
-                Box::new(crate::providers::anthropic::AnthropicProvider { api_key, base_url, model })
+                Box::new(crate::providers::anthropic::AnthropicProvider {
+                    api_key,
+                    base_url,
+                    model,
+                })
             } else {
-                Box::new(crate::providers::openai::OpenAIProvider { api_key, base_url, model })
+                Box::new(crate::providers::openai::OpenAIProvider {
+                    api_key,
+                    base_url,
+                    model,
+                })
             }
         }
     };
@@ -193,7 +266,10 @@ pub async fn run_tool(
         content: user_input_full,
     }];
 
-    match provider.stream(&system_prompt, &messages, &app, &stream_key).await {
+    match provider
+        .stream(&system_prompt, &messages, &app, &stream_key)
+        .await
+    {
         Ok(result) => {
             let duration_ms = stream_start.elapsed().as_millis() as u64;
 
@@ -210,11 +286,16 @@ pub async fn run_tool(
                     result.output_tokens.unwrap_or(0),
                     duration_ms,
                 );
-                (tools_dir.join(&filename), format!("{}{}", frontmatter, result.full_text))
+                (
+                    tools_dir.join(&filename),
+                    format!("{}{}", frontmatter, result.full_text),
+                )
             } else if args.tool_name == "ai-pm-priority" {
                 let now = chrono::Local::now();
                 // count is passed from frontend via mode field as "priority:N"
-                let count: u64 = args.mode.as_deref()
+                let count: u64 = args
+                    .mode
+                    .as_deref()
                     .and_then(|m| m.strip_prefix("priority:"))
                     .and_then(|n| n.parse().ok())
                     .unwrap_or(0);
@@ -227,7 +308,10 @@ pub async fn run_tool(
                     result.output_tokens.unwrap_or(0),
                     duration_ms,
                 );
-                (tools_dir.join(&filename), format!("{}{}", frontmatter, result.full_text))
+                (
+                    tools_dir.join(&filename),
+                    format!("{}{}", frontmatter, result.full_text),
+                )
             } else {
                 (tools_dir.join("output.md"), result.full_text.clone())
             };
@@ -244,14 +328,18 @@ pub async fn run_tool(
                             "SELECT output_dir FROM projects WHERE id = ?1",
                             rusqlite::params![pid],
                             |row| row.get(0),
-                        ).ok()
+                        )
+                        .ok()
                     })
                 };
                 if let Some(output_dir) = project_output_dir {
                     let context_dir = Path::new(&output_dir).join("context");
                     let _ = fs::create_dir_all(&context_dir);
                     // Short name: strip "ai-pm-" prefix
-                    let short_name = args.tool_name.strip_prefix("ai-pm-").unwrap_or(&args.tool_name);
+                    let short_name = args
+                        .tool_name
+                        .strip_prefix("ai-pm-")
+                        .unwrap_or(&args.tool_name);
                     let date_str = chrono::Local::now().format("%Y-%m-%d").to_string();
                     let context_file = context_dir.join(format!("{}-{}.md", short_name, date_str));
                     let _ = fs::write(&context_file, &result.full_text);
@@ -269,7 +357,10 @@ pub async fn run_tool(
             let _ = app.emit("stream_done", done_payload);
         }
         Err(e) => {
-            let _ = app.emit("stream_error", serde_json::json!({ "streamKey": &stream_key, "message": &e }));
+            let _ = app.emit(
+                "stream_error",
+                serde_json::json!({ "streamKey": &stream_key, "message": &e }),
+            );
         }
     }
 
@@ -300,7 +391,11 @@ pub async fn fetch_url_content(url: String) -> Result<String, String> {
 
     let text = strip_html(html);
     let truncated = if text.chars().count() > 8000 {
-        let cutoff = text.char_indices().nth(8000).map(|(i, _)| i).unwrap_or(text.len());
+        let cutoff = text
+            .char_indices()
+            .nth(8000)
+            .map(|(i, _)| i)
+            .unwrap_or(text.len());
         format!("{}…（内容已截断）", &text[..cutoff])
     } else {
         text
@@ -325,7 +420,9 @@ pub struct WeeklyReportMeta {
 /// Format: "---\nkey: value\n...\n---\n\nbody"
 /// Returns (field_map, body_start_offset). Keys/values are trimmed strings.
 /// split_once(':') splits at first colon only — safe for ISO date values containing colons.
-fn parse_tool_frontmatter(content: &str) -> Option<(std::collections::HashMap<String, String>, usize)> {
+fn parse_tool_frontmatter(
+    content: &str,
+) -> Option<(std::collections::HashMap<String, String>, usize)> {
     if !content.starts_with("---\n") {
         return None;
     }
@@ -357,10 +454,10 @@ fn fm_str(fm: &std::collections::HashMap<String, String>, key: &str) -> String {
 }
 
 #[tauri::command]
-pub fn list_weekly_reports(
-    state: State<'_, AppState>,
-) -> Result<Vec<WeeklyReportMeta>, String> {
-    let tools_dir = Path::new(&state.projects_dir).join("tools").join("ai-pm-weekly");
+pub fn list_weekly_reports(state: State<'_, AppState>) -> Result<Vec<WeeklyReportMeta>, String> {
+    let tools_dir = Path::new(&state.projects_dir)
+        .join("tools")
+        .join("ai-pm-weekly");
     if !tools_dir.exists() {
         return Ok(vec![]);
     }
@@ -400,16 +497,15 @@ pub fn list_weekly_reports(
 }
 
 #[tauri::command]
-pub fn get_weekly_report(
-    state: State<'_, AppState>,
-    filename: String,
-) -> Result<String, String> {
+pub fn get_weekly_report(state: State<'_, AppState>, filename: String) -> Result<String, String> {
     // C1: prevent path traversal
     if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
         return Err("非法文件名".to_string());
     }
     let path = Path::new(&state.projects_dir)
-        .join("tools").join("ai-pm-weekly").join(&filename);
+        .join("tools")
+        .join("ai-pm-weekly")
+        .join(&filename);
     let content = fs::read_to_string(&path).map_err(|e| format!("读取失败：{}", e))?;
     // Strip frontmatter, return body only
     if let Some((_, body_start)) = parse_tool_frontmatter(&content) {
@@ -420,15 +516,14 @@ pub fn get_weekly_report(
 }
 
 #[tauri::command]
-pub fn delete_weekly_report(
-    state: State<'_, AppState>,
-    filename: String,
-) -> Result<(), String> {
+pub fn delete_weekly_report(state: State<'_, AppState>, filename: String) -> Result<(), String> {
     if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
         return Err("非法文件名".to_string());
     }
     let path = Path::new(&state.projects_dir)
-        .join("tools").join("ai-pm-weekly").join(&filename);
+        .join("tools")
+        .join("ai-pm-weekly")
+        .join(&filename);
     fs::remove_file(&path).map_err(|e| format!("删除失败：{}", e))
 }
 
@@ -455,7 +550,9 @@ pub async fn list_priority_reports(
 
     // Run file I/O in blocking thread to avoid blocking the event loop (review #5)
     tokio::task::spawn_blocking(move || {
-        let tools_dir = Path::new(&projects_dir).join("tools").join("ai-pm-priority");
+        let tools_dir = Path::new(&projects_dir)
+            .join("tools")
+            .join("ai-pm-priority");
         if !tools_dir.exists() {
             return Ok(vec![]);
         }
@@ -519,15 +616,14 @@ pub async fn list_priority_reports(
 }
 
 #[tauri::command]
-pub fn get_priority_report(
-    state: State<'_, AppState>,
-    filename: String,
-) -> Result<String, String> {
+pub fn get_priority_report(state: State<'_, AppState>, filename: String) -> Result<String, String> {
     if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
         return Err("非法文件名".to_string());
     }
     let path = Path::new(&state.projects_dir)
-        .join("tools").join("ai-pm-priority").join(&filename);
+        .join("tools")
+        .join("ai-pm-priority")
+        .join(&filename);
     let content = fs::read_to_string(&path).map_err(|e| format!("读取失败：{}", e))?;
     if let Some((_, body_start)) = parse_tool_frontmatter(&content) {
         Ok(content[body_start..].to_string())
@@ -537,15 +633,14 @@ pub fn get_priority_report(
 }
 
 #[tauri::command]
-pub fn delete_priority_report(
-    state: State<'_, AppState>,
-    filename: String,
-) -> Result<(), String> {
+pub fn delete_priority_report(state: State<'_, AppState>, filename: String) -> Result<(), String> {
     if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
         return Err("非法文件名".to_string());
     }
     let path = Path::new(&state.projects_dir)
-        .join("tools").join("ai-pm-priority").join(&filename);
+        .join("tools")
+        .join("ai-pm-priority")
+        .join(&filename);
     fs::remove_file(&path).map_err(|e| format!("删除失败：{}", e))
 }
 
@@ -583,7 +678,13 @@ pub async fn analyze_screenshot(
         return Err("图片文件超过 10MB 限制".to_string());
     }
 
-    let valid_modes = ["describe", "ocr", "ui-review", "chart-data", "object-detect"];
+    let valid_modes = [
+        "describe",
+        "ocr",
+        "ui-review",
+        "chart-data",
+        "object-detect",
+    ];
     if !valid_modes.contains(&args.mode.as_str()) {
         return Err(format!("不支持的分析模式: {}", args.mode));
     }
@@ -615,10 +716,7 @@ pub async fn analyze_screenshot(
 }
 
 #[tauri::command]
-pub async fn capture_url_screenshot(
-    url: String,
-    output_dir: String,
-) -> Result<String, String> {
+pub async fn capture_url_screenshot(url: String, output_dir: String) -> Result<String, String> {
     // Security: only allow http/https
     if !url.starts_with("http://") && !url.starts_with("https://") {
         return Err("仅支持 http/https URL".to_string());
@@ -677,7 +775,10 @@ fn strip_html(html: String) -> String {
         if i + pat_chars.len() > lower.len() {
             return false;
         }
-        lower[i..i + pat_chars.len()].iter().zip(pat_chars.iter()).all(|(a, b)| a == b)
+        lower[i..i + pat_chars.len()]
+            .iter()
+            .zip(pat_chars.iter())
+            .all(|(a, b)| a == b)
     };
 
     while i < len {

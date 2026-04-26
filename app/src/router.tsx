@@ -19,6 +19,8 @@ import { ToolPersonaPage }   from "./pages/tools/Persona"
 import { ToolDataPage }      from "./pages/tools/Data"
 import { ToolInterviewPage } from "./pages/tools/Interview"
 import { ToolDesignSpecPage } from "./pages/tools/DesignSpec"
+import { ToolIllustrationPage } from "./pages/tools/Illustration"
+import { ToolDoctorPage } from "./pages/tools/Doctor"
 import { ToolPlazaPage } from "./pages/tools/Plaza"
 // Wave 4 — 图像创作
 import { BaoyuImaginePage }            from "./pages/tools/plaza/BaoyuImaginePage"
@@ -73,6 +75,8 @@ export const router = createBrowserRouter([
       { path: "/tools/data",              element: <ToolDataPage /> },
       { path: "/tools/interview",         element: <ToolInterviewPage /> },
       { path: "/tools/design-spec",       element: <ToolDesignSpecPage /> },
+      { path: "/tools/illustration",      element: <ToolIllustrationPage /> },
+      { path: "/tools/doctor",            element: <ToolDoctorPage /> },
       { path: "/tools/plaza",             element: <ToolPlazaPage /> },
       // Wave 4 — 图像创作
       { path: "/tools/plaza/baoyu-imagine",             element: <BaoyuImaginePage /> },
