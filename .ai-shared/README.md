@@ -1,12 +1,13 @@
 # AI 共享桥接层
 
-本目录用于让 Claude Code 与 Codex 共用项目上下文。
+本目录用于让 Claude Code 与 Codex 共用项目上下文。当前项目采用 Claude 与 Codex 并重的协作模式，二者都可以承担主要开发与产品工作流。
 
-这里的文件是导航和索引，不是主事实源。主事实源仍在：
+这里的文件是导航、索引和待合并材料，不替代原始资产。已沉淀历史上下文主要来自：
 
 - Claude 项目级 memory：通过 `CLAUDE_MEMORY_DIR` 指向本机 Claude 项目 memory；未配置时脚本会按当前仓库路径和 `$HOME/.claude/projects/` 自动探测
 - Claude skills：`.claude/skills/`
 - Claude agents：`.claude/agents/`
+- Codex memory：作为并列工作上下文、摘要或待合并材料使用
 
 ## 文件说明
 
@@ -15,7 +16,7 @@
 | `memory-index.md` | Claude 项目 memory 的索引 |
 | `skill-index.md` | Claude skills 的索引 |
 | `agent-index.md` | Claude agents 的索引 |
-| `pending-memory/` | Codex 新沉淀的待合并 memory |
+| `pending-memory/` | Codex 新沉淀的待合并 memory 或协作规则变更 |
 
 ## 生成脚本
 
