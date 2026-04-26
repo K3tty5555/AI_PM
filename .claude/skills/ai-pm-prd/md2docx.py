@@ -478,11 +478,16 @@ def convert(prd_path, output_path, manifest_path=None, recipe_config=None):
         print(f'  配方字体: {body_font} ({body_size}pt)')
 
     # 加载截图映射 label → 本地路径
+    # screenshot 路径相对于 prototype 目录解析（即 manifest_path 的 parent.parent，
+    # 因 manifest 约定在 <prototype>/screenshots/manifest.json）。
+    # 这样支持单项目多个原型目录（如 06-prototype 与 06-prototype-v1.3 并存）。
     screenshot_map = {}
     if manifest_path and Path(manifest_path).exists():
-        manifest = json.loads(Path(manifest_path).read_text())
+        manifest_p = Path(manifest_path).resolve()
+        manifest = json.loads(manifest_p.read_text())
+        prototype_dir = manifest_p.parent.parent
         for s in manifest['sections']:
-            img_path = project_dir / '06-prototype' / s['screenshot']
+            img_path = (prototype_dir / s['screenshot']).resolve()
             if img_path.exists():
                 screenshot_map[s['label']] = str(img_path)
                 print(f'  截图映射: [{s["label"]}原型] → {img_path.name}')
