@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI_PM TERMINAL v2.4.0 · K3TTY_WU</title>
+<title>AI_PM TERMINAL v2.4.3 · K3TTY_WU</title>
 <style>
 /* ===== CSS VARIABLES — EDITORIAL ENDFIELD ===== */
 :root {
@@ -783,7 +783,7 @@ body {
     <span class="brand-slash">//</span>
     <div>
       <span class="brand-name">AI_PM</span>
-      <span class="brand-ver"> v2.4.0</span>
+      <span class="brand-ver"> v2.4.3</span>
     </div>
   </a>
 
@@ -820,29 +820,29 @@ body {
     <div class="hero-info">
       <div class="tag-block"><span>CLAUDE CODE 技能集 + 桌面客户端</span></div>
       <p class="hero-subtitle">
-        描述你想做的产品，AI 帮你研究市场、拆功能、写 PRD、做原型，<br>
-        再从六个角色的视角帮你找漏洞。产出文档可直接导入飞书。<br>
+        描述你想做的产品，AI 帮你速评需求、研究市场、拆功能、写 PRD，<br>
+        再做埋点、原型、六角色评审和项目复盘。PRD 支持评分、对比和 AI 插图。<br>
         两种使用方式：Claude Code 命令行 或 桌面客户端 App。
       </p>
 <a href="#quickstart" class="hero-cta ripple-host">
         开始使用 <span style="font-size:13px">▶</span>
       </a>
       <div class="hero-features">
-        <span class="feat-tag">六角色并行评审</span>
-        <span class="feat-tag">PRD 导入飞书</span>
+        <span class="feat-tag">PM Agent 守门</span>
+        <span class="feat-tag">PRD 评分/对比</span>
+        <span class="feat-tag">AI 插图</span>
         <span class="feat-tag">原型设备模拟</span>
-        <span class="feat-tag">先聊聊模式</span>
-        <span class="feat-tag">CLI 网页搜索</span>
-        <span class="feat-tag">暗色模式</span>
+        <span class="feat-tag">功能广场</span>
+        <span class="feat-tag">Claude/Codex 协作桥</span>
       </div>
     </div>
     <div class="hero-stats">
       <div class="stat-block" id="sb-0">
-        <span class="stat-number" data-to="15">0</span>
+        <span class="stat-number" data-to="20">0</span>
         <span class="stat-label">SKILLS</span>
       </div>
       <div class="stat-block" id="sb-1">
-        <span class="stat-number" data-to="7">0</span>
+        <span class="stat-number" data-to="10">0</span>
         <span class="stat-label">PHASES</span>
       </div>
       <div class="stat-block" id="sb-2">
@@ -943,14 +943,14 @@ body {
         </div>
       </div>
       <p style="font-size:12px; color:var(--text-muted); margin-top:16px; line-height:1.5;">
-        客户端独有：项目 Dashboard · 故事拖拽排序 · 原型设备模拟 · PRD 目录导航 · 先聊聊模式 · 暗色主题 · 快捷键
+        客户端独有：项目 Dashboard · 故事拖拽排序 · PRD 评分/对比/助手 · AI 插图 · 功能广场 · 原型设备模拟 · 暗色主题
       </p>
     </div>
 
     <div class="qs-footer-row">
       <div class="qs-diamond"></div>
       <p class="qs-note">
-        两种方式功能互补：Claude Code 版工具链更强（网页搜索、脚本执行、多 Agent），客户端版体验更好（可视化、拖拽、设备预览）
+        两种方式功能互补：Claude Code 版以 skills、PM agent 和 memory 为主，客户端版提供可视化阶段流、PRD 工作台和功能广场；Codex 通过共享索引读取同一套上下文。
       </p>
     </div>
   </div>
@@ -987,7 +987,7 @@ body {
           <p class="card-desc">不知道从哪里开始就从这里开始。告诉 AI 你想做什么，它会一步步引导你把需求、竞品、PRD、原型都跑完。中途可以随时暂停，下次接着来。</p>
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
-            <div class="card-example-code">/ai-pm "帮年轻人记账的小程序"<br>加急 "帮年轻人记账的小程序"    （跳过追问，直跑到原型）<br>/ai-pm --team "企业级 CRM 系统"<br>/ai-pm continue<br>/ai-pm list</div>
+            <div class="card-example-code">/ai-pm "帮年轻人记账的小程序"<br>/ai-pm office-hours "先帮我判断这个方向值不值得做"<br>/ai-pm --team "企业级 CRM 系统"<br>/ai-pm continue<br>/ai-pm list</div>
           </div>
           <div class="card-footer">
             <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
@@ -1068,7 +1068,7 @@ body {
             <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
           </div>
           <span class="card-name">PRD GENERATOR</span>
-          <p class="card-desc">把前面分析的结论整合成一份完整 PRD。DOCX 格式可以直接导入飞书变成可编辑云文档。产出：05-prd/05-PRD-v1.0.md</p>
+          <p class="card-desc">把前面分析的结论整合成一份完整 PRD。默认输出 Markdown，按需导出 DOCX/PDF/分享页；客户端可评分、对比版本、让 AI 插图。产出：05-prd/05-PRD-v1.0.md</p>
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
             <div class="card-example-code">/ai-pm-prd<br>/ai-pm-prd --export=pdf<br>/ai-pm-prd --export=docx    （导飞书用这个）<br>/ai-pm-prd --export=all</div>
@@ -1089,7 +1089,7 @@ body {
             <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
           </div>
           <span class="card-name">PROTOTYPE GENERATOR</span>
-          <p class="card-desc">根据 PRD 生成一个能点击的 HTML 原型。首次使用时选设计规范（公司规范 / AI 情境定制 / 主流组件库），项目内记住偏好。双击 index.html 直接预览。</p>
+          <p class="card-desc">根据 PRD 生成一个能点击的 HTML 原型。可读取设计规范或既有代码的设计指纹，生成后做完整性审计。双击 index.html 直接预览。</p>
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
             <div class="card-example-code">/ai-pm-prototype</div>
@@ -1114,6 +1114,27 @@ body {
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
             <div class="card-example-code">/ai-pm-review<br>/ai-pm-review --round=2    （第二轮修改后再评）</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-core">CORE</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="7">
+        <div class="card-body" style="--prog:84%">
+          <div class="rarity-stripe stripe-gold"></div>
+          <div class="card-top">
+            <span class="card-command">/ai-pm-driver</span>
+            <span class="card-rarity rarity-p0">P0 ◆◆◆</span>
+          </div>
+          <span class="card-name">PM QUALITY GATE</span>
+          <p class="card-desc">评审前的产品经理守门。按 KettyWu 风格检查 PRD 的目标、边界、指标、表达和可落地性，先把硬伤挡在评审会前。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/ai-pm-driver 05-prd/05-PRD-v1.0.md<br>/ai-pm driver "检查这份 PRD"</div>
           </div>
           <div class="card-footer">
             <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
@@ -1239,14 +1260,77 @@ body {
         <div class="card-body" style="--prog:78%">
           <div class="rarity-stripe stripe-teal"></div>
           <div class="card-top">
-            <span class="card-command">/ai-pm pptx</span>
+            <span class="card-command">工具广场 / PPT</span>
             <span class="card-rarity rarity-p1">P1 ◆◆</span>
           </div>
           <span class="card-name">PPT GENERATOR</span>
-          <p class="card-desc">从 PRD 自动生成演示文稿。18 套配色方案按行业匹配，5 种页面类型自动编排，大纲可手动调整后一键输出 .pptx 文件。</p>
+          <p class="card-desc">客户端功能广场里的 PPT 生成能力。从 PRD 或大纲生成演示文稿，配色和页面类型自动编排，大纲可调整后一键输出 .pptx 文件。</p>
           <div class="card-example">
             <div class="card-example-label">// USAGE</div>
-            <div class="card-example-code">/ai-pm pptx<br>/ai-pm-pptx "PRD文件路径"</div>
+            <div class="card-example-code">客户端：功能广场 → PPT 生成<br>输入 PRD 文件路径或粘贴大纲</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-ext">EXT</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="6">
+        <div class="card-body" style="--prog:76%">
+          <div class="rarity-stripe stripe-teal"></div>
+          <div class="card-top">
+            <span class="card-command">/pm-gap-research</span>
+            <span class="card-rarity rarity-p1">P1 ◆◆</span>
+          </div>
+          <span class="card-name">GAP RESEARCH</span>
+          <p class="card-desc">围绕机会缺口做研究，不只罗列竞品，而是找目标用户、供给能力、体验断点和可切入空间之间的差距。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/pm-gap-research "AI 教学助手市场机会"</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-ext">EXT</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="7">
+        <div class="card-body" style="--prog:80%">
+          <div class="rarity-stripe stripe-teal"></div>
+          <div class="card-top">
+            <span class="card-command">/multi-perspective-review</span>
+            <span class="card-rarity rarity-p1">P1 ◆◆</span>
+          </div>
+          <span class="card-name">MULTI-PERSPECTIVE REVIEW</span>
+          <p class="card-desc">对方案、文档或页面做多视角审查。适合在正式需求评审之外，快速补齐业务、体验、技术和风险视角。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/multi-perspective-review "评审这份方案"</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-ext">EXT</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="skill-card" data-delay="8">
+        <div class="card-body" style="--prog:74%">
+          <div class="rarity-stripe stripe-teal"></div>
+          <div class="card-top">
+            <span class="card-command">/pdf-skill</span>
+            <span class="card-rarity rarity-p1">P1 ◆◆</span>
+          </div>
+          <span class="card-name">PDF WORKFLOW</span>
+          <p class="card-desc">围绕 PDF 生成、检查和交付的辅助技能。适合把 PRD、报告或分享稿整理成可交付文件。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/pdf-skill "把这份 PRD 导出为 PDF"</div>
           </div>
           <div class="card-footer">
             <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
@@ -1326,6 +1410,27 @@ body {
         </div>
       </div>
 
+      <div class="skill-card" data-delay="3">
+        <div class="card-body" style="--prog:65%">
+          <div class="rarity-stripe stripe-gray"></div>
+          <div class="card-top">
+            <span class="card-command">/tutorial-center-update</span>
+            <span class="card-rarity rarity-p2">P2 ◆</span>
+          </div>
+          <span class="card-name">TUTORIAL CENTER UPDATE</span>
+          <p class="card-desc">维护这个离线教程中心。按现有 HTML 结构增量更新内容、命令和能力说明，不整体重写页面。</p>
+          <div class="card-example">
+            <div class="card-example-label">// USAGE</div>
+            <div class="card-example-code">/tutorial-center-update "同步最新项目能力"</div>
+          </div>
+          <div class="card-footer">
+            <button class="deploy-btn ripple-host" onclick="deployCard(event,this)">▶ 复制命令</button>
+            <span class="card-type-tag tag-cfg">CFG</span>
+          </div>
+          <div class="card-progress"><div class="card-progress-fill"></div></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -1338,7 +1443,7 @@ body {
     <div class="sec-label-block"><span class="sec-sl">//</span><span class="sec-en">OPERATION FLOW</span></div>
     <h2 class="sec-cn">工作流程</h2>
   </div>
-  <p class="workflow-subtitle sec-reveal" id="sr-wf">点击节点查看阶段详情</p>
+  <p class="workflow-subtitle sec-reveal" id="sr-wf">点击节点查看阶段详情；正式流程前可先用 Office Hours 做需求速评</p>
 
   <div class="timeline-wrap-outer">
   <div class="timeline-wrap sec-reveal">
@@ -1466,6 +1571,29 @@ body {
         </svg>
       </div>
       <div class="tl-label">
+        <span class="tl-name">埋点设计</span>
+        <span class="tl-cmd">/ai-pm data metrics</span>
+        <span class="tl-info">// 指标和事件设计</span>
+      </div>
+      <div class="node-detail">
+        <div class="node-detail-inner">
+          <div class="nd-row"><span class="nd-label">阶段</span>设计核心指标、事件和埋点口径</div>
+          <div class="nd-row"><span class="nd-label">产物</span>09-analytics-requirement.md</div>
+          <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm data metrics',this)">/ai-pm data metrics</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+    <div class="tl-node">
+      <div class="node-hex">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22"/>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">07</text>
+        </svg>
+      </div>
+      <div class="tl-label">
         <span class="tl-name">原型设计</span>
         <span class="tl-cmd">/ai-pm-prototype</span>
         <span class="tl-info">// 可交互原型</span>
@@ -1485,7 +1613,7 @@ body {
       <div class="node-hex">
         <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
           <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22" stroke="#FFD700" stroke-width="2"/>
-          <text class="hex-label" x="40" y="45" text-anchor="middle">07</text>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">08</text>
         </svg>
       </div>
       <div class="tl-label">
@@ -1498,6 +1626,29 @@ body {
           <div class="nd-row"><span class="nd-label">阶段</span>六角色并行评审</div>
           <div class="nd-row"><span class="nd-label">产物</span>08-review-report-v1.md</div>
           <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm-review',this)">/ai-pm-review</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-connector"><div class="conn-line"></div><div class="conn-arrow"></div></div>
+
+    <div class="tl-node">
+      <div class="node-hex">
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon class="hex-bg" points="40,4 72,22 72,58 40,76 8,58 8,22" stroke="#FFD700" stroke-width="2"/>
+          <text class="hex-label" x="40" y="45" text-anchor="middle">09</text>
+        </svg>
+      </div>
+      <div class="tl-label">
+        <span class="tl-name">项目复盘</span>
+        <span class="tl-cmd">/ai-pm retrospective</span>
+        <span class="tl-info">// 经验沉淀</span>
+      </div>
+      <div class="node-detail">
+        <div class="node-detail-inner">
+          <div class="nd-row"><span class="nd-label">阶段</span>复盘项目过程、决策和可复用经验</div>
+          <div class="nd-row"><span class="nd-label">产物</span>10-retrospective.md</div>
+          <div class="nd-row"><span class="nd-label">技能</span><button class="nd-cmd" onclick="copyText('/ai-pm retrospective',this)">/ai-pm retrospective</button></div>
         </div>
       </div>
     </div>
@@ -1522,7 +1673,7 @@ body {
     <div class="sec-label-block"><span class="sec-sl">//</span><span class="sec-en">DESKTOP CLIENT</span></div>
     <h2 class="sec-cn">桌面客户端</h2>
   </div>
-  <p class="skills-subtitle sec-reveal" id="sr-cl">独立桌面应用，macOS / Windows 双平台，v0.4.0</p>
+  <p class="skills-subtitle sec-reveal" id="sr-cl">独立桌面应用，macOS / Windows 双平台，v0.4.3</p>
 
   <!-- 核心体验 -->
   <span class="client-cat sec-reveal">// 核心体验</span>
@@ -1546,6 +1697,11 @@ body {
       <span class="client-icon">🌙</span>
       <div class="client-name">暗色模式</div>
       <div class="client-desc">深色界面一键切换，护眼同时保持所有功能可用。⌘D 快捷切换。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">🧭</span>
+      <div class="client-name">10 个阶段页</div>
+      <div class="client-desc">需求速评、收集、分析、研究、故事、PRD、埋点、原型、评审、复盘，按项目流转。</div>
     </div>
   </div>
 
@@ -1571,6 +1727,11 @@ body {
       <span class="client-icon">🎚️</span>
       <div class="client-name">动效档位选择</div>
       <div class="client-desc">原型三档动效强度：低·克制（B端）/ 中·平衡（C端）/ 高·丰富（营销页）。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">🧩</span>
+      <div class="client-name">PRD 工作台</div>
+      <div class="client-desc">目录、Mermaid、版本列表、差异对比、PRD 评分、助手面板和 AI 插图集中在同一页。</div>
     </div>
   </div>
 
@@ -1599,6 +1760,31 @@ body {
     </div>
   </div>
 
+  <!-- 功能广场 -->
+  <span class="client-cat sec-reveal">// 功能广场</span>
+  <div class="client-grid sec-reveal">
+    <div class="client-card">
+      <span class="client-icon">🖼️</span>
+      <div class="client-name">图片与视觉</div>
+      <div class="client-desc">AI 文生图、文章封面、配图、信息图、小红书图片、知识漫画、GIF 贴纸和图像分析。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">🎬</span>
+      <div class="client-name">视频与音频</div>
+      <div class="client-desc">AI 视频生成、语音音乐、图片幻灯片和 YouTube 字幕等多媒体工作流。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">📚</span>
+      <div class="client-name">文档与内容</div>
+      <div class="client-desc">PPT、PDF、Word、Excel、翻译、Markdown 美化、微信 HTML、网页转 Markdown。</div>
+    </div>
+    <div class="client-card">
+      <span class="client-icon">📣</span>
+      <div class="client-name">发布工具</div>
+      <div class="client-desc">发布公众号、微博、X 等社媒工具统一放在功能广场，和项目工作流分离。</div>
+    </div>
+  </div>
+
   <!-- CLI 增强 -->
   <span class="client-cat sec-reveal">// CLI 增强</span>
   <div class="client-grid sec-reveal">
@@ -1617,6 +1803,11 @@ body {
       <div class="client-name">三种 AI 后端</div>
       <div class="client-desc">Anthropic API / OpenAI 兼容接口 / Claude CLI，按需选择。</div>
     </div>
+    <div class="client-card">
+      <span class="client-icon">🔄</span>
+      <div class="client-name">AI 共享上下文</div>
+      <div class="client-desc">项目 memory、skills 和 agent 索引可被 Claude 与 Codex 共同读取，降低上下文漂移。</div>
+    </div>
   </div>
 
   <!-- 后端配置提示 -->
@@ -1629,7 +1820,7 @@ body {
   <!-- 下载 CTA -->
   <div class="client-cta sec-reveal">
     <a href="https://github.com/K3tty5555/AI_PM/releases" target="_blank" class="cta-primary ripple-host">
-      DOWNLOAD v0.4.0 <span style="font-size:14px;">↗</span>
+      DOWNLOAD v0.4.3 <span style="font-size:14px;">↗</span>
     </a>
     <a href="https://github.com/K3tty5555/AI_PM" target="_blank" class="cta-secondary">
       VIEW SOURCE <span style="font-size:14px;">↗</span>
@@ -1650,12 +1841,15 @@ body {
     <div>
       <div class="ref-col-label">// 主流程</div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm')"><span class="ref-cmd">/ai-pm</span><span class="ref-desc">完整流程入口</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm office-hours')"><span class="ref-cmd">/ai-pm office-hours</span><span class="ref-desc">需求速评 / 先聊聊</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-analyze')"><span class="ref-cmd">/ai-pm-analyze</span><span class="ref-desc">需求分析</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-research')"><span class="ref-cmd">/ai-pm-research</span><span class="ref-desc">竞品研究</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-story')"><span class="ref-cmd">/ai-pm-story</span><span class="ref-desc">用户故事</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-prd')"><span class="ref-cmd">/ai-pm-prd</span><span class="ref-desc">PRD 生成</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm data metrics')"><span class="ref-cmd">/ai-pm data metrics</span><span class="ref-desc">埋点和指标设计</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-prototype')"><span class="ref-cmd">/ai-pm-prototype</span><span class="ref-desc">原型生成</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-review')"><span class="ref-cmd">/ai-pm-review</span><span class="ref-desc">需求评审（六角色）</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm retrospective')"><span class="ref-cmd">/ai-pm retrospective</span><span class="ref-desc">项目复盘</span><span class="ref-ok">✓ COPIED</span></div>
     </div>
 
     <div>
@@ -1664,6 +1858,9 @@ body {
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-weekly')"><span class="ref-cmd">/ai-pm-weekly</span><span class="ref-desc">工作周报</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-interview')"><span class="ref-cmd">/ai-pm-interview</span><span class="ref-desc">现场访谈</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-data')"><span class="ref-cmd">/ai-pm-data</span><span class="ref-desc">数据洞察</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/ai-pm-driver')"><span class="ref-cmd">/ai-pm-driver</span><span class="ref-desc">PM 风格质量守门</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/pm-gap-research')"><span class="ref-cmd">/pm-gap-research</span><span class="ref-desc">机会缺口研究</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/multi-perspective-review')"><span class="ref-cmd">/multi-perspective-review</span><span class="ref-desc">多视角评审</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-persona')"><span class="ref-cmd">/ai-pm-persona</span><span class="ref-desc">产品分身（风格学习）</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-design-spec')"><span class="ref-cmd">/ai-pm-design-spec</span><span class="ref-desc">设计规范</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-knowledge')"><span class="ref-cmd">/ai-pm-knowledge</span><span class="ref-desc">知识库</span><span class="ref-ok">✓ COPIED</span></div>
@@ -1674,7 +1871,13 @@ body {
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-knowledge add')"><span class="ref-cmd">/ai-pm-knowledge add</span><span class="ref-desc">记录踩坑经验</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-knowledge search')"><span class="ref-cmd">/ai-pm-knowledge search &quot;关键词&quot;</span><span class="ref-desc">搜索知识库</span><span class="ref-ok">✓ COPIED</span></div>
       <div class="ref-row" onclick="refCopy(this, '/ai-pm-knowledge sync')"><span class="ref-cmd">/ai-pm-knowledge sync</span><span class="ref-desc">同步当前项目经验到知识库</span><span class="ref-ok">✓ COPIED</span></div>
-      <div class="ref-row" onclick="refCopy(this, '/tutorial-center-update')"><span class="ref-cmd">/tutorial-center-update</span><span class="ref-desc">重新生成本教程页</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, '/tutorial-center-update')"><span class="ref-cmd">/tutorial-center-update</span><span class="ref-desc">增量更新本教程页</span><span class="ref-ok">✓ COPIED</span></div>
+    </div>
+
+    <div class="ref-section-full">
+      <div class="ref-sub-label">// AI 协作桥</div>
+      <div class="ref-row" onclick="refCopy(this, 'scripts/ai-sync/check-ai-context-drift.sh')"><span class="ref-cmd">scripts/ai-sync/check-ai-context-drift.sh</span><span class="ref-desc">检查 memory / skill / agent 索引是否同步</span><span class="ref-ok">✓ COPIED</span></div>
+      <div class="ref-row" onclick="refCopy(this, 'scripts/ai-sync/sync-claude-memory-to-codex.sh')"><span class="ref-cmd">scripts/ai-sync/sync-claude-memory-to-codex.sh</span><span class="ref-desc">把 Claude 项目 memory 同步成 Codex 可读摘要</span><span class="ref-ok">✓ COPIED</span></div>
     </div>
 
   </div>
@@ -1688,11 +1891,11 @@ body {
     <span>SYSTEM STATUS: <span class="footer-on">ONLINE</span></span>
   </div>
   <div class="footer-mid">
-    <span class="footer-slash">//</span>AI_PM v2.4.0
+    <span class="footer-slash">//</span>AI_PM v2.4.3
   </div>
   <div class="footer-right">
     <div>© 2026 K3TTY_WU</div>
-    <div>最后更新: 2026-03-29 · v0.4.0 PPT 生成 + 截图分析 + 动效档位 + 文案框架集成</div>
+    <div>最后更新: 2026-04-26 · v0.4.3 PM Agent + AI 协作桥 + 功能广场 + PRD 版本/评分/插图能力同步</div>
   </div>
 </footer>
 

@@ -75,7 +75,7 @@ output/projects/教育超级智能体/05-prd/
 
 ## 工程依赖
 
-- **代码仓**：`/Users/xiaowu/workplace/xunfei_CODE/DEVTOOLS`
+- **代码仓**：`<YOUR_CODEBASE_ROOT>/DEVTOOLS`
 - **题库新接口**（5/15 前对齐）：试卷库列卷 + 取卷题目
 - **精准教学 3.0 接口**（5/10 前对齐）：学情查询 + 分组管理 + AI 精准练作业布置 —— 对接人黄刘军
 - **作业本接口**（5/15 前对齐）：组卷写入 vs 智能组卷写入路径区分

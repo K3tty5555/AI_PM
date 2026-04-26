@@ -20,7 +20,7 @@
 **Step 1: 确认目录存在**
 
 ```bash
-ls /Users/xiaowu/workplace/AI_PM/templates/
+ls <AI_PM_ROOT>/templates/
 ```
 
 预期：看到 `prd-styles/` 等现有目录（如不存在 presets 子目录则下一步创建）
@@ -61,10 +61,10 @@ Vue 3 + TypeScript + Vite + ElementPlus
 - 仅单校管理员/考试管理员可创建考试，教师不参与
 
 ## 代码仓路径（供设计指纹提取）
-精准教学：/Users/xiaowu/workplace/xunfei_CODE/web-precision-agent
-题目设计：/Users/xiaowu/workplace/xunfei_CODE/web-pt-dj-front
-容器化：/Users/xiaowu/workplace/xunfei_CODE/zx-container-web
-设计工作台：/Users/xiaowu/workplace/xunfei_CODE/designer-workbench
+精准教学：<YOUR_CODEBASE_ROOT>/web-precision-agent
+题目设计：<YOUR_CODEBASE_ROOT>/web-pt-dj-front
+容器化：<YOUR_CODEBASE_ROOT>/zx-container-web
+设计工作台：<YOUR_CODEBASE_ROOT>/designer-workbench
 ```
 
 **Step 3: 验证写入成功**
@@ -74,7 +74,7 @@ Vue 3 + TypeScript + Vite + ElementPlus
 **Step 4: Commit**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add templates/presets/智学网B端.md
 git commit -m "feat(memory): add 智学网B端 preset template"
 ```
@@ -767,7 +767,7 @@ git commit -m "feat(prototype): add --codebase design fingerprint extraction and
 
 ### 模拟验收 B：设计指纹流程
 
-1. 执行 `/ai-pm prototype --codebase=/Users/xiaowu/workplace/xunfei_CODE/web-precision-agent`
+1. 执行 `/ai-pm prototype --codebase=<YOUR_CODEBASE_ROOT>/web-precision-agent`
    - 预期：先校验路径合法性（绝对路径 + home 目录内）
    - 预期：运行 4 组 bash 命令提取信息（含 `-maxdepth` 参数）
    - 预期：生成 `_memory/layout-shell.md`，含 `#05C1AE` 等真实色值，`status: ok`

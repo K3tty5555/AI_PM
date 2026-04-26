@@ -29,7 +29,9 @@ Vue 3 + TypeScript + Vite + ElementPlus
 - 仅单校管理员/考试管理员可创建考试，教师不参与
 
 ## 代码仓路径（供设计指纹提取）
-精准教学：/Users/xiaowu/workplace/xunfei_CODE/web-precision-agent
-题目设计：/Users/xiaowu/workplace/xunfei_CODE/web-pt-dj-front
-容器化：/Users/xiaowu/workplace/xunfei_CODE/zx-container-web
-设计工作台：/Users/xiaowu/workplace/xunfei_CODE/designer-workbench
+以下路径需要在本机按实际代码仓位置配置，不随公开仓库固定：
+
+精准教学：<your-codebase-path>/web-precision-agent
+题目设计：<your-codebase-path>/web-pt-dj-front
+容器化：<your-codebase-path>/zx-container-web
+设计工作台：<your-codebase-path>/designer-workbench
