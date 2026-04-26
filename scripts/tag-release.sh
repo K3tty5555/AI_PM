@@ -1,6 +1,6 @@
 #!/bin/bash
 # 用法: ./scripts/tag-release.sh 0.4.2
-# 自动完成：版本号对齐 → lock 文件同步 → 本地编译验证 → commit → tag → push
+# 自动完成：版本号对齐 → lock 文件同步 → 自动 release 验收 → commit → tag → push
 set -e
 
 VERSION="$1"
@@ -55,17 +55,22 @@ if ! cargo check --manifest-path "$APP/src-tauri/Cargo.toml" --quiet 2>&1; then
 fi
 echo "✅ Rust 无错误"
 
-# ── 5. Commit ────────────────────────────────────────────
+# ── 5. 自动 release 验收 ─────────────────────────────────
+echo "🧪 自动 release 验收..."
+cd "$ROOT" && "$ROOT/scripts/verify-release.sh"
+echo "✅ release 验收通过"
+
+# ── 6. Commit ────────────────────────────────────────────
 echo "💾 提交版本变更..."
 cd "$ROOT"
 git add app/src-tauri/tauri.conf.json app/src-tauri/Cargo.toml app/src-tauri/Cargo.lock app/package.json app/package-lock.json
 git diff --cached --quiet && echo "⚠️  无变更可提交（版本号已是 $VERSION）" || \
   git commit -m "chore: bump version to $VERSION"
 
-# ── 6. Push main ─────────────────────────────────────────
+# ── 7. Push main ─────────────────────────────────────────
 git push origin main
 
-# ── 7. Tag & push ────────────────────────────────────────
+# ── 8. Tag & push ────────────────────────────────────────
 echo "🏷️  打 tag v$VERSION..."
 git tag -d "v$VERSION" 2>/dev/null && git push origin ":refs/tags/v$VERSION" 2>/dev/null || true
 git tag -a "v$VERSION" -m "v$VERSION"
