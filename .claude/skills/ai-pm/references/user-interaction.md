@@ -42,7 +42,7 @@
 
 ```json
 {
-  "projects_dir": "/Users/foo/somewhere/output/projects",
+  "projects_dir": "<PROJECTS_DIR>/output/projects",
   "created": "YYYY-MM-DD"
 }
 ```

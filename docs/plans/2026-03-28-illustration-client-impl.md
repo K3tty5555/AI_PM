@@ -71,7 +71,7 @@ cd app/src-tauri && cargo check
 **Step 5: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src-tauri/Cargo.toml app/src-tauri/src/state.rs app/src-tauri/src/lib.rs
 git commit -m "feat(backend): add image/base64/dotenvy deps and illustration_lock to AppState"
 ```
@@ -343,7 +343,7 @@ cd app/src-tauri && cargo check
 **Step 4: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src-tauri/src/commands/illustration.rs app/src-tauri/src/commands/mod.rs
 git commit -m "feat(backend): illustration.rs — data structures, provider registry, config commands"
 ```
@@ -573,7 +573,7 @@ cd app/src-tauri && cargo check
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src-tauri/src/commands/illustration.rs
 git commit -m "feat(backend): generate_illustration command — Seedream API, thumbnail, meta"
 ```
@@ -804,7 +804,7 @@ cd app/src-tauri && cargo check
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src-tauri/src/commands/illustration.rs
 git commit -m "feat(backend): list_illustrations, read_local_image, test_key, delete commands"
 ```
@@ -837,7 +837,7 @@ cd app/src-tauri && cargo check
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src-tauri/src/lib.rs
 git commit -m "feat(backend): register illustration commands in invoke_handler"
 ```
@@ -934,7 +934,7 @@ cd app && npx tsc --noEmit
 **Step 4: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/lib/tauri-api.ts
 git commit -m "feat(frontend): add illustration types and API methods to tauri-api.ts"
 ```
@@ -1003,7 +1003,7 @@ cd app && npx tsc --noEmit
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/hooks/use-illustration.ts
 git commit -m "feat(frontend): add useIllustration hook"
 ```
@@ -1061,7 +1061,7 @@ cd app && npm run build
 **Step 5: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/pages/tools/Illustration.tsx app/src/router.tsx app/src/components/layout/Sidebar.tsx
 git commit -m "feat(frontend): add Illustration tools page shell, route, sidebar link"
 ```
@@ -1094,7 +1094,7 @@ cd app && npm run build
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/pages/tools/Illustration.tsx
 git commit -m "feat(frontend): style recommendation panel with Mermaid detection"
 ```
@@ -1124,7 +1124,7 @@ cd app && npm run build
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/pages/tools/Illustration.tsx
 git commit -m "feat(frontend): illustration generation flow, result display, error states"
 ```
@@ -1167,7 +1167,7 @@ cd app && npm run build
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/components/lightbox.tsx
 git commit -m "feat(frontend): add Lightbox component for image preview"
 ```
@@ -1199,7 +1199,7 @@ cd app && npm run build
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/pages/tools/Illustration.tsx
 git commit -m "feat(frontend): illustration history gallery with thumbnails and Lightbox"
 ```
@@ -1255,7 +1255,7 @@ cd app && npm run build
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/components/mermaid-render-dialog.tsx
 git commit -m "feat(frontend): add MermaidRenderDialog for PRD export integration"
 ```
@@ -1334,7 +1334,7 @@ cd app && npm run build
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/pages/project/Prd.tsx
 git commit -m "feat(frontend): integrate MermaidRenderDialog into PRD export preflight"
 ```
@@ -1369,7 +1369,7 @@ cd app && npm run build
 **Step 3: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/pages/settings/SettingsApi.tsx
 git commit -m "feat(frontend): add illustration config card to Settings API page"
 ```
@@ -1448,7 +1448,7 @@ cd app && npm run build
 **Step 4: 提交**
 
 ```bash
-cd /Users/xiaowu/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add app/src/components/local-image.tsx app/src/components/prd-viewer.tsx
 git commit -m "feat(frontend): LocalImage component + PrdViewer inline preview integration"
 ```
