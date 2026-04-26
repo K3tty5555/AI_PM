@@ -74,7 +74,7 @@ Vue 3 + TypeScript + Vite + ElementPlus
 **Step 4: Commit**
 
 ```bash
-cd <USER_HOME>/workplace/AI_PM
+cd <AI_PM_ROOT>
 git add templates/presets/智学网B端.md
 git commit -m "feat(memory): add 智学网B端 preset template"
 ```
