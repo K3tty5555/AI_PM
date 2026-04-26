@@ -6,12 +6,13 @@ mod state;
 use db::init_db;
 use state::AppState;
 use std::fs;
-use tauri::Manager;
 
 #[cfg(desktop)]
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 #[cfg(desktop)]
 use tauri::Emitter;
+#[cfg(debug_assertions)]
+use tauri::Manager;
 
 fn resolve_app_paths() -> (String, String) {
     let home = dirs::home_dir().unwrap_or_default();
