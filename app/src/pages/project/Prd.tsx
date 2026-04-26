@@ -3,10 +3,11 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdIllustrationDialog, getIllustrationSkipKey } from "@/components/prd-illustration-dialog"
-import { Sparkles } from "lucide-react"
+import { ArrowRight, Check, Copy, ShieldCheck, Sparkles, X } from "lucide-react"
 import { PrdViewer } from "@/components/prd-viewer"
 import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
+import { useToolStream } from "@/hooks/use-tool-stream"
 import { useProgressiveReveal } from "@/hooks/use-progressive-reveal"
 import { RevealContainer } from "@/components/RevealContainer"
 import { api, type PrdStyleEntry } from "@/lib/tauri-api"
@@ -58,6 +59,74 @@ function extractSectionIds(markdown: string): string[] {
   return ids
 }
 
+type PmLintSeverity = "critical" | "warning" | "pass"
+type PmLintStatus = "pending" | "sent" | "dismissed"
+
+interface PmLintIssue {
+  id: string
+  severity: PmLintSeverity
+  content: string
+}
+
+function hashText(text: string): string {
+  let hash = 0
+  for (let i = 0; i < text.length; i++) {
+    hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0
+  }
+  return String(Math.abs(hash))
+}
+
+function parsePmLintIssues(markdown: string): PmLintIssue[] {
+  const issues: PmLintIssue[] = []
+  let severity: PmLintSeverity | null = null
+
+  for (const rawLine of markdown.split("\n")) {
+    const line = rawLine.trim()
+    if (!line) continue
+
+    if (/^(#{1,4}\s*)?(❌|必修|越界|Critical|严重)/i.test(line)) {
+      severity = "critical"
+      continue
+    }
+    if (/^(#{1,4}\s*)?(⚠️|建议|缺失|Major|Minor|补齐)/i.test(line)) {
+      severity = "warning"
+      continue
+    }
+    if (/^(#{1,4}\s*)?(✅|通过)/i.test(line)) {
+      severity = "pass"
+      continue
+    }
+
+    if (!severity || severity === "pass") continue
+
+    const isIssueLine =
+      /^([-*]|\d+\.)\s+/.test(line) ||
+      /^L\d+[:：]/i.test(line) ||
+      /^####\s+/.test(line) ||
+      /^\[[ x]\]\s+/i.test(line)
+
+    if (!isIssueLine) continue
+
+    const content = line
+      .replace(/^####\s+/, "")
+      .replace(/^[-*]\s+/, "")
+      .replace(/^\d+\.\s+/, "")
+      .replace(/^\[[ x]\]\s+/i, "")
+      .trim()
+
+    if (content.length < 6) continue
+    issues.push({
+      id: hashText(`${severity}:${content}`),
+      severity,
+      content,
+    })
+  }
+
+  const dedup = new Map<string, PmLintIssue>()
+  for (const issue of issues) dedup.set(issue.id, issue)
+  return Array.from(dedup.values())
+}
+
 // ---------------------------------------------------------------------------
 // Mermaid detection helpers — imported from @/lib/mermaid-utils
 
@@ -102,6 +171,9 @@ export function PrdPage() {
   const [scoreStale, setScoreStale] = useState(false)
   const [scorePanelOpen, setScorePanelOpen] = useState(false)
   const scoreCheckedRef = useRef(false)
+  const [pmLintOpen, setPmLintOpen] = useState(false)
+  const [pmLintStatuses, setPmLintStatuses] = useState<Record<string, PmLintStatus>>({})
+  const [assistInputVersion, setAssistInputVersion] = useState(0)
 
   // Sample PRD dialog
   const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
@@ -130,6 +202,7 @@ export function PrdPage() {
     const queue = consumeAdoptionQueue()
     if (queue.length > 0) {
       setAssistInput(queue.join("；"))
+      setAssistInputVersion((v) => v + 1)
     }
   }, [])
 
@@ -161,6 +234,17 @@ export function PrdPage() {
     projectId,
     phase: "prd-assist",
   })
+
+  const {
+    text: pmLintText,
+    isStreaming: pmLintStreaming,
+    isThinking: pmLintThinking,
+    elapsedSeconds: pmLintElapsedSeconds,
+    error: pmLintError,
+    streamMeta: pmLintMeta,
+    run: runPmLint,
+    reset: resetPmLint,
+  } = useToolStream("ai-pm-driver", { projectId })
 
   // Auto-score when PRD generation completes
   useEffect(() => {
@@ -302,6 +386,16 @@ export function PrdPage() {
   const sectionIds = useMemo(
     () => extractSectionIds(displayMarkdown || ""),
     [displayMarkdown]
+  )
+
+  const pmLintIssues = useMemo(
+    () => parsePmLintIssues(pmLintText),
+    [pmLintText]
+  )
+
+  const pendingPmLintIssues = useMemo(
+    () => pmLintIssues.filter((issue) => (pmLintStatuses[issue.id] ?? "pending") === "pending"),
+    [pmLintIssues, pmLintStatuses]
   )
 
   // -------------------------------------------------------------------------
@@ -489,6 +583,61 @@ export function PrdPage() {
       setTimeout(() => setCopied(false), 2000)
     }
   }, [displayMarkdown])
+
+  const handlePmLint = useCallback(() => {
+    const content = displayMarkdown?.trim()
+    if (!content) {
+      toast("没有可体检的 PRD 内容", "error")
+      return
+    }
+    resetPmLint()
+    setPmLintStatuses({})
+    setPmLintOpen(true)
+    runPmLint([
+      `任务：审视下列 PRD 全文，按 PM 风格判断卡输出 punch list。`,
+      `PRD 文件：${prdFile(currentVersion)}`,
+      "",
+      "```markdown",
+      content,
+      "```",
+    ].join("\n"))
+  }, [currentVersion, displayMarkdown, resetPmLint, runPmLint, toast])
+
+  const sendPmLintIssuesToAssist = useCallback((issues: PmLintIssue[]) => {
+    if (issues.length === 0) return
+    const text = [
+      "请根据 PM 体检结果修订 PRD，重点修复以下问题。保持 PRD 结构不乱改，补业务判断，不写技术实现细节：",
+      "",
+      ...issues.map((issue, index) => `${index + 1}. ${issue.content}`),
+    ].join("\n")
+    setAssistInput(text)
+    setAssistInputVersion((v) => v + 1)
+    setPmLintStatuses((prev) => {
+      const next = { ...prev }
+      for (const issue of issues) next[issue.id] = "sent"
+      return next
+    })
+    setPmLintOpen(false)
+    toast(`已发送 ${issues.length} 条问题到 AI 修订`, "success")
+  }, [toast])
+
+  const recordPmLintIssueAsInstinct = useCallback(async (issue: PmLintIssue) => {
+    try {
+      await api.recordInstinctCandidate({
+        type: "writing",
+        description: issue.content,
+        sourceProject: `project:${projectId}`,
+      })
+      toast("已沉淀为习惯候选，可在「我的习惯」确认", "success")
+    } catch (err) {
+      console.error("[Prd] record instinct:", err)
+      toast("习惯沉淀失败", "error")
+    }
+  }, [projectId, toast])
+
+  const updatePmLintStatus = useCallback((id: string, status: PmLintStatus) => {
+    setPmLintStatuses((prev) => ({ ...prev, [id]: status }))
+  }, [])
 
   // DOCX export with recipe dialog
   const [docxRecipeDialogOpen, setDocxRecipeDialogOpen] = useState(false)
@@ -713,6 +862,15 @@ export function PrdPage() {
         <div className="prd-actions flex items-center gap-1">
           {hasContent && !currentStreaming && (
             <>
+              <Button
+                variant={pmLintOpen ? "secondary" : "ghost"}
+                size="sm"
+                onClick={handlePmLint}
+                disabled={pmLintStreaming}
+              >
+                <ShieldCheck className="size-3.5" />
+                {pmLintStreaming ? "体检中" : "PM 体检"}
+              </Button>
               <ExportDropdown
                 onCopyMd={handleCopyMarkdown}
                 copied={copied}
@@ -774,9 +932,161 @@ export function PrdPage() {
             totalScore={scoreData.totalScore}
             onSendSuggestions={(suggestions) => {
               setAssistInput(suggestions.join("；"))
+              setAssistInputVersion((v) => v + 1)
               setScorePanelOpen(false)
             }}
           />
+        </div>
+      )}
+
+      {pmLintOpen && (
+        <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--card)]">
+          <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="size-4 text-[var(--accent-color)]" />
+              <span className="text-sm font-medium text-[var(--text-primary)]">PM 风格体检</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPmLintOpen(false)}
+              className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              收起
+            </button>
+          </div>
+          <div className="px-4 py-3">
+            {pmLintStreaming && (
+              <div className="mb-3">
+                <ProgressBar value={pmLintText ? Math.min(90, Math.floor(pmLintText.length / 30)) : 12} animated />
+                <StreamProgress
+                  isStreaming={pmLintStreaming}
+                  isThinking={pmLintThinking}
+                  elapsedSeconds={pmLintElapsedSeconds}
+                  streamMeta={pmLintMeta}
+                />
+              </div>
+            )}
+            {pmLintError && (
+              <p className="text-sm text-[var(--destructive)]">{pmLintError}</p>
+            )}
+            {!pmLintError && !pmLintText && !pmLintStreaming && (
+              <p className="text-sm text-[var(--text-secondary)]">点击「PM 体检」后会检查越界、缺失项和评审前风险。</p>
+            )}
+            {pmLintText && pmLintIssues.length > 0 && (
+              <div className="mb-4 rounded-lg border border-[var(--border)]">
+                <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-2">
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">
+                    待处理问题 {pendingPmLintIssues.length}/{pmLintIssues.length}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => sendPmLintIssuesToAssist(pendingPmLintIssues)}
+                    disabled={pendingPmLintIssues.length === 0}
+                  >
+                    <ArrowRight className="size-3" />
+                    发送待处理到 AI 修订
+                  </Button>
+                </div>
+                <div className="max-h-[280px] overflow-y-auto px-3 py-2">
+                  <div className="space-y-2">
+                    {pmLintIssues.map((issue) => {
+                      const status = pmLintStatuses[issue.id] ?? "pending"
+                      return (
+                        <div
+                          key={issue.id}
+                          className={cn(
+                            "flex items-start gap-2 rounded-lg px-3 py-2",
+                            issue.severity === "critical" ? "bg-[var(--destructive)]/5" : "bg-[var(--secondary)]",
+                            status !== "pending" && "opacity-55",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                              issue.severity === "critical"
+                                ? "bg-[var(--destructive)]/10 text-[var(--destructive)]"
+                                : "bg-[color-mix(in_srgb,var(--warning)_12%,transparent)] text-[var(--warning)]",
+                            )}
+                          >
+                            {issue.severity === "critical" ? "必修" : "建议"}
+                          </span>
+                          <p
+                            className={cn(
+                              "min-w-0 flex-1 text-sm text-[var(--text-primary)]",
+                              status === "sent" && "line-through text-[var(--text-secondary)]",
+                            )}
+                          >
+                            {issue.content}
+                          </p>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {status === "pending" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => sendPmLintIssuesToAssist([issue])}
+                                  className="flex size-6 items-center justify-center rounded-md text-[var(--accent-color)] hover:bg-[var(--accent-light)] transition-colors"
+                                  title="发送到 AI 修订"
+                                >
+                                  <ArrowRight className="size-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(issue.content)
+                                    toast("已复制问题", "success")
+                                  }}
+                                  className="flex size-6 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] transition-colors"
+                                  title="复制"
+                                >
+                                  <Copy className="size-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => recordPmLintIssueAsInstinct(issue)}
+                                  className="flex size-6 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] hover:text-[var(--accent-color)] transition-colors"
+                                  title="沉淀为习惯候选"
+                                >
+                                  <Sparkles className="size-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => updatePmLintStatus(issue.id, "dismissed")}
+                                  className="flex size-6 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] transition-colors"
+                                  title="忽略"
+                                >
+                                  <X className="size-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => updatePmLintStatus(issue.id, "pending")}
+                                className="flex size-6 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:bg-[var(--hover-bg)] transition-colors"
+                                title="恢复待处理"
+                              >
+                                <Check className="size-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+            {pmLintText && (
+              <details className="group">
+                <summary className="cursor-pointer text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
+                  查看完整体检报告
+                </summary>
+                <div className="mt-3 max-h-[520px] overflow-y-auto">
+                  <PrdViewer markdown={pmLintText} isStreaming={pmLintStreaming} />
+                </div>
+              </details>
+            )}
+          </div>
         </div>
       )}
 
@@ -956,6 +1266,7 @@ export function PrdPage() {
             api.saveProjectFile({ projectId, fileName: prdFile(currentVersion), content: newMd }).catch(() => {})
           }}
           initialInput={assistInput}
+          initialInputVersion={assistInputVersion}
         />
       )}
 

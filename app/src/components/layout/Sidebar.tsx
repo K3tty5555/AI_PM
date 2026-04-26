@@ -4,10 +4,10 @@ import {
   Plus, ChevronLeft,
   Sun, Moon,
   Inbox, ScanSearch, Globe, Users, ScrollText, Activity, Layers, ClipboardCheck, Milestone, MessageSquare,
-  Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette, LayoutGrid,
+  Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette, LayoutGrid, ImagePlus,
   CheckCircle2, SkipForward, Settings2,
   FolderOpen, Pencil, Trash2, ArrowRight, RefreshCw, FileText,
-  Star,
+  Star, Stethoscope,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PHASE_LABELS } from "@/lib/phase-meta"
@@ -113,12 +113,14 @@ const TOOLS_ACTION = [
   { path: "/tools/weekly",    label: "工作周报",   icon: CalendarDays },
   { path: "/tools/data",      label: "数据洞察",   icon: BarChart2    },
   { path: "/tools/interview", label: "调研访谈",   icon: Mic          },
+  { path: "/tools/illustration", label: "流程图配图", icon: ImagePlus },
 ]
 
 const TOOLS_RESOURCE = [
   { path: "/tools/knowledge",   label: "知识库",   icon: Library    },
   { path: "/tools/persona",     label: "产品分身", icon: Bot        },
   { path: "/tools/design-spec", label: "设计规范", icon: Palette    },
+  { path: "/tools/doctor",      label: "诊断中心", icon: Stethoscope },
   { path: "/tools/plaza",       label: "功能广场", icon: LayoutGrid },
 ]
 

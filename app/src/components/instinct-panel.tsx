@@ -88,7 +88,7 @@ export function InstinctPanel() {
     try {
       await api.confirmInstinct(id)
       setEntries((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, confidence: 1.0 } : e))
+        prev.map((e) => (e.id === id ? { ...e, confidence: 0.9 } : e))
       )
     } finally {
       markBusy(id, false)
@@ -109,14 +109,14 @@ export function InstinctPanel() {
   }
 
   const handleConfirmAll = async () => {
-    const pending = entries.filter((e) => e.confidence < 1.0)
+    const pending = entries.filter((e) => e.confidence < 0.9)
     for (const e of pending) {
       markBusy(e.id, true)
     }
     try {
       await Promise.all(pending.map((e) => api.confirmInstinct(e.id)))
       setEntries((prev) =>
-        prev.map((e) => (e.confidence < 1.0 ? { ...e, confidence: 1.0 } : e))
+        prev.map((e) => (e.confidence < 0.9 ? { ...e, confidence: 0.9 } : e))
       )
     } finally {
       for (const e of pending) {
@@ -305,7 +305,7 @@ function InstinctCard({ item, busy, onConfirm, onDelete }: InstinctCardProps) {
           <Button
             variant="ghost"
             size="xs"
-            disabled={busy || item.confidence >= 1.0}
+            disabled={busy || item.confidence >= 0.9}
             onClick={onConfirm}
           >
             <CheckCircle2 className="size-3" />
