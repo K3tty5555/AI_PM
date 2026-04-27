@@ -2,6 +2,12 @@
 # AI_PM Session Start Hook
 # 检测进行中的项目，提示用户是否恢复
 
+ROOT="$(pwd)"
+
+if [ -x "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" ]; then
+  "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" 2>/dev/null || true
+fi
+
 PROJECTS_DIR="output/projects"
 
 if [ ! -d "$PROJECTS_DIR" ]; then

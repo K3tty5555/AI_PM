@@ -55,6 +55,12 @@ AI_PM_提效分享.html
 /docs/plans/
 /app/docs/plans/
 
+# AI shared local context copies
+# Keep bridge docs/scripts versioned, but do not upload local memory snapshots
+# or raw/summarized AI conversation records.
+.ai-shared/memory-snapshots/
+.ai-shared/conversations/
+
 # Playwright
 .playwright/
 .playwright-mcp/
