@@ -60,6 +60,8 @@ AI_PM_提效分享.html
 # or raw/summarized AI conversation records.
 .ai-shared/memory-snapshots/
 .ai-shared/conversations/
+.ai-shared/memory-index.md
+.ai-shared/agent-index.md
 
 # Playwright
 .playwright/
