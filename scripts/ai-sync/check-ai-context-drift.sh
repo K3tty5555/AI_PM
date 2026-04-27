@@ -132,12 +132,27 @@ if [[ -d "$AGENTS_DIR" ]]; then
   check_newer "$AGENTS_DIR" '*.md' "$ROOT/.ai-shared/agent-index.md" "agent"
 fi
 
+CONVERSATION_RAW_DIR="$ROOT/.ai-shared/conversations/raw"
+CONVERSATION_INDEX="$ROOT/.ai-shared/conversations/index.jsonl"
+if [[ -d "$CONVERSATION_RAW_DIR" ]]; then
+  if [[ ! -f "$CONVERSATION_INDEX" ]]; then
+    echo "MISSING: conversation index not found: $CONVERSATION_INDEX"
+    fail=1
+  elif find "$CONVERSATION_RAW_DIR" -type f -name '*.jsonl' -newer "$CONVERSATION_INDEX" | grep -q .; then
+    echo "STALE: conversation index is older than raw conversation snapshots"
+    fail=1
+  else
+    echo "OK: conversation index is current"
+  fi
+fi
+
 if [[ "$fail" -eq 1 ]]; then
   echo
   echo "Run:"
   echo "  scripts/ai-sync/build-memory-index.sh"
   echo "  scripts/ai-sync/build-skill-index.sh"
   echo "  scripts/ai-sync/build-agent-index.sh"
+  echo "  scripts/ai-sync/sync-ai-context.sh"
   exit 1
 fi
 

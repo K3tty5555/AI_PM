@@ -1,5 +1,5 @@
 ---
-generated_at: 2026-04-26 16:03:33 +0800
+generated_at: 2026-04-27 13:50:38 +0800
 source: .claude/skills
 do_not_edit: true
 ---

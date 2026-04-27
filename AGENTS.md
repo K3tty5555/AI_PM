@@ -14,6 +14,14 @@ Codex 进入本项目后，优先读取以下上下文：
 
 `.ai-shared/` 是桥接层，不替代 Claude 原始资产。索引过期时，以本机 Claude memory、skills、agents 原始文件为准。
 
+进入项目后如需检查 Claude/Codex memory 与对话副本是否过期，可运行：
+
+```bash
+scripts/ai-sync/check-ai-context-freshness.sh
+```
+
+该命令只提示，不自动复制对话或 memory；需要刷新时再手动运行 `scripts/ai-sync/sync-ai-context.sh`。
+
 ## 事实源协作
 
 - Claude 项目 memory 仍是已沉淀历史上下文的主事实源之一。
@@ -61,7 +69,14 @@ scripts/ai-sync/build-memory-index.sh
 scripts/ai-sync/build-skill-index.sh
 scripts/ai-sync/build-agent-index.sh
 scripts/ai-sync/check-ai-context-drift.sh
+scripts/ai-sync/check-ai-context-freshness.sh
 scripts/ai-sync/sync-claude-memory-to-codex.sh
+scripts/ai-sync/snapshot-ai-memory.sh
+scripts/ai-sync/snapshot-claude-conversations.sh
+scripts/ai-sync/snapshot-codex-conversations.sh
+scripts/ai-sync/build-conversation-index.py
+scripts/ai-sync/summarize-conversation.py --missing
+scripts/ai-sync/sync-ai-context.sh
 ```
 
 `sync-claude-memory-to-codex.sh` 只生成 Codex 可读摘要，不修改 Claude memory 主源。
