@@ -79,6 +79,22 @@ README.md                  项目介绍
 
 **篇幅指引**（KettyWu范本）：单功能补丁 80-150 行 / 中等场景 200-300 行 / 复杂含 Agent 章节 300-500 行 / 500+ 警戒。
 
+## 原型设计专项（Prototype Agent 体系）
+
+原型生成遵循"蓝图前置 + 视觉设计 + 质量审计"链路（完整方法见 `.claude/skills/ai-pm/references/prototype-judgment-card.md`）：
+
+1. **判断卡**（`references/prototype-judgment-card.md`）—— 原型目标、蓝图必答、视觉红线、场景化策略、Agent 原型专项、12 分制审计
+2. **prototype-agent**（`agents/prototype-agent.md`）—— 原型设计负责人，负责原型蓝图、视觉方向、生成约束、质量审计。**生成 HTML 前优先调用** `Agent(subagent_type=prototype-agent, prompt=...)`
+3. **Phase 7 脚手架**（`phase-7-prototype.md`）—— 在页面框架搭建前锁定页面/流程/状态/视觉方向；落盘后做 PRD 覆盖 + 交互体验 + 视觉设计审计
+4. **质量门槛**—— 12 分制：PRD 覆盖 / 交互体验 / 视觉设计各 0-4 分；任一维度 < 3 或总分 < 9，必须修完再评审
+
+**铁律（原型必守）**：
+- 原型不是线框草图，必须可评审、可体验、视觉可信
+- 视觉设计是原型质量的一部分，不能因为是原型就接受模板套壳、灰白卡片、假数据糊弄
+- B 端重信息密度和扫描效率，不能做成营销页；C 端重路径流畅和引导，不能做成后台表格脸
+- Agent / hybrid 原型必须体现用户输入、AI 回复、AI 状态、结果预确认、用户修改入口、失败兜底
+- HTML 原型可以落具体视觉和 CSS，但不要把像素/色号/动效毫秒写回 PRD 功能表格
+
 ## 设计与研发自动审视
 
 - **brainstorming 产出设计方案后**，在写入设计文档之前，必须调用 `multi-perspective-review` 技能进行多视角审视
