@@ -62,6 +62,7 @@ AI_PM_提效分享.html
 .ai-shared/conversations/
 .ai-shared/memory-index.md
 .ai-shared/agent-index.md
+.ai-shared/skill-index.md
 
 # Playwright
 .playwright/
