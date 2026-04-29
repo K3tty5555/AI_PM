@@ -88,6 +88,16 @@ templates/**/private/
 templates/**/uploads/
 templates/**/.cache/
 
+# 个人知识库内容（含真实业务洞察、客户访谈、PRD 引用等私有信息）
+# 保留 README.md（目录说明）和 .gitkeep（目录骨架）
+templates/knowledge-base/decisions/*
+templates/knowledge-base/insights/*
+templates/knowledge-base/metrics/*
+templates/knowledge-base/patterns/*
+templates/knowledge-base/pitfalls/*
+templates/knowledge-base/playbooks/*
+!templates/knowledge-base/**/.gitkeep
+
 # -----------------------------------------------------------------------------
 # Design Source Files (Large & Proprietary)
 # -----------------------------------------------------------------------------
