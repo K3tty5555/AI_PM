@@ -6,6 +6,7 @@
 <title>AI PM · 使用教程</title>
 <style>
 :root {
+  color-scheme: light dark;
   --accent: #1D4ED8;
   --accent-hover: #1E40AF;
   --accent-light: rgba(29,78,216,0.08);
@@ -60,6 +61,16 @@ html.theme-dark {
   --border: rgba(255,255,255,0.07);
   --hover-bg: rgba(255,255,255,0.05);
   --active-bg: rgba(255,255,255,0.08);
+
+  --accent-ring: rgba(79,142,247,0.30);
+
+  --success: #4ADE80;
+  --warning: #FBBF24;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.30);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.40);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.50);
+  --shadow-xl: 0 20px 60px rgba(0,0,0,0.60);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -89,8 +100,8 @@ body {
   to { transform: translateX(0); opacity: 1; }
 }
 @keyframes dotPulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(29,78,216,0.5); }
-  50%      { transform: scale(1.15); box-shadow: 0 0 0 4px rgba(29,78,216,0); }
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--accent-ring); }
+  50%      { transform: scale(1.15); box-shadow: 0 0 0 4px transparent; }
 }
 @keyframes fadeOut {
   from { opacity: 1; }
@@ -98,6 +109,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* TODO Task 9/10: also explicitly cover html { transition / scroll-behavior } */
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
