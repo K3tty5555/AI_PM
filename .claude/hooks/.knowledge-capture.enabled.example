@@ -1,0 +1,3 @@
+# 这是灰度开关占位文件
+# 启用：cp .knowledge-capture.enabled.example .knowledge-capture.enabled
+# 关闭：rm .knowledge-capture.enabled
