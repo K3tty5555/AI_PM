@@ -55,3 +55,18 @@ echo "0" > "$STATE_DIR/test6.ts"
 RESULT=$(echo '{"hook_event_name":"PreCompact","session_id":"test6"}' | bash "$HOOK")
 echo "$RESULT" | jq -e '.decision == "block"' >/dev/null || { echo "FAIL T6: PreCompact 应直接 block, got: $RESULT"; exit 1; }
 echo "PASS T6: PreCompact 直接 block"
+
+# Test 7: block reason 含关键指令
+echo "0" > "$STATE_DIR/test7.ts"
+RESULT=$(echo '{"hook_event_name":"PreCompact","session_id":"test7"}' | bash "$HOOK")
+echo "$RESULT" | jq -e '.reason | contains("ai-pm-knowledge add")' >/dev/null \
+  || { echo "FAIL T7: reason 缺指令, got: $RESULT"; exit 1; }
+echo "$RESULT" | jq -e '.reason | contains("auto-generated")' >/dev/null \
+  || { echo "FAIL T7b: reason 缺标记说明"; exit 1; }
+echo "PASS T7: reason 完整"
+
+# Test 8: 日志文件存在
+LOG_FILE="$PWD/.claude/logs/knowledge-hook.log"
+[[ -f "$LOG_FILE" ]] || { echo "FAIL T8: 日志未创建"; exit 1; }
+grep -q "test7" "$LOG_FILE" || { echo "FAIL T8b: 日志未记录 session"; exit 1; }
+echo "PASS T8: 日志正常"
