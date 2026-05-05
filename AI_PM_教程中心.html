@@ -183,6 +183,184 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
   border-radius: var(--radius-sm);
 }
 
+.hero {
+  min-height: calc(100vh - 44px);
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 64px; align-items: center;
+  padding: 80px 64px;
+  max-width: 1280px; margin: 0 auto;
+}
+.hero-content { animation: fadeInUp var(--dur-slow) var(--ease-decelerate); }
+.hero-eyebrow {
+  font-size: 13px; font-weight: 500;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+.hero h1 {
+  font-size: 56px; font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+}
+.hero-sub {
+  font-size: 16px; font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 32px;
+  max-width: 480px;
+}
+.hero-cta {
+  display: flex; gap: 12px;
+}
+.btn-primary, .btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 42px; padding: 0 20px;
+  border-radius: var(--radius);
+  font-size: 14px; font-weight: 500;
+  border: none; cursor: pointer;
+  text-decoration: none;
+  transition: background var(--dur-base) var(--ease-standard), transform var(--dur-fast);
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: var(--hover-bg); border-color: var(--accent); }
+.btn-ghost:active { transform: scale(0.97); }
+
+/* Mockup 三栏示意图 */
+.hero-mockup {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 32px 1fr;
+  height: 360px;
+  transition: transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base);
+  animation: fadeInUp var(--dur-slow) var(--ease-decelerate) 100ms backwards;
+}
+.hero-mockup:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+.mockup-titlebar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 12px;
+  background: var(--secondary);
+  border-bottom: 1px solid var(--border);
+}
+.mockup-titlebar-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+.mockup-titlebar-dot.red { background: #FF5F57; }
+.mockup-titlebar-dot.yellow { background: #FEBC2E; }
+.mockup-titlebar-dot.green { background: #28C840; }
+.mockup-titlebar-title {
+  margin-left: 12px;
+  font-size: 11px; font-weight: 500;
+  color: var(--text-secondary);
+}
+.mockup-body {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+}
+.mockup-sidebar {
+  background: var(--bg-elevated);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border);
+  padding: 16px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mockup-project-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mockup-line {
+  height: 6px; border-radius: 3px;
+  background: var(--secondary);
+}
+.mockup-line.short { width: 50%; }
+.mockup-line.med { width: 70%; }
+.mockup-line.full { width: 100%; }
+.mockup-stage {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  position: relative;
+}
+.mockup-stage.current {
+  background: var(--active-bg);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.mockup-stage.current::before {
+  content: ''; position: absolute;
+  left: -12px; top: 4px; bottom: 4px;
+  width: 3px; background: var(--accent);
+  border-radius: 2px;
+}
+.mockup-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.mockup-dot.pending {
+  border: 1.25px solid var(--text-tertiary);
+  background: transparent;
+}
+.mockup-dot.current {
+  background: var(--accent);
+  animation: dotPulse 2.5s ease-in-out infinite;
+}
+.mockup-dot.completed {
+  background: var(--success);
+}
+.mockup-main {
+  padding: 20px;
+  background: var(--background);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.mockup-main-title {
+  height: 14px; width: 60%;
+  background: var(--text-secondary);
+  opacity: 0.6;
+  border-radius: 3px;
+}
+.mockup-main-btn {
+  height: 26px; width: 80px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  margin-top: 8px;
+}
+
+/* 响应式：≤ 900px hero 堆叠 */
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 48px 24px;
+    gap: 48px;
+  }
+  .hero h1 { font-size: 40px; }
+  .hero-mockup { height: 280px; }
+}
+
 </style>
 </head>
 <body>
@@ -215,7 +393,79 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
 </header>
 
 <main>
-  <!-- Hero · Task 3 -->
+  <section id="hero" class="hero">
+    <div class="hero-content">
+      <div class="hero-eyebrow">CLAUDE CODE 技能集 · 桌面客户端</div>
+      <h1>AI 产品经理</h1>
+      <p class="hero-sub">
+        描述你想做的产品，AI 帮你速评需求、研究市场、拆功能、写 PRD，
+        再做埋点、原型、六角色评审和项目复盘。
+        两种使用方式：Claude Code 命令行 或 桌面客户端 App。
+      </p>
+      <div class="hero-cta">
+        <a href="#quickstart" class="btn-primary">
+          开始使用
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </a>
+        <a href="https://github.com/K3tty5555/AI_PM" target="_blank" rel="noopener" class="btn-ghost">
+          查看 GitHub
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-mockup" aria-label="AI PM 客户端示意">
+      <div class="mockup-titlebar">
+        <span class="mockup-titlebar-dot red"></span>
+        <span class="mockup-titlebar-dot yellow"></span>
+        <span class="mockup-titlebar-dot green"></span>
+        <span class="mockup-titlebar-title">AI PM</span>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-sidebar">
+          <div class="mockup-project-card">
+            <span class="mockup-line full"></span>
+            <span class="mockup-line med"></span>
+          </div>
+          <div class="mockup-stage completed">
+            <span class="mockup-dot completed"></span>
+            <span class="mockup-line med"></span>
+          </div>
+          <div class="mockup-stage completed">
+            <span class="mockup-dot completed"></span>
+            <span class="mockup-line med"></span>
+          </div>
+          <div class="mockup-stage current">
+            <span class="mockup-dot current"></span>
+            <span class="mockup-line full"></span>
+          </div>
+          <div class="mockup-stage">
+            <span class="mockup-dot pending"></span>
+            <span class="mockup-line med"></span>
+          </div>
+          <div class="mockup-stage">
+            <span class="mockup-dot pending"></span>
+            <span class="mockup-line short"></span>
+          </div>
+          <div class="mockup-stage">
+            <span class="mockup-dot pending"></span>
+            <span class="mockup-line med"></span>
+          </div>
+        </div>
+        <div class="mockup-main">
+          <span class="mockup-main-title"></span>
+          <span class="mockup-line full"></span>
+          <span class="mockup-line full"></span>
+          <span class="mockup-line med"></span>
+          <span class="mockup-main-btn"></span>
+        </div>
+      </div>
+    </div>
+  </section>
   <!-- Quickstart · Task 4 -->
   <!-- Skills · Task 5 -->
   <!-- Workflow · Task 6 -->
