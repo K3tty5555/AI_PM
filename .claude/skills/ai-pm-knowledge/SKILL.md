@@ -76,8 +76,11 @@ id: {ID}
 category: {category}
 tags: []
 source-project:
+source-session:                    # auto 模式必填，前 8 位 session_id
 created: {YYYY-MM-DD}
 confidence: low
+auto-generated: false              # auto 模式必填 true
+auto-dedup-key:                    # auto 模式必填，核心概念-动词
 ---
 
 # {标题}
@@ -99,6 +102,47 @@ confidence: low
 ```
 已保存 {ID}  {标题}
 → templates/knowledge-base/{分类}/{文件名}
+```
+
+### auto 模式（hook 触发时使用）
+
+当 hook 触发让 AI 自动写卡片时，AI 必须传以下额外字段：
+
+| 字段 | 说明 |
+|------|------|
+| `confidence: low` | 自动生成默认低置信度 |
+| `auto-generated: true` | 标记为 hook 触发产生 |
+| `source-session: {前8位}` | 哪次会话产生的（来自 hook stdin 的 session_id） |
+| `auto-dedup-key` | 跨次去重 key，由 AI 生成（核心概念-动词，如 `filter-repo-untracked`、`force-with-lease-stale`） |
+
+**新建前必须做的去重检查**：
+
+1. 提取候选卡片的 title + 前 200 字描述
+2. 在 `templates/knowledge-base/{同 category}/` 下用 `grep -ri` 查相似 title
+3. 如果 `auto-dedup-key` 已存在 → **不新建**，把当前对话的"验证数据"段追加到旧卡末尾
+4. 否则正常新建
+
+**source-project 双重校验**：
+
+1. 取 cwd（当前目录）从路径中识别项目名
+2. 扫最近 N 条对话提及的项目名
+3. 两者一致 → 用该项目名
+4. 不一致或都拿不准 → 标 `source-project: unknown`，绝不猜
+
+frontmatter 示例（auto 模式实际写入）：
+
+```yaml
+---
+id: PITFALL-016
+category: pitfalls
+tags: [git, filter-repo]
+source-project: _meta              # 或具体项目 / unknown
+source-session: 95603cf1
+created: 2026-05-05
+confidence: low                    # auto 模式默认 low
+auto-generated: true               # auto 模式必填
+auto-dedup-key: filter-repo-untracked  # auto 模式必填，核心概念-动词
+---
 ```
 
 ---
