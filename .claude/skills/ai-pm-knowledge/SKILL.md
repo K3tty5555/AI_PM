@@ -164,6 +164,28 @@ auto-dedup-key: filter-repo-untracked  # auto 模式必填，核心概念-动词
 4. 用户输入数字 → 输出完整知识卡片
 5. 无匹配 → 静默
 
+### 搜索行为（默认过滤）
+
+默认过滤 `confidence: low` + `auto-generated: true` 的卡片，避免低质量结果污染。
+
+**实现伪代码**：
+
+```bash
+# 默认（隐藏 auto+low）
+grep -r "{关键词}" templates/knowledge-base/ --include='*.md' -l | while read f; do
+  AUTO=$(awk '/^auto-generated:/{print $2; exit}' "$f")
+  CONF=$(awk '/^confidence:/{print $2; exit}' "$f")
+  if [[ "$AUTO" == "true" && "$CONF" == "low" ]]; then
+    continue   # 默认过滤
+  fi
+  echo "$f"
+done
+```
+
+**显式包含 auto 卡片**：`/ai-pm knowledge search {词} --include-auto`
+
+suggest 同样默认过滤，理由相同（PRD 前推荐时不希望低质量噪音）。
+
 ---
 
 ## list — 列出知识库
@@ -249,6 +271,10 @@ suggest {需求关键词列表}
 # 逐个关键词在知识库中搜索，合并去重结果
 grep -r "{keyword}" templates/knowledge-base/ --include="*.md" -l 2>/dev/null
 ```
+
+**默认过滤规则**（与 search 一致）：
+
+排除 `auto-generated: true` AND `confidence: low` 的卡片。手写卡片或已被 PM promote 到 medium/high 的 auto 卡片仍会出现。
 
 ### 推荐展示（最多 3 条）
 
