@@ -23,6 +23,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep)
 | `list` | 列出所有分类统计 |
 | `sync` | 从当前项目提取可沉淀知识 |
 | `suggest {词}` | 推荐相关知识（Phase 5 自动调用 / 用户直接调用，详见文末规范） |
+| `review-low` | 批量管理 auto-generated 卡片 |
+| `cleanup-auto` | 清理 / 归档 auto 卡片（紧急回滚 + 日常维护）|
 | 无参数 | 执行 list |
 
 ---
@@ -303,3 +305,42 @@ grep -r "{keyword}" templates/knowledge-base/ --include="*.md" -l 2>/dev/null
 ### 无匹配时
 
 搜索结果为空 → 静默跳过，不输出任何提示（避免噪音）
+
+---
+
+## review-low — 批量审阅自动卡片
+
+### 列出所有 auto-generated + low 卡片
+
+```bash
+find templates/knowledge-base -name '*.md' -exec grep -l 'auto-generated: true' {} \;
+```
+
+按 category 分组展示：
+
+```
+本月自动生成 14 张待 review 卡片：
+
+[1] PITFALL: filter-repo 拒绝 untracked  源:95603cf1  pitfalls/
+[2] PITFALL: force-with-lease stale       源:95603cf1  pitfalls/
+[3] PATTERN: memory 索引拆分原则          源:abc12345  patterns/
+...
+
+可用操作：
+  promote-high 1,2,5      # 升 confidence=high
+  promote-medium 3,4      # 升 medium
+  drop 6                  # 删除
+  merge 5,6 → 6           # 合并：5 删除、其验证数据合并到 6
+  skip                    # 暂不处理
+  all-promote-medium      # 全部升 medium
+  all-drop                # 全清
+```
+
+### 操作实现
+
+| 操作 | 实现 |
+|------|------|
+| promote-high N | sed 改对应卡片的 `confidence: low` → `confidence: high` |
+| promote-medium N | 同上，改为 medium |
+| drop N | rm 对应卡片 |
+| merge A,B → B | 把 A 的"验证数据"段 cat 到 B 末尾，rm A |
