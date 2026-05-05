@@ -344,3 +344,14 @@ find templates/knowledge-base -name '*.md' -exec grep -l 'auto-generated: true' 
 | promote-medium N | 同上，改为 medium |
 | drop N | rm 对应卡片 |
 | merge A,B → B | 把 A 的"验证数据"段 cat 到 B 末尾，rm A |
+
+---
+
+## cleanup-auto — 清理自动卡片
+
+调用：`bash scripts/cleanup-auto-cards.sh [模式]`
+
+| 模式 | 用途 |
+|------|------|
+| `--all-drop` | 紧急回滚——全删 auto-generated 卡片（含交互确认）|
+| `--archive-stale [天数]` | 归档 N 天（默认 7）未修改的 auto+low 卡片到 `.archived/` |
