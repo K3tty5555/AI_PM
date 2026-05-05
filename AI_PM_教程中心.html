@@ -118,11 +118,93 @@ body {
 
 /* 组件样式占位，后续 Task 逐步填充 */
 
+.app-header {
+  position: sticky; top: 0; z-index: 50;
+  height: 44px;
+  background: var(--bg-elevated);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 24px; gap: 32px;
+}
+.app-logo {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-primary); text-decoration: none;
+}
+.app-nav { display: flex; gap: 4px; flex: 1; }
+.app-nav-link {
+  position: relative;
+  font-size: 13px; font-weight: 500;
+  color: var(--text-secondary);
+  padding: 0 12px; height: 44px;
+  display: flex; align-items: center;
+  text-decoration: none;
+  transition: color var(--dur-base) var(--ease-standard);
+}
+.app-nav-link:hover { color: var(--text-primary); }
+.app-nav-link.active { color: var(--text-primary); }
+.app-nav-link.active::after {
+  content: ''; position: absolute;
+  bottom: 0; left: 8px; right: 8px; height: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  animation: slideInLeft var(--dur-base) var(--ease-decelerate);
+}
+.app-actions { display: flex; gap: 8px; align-items: center; }
+.theme-toggle, .icon-link {
+  width: 28px; height: 28px;
+  border-radius: var(--radius-sm);
+  border: none; background: transparent;
+  color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-standard), color var(--dur-base);
+}
+.theme-toggle:hover, .icon-link:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+.theme-toggle:active { transform: scale(0.97); transition-duration: var(--dur-fast); }
+.theme-toggle svg, .icon-link svg {
+  width: 16px; height: 16px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+}
+.theme-toggle .icon-moon { display: none; }
+html.theme-dark .theme-toggle .icon-sun { display: none; }
+html.theme-dark .theme-toggle .icon-moon { display: block; }
+
 </style>
 </head>
 <body>
 
-<!-- AppHeader · Task 2 -->
+<header class="app-header">
+  <a href="#hero" class="app-logo">AI PM</a>
+  <nav class="app-nav">
+    <a href="#quickstart" class="app-nav-link" data-section="quickstart">快速开始</a>
+    <a href="#skills" class="app-nav-link" data-section="skills">技能</a>
+    <a href="#workflow" class="app-nav-link" data-section="workflow">流程</a>
+    <a href="#client" class="app-nav-link" data-section="client">客户端</a>
+    <a href="#reference" class="app-nav-link" data-section="reference">速查</a>
+  </nav>
+  <div class="app-actions">
+    <button class="theme-toggle" aria-label="切换主题" title="切换 Light/Dark 主题">
+      <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+    <a href="https://github.com/K3tty5555/AI_PM" target="_blank" rel="noopener" class="icon-link" aria-label="GitHub" title="GitHub 仓库">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+      </svg>
+    </a>
+  </div>
+</header>
 
 <main>
   <!-- Hero · Task 3 -->
