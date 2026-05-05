@@ -364,6 +364,119 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
   .hero-mockup { height: 300px; }
 }
 
+.section {
+  padding: 80px 64px;
+  max-width: 1280px; margin: 0 auto;
+}
+.section-eyebrow {
+  font-size: 13px; font-weight: 500;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.section h2 {
+  font-size: 28px; font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.section-desc {
+  font-size: 14px; color: var(--text-secondary);
+  margin-bottom: 32px;
+  max-width: 600px;
+}
+
+.tabs {
+  display: flex; gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.tab-trigger {
+  position: relative;
+  font-size: 14px; font-weight: 500;
+  padding: 10px 16px;
+  border: none; background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: color var(--dur-base), background var(--dur-base);
+}
+.tab-trigger:hover { background: var(--hover-bg); }
+.tab-trigger.active { color: var(--text-primary); }
+.tab-trigger.active::after {
+  content: ''; position: absolute;
+  bottom: -1px; left: 8px; right: 8px; height: 2px;
+  background: var(--accent);
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.step-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600;
+  font-family: var(--font-mono);
+}
+.step-title {
+  font-size: 15px; font-weight: 500;
+  color: var(--text-primary);
+}
+.step-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.code-line {
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  display: flex; align-items: center; gap: 8px;
+  position: relative;
+}
+.code-prompt {
+  color: var(--text-tertiary);
+  user-select: none;
+}
+.copy-btn {
+  margin-left: auto;
+  font-size: 11px; font-weight: 500;
+  font-family: var(--font-sans);
+  padding: 4px 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--dur-base);
+}
+.copy-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.copy-btn:active { transform: scale(0.97); }
+
+@media (max-width: 900px) {
+  .section { padding: 48px 24px; }
+  .steps { grid-template-columns: 1fr; }
+}
+
 </style>
 </head>
 <body>
@@ -469,7 +582,82 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
       </div>
     </div>
   </section>
-  <!-- Quickstart · Task 4 -->
+  <section id="quickstart" class="section">
+    <div class="section-eyebrow">GETTING STARTED</div>
+    <h2>快速开始</h2>
+    <p class="section-desc">两种使用方式，根据你的偏好选择。Claude Code 命令行原生集成，桌面客户端可视化操作。</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab-trigger active" data-tab="cli" role="tab" aria-selected="true">Claude Code 命令行</button>
+      <button class="tab-trigger" data-tab="app" role="tab" aria-selected="false">桌面客户端</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-cli" role="tabpanel">
+      <div class="steps">
+        <div class="step-card">
+          <span class="step-num">01</span>
+          <div class="step-title">克隆项目</div>
+          <p class="step-desc">把项目拉到本地。没用过命令行？把下面这行复制到终端回车即可。</p>
+          <div class="code-line">
+            <span class="code-prompt">$</span>
+            <span>git clone https://github.com/K3tty5555/AI_PM.git</span>
+            <button class="copy-btn" data-copy="git clone https://github.com/K3tty5555/AI_PM.git">复制</button>
+          </div>
+        </div>
+        <div class="step-card">
+          <span class="step-num">02</span>
+          <div class="step-title">打开目录</div>
+          <p class="step-desc">用 Claude Code 打开 AI_PM 目录（File → Open Folder）。还没装？前往 claude.ai/code。</p>
+          <div class="code-line">
+            <span class="code-prompt">&gt;</span>
+            <span style="color:var(--text-tertiary)">File → Open Folder → AI_PM/</span>
+          </div>
+        </div>
+        <div class="step-card">
+          <span class="step-num">03</span>
+          <div class="step-title">输入需求</div>
+          <p class="step-desc">用 /ai-pm 命令描述你的想法。AI 会先确认方向，然后自动推进到 PRD 和原型。</p>
+          <div class="code-line">
+            <span class="code-prompt">/</span>
+            <span>ai-pm "帮年轻人记账的小程序"</span>
+            <button class="copy-btn" data-copy='/ai-pm "帮年轻人记账的小程序"'>复制</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-app" role="tabpanel">
+      <div class="steps">
+        <div class="step-card">
+          <span class="step-num">01</span>
+          <div class="step-title">下载安装</div>
+          <p class="step-desc">从 GitHub Releases 下载对应平台的安装包，双击安装。</p>
+          <div class="code-line">
+            <span class="code-prompt">→</span>
+            <span style="color:var(--text-tertiary)">github.com/K3tty5555/AI_PM/releases</span>
+          </div>
+        </div>
+        <div class="step-card">
+          <span class="step-num">02</span>
+          <div class="step-title">配置 AI 后端</div>
+          <p class="step-desc">设置中选择：Anthropic API（填 Key）/ OpenAI 兼容接口 / Claude CLI（复用本机登录）。</p>
+          <div class="code-line">
+            <span class="code-prompt">~</span>
+            <span style="color:var(--text-tertiary)">设置 → AI 后端 → 选择模式</span>
+          </div>
+        </div>
+        <div class="step-card">
+          <span class="step-num">03</span>
+          <div class="step-title">创建项目</div>
+          <p class="step-desc">点击「新建项目」，输入需求。每个阶段支持「先聊聊」模式——和 AI 讨论达成共识后再生成。</p>
+          <div class="code-line">
+            <span class="code-prompt">+</span>
+            <span style="color:var(--text-tertiary)">新建项目 → 输入需求 → 开始</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
   <!-- Skills · Task 5 -->
   <!-- Workflow · Task 6 -->
   <!-- Client · Task 7 -->
