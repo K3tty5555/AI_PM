@@ -24,3 +24,34 @@ echo "$NOW" > "$STATE_DIR/test2.ts"
 RESULT=$(echo '{"hook_event_name":"Stop","session_id":"test2"}' | bash "$HOOK")
 [[ "$RESULT" == "{}" ]] || { echo "FAIL T3: cooldown 未生效"; exit 1; }
 echo "PASS T3: 60s 冷却生效"
+
+# 准备假 transcript 文件
+FAKE_TRANSCRIPT="/tmp/fake-transcript.jsonl"
+> "$FAKE_TRANSCRIPT"
+for i in $(seq 1 5); do
+  echo '{"type":"user","content":"msg '"$i"'"}' >> "$FAKE_TRANSCRIPT"
+done
+
+# Test 4: msg < 30 应放行（节流）
+echo "0" > "$STATE_DIR/test4.last_count"   # 上次 count=0
+echo "0" > "$STATE_DIR/test4.ts"           # 远古时间戳，不受 cooldown 限
+RESULT=$(echo "{\"hook_event_name\":\"Stop\",\"session_id\":\"test4\",\"transcript_path\":\"$FAKE_TRANSCRIPT\"}" | bash "$HOOK")
+[[ "$RESULT" == "{}" ]] || { echo "FAIL T4: 5 msg 不应触发"; exit 1; }
+echo "PASS T4: 5 msg 节流放行"
+
+# Test 5: msg >= 30 应触发（生成 block）
+> "$FAKE_TRANSCRIPT"
+for i in $(seq 1 35); do
+  echo '{"type":"user","content":"msg '"$i"'"}' >> "$FAKE_TRANSCRIPT"
+done
+echo "0" > "$STATE_DIR/test5.last_count"
+echo "0" > "$STATE_DIR/test5.ts"
+RESULT=$(echo "{\"hook_event_name\":\"Stop\",\"session_id\":\"test5\",\"transcript_path\":\"$FAKE_TRANSCRIPT\"}" | bash "$HOOK")
+echo "$RESULT" | jq -e '.decision == "block"' >/dev/null || { echo "FAIL T5: 35 msg 应触发 block, got: $RESULT"; exit 1; }
+echo "PASS T5: 35 msg 触发 block"
+
+# Test 6: PreCompact 直接触发不数 msg
+echo "0" > "$STATE_DIR/test6.ts"
+RESULT=$(echo '{"hook_event_name":"PreCompact","session_id":"test6"}' | bash "$HOOK")
+echo "$RESULT" | jq -e '.decision == "block"' >/dev/null || { echo "FAIL T6: PreCompact 应直接 block, got: $RESULT"; exit 1; }
+echo "PASS T6: PreCompact 直接 block"

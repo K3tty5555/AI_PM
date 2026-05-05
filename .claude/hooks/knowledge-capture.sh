@@ -3,6 +3,7 @@ set +e
 trap 'echo "{}"; exit 0' ERR
 
 COOLDOWN_SECONDS=60
+SAVE_INTERVAL=30
 STATE_DIR="${HOME}/.ai-pm/hook_state"
 ENABLED_FLAG="${PWD}/.claude/hooks/.knowledge-capture.enabled"
 
@@ -14,6 +15,8 @@ mkdir -p "$STATE_DIR" 2>/dev/null
 INPUT=$(cat)
 SESSION=$(echo "$INPUT" | jq -r '.session_id // "unknown"')
 ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
+EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // ""')
+TRANSCRIPT=$(echo "$INPUT" | jq -r '.transcript_path // ""')
 
 # 死循环防护 1：stop_hook_active flag
 [[ "$ACTIVE" == "true" ]] && { echo "{}"; exit 0; }
@@ -26,5 +29,26 @@ if (( START_TS - LAST_TS < COOLDOWN_SECONDS )); then
   echo "{}"; exit 0
 fi
 
-# 占位：后续 task 填充节流 + block 逻辑
-echo "{}"
+# Stop 事件按 msg 数节流（PreCompact / SessionEnd 直接通过）
+if [[ "$EVENT" == "Stop" ]]; then
+  [[ -f "$TRANSCRIPT" ]] || { echo "{}"; exit 0; }
+  COUNT=$(grep -c '"type":"user"' "$TRANSCRIPT" 2>/dev/null || echo 0)
+  LAST_COUNT_FILE="$STATE_DIR/${SESSION}.last_count"
+  LAST_COUNT=$(cat "$LAST_COUNT_FILE" 2>/dev/null || echo 0)
+  DELTA=$(( COUNT - LAST_COUNT ))
+  if (( DELTA < SAVE_INTERVAL )); then
+    echo "{}"; exit 0
+  fi
+  echo "$COUNT" > "$LAST_COUNT_FILE"
+fi
+
+# 节流通过，记录时间戳
+echo "$START_TS" > "$LAST_TS_FILE"
+
+# 触发 block（reason 占位，下个 task 填充正式提示词）
+cat <<'EOF'
+{
+  "decision": "block",
+  "reason": "PLACEHOLDER - 下个 task 填充"
+}
+EOF
