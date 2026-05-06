@@ -184,7 +184,8 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
 .tab-trigger:focus-visible,
 .copy-btn:focus-visible,
 .tl-node:focus-visible,
-.ref-row:focus-visible {
+.ref-row:focus-visible,
+.drawer-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
@@ -1769,7 +1770,7 @@ footer {
   <span>共 26 个项目技能 + 2 个 sub-agent · 最后更新 2026-05-05</span>
 </footer>
 <div class="drawer-overlay" id="drawer-overlay"></div>
-<aside class="drawer" id="drawer" aria-label="导航菜单">
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="导航菜单">
   <a href="#quickstart" class="drawer-link">快速开始</a>
   <a href="#skills" class="drawer-link">技能</a>
   <a href="#workflow" class="drawer-link">流程</a>
@@ -2045,11 +2046,16 @@ footer {
     drawer.classList.add('open');
     overlay.classList.add('open');
     toggle.setAttribute('aria-expanded', 'true');
+    // 进入 drawer，焦点落在第一个链接，避免 Tab 漂到背后内容
+    const firstLink = drawer.querySelector('a');
+    if (firstLink) firstLink.focus();
   }
   function closeDrawer() {
     drawer.classList.remove('open');
     overlay.classList.remove('open');
     toggle.setAttribute('aria-expanded', 'false');
+    // 关闭时焦点回到 hamburger，方便键盘用户
+    toggle.focus();
   }
   toggle.addEventListener('click', openDrawer);
   overlay.addEventListener('click', closeDrawer);
