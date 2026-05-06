@@ -1732,17 +1732,21 @@ footer {
 (function() {
   const cards = document.querySelectorAll('.skill-card, .client-card');
   if (!cards.length) return;
-  if (!('IntersectionObserver' in window)) {
-    cards.forEach(c => { c.style.opacity = '1'; });
-    return;
-  }
+  if (!('IntersectionObserver' in window)) return; // 无 IO，保持 CSS 默认 opacity:1
+
+  // 预设隐藏，防止闪烁
+  cards.forEach(c => {
+    c.style.opacity = '0';
+    c.style.willChange = 'opacity, transform';
+  });
+
   const io = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
       const el = entry.target;
       const idx = Array.from(el.parentNode.children).indexOf(el);
       const delay = Math.min(idx * 60, 600);
-      el.style.animation = `fadeInUp 0.4s ease forwards ${delay}ms`;
+      el.style.animation = `fadeInUp var(--dur-slow) var(--ease-decelerate) forwards ${delay}ms`;
       io.unobserve(el);
     });
   }, { threshold: 0.1 });
@@ -1753,7 +1757,7 @@ footer {
 (function() {
   document.querySelectorAll('.tabs').forEach(tabsEl => {
     const triggers = tabsEl.querySelectorAll('.tab-trigger');
-    const panels = tabsEl.querySelectorAll('.tab-panel');
+    const panels = tabsEl.parentElement.querySelectorAll(':scope > .tab-panel');
     if (!triggers.length || !panels.length) return;
 
     function syncTabindex() {
@@ -1809,7 +1813,10 @@ footer {
     }
     node.addEventListener('click', (e) => {
       // 点击 detail 内的 <code> 不收起，让用户能选中文本
-      if (e.target.tagName === 'CODE') return;
+      if (e.target.tagName === 'CODE') {
+        e.stopPropagation();
+        return;
+      }
       e.stopPropagation();
       toggle();
     });
