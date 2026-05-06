@@ -110,11 +110,11 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* TODO Task 9/10: also explicitly cover html { transition / scroll-behavior } */
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+  html { scroll-behavior: auto !important; }
 }
 
 /* 组件样式占位，后续 Task 逐步填充 */
@@ -1054,7 +1054,7 @@ footer {
   <section id="skills" class="section">
     <div class="section-eyebrow">SKILLS</div>
     <h2>技能列表</h2>
-    <p class="section-desc">21 个项目技能，覆盖完整产品流程、扩展工具与配置管理。命令直接复制到 Claude Code 输入框运行。</p>
+    <p class="section-desc">精选 21 个常用技能，覆盖完整产品流程、扩展工具与配置管理。完整命令清单见下方"命令速查"。</p>
 
     <div class="tabs" role="tablist" aria-label="技能分类">
       <button class="tab-trigger active" data-tab="core" role="tab" id="tab-skills-trigger-core" aria-controls="tab-skills-core" aria-selected="true">主流程</button>
