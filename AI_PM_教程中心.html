@@ -1672,11 +1672,42 @@ footer {
 
 <script>
 /* JS 占位，后续 Task 逐步填充：
-   - Task 9: 主题切换
+   - [v] Task 9: 主题切换
    - Task 10: 滚动联动 + 卡片进入动画
    - Task 11: 复制 + Toast
    - Task 12: 响应式 drawer + fallbacks
 */
+
+/* === 主题切换 === */
+(function() {
+  const STORAGE_KEY = 'tutorial-theme';
+  const html = document.documentElement;
+
+  // 初始：localStorage > prefers-color-scheme > light
+  function initTheme() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'dark' || saved === 'light') {
+      applyTheme(saved);
+      return;
+    }
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(prefersDark ? 'dark' : 'light');
+  }
+  function applyTheme(theme) {
+    if (theme === 'dark') html.classList.add('theme-dark');
+    else html.classList.remove('theme-dark');
+  }
+  function toggleTheme() {
+    const isDark = html.classList.contains('theme-dark');
+    const next = isDark ? 'light' : 'dark';
+    applyTheme(next);
+    localStorage.setItem(STORAGE_KEY, next);
+  }
+
+  initTheme();
+  const btn = document.querySelector('.theme-toggle');
+  if (btn) btn.addEventListener('click', toggleTheme);
+})();
 </script>
 
 </body>
