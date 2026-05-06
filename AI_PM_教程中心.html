@@ -704,6 +704,70 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
+.ref-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 32px;
+}
+.ref-col-label {
+  font-size: 13px; font-weight: 500;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+}
+.ref-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--dur-base);
+  position: relative;
+}
+.ref-row:hover {
+  background: var(--hover-bg);
+}
+.ref-row.copied {
+  background: var(--accent-light);
+}
+.ref-cmd {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.ref-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.ref-ok {
+  margin-left: auto;
+  font-size: 12px; color: var(--success);
+  opacity: 0;
+  transition: opacity var(--dur-base);
+}
+.ref-row.copied .ref-ok { opacity: 1; }
+.ref-section-full {
+  grid-column: 1 / -1;
+  margin-top: 16px;
+}
+.ref-sub-label {
+  font-size: 13px; font-weight: 500;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+footer {
+  padding: 32px 64px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .ref-grid { grid-template-columns: 1fr; }
+  footer { flex-direction: column; gap: 12px; padding: 24px; }
+}
 </style>
 </head>
 <body>
@@ -1343,10 +1407,266 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
       </div>
     </div>
   </section>
-  <!-- Reference · Task 8 -->
+  <section id="reference" class="section">
+    <div class="section-eyebrow">REFERENCE</div>
+    <h2>命令速查</h2>
+    <p class="section-desc">点击任意行复制命令到剪贴板。</p>
+
+    <div class="ref-grid">
+      <div>
+        <div class="ref-col-label">主流程</div>
+        <div class="ref-row" data-copy="/ai-pm" tabindex="0" role="button" aria-label="复制命令 /ai-pm">
+          <span class="ref-cmd">/ai-pm</span>
+          <span class="ref-desc">完整流程入口</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm office-hours" tabindex="0" role="button" aria-label="复制命令 /ai-pm office-hours">
+          <span class="ref-cmd">/ai-pm office-hours</span>
+          <span class="ref-desc">需求速评 / 先聊聊</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-analyze" tabindex="0" role="button" aria-label="复制命令 /ai-pm-analyze">
+          <span class="ref-cmd">/ai-pm-analyze</span>
+          <span class="ref-desc">需求分析</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-research" tabindex="0" role="button" aria-label="复制命令 /ai-pm-research">
+          <span class="ref-cmd">/ai-pm-research</span>
+          <span class="ref-desc">竞品研究</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-story" tabindex="0" role="button" aria-label="复制命令 /ai-pm-story">
+          <span class="ref-cmd">/ai-pm-story</span>
+          <span class="ref-desc">用户故事</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-prd" tabindex="0" role="button" aria-label="复制命令 /ai-pm-prd">
+          <span class="ref-cmd">/ai-pm-prd</span>
+          <span class="ref-desc">PRD 生成</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm data metrics" tabindex="0" role="button" aria-label="复制命令 /ai-pm data metrics">
+          <span class="ref-cmd">/ai-pm data metrics</span>
+          <span class="ref-desc">埋点和指标设计</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-prototype" tabindex="0" role="button" aria-label="复制命令 /ai-pm-prototype">
+          <span class="ref-cmd">/ai-pm-prototype</span>
+          <span class="ref-desc">原型生成</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-review" tabindex="0" role="button" aria-label="复制命令 /ai-pm-review">
+          <span class="ref-cmd">/ai-pm-review</span>
+          <span class="ref-desc">需求评审（六角色）</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm retrospective" tabindex="0" role="button" aria-label="复制命令 /ai-pm retrospective">
+          <span class="ref-cmd">/ai-pm retrospective</span>
+          <span class="ref-desc">项目复盘</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-brainstorm" tabindex="0" role="button" aria-label="复制命令 /ai-pm-brainstorm">
+          <span class="ref-cmd">/ai-pm-brainstorm</span>
+          <span class="ref-desc">头脑风暴对话</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+      </div>
+      <div>
+        <div class="ref-col-label">扩展工具</div>
+        <div class="ref-row" data-copy="/ai-pm-priority" tabindex="0" role="button" aria-label="复制命令 /ai-pm-priority">
+          <span class="ref-cmd">/ai-pm-priority</span>
+          <span class="ref-desc">需求优先级</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-weekly" tabindex="0" role="button" aria-label="复制命令 /ai-pm-weekly">
+          <span class="ref-cmd">/ai-pm-weekly</span>
+          <span class="ref-desc">工作周报</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-interview" tabindex="0" role="button" aria-label="复制命令 /ai-pm-interview">
+          <span class="ref-cmd">/ai-pm-interview</span>
+          <span class="ref-desc">现场访谈</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-data" tabindex="0" role="button" aria-label="复制命令 /ai-pm-data">
+          <span class="ref-cmd">/ai-pm-data</span>
+          <span class="ref-desc">数据洞察</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-driver" tabindex="0" role="button" aria-label="复制命令 /ai-pm-driver">
+          <span class="ref-cmd">/ai-pm-driver</span>
+          <span class="ref-desc">PM 风格质量守门</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/pm-gap-research" tabindex="0" role="button" aria-label="复制命令 /pm-gap-research">
+          <span class="ref-cmd">/pm-gap-research</span>
+          <span class="ref-desc">机会缺口研究</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/multi-perspective-review" tabindex="0" role="button" aria-label="复制命令 /multi-perspective-review">
+          <span class="ref-cmd">/multi-perspective-review</span>
+          <span class="ref-desc">多视角评审</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-persona" tabindex="0" role="button" aria-label="复制命令 /ai-pm-persona">
+          <span class="ref-cmd">/ai-pm-persona</span>
+          <span class="ref-desc">产品分身（风格学习）</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-design-spec" tabindex="0" role="button" aria-label="复制命令 /ai-pm-design-spec">
+          <span class="ref-cmd">/ai-pm-design-spec</span>
+          <span class="ref-desc">设计规范</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-knowledge" tabindex="0" role="button" aria-label="复制命令 /ai-pm-knowledge">
+          <span class="ref-cmd">/ai-pm-knowledge</span>
+          <span class="ref-desc">知识库</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-review-modify" tabindex="0" role="button" aria-label="复制命令 /ai-pm-review-modify">
+          <span class="ref-cmd">/ai-pm-review-modify</span>
+          <span class="ref-desc">评审后修订</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+      </div>
+      <div class="ref-section-full">
+        <div class="ref-sub-label">配置管理</div>
+        <div class="ref-row" data-copy="/ai-pm-knowledge add" tabindex="0" role="button" aria-label="复制命令 /ai-pm-knowledge add">
+          <span class="ref-cmd">/ai-pm-knowledge add</span>
+          <span class="ref-desc">记录踩坑经验</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy='/ai-pm-knowledge search "关键词"' tabindex="0" role="button" aria-label='复制命令 /ai-pm-knowledge search "关键词"'>
+          <span class="ref-cmd">/ai-pm-knowledge search &quot;关键词&quot;</span>
+          <span class="ref-desc">搜索知识库</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm-knowledge sync" tabindex="0" role="button" aria-label="复制命令 /ai-pm-knowledge sync">
+          <span class="ref-cmd">/ai-pm-knowledge sync</span>
+          <span class="ref-desc">同步当前项目经验到知识库</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/tutorial-center-update" tabindex="0" role="button" aria-label="复制命令 /tutorial-center-update">
+          <span class="ref-cmd">/tutorial-center-update</span>
+          <span class="ref-desc">增量更新本教程页</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+      </div>
+      <div class="ref-section-full">
+        <div class="ref-sub-label">AI 协作桥</div>
+        <div class="ref-row" data-copy="scripts/ai-sync/check-ai-context-drift.sh" tabindex="0" role="button" aria-label="复制命令 scripts/ai-sync/check-ai-context-drift.sh">
+          <span class="ref-cmd">scripts/ai-sync/check-ai-context-drift.sh</span>
+          <span class="ref-desc">检查 memory / skill / agent 索引是否同步</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="scripts/ai-sync/sync-claude-memory-to-codex.sh" tabindex="0" role="button" aria-label="复制命令 scripts/ai-sync/sync-claude-memory-to-codex.sh">
+          <span class="ref-cmd">scripts/ai-sync/sync-claude-memory-to-codex.sh</span>
+          <span class="ref-desc">把 Claude 项目 memory 同步成 Codex 可读摘要</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+      </div>
+      <div class="ref-section-full">
+        <div class="ref-sub-label">基础设施（被主流程内部调用）</div>
+        <div class="ref-row" data-copy="/frontend-design" tabindex="0" role="button" aria-label="复制命令 /frontend-design">
+          <span class="ref-cmd">/frontend-design</span>
+          <span class="ref-desc">前端视觉设计（impeccable 套件）</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/ui-ux-pro-max" tabindex="0" role="button" aria-label="复制命令 /ui-ux-pro-max">
+          <span class="ref-cmd">/ui-ux-pro-max</span>
+          <span class="ref-desc">UI/UX 分析与方案</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="/Humanizer-zh" tabindex="0" role="button" aria-label="复制命令 /Humanizer-zh">
+          <span class="ref-cmd">/Humanizer-zh</span>
+          <span class="ref-desc">中文文案去 AI 味</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="pm-agent" tabindex="0" role="button" aria-label="复制命令 pm-agent">
+          <span class="ref-cmd">pm-agent</span>
+          <span class="ref-desc">PRD 章节写作 sub-agent</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+        <div class="ref-row" data-copy="prototype-agent" tabindex="0" role="button" aria-label="复制命令 prototype-agent">
+          <span class="ref-cmd">prototype-agent</span>
+          <span class="ref-desc">原型蓝图与质量审计 sub-agent</span>
+          <span class="ref-ok" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
-<!-- Footer · Task 8 -->
+<footer>
+  <span>© 2026 K3TTY_WU · AI PM v0.4.4</span>
+  <span>共 26 个项目技能 + 2 个 sub-agent · 最后更新 2026-05-05</span>
+</footer>
 <!-- Toast container · Task 11 -->
 
 <script>
