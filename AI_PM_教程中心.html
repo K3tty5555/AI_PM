@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI PM · 使用教程</title>
+<script>(function(){try{var t=localStorage.getItem('tutorial-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';if(t==='dark')document.documentElement.classList.add('theme-dark');}catch(e){}})();</script>
 <style>
 :root {
   color-scheme: light dark;
@@ -1682,30 +1683,26 @@ footer {
 (function() {
   const STORAGE_KEY = 'tutorial-theme';
   const html = document.documentElement;
+  const btn = document.querySelector('.theme-toggle');
 
-  // 初始：localStorage > prefers-color-scheme > light
-  function initTheme() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === 'dark' || saved === 'light') {
-      applyTheme(saved);
-      return;
-    }
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    applyTheme(prefersDark ? 'dark' : 'light');
+  // head 脚本已应用初始 theme（防 FOUC），这里只同步 aria-pressed 并绑定点击
+  function syncAriaPressed() {
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', html.classList.contains('theme-dark') ? 'true' : 'false');
   }
   function applyTheme(theme) {
     if (theme === 'dark') html.classList.add('theme-dark');
     else html.classList.remove('theme-dark');
+    syncAriaPressed();
   }
   function toggleTheme() {
     const isDark = html.classList.contains('theme-dark');
     const next = isDark ? 'light' : 'dark';
     applyTheme(next);
-    localStorage.setItem(STORAGE_KEY, next);
+    try { localStorage.setItem(STORAGE_KEY, next); } catch (e) { /* localStorage blocked, no-op */ }
   }
 
-  initTheme();
-  const btn = document.querySelector('.theme-toggle');
+  syncAriaPressed();
   if (btn) btn.addEventListener('click', toggleTheme);
 })();
 </script>
