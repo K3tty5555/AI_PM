@@ -655,6 +655,55 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
     transform: translateX(0) translateY(0);
   }
 }
+
+.client-cat {
+  display: block;
+  font-size: 13px; font-weight: 500;
+  color: var(--text-tertiary);
+  margin: 32px 0 16px;
+  letter-spacing: 0.02em;
+}
+.client-cat:first-of-type { margin-top: 0; }
+.client-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-base), box-shadow var(--dur-base);
+}
+.client-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.client-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-light);
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.client-icon svg {
+  width: 18px; height: 18px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+}
+.client-name {
+  font-size: 15px; font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.client-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.client-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
 </style>
 </head>
 <body>
@@ -1159,6 +1208,141 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
     </div>
   </section>
   <!-- Client · Task 7 -->
+  <section id="client" class="section">
+    <div class="section-eyebrow">DESKTOP CLIENT</div>
+    <h2>桌面客户端</h2>
+    <p class="section-desc">独立桌面应用，macOS / Windows 双平台，v0.4.4。</p>
+
+    <span class="client-cat">核心体验</span>
+    <div class="client-grid">
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+        <div class="client-name">先聊聊模式</div>
+        <div class="client-desc">每个阶段可先和 AI 多轮讨论，达成共识后再生成文档。像真人协作一样。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="M19 14l.7 2.1L22 17l-2.3.9-.7 2.1-.7-2.1L16 17l2.3-.9z"/></svg></span>
+        <div class="client-name">分段渐现</div>
+        <div class="client-desc">内容按段落 fade-in 渐次呈现，不再是等半天然后突然全出来。可随时 Esc 跳过。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+        <div class="client-name">工具调用进度</div>
+        <div class="client-desc">AI 搜索网页、执行脚本时，实时显示工具状态和 Token 费用。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        <div class="client-name">暗色模式</div>
+        <div class="client-desc">深色界面一键切换，护眼同时保持所有功能可用。⌘D 快捷切换。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span>
+        <div class="client-name">10 个阶段页</div>
+        <div class="client-desc">需求速评、收集、分析、研究、故事、PRD、埋点、原型、评审、复盘，按项目流转。</div>
+      </div>
+    </div>
+
+    <span class="client-cat">可视化</span>
+    <div class="client-grid">
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+        <div class="client-name">项目 Dashboard</div>
+        <div class="client-desc">卡片视图，搜索/过滤/收藏/进度条，所有项目状态一目了然。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg></span>
+        <div class="client-name">故事拖拽排序</div>
+        <div class="client-desc">StoryBoard 卡片拖拽，双击编辑，像 Trello 一样管理用户故事。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>
+        <div class="client-name">原型设备模拟</div>
+        <div class="client-desc">生成的原型可在 iPhone / iPad / Laptop / Desktop 四种设备下预览。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span>
+        <div class="client-name">动效档位选择</div>
+        <div class="client-desc">原型三档动效强度：低·克制（B端）/ 中·平衡（C端）/ 高·丰富（营销页）。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></span>
+        <div class="client-name">PRD 工作台</div>
+        <div class="client-desc">目录、Mermaid、版本列表、差异对比、PRD 评分、助手面板和 AI 插图集中在同一页。</div>
+      </div>
+    </div>
+
+    <span class="client-cat">导出能力</span>
+    <div class="client-grid">
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+        <div class="client-name">PDF 导出</div>
+        <div class="client-desc">15 套封面模板，Chrome 无头渲染，一键生成专业 PDF 文档。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13.5V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2h-5.5"/><polyline points="14 2 14 8 20 8"/><path d="M10.42 12.61a2.1 2.1 0 1 1 2.97 2.97L7.95 21 4 22l.99-3.95 5.43-5.44z"/></svg></span>
+        <div class="client-name">DOCX 导出</div>
+        <div class="client-desc">13 套配方风格，可直接导入飞书/Lark，格式完美适配。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg></span>
+        <div class="client-name">PPT 导出</div>
+        <div class="client-desc">18 套配色方案按行业匹配，5 种页面类型，大纲可调整后一键生成。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>
+        <div class="client-name">分享页</div>
+        <div class="client-desc">独立 HTML 分享页，发给干系人直接浏览器打开，无需安装任何工具。</div>
+      </div>
+    </div>
+
+    <span class="client-cat">功能广场</span>
+    <div class="client-grid">
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><polyline points="21 15 16 10 5 21"/></svg></span>
+        <div class="client-name">图片与视觉</div>
+        <div class="client-desc">AI 文生图、文章封面、配图、信息图、小红书图片、知识漫画、GIF 贴纸和图像分析。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg></span>
+        <div class="client-name">视频与音频</div>
+        <div class="client-desc">AI 视频生成、语音音乐、图片幻灯片和 YouTube 字幕等多媒体工作流。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+        <div class="client-name">文档与内容</div>
+        <div class="client-desc">PPT、PDF、Word、Excel、翻译、Markdown 美化、微信 HTML、网页转 Markdown。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span>
+        <div class="client-name">发布工具</div>
+        <div class="client-desc">发布公众号、微博、X 等社媒工具统一放在功能广场，和项目工作流分离。</div>
+      </div>
+    </div>
+
+    <span class="client-cat">CLI 增强</span>
+    <div class="client-grid">
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+        <div class="client-name">网页搜索</div>
+        <div class="client-desc">竞品研究时 AI 自动搜索网页获取最新信息，不再局限于训练数据。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <div class="client-name">分阶段工具白名单</div>
+        <div class="client-desc">竞品研究开放搜索，原型开放文件写入，其他阶段只读，安全受控。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8z"/></svg></span>
+        <div class="client-name">三种 AI 后端</div>
+        <div class="client-desc">Anthropic API / OpenAI 兼容接口 / Claude CLI，按需选择。</div>
+      </div>
+      <div class="client-card">
+        <span class="client-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></span>
+        <div class="client-name">AI 共享上下文</div>
+        <div class="client-desc">项目 memory、skills 和 agent 索引可被 Claude 与 Codex 共同读取，降低上下文漂移。</div>
+      </div>
+    </div>
+  </section>
   <!-- Reference · Task 8 -->
 </main>
 
