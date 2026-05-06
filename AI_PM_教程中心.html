@@ -1674,7 +1674,7 @@ footer {
 <script>
 /* JS 占位，后续 Task 逐步填充：
    - [v] Task 9: 主题切换
-   - Task 10: 滚动联动 + 卡片进入动画
+   - [v] Task 10: 滚动联动 + 卡片进入动画 + Tab + Workflow accordion
    - Task 11: 复制 + Toast
    - Task 12: 响应式 drawer + fallbacks
 */
@@ -1704,6 +1704,127 @@ footer {
 
   syncAriaPressed();
   if (btn) btn.addEventListener('click', toggleTheme);
+})();
+
+/* === 滚动联动锚点 active === */
+(function() {
+  const sections = document.querySelectorAll('main section[id]');
+  const links = document.querySelectorAll('.app-nav-link[data-section]');
+  if (!sections.length || !links.length || !('IntersectionObserver' in window)) return;
+
+  const linkMap = new Map();
+  links.forEach(l => linkMap.set(l.dataset.section, l));
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const id = entry.target.id;
+      links.forEach(l => l.classList.remove('active'));
+      const link = linkMap.get(id);
+      if (link) link.classList.add('active');
+    });
+  }, { rootMargin: '-50% 0px -50% 0px' });
+
+  sections.forEach(s => io.observe(s));
+})();
+
+/* === 卡片 / Section 进入 fadeInUp === */
+(function() {
+  const cards = document.querySelectorAll('.skill-card, .client-card');
+  if (!cards.length) return;
+  if (!('IntersectionObserver' in window)) {
+    cards.forEach(c => { c.style.opacity = '1'; });
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const idx = Array.from(el.parentNode.children).indexOf(el);
+      const delay = Math.min(idx * 60, 600);
+      el.style.animation = `fadeInUp 0.4s ease forwards ${delay}ms`;
+      io.unobserve(el);
+    });
+  }, { threshold: 0.1 });
+  cards.forEach(c => io.observe(c));
+})();
+
+/* === Tab 切换 === */
+(function() {
+  document.querySelectorAll('.tabs').forEach(tabsEl => {
+    const triggers = tabsEl.querySelectorAll('.tab-trigger');
+    const panels = tabsEl.querySelectorAll('.tab-panel');
+    if (!triggers.length || !panels.length) return;
+
+    function syncTabindex() {
+      triggers.forEach(x => x.setAttribute('tabindex', x.classList.contains('active') ? '0' : '-1'));
+    }
+    syncTabindex();
+
+    triggers.forEach(t => {
+      t.addEventListener('click', () => {
+        triggers.forEach(x => {
+          const isActive = x === t;
+          x.classList.toggle('active', isActive);
+          x.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        const targetId = t.getAttribute('aria-controls');
+        panels.forEach(p => {
+          const isActive = p.id === targetId;
+          p.classList.toggle('active', isActive);
+        });
+        syncTabindex();
+      });
+    });
+
+    tabsEl.addEventListener('keydown', (e) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+      e.preventDefault();
+      const arr = Array.from(triggers);
+      const cur = arr.indexOf(document.activeElement);
+      let next = cur;
+      if (e.key === 'ArrowLeft')  next = cur > 0 ? cur - 1 : arr.length - 1;
+      if (e.key === 'ArrowRight') next = cur < arr.length - 1 ? cur + 1 : 0;
+      if (e.key === 'Home') next = 0;
+      if (e.key === 'End')  next = arr.length - 1;
+      arr[next].focus();
+      arr[next].click();
+    });
+  });
+})();
+
+/* === Workflow 节点 accordion === */
+(function() {
+  document.querySelectorAll('.tl-node').forEach(node => {
+    function toggle() {
+      const wasOpen = node.classList.contains('expanded');
+      document.querySelectorAll('.tl-node.expanded').forEach(n => {
+        n.classList.remove('expanded');
+        n.setAttribute('aria-expanded', 'false');
+      });
+      if (!wasOpen) {
+        node.classList.add('expanded');
+        node.setAttribute('aria-expanded', 'true');
+      }
+    }
+    node.addEventListener('click', (e) => {
+      // 点击 detail 内的 <code> 不收起，让用户能选中文本
+      if (e.target.tagName === 'CODE') return;
+      e.stopPropagation();
+      toggle();
+    });
+    node.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      toggle();
+    });
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.tl-node.expanded').forEach(n => {
+      n.classList.remove('expanded');
+      n.setAttribute('aria-expanded', 'false');
+    });
+  });
 })();
 </script>
 
