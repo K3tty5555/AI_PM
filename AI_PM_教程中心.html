@@ -1708,7 +1708,7 @@ footer {
   <span>© 2026 K3TTY_WU · AI PM v0.4.4</span>
   <span>共 26 个项目技能 + 2 个 sub-agent · 最后更新 2026-05-05</span>
 </footer>
-<div class="toast-container" id="toast-container"></div>
+<div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
 <script>
 /* JS 占位，后续 Task 逐步填充：
@@ -1926,7 +1926,9 @@ footer {
       e.preventDefault();
       const text = btn.dataset.copy;
       if (!text) return;
-      copy(text).then(() => showToast('命令已复制'));
+      copy(text)
+        .then(() => showToast('命令已复制'))
+        .catch(() => showToast('复制失败，请手动选中复制'));
     });
   });
 
@@ -1934,11 +1936,13 @@ footer {
   function triggerRefCopy(row) {
     const text = row.dataset.copy;
     if (!text) return;
-    copy(text).then(() => {
-      row.classList.add('copied');
-      showToast('命令已复制');
-      setTimeout(() => row.classList.remove('copied'), 1800);
-    });
+    copy(text)
+      .then(() => {
+        row.classList.add('copied');
+        showToast('命令已复制');
+        setTimeout(() => row.classList.remove('copied'), 1800);
+      })
+      .catch(() => showToast('复制失败，请手动选中复制'));
   }
   document.querySelectorAll('.ref-row[data-copy]').forEach(row => {
     row.addEventListener('click', () => triggerRefCopy(row));
