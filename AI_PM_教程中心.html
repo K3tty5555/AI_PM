@@ -179,7 +179,9 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
 .theme-toggle:focus-visible,
 .icon-link:focus-visible,
 .btn-primary:focus-visible,
-.btn-ghost:focus-visible {
+.btn-ghost:focus-visible,
+.tab-trigger:focus-visible,
+.copy-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
@@ -464,7 +466,7 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--dur-base);
+  transition: color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard), transform var(--dur-fast);
 }
 .copy-btn:hover {
   color: var(--accent);
@@ -587,12 +589,12 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
     <h2>快速开始</h2>
     <p class="section-desc">两种使用方式，根据你的偏好选择。Claude Code 命令行原生集成，桌面客户端可视化操作。</p>
 
-    <div class="tabs" role="tablist">
-      <button class="tab-trigger active" data-tab="cli" role="tab" aria-selected="true">Claude Code 命令行</button>
-      <button class="tab-trigger" data-tab="app" role="tab" aria-selected="false">桌面客户端</button>
+    <div class="tabs" role="tablist" aria-label="使用方式">
+      <button class="tab-trigger active" id="tab-trigger-cli" data-tab="cli" role="tab" aria-selected="true" aria-controls="tab-cli">Claude Code 命令行</button>
+      <button class="tab-trigger" id="tab-trigger-app" data-tab="app" role="tab" aria-selected="false" aria-controls="tab-app">桌面客户端</button>
     </div>
 
-    <div class="tab-panel active" id="tab-cli" role="tabpanel">
+    <div class="tab-panel active" id="tab-cli" role="tabpanel" aria-labelledby="tab-trigger-cli">
       <div class="steps">
         <div class="step-card">
           <span class="step-num">01</span>
@@ -626,7 +628,7 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
       </div>
     </div>
 
-    <div class="tab-panel" id="tab-app" role="tabpanel">
+    <div class="tab-panel" id="tab-app" role="tabpanel" aria-labelledby="tab-trigger-app">
       <div class="steps">
         <div class="step-card">
           <span class="step-num">01</span>
