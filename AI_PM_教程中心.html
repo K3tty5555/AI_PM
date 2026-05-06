@@ -809,6 +809,59 @@ footer {
   stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
   flex-shrink: 0;
 }
+
+.menu-toggle {
+  display: none;
+  width: 28px; height: 28px;
+  border: none; background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.menu-toggle:hover { background: var(--hover-bg); }
+.menu-toggle svg {
+  width: 18px; height: 18px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+}
+
+.drawer {
+  position: fixed;
+  top: 44px; right: 0; bottom: 0;
+  width: 240px;
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-xl);
+  z-index: 49;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 4px;
+  transform: translateX(100%);
+  transition: transform var(--dur-slow) var(--ease-decelerate);
+}
+.drawer.open { transform: translateX(0); }
+.drawer-link {
+  font-size: 14px; font-weight: 500;
+  color: var(--text-secondary);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: background var(--dur-base), color var(--dur-base);
+}
+.drawer-link:hover { background: var(--hover-bg); color: var(--text-primary); }
+.drawer-overlay {
+  position: fixed;
+  top: 44px; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 48;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-base);
+}
+.drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
+@media (max-width: 900px) {
+  .app-nav { display: none; }
+  .menu-toggle { display: flex; align-items: center; justify-content: center; }
+}
 </style>
 </head>
 <body>
@@ -822,6 +875,13 @@ footer {
     <a href="#client" class="app-nav-link" data-section="client">客户端</a>
     <a href="#reference" class="app-nav-link" data-section="reference">速查</a>
   </nav>
+  <button class="menu-toggle" id="menu-toggle" aria-label="菜单" aria-expanded="false" aria-controls="drawer">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <line x1="4" y1="6" x2="20" y2="6"/>
+      <line x1="4" y1="12" x2="20" y2="12"/>
+      <line x1="4" y1="18" x2="20" y2="18"/>
+    </svg>
+  </button>
   <div class="app-actions">
     <button class="theme-toggle" aria-label="切换主题" title="切换 Light/Dark 主题">
       <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
@@ -1708,6 +1768,14 @@ footer {
   <span>© 2026 K3TTY_WU · AI PM v0.4.4</span>
   <span>共 26 个项目技能 + 2 个 sub-agent · 最后更新 2026-05-05</span>
 </footer>
+<div class="drawer-overlay" id="drawer-overlay"></div>
+<aside class="drawer" id="drawer" aria-label="导航菜单">
+  <a href="#quickstart" class="drawer-link">快速开始</a>
+  <a href="#skills" class="drawer-link">技能</a>
+  <a href="#workflow" class="drawer-link">流程</a>
+  <a href="#client" class="drawer-link">客户端</a>
+  <a href="#reference" class="drawer-link">速查</a>
+</aside>
 <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
 <script>
@@ -1715,7 +1783,7 @@ footer {
    - [v] Task 9: 主题切换
    - [v] Task 10: 滚动联动 + 卡片进入动画 + Tab + Workflow accordion
    - [v] Task 11: 复制 + Toast
-   - Task 12: 响应式 drawer + fallbacks
+   - [v] Task 12: 响应式 drawer + fallbacks
 */
 
 /* === 主题切换 === */
@@ -1963,6 +2031,31 @@ footer {
         toastQueue.shift();
       }, 300);
     }
+  });
+})();
+
+/* === 移动端 drawer === */
+(function() {
+  const toggle = document.getElementById('menu-toggle');
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('drawer-overlay');
+  if (!toggle || !drawer || !overlay) return;
+
+  function openDrawer() {
+    drawer.classList.add('open');
+    overlay.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    overlay.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  toggle.addEventListener('click', openDrawer);
+  overlay.addEventListener('click', closeDrawer);
+  drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', closeDrawer));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
   });
 })();
 </script>
