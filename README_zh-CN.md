@@ -125,6 +125,8 @@ AI PM 会先引导需求澄清，再推进完整产品工作流。
 | `/ai-pm-knowledge` | 产品知识库 |
 | `/pm-gap-research` | 差距导向的产品研究 |
 | `/multi-perspective-review` | 多视角评审 |
+| `/ai-pm-brainstorm` | 头脑风暴 / 想法收敛 |
+| `/ai-pm-review-modify` | 基于评审意见定向修改 PRD |
 | `/tutorial-center-update` | 更新离线教程中心 |
 
 核心独立技能：`/ai-pm-analyze`、`/ai-pm-research`、`/ai-pm-story`、`/ai-pm-prd`、`/ai-pm-prototype`、`/ai-pm-review`。
@@ -149,8 +151,8 @@ AI PM 会先引导需求澄清，再推进完整产品工作流。
 |----|------|
 | 前端 | React 19、TypeScript 5、Vite 6、TailwindCSS 4、Mermaid 11 |
 | 后端 | Tauri 2、Rust、SQLite |
-| AI 技能 | 20 个 Claude Code 项目技能 + 1 个 PM agent |
-| 客户端资源 | 24 个 bundled app skills + 功能广场 manifest |
+| AI 技能 | 26 个 Claude Code 项目技能 + 2 个 sub-agent（pm-agent / prototype-agent）|
+| 客户端资源 | 26 个 bundled app skills + 功能广场 manifest（5 大分类）|
 | 导出脚本 | Python 3、Node 脚本、Chrome PDF 渲染 |
 | AI 协作上下文 | `.ai-shared` 索引和 `scripts/ai-sync` 检查脚本 |
 | CI/CD | GitHub Actions、macOS 通用二进制、Windows x64 |
@@ -158,15 +160,15 @@ AI PM 会先引导需求澄清，再推进完整产品工作流。
 ## 项目结构
 
 ```text
-.claude/skills/                    # 20 个 Claude Code 项目技能
-.claude/agents/                    # PM agent，用于 KettyWu 风格评审和 driver 流程
+.claude/skills/                    # 26 个 Claude Code 项目技能
+.claude/agents/                    # 2 个 sub-agent：pm-agent（PRD 守门）、prototype-agent（原型审计）
 .ai-shared/                        # Claude / Codex 共享 memory、skill、agent 索引
 scripts/ai-sync/                   # 索引生成和上下文漂移检查
 app/src/                           # React 前端
 app/src/pages/project/             # 10 个项目阶段页面
 app/src/pages/tools/plaza/         # 功能广场页面
 app/src-tauri/                     # Rust 后端
-app/src-tauri/resources/skills/    # 24 个桌面端 bundled skills
+app/src-tauri/resources/skills/    # 26 个桌面端 bundled skills
 app/src-tauri/resources/plaza-manifest.json
 templates/                         # PRD 风格、UI 规范、知识库、预设配置
 docs/                              # 设计规范、实施记录

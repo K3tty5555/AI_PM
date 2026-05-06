@@ -125,6 +125,8 @@ On first launch, configure one AI backend in Settings:
 | `/ai-pm-knowledge` | Product knowledge base |
 | `/pm-gap-research` | Gap-oriented product research |
 | `/multi-perspective-review` | Multi-perspective review mode |
+| `/ai-pm-brainstorm` | Idea brainstorming and convergence |
+| `/ai-pm-review-modify` | Targeted PRD edit based on review feedback |
 | `/tutorial-center-update` | Update the offline tutorial center |
 
 Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/ai-pm-prd`, `/ai-pm-prototype`, `/ai-pm-review`.
@@ -149,8 +151,8 @@ Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/a
 |-------|-----------|
 | Frontend | React 19, TypeScript 5, Vite 6, TailwindCSS 4, Mermaid 11 |
 | Backend | Tauri 2, Rust, SQLite |
-| AI Skills | 20 Claude Code project skills + 1 PM agent |
-| Desktop Resources | 24 bundled app skills + Tool Plaza manifest |
+| AI Skills | 26 Claude Code project skills + 2 sub-agents (pm-agent / prototype-agent) |
+| Desktop Resources | 26 bundled app skills + Tool Plaza manifest (5 categories) |
 | Export Scripts | Python 3, Node scripts, Chrome-based PDF rendering |
 | Collaboration Context | `.ai-shared` indexes and `scripts/ai-sync` checks |
 | CI/CD | GitHub Actions, macOS universal binary, Windows x64 |
@@ -158,15 +160,15 @@ Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/a
 ## Project Structure
 
 ```text
-.claude/skills/                    # 20 Claude Code project skills
-.claude/agents/                    # PM agent for KettyWu-style review and driver flow
+.claude/skills/                    # 26 Claude Code project skills
+.claude/agents/                    # 2 sub-agents: pm-agent (PRD gate) and prototype-agent (prototype audit)
 .ai-shared/                        # Shared memory / skill / agent indexes for Claude and Codex
 scripts/ai-sync/                   # Index generation and context drift checks
 app/src/                           # React frontend
 app/src/pages/project/             # 10 project phase pages
 app/src/pages/tools/plaza/         # Tool Plaza pages
 app/src-tauri/                     # Rust backend
-app/src-tauri/resources/skills/    # 24 bundled desktop skills
+app/src-tauri/resources/skills/    # 26 bundled desktop skills
 app/src-tauri/resources/plaza-manifest.json
 templates/                         # PRD styles, UI specs, knowledge presets
 docs/                              # Design system and implementation notes
