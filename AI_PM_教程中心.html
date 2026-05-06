@@ -541,6 +541,88 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
   font-size: 12px;
   color: var(--text-secondary);
 }
+.workflow-timeline {
+  display: flex; gap: 0;
+  overflow-x: auto;
+  padding: 16px 0;
+  scrollbar-width: none;
+}
+.workflow-timeline::-webkit-scrollbar { display: none; }
+.tl-node {
+  display: flex; flex-direction: column; align-items: center;
+  flex-shrink: 0; min-width: 140px;
+  position: relative; cursor: pointer;
+  padding: 16px 0;
+}
+.tl-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  position: relative;
+  transition: all var(--dur-base);
+}
+.tl-dot.pending {
+  background: transparent;
+  border: 1.5px solid var(--text-tertiary);
+}
+.tl-dot.current {
+  background: var(--accent);
+  animation: dotPulse 2.5s ease-in-out infinite;
+}
+.tl-dot.completed {
+  background: var(--success);
+}
+.tl-name {
+  font-size: 14px; font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.tl-cmd {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.tl-connector {
+  flex-grow: 1;
+  height: 1px;
+  background: var(--border);
+  margin-top: 23px;
+  flex-shrink: 1; min-width: 24px;
+}
+.tl-detail {
+  position: absolute;
+  top: 100%; left: 50%; transform: translateX(-50%);
+  min-width: 280px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 16px;
+  margin-top: 8px;
+  opacity: 0; visibility: hidden;
+  transform: translateX(-50%) translateY(-4px);
+  transition: opacity var(--dur-base), transform var(--dur-base), visibility var(--dur-base);
+  z-index: 10;
+}
+.tl-node.expanded .tl-detail {
+  opacity: 1; visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+.tl-detail-row {
+  display: flex; gap: 8px;
+  font-size: 13px; line-height: 1.7;
+  color: var(--text-secondary);
+}
+.tl-detail-label {
+  color: var(--text-tertiary);
+  min-width: 48px;
+}
+
+@media (max-width: 900px) {
+  .workflow-timeline { flex-wrap: wrap; }
+  .tl-connector { display: none; }
+}
 </style>
 </head>
 <body>
@@ -938,6 +1020,112 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
     </div>
   </section>
   <!-- Workflow · Task 6 -->
+  <section id="workflow" class="section">
+    <div class="section-eyebrow">WORKFLOW</div>
+    <h2>工作流程</h2>
+    <p class="section-desc">9 个阶段，每个阶段独立保存，可恢复可跳过。点击节点查看阶段详情。</p>
+
+    <div class="workflow-timeline">
+      <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-01">
+        <span class="tl-dot pending" aria-hidden="true"></span>
+        <span class="tl-name">需求输入</span>
+        <span class="tl-cmd">/ai-pm</span>
+        <div class="tl-detail" id="tl-detail-01" role="region" aria-label="需求输入 详情">
+          <div class="tl-detail-row"><span class="tl-detail-label">阶段</span><span>描述产品需求，AI 引导澄清</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">产物</span><span>01-requirement-draft.md</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">命令</span><code>/ai-pm "你的需求"</code></div>
+        </div>
+      </div>
+      <div class="tl-connector" aria-hidden="true"></div>
+      <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-02">
+        <span class="tl-dot pending" aria-hidden="true"></span>
+        <span class="tl-name">需求分析</span>
+        <span class="tl-cmd">/ai-pm-analyze</span>
+        <div class="tl-detail" id="tl-detail-02" role="region" aria-label="需求分析 详情">
+          <div class="tl-detail-row"><span class="tl-detail-label">阶段</span><span>挖掘用户画像、痛点、MVP 范围</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">产物</span><span>02-analysis-report.md</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">命令</span><code>/ai-pm-analyze</code></div>
+        </div>
+      </div>
+      <div class="tl-connector" aria-hidden="true"></div>
+      <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-03">
+        <span class="tl-dot pending" aria-hidden="true"></span>
+        <span class="tl-name">竞品研究</span>
+        <span class="tl-cmd">/ai-pm-research</span>
+        <div class="tl-detail" id="tl-detail-03" role="region" aria-label="竞品研究 详情">
+          <div class="tl-detail-row"><span class="tl-detail-label">阶段</span><span>对标竞品，识别差异化机会</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">产物</span><span>03-competitor-report.md</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">命令</span><code>/ai-pm-research</code></div>
+        </div>
+      </div>
+      <div class="tl-connector" aria-hidden="true"></div>
+      <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-04">
+        <span class="tl-dot pending" aria-hidden="true"></span>
+        <span class="tl-name">用户故事</span>
+        <span class="tl-cmd">/ai-pm-story</span>
+        <div class="tl-detail" id="tl-detail-04" role="region" aria-label="用户故事 详情">
+          <div class="tl-detail-row"><span class="tl-detail-label">阶段</span><span>拆解功能为可验收的用户故事</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">产物</span><span>04-user-stories.md</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">命令</span><code>/ai-pm-story</code></div>
+        </div>
+      </div>
+      <div class="tl-connector" aria-hidden="true"></div>
+      <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-05">
+        <span class="tl-dot pending" aria-hidden="true"></span>
+        <span class="tl-name">PRD</span>
+        <span class="tl-cmd">/ai-pm-prd</span>
+        <div class="tl-detail" id="tl-detail-05" role="region" aria-label="PRD 详情">
+          <div class="tl-detail-row"><span class="tl-detail-label">阶段</span><span>生成完整 PRD，支持多格式导出</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">产物</span><span>05-prd/05-PRD-v1.0.md</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">命令</span><code>/ai-pm-prd</code></div>
+        </div>
+      </div>
+      <div class="tl-connector" aria-hidden="true"></div>
+      <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-06">
+        <span class="tl-dot pending" aria-hidden="true"></span>
+        <span class="tl-name">埋点设计</span>
+        <span class="tl-cmd">/ai-pm data metrics</span>
+        <div class="tl-detail" id="tl-detail-06" role="region" aria-label="埋点设计 详情">
+          <div class="tl-detail-row"><span class="tl-detail-label">阶段</span><span>设计核心指标、事件和埋点口径</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">产物</span><span>09-analytics-requirement.md</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">命令</span><code>/ai-pm data metrics</code></div>
+        </div>
+      </div>
+      <div class="tl-connector" aria-hidden="true"></div>
+      <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-07">
+        <span class="tl-dot pending" aria-hidden="true"></span>
+        <span class="tl-name">原型设计</span>
+        <span class="tl-cmd">/ai-pm-prototype</span>
+        <div class="tl-detail" id="tl-detail-07" role="region" aria-label="原型设计 详情">
+          <div class="tl-detail-row"><span class="tl-detail-label">阶段</span><span>生成可交互 HTML 原型</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">产物</span><span>06-prototype/index.html</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">命令</span><code>/ai-pm-prototype</code></div>
+        </div>
+      </div>
+      <div class="tl-connector" aria-hidden="true"></div>
+      <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-08">
+        <span class="tl-dot pending" aria-hidden="true"></span>
+        <span class="tl-name">需求评审</span>
+        <span class="tl-cmd">/ai-pm-review</span>
+        <div class="tl-detail" id="tl-detail-08" role="region" aria-label="需求评审 详情">
+          <div class="tl-detail-row"><span class="tl-detail-label">阶段</span><span>六角色并行评审</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">产物</span><span>08-review-report-v1.md</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">命令</span><code>/ai-pm-review</code></div>
+        </div>
+      </div>
+      <div class="tl-connector" aria-hidden="true"></div>
+      <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-09">
+        <span class="tl-dot pending" aria-hidden="true"></span>
+        <span class="tl-name">项目复盘</span>
+        <span class="tl-cmd">/ai-pm retrospective</span>
+        <div class="tl-detail" id="tl-detail-09" role="region" aria-label="项目复盘 详情">
+          <div class="tl-detail-row"><span class="tl-detail-label">阶段</span><span>复盘项目过程、决策和可复用经验</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">产物</span><span>10-retrospective.md</span></div>
+          <div class="tl-detail-row"><span class="tl-detail-label">命令</span><code>/ai-pm retrospective</code></div>
+        </div>
+      </div>
+    </div>
+  </section>
   <!-- Client · Task 7 -->
   <!-- Reference · Task 8 -->
 </main>
