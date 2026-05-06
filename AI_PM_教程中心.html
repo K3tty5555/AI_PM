@@ -479,6 +479,68 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
   .steps { grid-template-columns: 1fr; }
 }
 
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.skill-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; gap: 12px;
+  transition: transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base);
+}
+.skill-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.skill-card-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.skill-cmd {
+  font-family: var(--font-mono);
+  font-size: 13px; font-weight: 500;
+  color: var(--text-primary);
+}
+.badge {
+  display: inline-flex; align-items: center;
+  font-size: 12px; font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+.badge-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.badge-outline {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+.badge-muted {
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.skill-name {
+  font-size: 15px; font-weight: 500;
+  color: var(--text-primary);
+}
+.skill-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.skill-example {
+  background: var(--secondary);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 </style>
 </head>
 <body>
@@ -660,7 +722,221 @@ html.theme-dark .theme-toggle .icon-moon { display: block; }
       </div>
     </div>
   </section>
-  <!-- Skills · Task 5 -->
+  <section id="skills" class="section">
+    <div class="section-eyebrow">SKILLS</div>
+    <h2>技能列表</h2>
+    <p class="section-desc">26 个项目技能 + 2 个 sub-agent。点击卡片右上角的"复制"按钮把命令粘贴到 Claude Code。</p>
+
+    <div class="tabs" role="tablist" aria-label="技能分类">
+      <button class="tab-trigger active" data-tab="core" role="tab" id="tab-skills-trigger-core" aria-controls="tab-skills-core" aria-selected="true">主流程</button>
+      <button class="tab-trigger" data-tab="ext" role="tab" id="tab-skills-trigger-ext" aria-controls="tab-skills-ext" aria-selected="false">扩展工具</button>
+      <button class="tab-trigger" data-tab="cfg" role="tab" id="tab-skills-trigger-cfg" aria-controls="tab-skills-cfg" aria-selected="false">配置管理</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-skills-core" role="tabpanel" aria-labelledby="tab-skills-trigger-core">
+      <div class="skill-grid">
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm</span>
+            <span class="badge badge-primary">核心</span>
+          </div>
+          <div class="skill-name">AI PRODUCT MANAGER</div>
+          <p class="skill-desc">不知道从哪里开始就从这里开始。告诉 AI 你想做什么，它会一步步引导你把需求、竞品、PRD、原型都跑完。中途可以随时暂停，下次接着来。</p>
+          <div class="skill-example">/ai-pm "帮年轻人记账的小程序"</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-analyze</span>
+            <span class="badge badge-primary">核心</span>
+          </div>
+          <div class="skill-name">REQUIREMENTS ANALYSIS</div>
+          <p class="skill-desc">把模糊的需求问清楚。会问你目标用户是谁、痛点在哪、想做哪些功能，整理成分析报告存下来。产出：02-analysis-report.md</p>
+          <div class="skill-example">/ai-pm-analyze "企业内部审批系统"</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-research</span>
+            <span class="badge badge-primary">核心</span>
+          </div>
+          <div class="skill-name">COMPETITIVE RESEARCH</div>
+          <p class="skill-desc">扫一遍市场上的同类产品，看他们做了什么、没做什么，帮你找到差异化的切入点。产出：03-competitor-report.md</p>
+          <div class="skill-example">/ai-pm-research "记账类 App"</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-story</span>
+            <span class="badge badge-primary">核心</span>
+          </div>
+          <div class="skill-name">USER STORY WRITER</div>
+          <p class="skill-desc">把功能拆成用户故事格式，每条附带验收标准，可以直接给开发团队用。产出：04-user-stories.md</p>
+          <div class="skill-example">/ai-pm-story</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-prd</span>
+            <span class="badge badge-primary">核心</span>
+          </div>
+          <div class="skill-name">PRD GENERATOR</div>
+          <p class="skill-desc">把前面分析的结论整合成一份完整 PRD。默认输出 Markdown，按需导出 DOCX/PDF/分享页；客户端可评分、对比版本、让 AI 插图。产出：05-prd/05-PRD-v1.0.md</p>
+          <div class="skill-example">/ai-pm-prd --export=pdf</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-prototype</span>
+            <span class="badge badge-primary">核心</span>
+          </div>
+          <div class="skill-name">PROTOTYPE GENERATOR</div>
+          <p class="skill-desc">根据 PRD 生成一个能点击的 HTML 原型。可读取设计规范或既有代码的设计指纹，生成后做完整性审计。双击 index.html 直接预览。</p>
+          <div class="skill-example">/ai-pm-prototype</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-review</span>
+            <span class="badge badge-primary">核心</span>
+          </div>
+          <div class="skill-name">REQUIREMENTS REVIEW</div>
+          <p class="skill-desc">模拟一场评审会。产品、设计、前端、后端、测试、运营——六个角色同时开口，从各自立场找问题、给意见。产出：08-review-report-v1.md</p>
+          <div class="skill-example">/ai-pm-review --round=2</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-driver</span>
+            <span class="badge badge-primary">核心</span>
+          </div>
+          <div class="skill-name">PM QUALITY GATE</div>
+          <p class="skill-desc">评审前的产品经理守门。按 KettyWu 风格检查 PRD 的目标、边界、指标、表达和可落地性，先把硬伤挡在评审会前。</p>
+          <div class="skill-example">/ai-pm-driver 05-prd/05-PRD-v1.0.md</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-skills-ext" role="tabpanel" aria-labelledby="tab-skills-trigger-ext">
+      <div class="skill-grid">
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-priority</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">PRIORITY EVALUATOR</div>
+          <p class="skill-desc">把各方提来的需求集中评估。按业务价值、实现难度、用户影响、战略方向四个维度打分，排出优先级，顺带生成一份可以直接发给提报人的回复。</p>
+          <div class="skill-example">/ai-pm-priority</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-weekly</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">WEEKLY REPORT</div>
+          <p class="skill-desc">把这周做的事随便说一遍，AI 帮你归类整理成周报。可以出两个版本：给上级看的简洁版，和给团队看的详细版。</p>
+          <div class="skill-example">/ai-pm-weekly</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-interview</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">FIELD INTERVIEW</div>
+          <p class="skill-desc">带着电脑去和客户面谈时用。AI 给出访谈提纲，你跟着走，谈完直接生成需求草稿，不用事后再整理。</p>
+          <div class="skill-example">/ai-pm-interview</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-data</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">DATA INSIGHT</div>
+          <p class="skill-desc">上传你的业务数据表，AI 读出规律，生成一个浏览器里能点的交互图表页面，并告诉你数据背后可能藏着哪些产品机会。</p>
+          <div class="skill-example">/ai-pm-data 用户行为数据.xlsx</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm --team</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">MULTI-AGENT MODE</div>
+          <p class="skill-desc">复杂需求用多代理并行处理。产品分析师拆需求、竞品研究员做市场分析、主控 PM 整合产出，比标准模式快约 40%。</p>
+          <div class="skill-example">/ai-pm --team "企业级 CRM 系统"</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">工具广场 / PPT</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">PPT GENERATOR</div>
+          <p class="skill-desc">客户端功能广场里的 PPT 生成能力。从 PRD 或大纲生成演示文稿，配色和页面类型自动编排，大纲可调整后一键输出 .pptx 文件。</p>
+          <div class="skill-example">客户端：功能广场 → PPT 生成</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/pm-gap-research</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">GAP RESEARCH</div>
+          <p class="skill-desc">围绕机会缺口做研究，不只罗列竞品，而是找目标用户、供给能力、体验断点和可切入空间之间的差距。</p>
+          <div class="skill-example">/pm-gap-research "AI 教学助手市场机会"</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/multi-perspective-review</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">MULTI-PERSPECTIVE REVIEW</div>
+          <p class="skill-desc">对方案、文档或页面做多视角审查。适合在正式需求评审之外，快速补齐业务、体验、技术和风险视角。</p>
+          <div class="skill-example">/multi-perspective-review "评审这份方案"</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/pdf-skill</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">PDF WORKFLOW</div>
+          <p class="skill-desc">围绕 PDF 生成、检查和交付的辅助技能。适合把 PRD、报告或分享稿整理成可交付文件。</p>
+          <div class="skill-example">/pdf-skill "把这份 PRD 导出为 PDF"</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-skills-cfg" role="tabpanel" aria-labelledby="tab-skills-trigger-cfg">
+      <div class="skill-grid">
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-persona</span>
+            <span class="badge badge-muted">配置</span>
+          </div>
+          <div class="skill-name">PRODUCT PERSONA</div>
+          <p class="skill-desc">分析你写过的 PRD，提取表达习惯和结构偏好。之后生成的文档会按你的风格来写，不是标准 AI 腔。</p>
+          <div class="skill-example">/ai-pm-persona analyze 05-PRD-v1.0.md</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-design-spec</span>
+            <span class="badge badge-muted">配置</span>
+          </div>
+          <div class="skill-name">DESIGN SPEC</div>
+          <p class="skill-desc">上传公司/团队 UI 规范，优先级高于 AI 情境定制。原型和仪表盘生成时自动套用，不用每次指定颜色和字体。</p>
+          <div class="skill-example">/ai-pm-design-spec upload 公司规范.pdf</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm-knowledge</span>
+            <span class="badge badge-muted">配置</span>
+          </div>
+          <div class="skill-name">KNOWLEDGE BASE</div>
+          <p class="skill-desc">把你踩过的坑、做过的决策记进来。下次遇到类似场景，AI 会主动提醒你：这里之前出过问题。</p>
+          <div class="skill-example">/ai-pm-knowledge add</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/tutorial-center-update</span>
+            <span class="badge badge-muted">配置</span>
+          </div>
+          <div class="skill-name">TUTORIAL CENTER UPDATE</div>
+          <p class="skill-desc">维护这个离线教程中心。按现有 HTML 结构增量更新内容、命令和能力说明，不整体重写页面。</p>
+          <div class="skill-example">/tutorial-center-update "同步最新项目能力"</div>
+        </div>
+      </div>
+    </div>
+  </section>
   <!-- Workflow · Task 6 -->
   <!-- Client · Task 7 -->
   <!-- Reference · Task 8 -->
