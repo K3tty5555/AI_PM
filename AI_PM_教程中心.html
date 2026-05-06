@@ -770,6 +770,45 @@ footer {
   .ref-grid { grid-template-columns: 1fr; }
   footer { flex-direction: column; gap: 12px; padding: 24px; }
 }
+
+.toast-container {
+  position: fixed;
+  top: 56px; right: 24px;
+  display: flex; flex-direction: column; gap: 12px;
+  z-index: 100;
+  pointer-events: none;
+}
+.toast {
+  min-width: 280px; max-width: 420px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 16px 12px 19px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px;
+  color: var(--text-primary);
+  position: relative;
+  pointer-events: auto;
+  animation: slideInRight var(--dur-slow) var(--ease-decelerate);
+}
+.toast::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--success);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.toast.exiting {
+  animation: fadeOut var(--dur-slow) var(--ease-standard) forwards;
+}
+.toast svg {
+  width: 16px; height: 16px;
+  stroke: var(--success); fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -1669,13 +1708,13 @@ footer {
   <span>© 2026 K3TTY_WU · AI PM v0.4.4</span>
   <span>共 26 个项目技能 + 2 个 sub-agent · 最后更新 2026-05-05</span>
 </footer>
-<!-- Toast container · Task 11 -->
+<div class="toast-container" id="toast-container"></div>
 
 <script>
 /* JS 占位，后续 Task 逐步填充：
    - [v] Task 9: 主题切换
    - [v] Task 10: 滚动联动 + 卡片进入动画 + Tab + Workflow accordion
-   - Task 11: 复制 + Toast
+   - [v] Task 11: 复制 + Toast
    - Task 12: 响应式 drawer + fallbacks
 */
 
@@ -1831,6 +1870,95 @@ footer {
       n.classList.remove('expanded');
       n.setAttribute('aria-expanded', 'false');
     });
+  });
+})();
+
+/* === 复制 + Toast === */
+(function() {
+  const container = document.getElementById('toast-container');
+  let toastQueue = [];
+  const MAX_TOAST = 3;
+
+  function showToast(msg) {
+    if (toastQueue.length >= MAX_TOAST) {
+      const old = toastQueue.shift();
+      old.classList.add('exiting');
+      setTimeout(() => old.remove(), 300);
+    }
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span>${msg}</span>
+    `;
+    container.appendChild(t);
+    toastQueue.push(t);
+    setTimeout(() => {
+      t.classList.add('exiting');
+      setTimeout(() => {
+        t.remove();
+        toastQueue = toastQueue.filter(x => x !== t);
+      }, 300);
+    }, 3000);
+  }
+
+  function copy(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve) => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;opacity:0;left:-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); resolve(); } catch (e) { resolve(); }
+      ta.remove();
+    });
+  }
+
+  // Quickstart 步骤复制按钮
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const text = btn.dataset.copy;
+      if (!text) return;
+      copy(text).then(() => showToast('命令已复制'));
+    });
+  });
+
+  // Reference 表格行复制（鼠标 + 键盘）
+  function triggerRefCopy(row) {
+    const text = row.dataset.copy;
+    if (!text) return;
+    copy(text).then(() => {
+      row.classList.add('copied');
+      showToast('命令已复制');
+      setTimeout(() => row.classList.remove('copied'), 1800);
+    });
+  }
+  document.querySelectorAll('.ref-row[data-copy]').forEach(row => {
+    row.addEventListener('click', () => triggerRefCopy(row));
+    row.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      triggerRefCopy(row);
+    });
+  });
+
+  // Esc 关闭最早一条 toast
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && toastQueue.length > 0) {
+      const oldest = toastQueue[0];
+      oldest.classList.add('exiting');
+      setTimeout(() => {
+        oldest.remove();
+        toastQueue.shift();
+      }, 300);
+    }
   });
 })();
 </script>
