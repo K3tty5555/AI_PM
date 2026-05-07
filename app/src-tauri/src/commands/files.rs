@@ -270,7 +270,8 @@ pub async fn export_prd_docx(
     Ok(docx_path.to_string_lossy().to_string())
 }
 
-/// List PRD version numbers by scanning 05-prd/ directory.
+/// List PRD version numbers by scanning 05-prd/ directory (legacy: only matches 05-PRD-v{N}.0.md).
+/// Kept for backward compatibility — prefer `list_prd_files` for business naming support.
 #[tauri::command]
 pub fn list_prd_versions(
     state: State<'_, AppState>,
@@ -316,6 +317,477 @@ pub fn get_latest_prd_version(
 ) -> Result<u32, String> {
     let versions = list_prd_versions(state, project_id)?;
     Ok(versions.last().copied().unwrap_or(1))
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrdFileEntry {
+    /// 文件名（相对 05-prd/）
+    pub file: String,
+    /// 显示标签：V1.0 / V1.1 / "未版本"
+    pub label: String,
+    /// 排序键：V1.0=100, V1.1=110, V1.3=130, V2=200, 未识别=0
+    pub sort_key: u32,
+    /// 是否识别到版本号
+    pub recognized: bool,
+    /// 父版本 label（来自 _status.json，可空）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent: Option<String>,
+    /// 自定义业务标签（来自 _status.json，例如 "V1.1 搜题场景"）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_label: Option<String>,
+}
+
+static PRD_VERSION_RE: Lazy<Regex> = Lazy::new(|| {
+    // 匹配文件名中的 V/v 后跟数字（可选 .子版本）
+    Regex::new(r"[Vv](\d+)(?:\.(\d+))?").expect("PRD_VERSION_RE")
+});
+
+/// Extract version label and sort key from a filename.
+/// Examples:
+///   "05-PRD-v1.0.md"                                   → ("V1.0", 100)
+///   "[2026M05上][Agent]V1.1搜题PRD.md"                 → ("V1.1", 110)
+///   "[2026M06上][Agent]V1.3 精准教学联动PRD.md"        → ("V1.3", 130)
+///   "其他.md"                                          → ("未版本", 0)
+fn parse_prd_filename(name: &str) -> (String, u32, bool) {
+    if let Some(caps) = PRD_VERSION_RE.captures(name) {
+        let major: u32 = caps.get(1).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
+        let minor: u32 = caps.get(2).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
+        let label = if minor == 0 {
+            format!("V{major}.0")
+        } else {
+            format!("V{major}.{minor}")
+        };
+        let sort_key = major * 100 + minor;
+        (label, sort_key, true)
+    } else {
+        ("未版本".to_string(), 0, false)
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrototypeVersion {
+    /// 相对项目根的目录（含尾斜杠），例：06-prototype/, 06-prototype-v1.3/
+    pub dir: String,
+    /// 显示标签：默认 / V1.3 / preview
+    pub label: String,
+    /// 排序键
+    pub sort_key: u32,
+    /// 是否多文件（含 manifest.json）
+    pub has_manifest: bool,
+    /// 自定义标签（来自 _status.json）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_label: Option<String>,
+}
+
+static PROTOTYPE_DIR_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^06-prototype(?:-(.+))?$").expect("PROTOTYPE_DIR_RE"));
+
+/// List prototype version directories (06-prototype, 06-prototype-v1.3, 06-prototype-preview, ...)。
+#[tauri::command]
+pub fn list_prototype_versions(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<Vec<PrototypeVersion>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| "项目不存在".to_string())?
+    };
+
+    let project_root = Path::new(&output_dir);
+    if !project_root.exists() {
+        return Ok(vec![]);
+    }
+
+    // Read _status.json metadata (T13)
+    let status_path = project_root.join("_status.json");
+    let status_meta: std::collections::HashMap<String, String> = if status_path.exists() {
+        fs::read_to_string(&status_path)
+            .ok()
+            .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+            .and_then(|json| json.get("prototype_versions").cloned())
+            .and_then(|val| val.as_array().cloned())
+            .map(|arr| {
+                arr.into_iter()
+                    .filter_map(|item| {
+                        let dir = item.get("dir")?.as_str()?.trim_end_matches('/').to_string();
+                        let label = item.get("label")?.as_str()?.to_string();
+                        Some((dir, label))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    } else {
+        std::collections::HashMap::new()
+    };
+
+    let mut entries: Vec<PrototypeVersion> = Vec::new();
+
+    if let Ok(read) = fs::read_dir(project_root) {
+        for entry in read.filter_map(|e| e.ok()) {
+            let ty = match entry.file_type() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            if !ty.is_dir() {
+                continue;
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            let caps = match PROTOTYPE_DIR_RE.captures(&name) {
+                Some(c) => c,
+                None => continue,
+            };
+
+            let suffix = caps.get(1).map(|m| m.as_str()).unwrap_or("default");
+            // Extract version digits from suffix for sorting (e.g., v1.3 → 130)
+            let sort_key = if suffix == "default" {
+                100
+            } else if let Some(vc) = PRD_VERSION_RE.captures(suffix) {
+                let major: u32 = vc.get(1).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
+                let minor: u32 = vc.get(2).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
+                major * 100 + minor
+            } else {
+                0
+            };
+            let label = if suffix == "default" {
+                "默认".to_string()
+            } else {
+                suffix.to_string()
+            };
+
+            // Check for manifest.json
+            let manifest_path = entry.path().join("manifest.json");
+            let has_manifest = manifest_path.exists();
+
+            // Skip directories with neither manifest nor index.html
+            let index_path = entry.path().join("index.html");
+            if !has_manifest && !index_path.exists() {
+                continue;
+            }
+
+            let dir_key = name.clone();
+            let custom_label = status_meta.get(&dir_key).cloned();
+
+            entries.push(PrototypeVersion {
+                dir: format!("{}/", name),
+                label,
+                sort_key,
+                has_manifest,
+                custom_label,
+            });
+        }
+    }
+
+    entries.sort_by(|a, b| a.sort_key.cmp(&b.sort_key).then_with(|| a.dir.cmp(&b.dir)));
+    Ok(entries)
+}
+
+/// T6: 列出项目 _memory/ 目录下所有 .md 文件
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryFile {
+    pub name: String,
+    pub size: u64,
+    pub mtime: String,
+}
+
+#[tauri::command]
+pub fn list_memory_files(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<Vec<MemoryFile>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| "项目不存在".to_string())?
+    };
+
+    let memory_dir = Path::new(&output_dir).join("_memory");
+    if !memory_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut entries: Vec<MemoryFile> = Vec::new();
+    if let Ok(read) = fs::read_dir(&memory_dir) {
+        for entry in read.filter_map(|e| e.ok()) {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !name.ends_with(".md") {
+                continue;
+            }
+            let meta = match entry.metadata() {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+            let mtime = meta
+                .modified()
+                .ok()
+                .and_then(|t| {
+                    chrono::DateTime::<chrono::Utc>::from(t)
+                        .to_rfc3339()
+                        .into()
+                })
+                .unwrap_or_default();
+            entries.push(MemoryFile {
+                name,
+                size: meta.len(),
+                mtime,
+            });
+        }
+    }
+    // Sort by canonical layered order: L0 → L1 → L2 → others
+    let layer_order = |name: &str| -> u8 {
+        if name.starts_with("L0-") { 0 }
+        else if name.starts_with("L1-") { 1 }
+        else if name.starts_with("L2-") { 2 }
+        else if name.starts_with("layout-") { 3 }
+        else { 4 }
+    };
+    entries.sort_by(|a, b| {
+        layer_order(&a.name).cmp(&layer_order(&b.name)).then_with(|| a.name.cmp(&b.name))
+    });
+    Ok(entries)
+}
+
+/// T12: 写入 PRD 版本元数据到 _status.json.prd_versions
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrdVersionMetaArgs {
+    pub project_id: String,
+    pub file: String,
+    /// 自定义业务标签；传 null 清除
+    pub label: Option<String>,
+    /// 父版本 label；传 null 清除
+    pub parent: Option<String>,
+}
+
+#[tauri::command]
+pub fn set_prd_version_meta(
+    state: State<'_, AppState>,
+    args: PrdVersionMetaArgs,
+) -> Result<(), String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&args.project_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| "项目不存在".to_string())?
+    };
+
+    let status_path = Path::new(&output_dir).join("_status.json");
+    let mut json: serde_json::Value = if status_path.exists() {
+        let raw = fs::read_to_string(&status_path).map_err(|e| format!("读取 _status.json 失败: {e}"))?;
+        serde_json::from_str(&raw).map_err(|e| format!("_status.json 不是合法 JSON: {e}"))?
+    } else {
+        serde_json::json!({})
+    };
+
+    // Ensure prd_versions is an array
+    if !json.get("prd_versions").map(|v| v.is_array()).unwrap_or(false) {
+        json["prd_versions"] = serde_json::json!([]);
+    }
+
+    let arr = json.get_mut("prd_versions").and_then(|v| v.as_array_mut()).unwrap();
+
+    // Find or create entry
+    let mut found = false;
+    for item in arr.iter_mut() {
+        if item.get("file").and_then(|f| f.as_str()) == Some(&args.file) {
+            if let Some(label) = &args.label {
+                item["label"] = serde_json::Value::String(label.clone());
+            } else {
+                item.as_object_mut().map(|o| o.remove("label"));
+            }
+            if let Some(parent) = &args.parent {
+                item["parent"] = serde_json::Value::String(parent.clone());
+            } else {
+                item.as_object_mut().map(|o| o.remove("parent"));
+            }
+            found = true;
+            break;
+        }
+    }
+    if !found {
+        let mut entry = serde_json::Map::new();
+        entry.insert("file".to_string(), serde_json::Value::String(args.file.clone()));
+        if let Some(label) = args.label {
+            entry.insert("label".to_string(), serde_json::Value::String(label));
+        }
+        if let Some(parent) = args.parent {
+            entry.insert("parent".to_string(), serde_json::Value::String(parent));
+        }
+        arr.push(serde_json::Value::Object(entry));
+    }
+
+    let out = serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?;
+    fs::write(&status_path, out).map_err(|e| format!("写入 _status.json 失败: {e}"))?;
+    Ok(())
+}
+
+/// T13: 写入原型版本元数据到 _status.json.prototype_versions
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrototypeVersionMetaArgs {
+    pub project_id: String,
+    /// 目录路径（相对项目根，含或不含尾斜杠）
+    pub dir: String,
+    pub label: Option<String>,
+}
+
+#[tauri::command]
+pub fn set_prototype_version_meta(
+    state: State<'_, AppState>,
+    args: PrototypeVersionMetaArgs,
+) -> Result<(), String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&args.project_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| "项目不存在".to_string())?
+    };
+
+    let dir_key = args.dir.trim_end_matches('/').to_string();
+    let status_path = Path::new(&output_dir).join("_status.json");
+    let mut json: serde_json::Value = if status_path.exists() {
+        let raw = fs::read_to_string(&status_path).map_err(|e| format!("读取 _status.json 失败: {e}"))?;
+        serde_json::from_str(&raw).map_err(|e| format!("_status.json 不是合法 JSON: {e}"))?
+    } else {
+        serde_json::json!({})
+    };
+
+    if !json.get("prototype_versions").map(|v| v.is_array()).unwrap_or(false) {
+        json["prototype_versions"] = serde_json::json!([]);
+    }
+
+    let arr = json.get_mut("prototype_versions").and_then(|v| v.as_array_mut()).unwrap();
+
+    let mut found = false;
+    for item in arr.iter_mut() {
+        let stored = item
+            .get("dir")
+            .and_then(|d| d.as_str())
+            .map(|s| s.trim_end_matches('/').to_string());
+        if stored.as_deref() == Some(&dir_key) {
+            if let Some(label) = &args.label {
+                item["label"] = serde_json::Value::String(label.clone());
+            } else {
+                item.as_object_mut().map(|o| o.remove("label"));
+            }
+            found = true;
+            break;
+        }
+    }
+    if !found {
+        let mut entry = serde_json::Map::new();
+        entry.insert("dir".to_string(), serde_json::Value::String(dir_key));
+        if let Some(label) = args.label {
+            entry.insert("label".to_string(), serde_json::Value::String(label));
+        }
+        arr.push(serde_json::Value::Object(entry));
+    }
+
+    let out = serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?;
+    fs::write(&status_path, out).map_err(|e| format!("写入 _status.json 失败: {e}"))?;
+    Ok(())
+}
+
+/// List PRD files by scanning 05-prd/ directory and parsing version from filename.
+/// Supports business naming: V1.1, V1.2, [2026M05]VX等。也合并 _status.json.prd_versions 元数据（如有）。
+#[tauri::command]
+pub fn list_prd_files(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<Vec<PrdFileEntry>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ).map_err(|_| "项目不存在".to_string())?
+    };
+
+    let prd_dir = Path::new(&output_dir).join("05-prd");
+    if !prd_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    // Read _status.json to merge metadata (T12)
+    let status_path = Path::new(&output_dir).join("_status.json");
+    let status_meta: std::collections::HashMap<String, (Option<String>, Option<String>)> =
+        if status_path.exists() {
+            fs::read_to_string(&status_path)
+                .ok()
+                .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+                .and_then(|json| json.get("prd_versions").cloned())
+                .and_then(|val| val.as_array().cloned())
+                .map(|arr| {
+                    arr.into_iter()
+                        .filter_map(|item| {
+                            let file = item.get("file")?.as_str()?.to_string();
+                            let custom = item.get("label").and_then(|v| v.as_str()).map(String::from);
+                            let parent = item.get("parent").and_then(|v| v.as_str()).map(String::from);
+                            Some((file, (custom, parent)))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+        } else {
+            std::collections::HashMap::new()
+        };
+
+    let mut entries: Vec<PrdFileEntry> = Vec::new();
+    if let Ok(read) = fs::read_dir(&prd_dir) {
+        for entry in read.filter_map(|e| e.ok()) {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !name.ends_with(".md") {
+                continue;
+            }
+            // Skip README
+            if name.eq_ignore_ascii_case("README.md") {
+                continue;
+            }
+            let (label, sort_key, recognized) = parse_prd_filename(&name);
+            let (custom_label, parent) = status_meta
+                .get(&name)
+                .cloned()
+                .unwrap_or((None, None));
+            entries.push(PrdFileEntry {
+                file: name,
+                label,
+                sort_key,
+                recognized,
+                parent,
+                custom_label,
+            });
+        }
+    }
+
+    // Sort: recognized versions by sort_key asc, then unrecognized by filename
+    entries.sort_by(|a, b| {
+        match (a.recognized, b.recognized) {
+            (true, true) => a.sort_key.cmp(&b.sort_key),
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            (false, false) => a.file.cmp(&b.file),
+        }
+    });
+
+    Ok(entries)
 }
 
 /// Export PRD as a self-contained shareable HTML page.

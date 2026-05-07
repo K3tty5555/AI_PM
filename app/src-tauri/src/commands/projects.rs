@@ -854,6 +854,153 @@ fn phase_output_file(phase: &str) -> Option<&'static str> {
     }
 }
 
+/// T5: 读取 _status.json.agent_errors（agent-team Wave 失败记录）
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentError {
+    pub key: String,
+    pub error: String,
+    pub timestamp: String,
+    pub retryable: bool,
+}
+
+#[tauri::command]
+pub fn get_agent_errors(
+    state: State<AppState>,
+    project_id: String,
+) -> Result<Vec<AgentError>, String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| "项目不存在".to_string())?
+    };
+
+    let json = match read_status_json(&output_dir) {
+        Some(v) => v,
+        None => return Ok(vec![]),
+    };
+
+    let errors_obj = match json.get("agent_errors").and_then(|v| v.as_object()) {
+        Some(o) => o,
+        None => return Ok(vec![]),
+    };
+
+    let mut entries: Vec<AgentError> = errors_obj
+        .iter()
+        .map(|(key, val)| AgentError {
+            key: key.clone(),
+            error: val.get("error").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            timestamp: val
+                .get("timestamp")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            retryable: val
+                .get("retryable")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+        })
+        .collect();
+    entries.sort_by(|a, b| a.key.cmp(&b.key));
+    Ok(entries)
+}
+
+/// T5: 清除 agent_errors 中的条目。当 keys 为空时清空全部。
+#[tauri::command]
+pub fn clear_agent_errors(
+    state: State<AppState>,
+    project_id: String,
+    keys: Vec<String>,
+) -> Result<(), String> {
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| "项目不存在".to_string())?
+    };
+
+    let path = Path::new(&output_dir).join("_status.json");
+    let mut json: serde_json::Value = match fs::read_to_string(&path) {
+        Ok(raw) => serde_json::from_str(&raw).map_err(|e| format!("_status.json 不是合法 JSON: {e}"))?,
+        Err(_) => return Ok(()),
+    };
+
+    if let Some(obj) = json.get_mut("agent_errors").and_then(|v| v.as_object_mut()) {
+        if keys.is_empty() {
+            obj.clear();
+        } else {
+            for k in &keys {
+                obj.remove(k);
+            }
+        }
+    }
+
+    let out = serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?;
+    fs::write(&path, out).map_err(|e| format!("写入 _status.json 失败: {e}"))?;
+    Ok(())
+}
+
+/// T16: 升级 _status.json schema — 补缺失字段、保留未知字段为元数据。
+/// 写回磁盘，让 CLI 与 App 共享同一份 schema。
+fn migrate_status_json_schema(output_dir: &std::path::Path) {
+    let path = output_dir.join("_status.json");
+    let raw = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+    let mut json: serde_json::Value = match serde_json::from_str(&raw) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+
+    let mut changed = false;
+
+    // 确保 phases 是 object
+    if !json.get("phases").map(|v| v.is_object()).unwrap_or(false) {
+        json["phases"] = serde_json::json!({});
+        changed = true;
+    }
+
+    if let Some(phases) = json.get_mut("phases").and_then(|v| v.as_object_mut()) {
+        // 补缺失的新字段（兜底为 false）
+        for &phase in PHASES {
+            if !phases.contains_key(phase) {
+                phases.insert(phase.to_string(), serde_json::Value::Bool(false));
+                changed = true;
+            }
+        }
+        // 老字段映射：competitor → research
+        if let Some(comp) = phases.remove("competitor") {
+            phases.entry("research".to_string()).or_insert(comp);
+            changed = true;
+        }
+    }
+
+    // last_phase 映射：competitor → research
+    if let Some(last) = json.get("last_phase").and_then(|v| v.as_str()) {
+        if last == "competitor" {
+            json["last_phase"] = serde_json::Value::String("research".to_string());
+            changed = true;
+        }
+    }
+
+    if !changed {
+        return;
+    }
+
+    // Pretty-print to keep file human-readable
+    if let Ok(out) = serde_json::to_string_pretty(&json) {
+        let _ = std::fs::write(&path, out);
+    }
+}
+
 /// Migrate legacy 07-review-report.md → 08-review-report.md
 fn migrate_review_file(output_dir: &str) {
     let old_path = std::path::Path::new(output_dir).join("07-review-report.md");
@@ -960,6 +1107,9 @@ pub fn import_legacy_projects(
                 pi.project.dir.clone()
             }
         };
+
+        // T16: 升级 _status.json schema（补缺失字段、competitor → research）
+        migrate_status_json_schema(std::path::Path::new(&output_dir));
 
         ready.push(ReadyImport {
             id: pi.id,

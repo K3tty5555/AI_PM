@@ -22,6 +22,8 @@ import { ToolDesignSpecPage } from "./pages/tools/DesignSpec"
 import { ToolIllustrationPage } from "./pages/tools/Illustration"
 import { ToolDoctorPage } from "./pages/tools/Doctor"
 import { ToolPlazaPage } from "./pages/tools/Plaza"
+import { ToolMultiReviewPage } from "./pages/tools/MultiReview"
+import { ToolGapResearchPage } from "./pages/tools/GapResearch"
 // Wave 4 — 图像创作
 import { BaoyuImaginePage }            from "./pages/tools/plaza/BaoyuImaginePage"
 import { BaoyuCoverImagePage }         from "./pages/tools/plaza/BaoyuCoverImagePage"
@@ -77,6 +79,8 @@ export const router = createBrowserRouter([
       { path: "/tools/design-spec",       element: <ToolDesignSpecPage /> },
       { path: "/tools/illustration",      element: <ToolIllustrationPage /> },
       { path: "/tools/doctor",            element: <ToolDoctorPage /> },
+      { path: "/tools/multi-review",      element: <ToolMultiReviewPage /> },
+      { path: "/tools/gap-research",      element: <ToolGapResearchPage /> },
       { path: "/tools/plaza",             element: <ToolPlazaPage /> },
       // Wave 4 — 图像创作
       { path: "/tools/plaza/baoyu-imagine",             element: <BaoyuImaginePage /> },

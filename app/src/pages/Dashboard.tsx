@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus, Clock, ArrowRight, CheckSquare } from "lucide-react"
+import { Plus, Clock, ArrowRight, CheckSquare, FolderSearch, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NewProjectDialog } from "@/components/new-project-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -58,6 +58,13 @@ export function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [exporting, setExporting] = useState(false)
 
+  // Disk drift detection (T9): on-disk projects not yet in DB
+  const [unimportedCount, setUnimportedCount] = useState(0)
+  const [unimportedDismissed, setUnimportedDismissed] = useState(
+    () => localStorage.getItem("disk-drift-dismissed") === "1",
+  )
+  const [importing, setImporting] = useState(false)
+
   // Batch delete confirmation
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false)
 
@@ -106,6 +113,60 @@ export function DashboardPage() {
         setShowOnboarding(true)
       }
     }).catch((err) => console.error("[Dashboard] getConfig:", err))
+  }, [])
+
+  // T9: detect unimported projects on disk
+  useEffect(() => {
+    if (unimportedDismissed) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const projectsDir = await api.getProjectsDir()
+        if (!projectsDir) return
+        const base = `${projectsDir.replace(/\/$/, "")}/projects`
+        const results = await api.scanLegacyProjects(base)
+        if (cancelled) return
+        const pending = results.filter((p) => !p.alreadyExists).length
+        setUnimportedCount(pending)
+      } catch (err) {
+        console.warn("[Dashboard] disk drift scan skipped:", err)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [unimportedDismissed])
+
+  const handleImportFromDisk = useCallback(async () => {
+    setImporting(true)
+    try {
+      const projectsDir = await api.getProjectsDir()
+      const base = `${projectsDir.replace(/\/$/, "")}/projects`
+      const results = await api.scanLegacyProjects(base)
+      const toImport = results.filter((p) => !p.alreadyExists)
+      if (toImport.length === 0) {
+        toast("没有可导入的项目", "info")
+        setUnimportedCount(0)
+        return
+      }
+      const result = await api.importLegacyProjects(toImport)
+      if (result.imported > 0) {
+        toast(`已导入 ${result.imported} 个项目`, "success")
+        setUnimportedCount(0)
+        await fetchProjects()
+        window.dispatchEvent(new Event("projects-updated"))
+      } else {
+        toast("导入失败，请前往设置页查看详情", "error")
+      }
+    } catch (err) {
+      console.error("[Dashboard] import from disk:", err)
+      toast(translateError(err), "error")
+    } finally {
+      setImporting(false)
+    }
+  }, [fetchProjects, toast])
+
+  const handleDismissDrift = useCallback(() => {
+    localStorage.setItem("disk-drift-dismissed", "1")
+    setUnimportedDismissed(true)
   }, [])
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
@@ -268,14 +329,32 @@ export function DashboardPage() {
               </p>
             </div>
 
-            <Button
-              variant="primary"
-              onClick={() => setDialogOpen(true)}
-              className="gap-2"
-            >
-              <Plus className="size-4" strokeWidth={1.75} />
-              新建项目
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                onClick={() => setDialogOpen(true)}
+                className="gap-2"
+              >
+                <Plus className="size-4" strokeWidth={1.75} />
+                新建项目
+              </Button>
+              {unimportedCount > 0 && (
+                <Button
+                  variant="secondary"
+                  onClick={handleImportFromDisk}
+                  disabled={importing}
+                  className="gap-2"
+                >
+                  <FolderSearch className="size-4" strokeWidth={1.75} />
+                  {importing ? "导入中..." : `导入磁盘项目（${unimportedCount}）`}
+                </Button>
+              )}
+            </div>
+            {unimportedCount > 0 && (
+              <p className="max-w-[420px] text-center text-[12px] text-[var(--text-tertiary)]">
+                检测到 {unimportedCount} 个 CLI 创建但未入客户端的项目，可一键导入
+              </p>
+            )}
           </div>
         </div>
 
@@ -303,6 +382,41 @@ export function DashboardPage() {
   return (
     <>
       <div className={cn("layout-cards", batch.selectionMode && "pb-20")}>
+        {/* Disk drift banner (T9) */}
+        {unimportedCount > 0 && !unimportedDismissed && (
+          <div
+            className="mb-4 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--accent-color)]/5 px-4 py-3"
+            style={{ animation: "fadeInUp 200ms var(--ease-decelerate)" }}
+          >
+            <FolderSearch className="size-4 shrink-0 text-[var(--accent-color)]" strokeWidth={1.75} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] text-[var(--text-primary)]">
+                检测到 <span className="font-semibold text-[var(--accent-color)]">{unimportedCount}</span> 个磁盘项目未入客户端
+              </p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                CLI 创建的项目会写入磁盘但不进数据库，导入后可在客户端查看
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleImportFromDisk}
+              disabled={importing}
+              className="shrink-0"
+            >
+              {importing ? "导入中..." : "立即导入"}
+            </Button>
+            <button
+              type="button"
+              onClick={handleDismissDrift}
+              className="shrink-0 rounded p-1 text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              aria-label="忽略"
+            >
+              <X className="size-4" strokeWidth={1.75} />
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">项目</h1>

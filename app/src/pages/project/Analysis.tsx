@@ -10,6 +10,7 @@ import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { PhaseShell } from "@/components/phase-shell"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
+import { AgentErrorsBanner } from "@/components/agent-errors-banner"
 import { api } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
@@ -124,6 +125,9 @@ export function AnalysisPage() {
 
   // Prevent double-start of AI stream in React StrictMode
   const startedRef = useRef(false)
+
+  // T5: agent_errors banner refresh trigger (increment after stream finishes)
+  const [agentErrorsKey, setAgentErrorsKey] = useState(0)
 
   // AI stream hook
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, toolStatus, start, reset } = useAiStream({
@@ -268,6 +272,30 @@ export function AnalysisPage() {
     start(initialMessages, { excludedContext })
   }, [reset, start, excludedContext])
 
+  /** T5: Retry a specific wave by clearing its errors and restarting analysis. */
+  const handleRetryWave = useCallback(async (wavePrefix: string) => {
+    if (!projectId) return
+    try {
+      // Clear errors for this wave prefix only
+      const allErrors = await api.getAgentErrors(projectId)
+      const keys = allErrors.filter((e) => e.key.startsWith(`${wavePrefix}_`)).map((e) => e.key)
+      if (keys.length > 0) {
+        await api.clearAgentErrors(projectId, keys)
+      }
+      handleRestart()
+      setAgentErrorsKey((k) => k + 1)
+    } catch (err) {
+      console.error("[Analysis] retry wave:", err)
+    }
+  }, [projectId, handleRestart])
+
+  // Refresh agent errors after each stream finishes
+  useEffect(() => {
+    if (!isStreaming) {
+      setAgentErrorsKey((k) => k + 1)
+    }
+  }, [isStreaming])
+
   // After analysis stream completes, check for skip suggestions
   useEffect(() => {
     if (isStreaming || !text || skipCheckedRef.current) return
@@ -401,6 +429,17 @@ export function AnalysisPage() {
         </div>
 
         <div className="h-px bg-[var(--border)]" />
+
+        {/* T5: Agent Wave error banner (only shown when agent_errors has entries) */}
+        {projectId && (
+          <div className="mt-4">
+            <AgentErrorsBanner
+              projectId={projectId}
+              refreshKey={agentErrorsKey}
+              onRetry={isTeam ? handleRetryWave : undefined}
+            />
+          </div>
+        )}
 
         <ContextPills
           projectId={projectId!}

@@ -15,6 +15,37 @@ pub struct KnowledgeEntry {
     pub title: String,
     pub content: String,
     pub source: String,  // "manual" or "auto"
+    /// frontmatter 解析的 confidence 字段（high/medium/low），缺失为 "unknown"
+    #[serde(default = "default_confidence")]
+    pub confidence: String,
+    /// frontmatter 中的 auto-generated 标记
+    #[serde(default)]
+    pub auto_generated: bool,
+}
+
+fn default_confidence() -> String {
+    "unknown".to_string()
+}
+
+/// 从 markdown frontmatter 解析 confidence / auto-generated 字段
+fn parse_frontmatter(content: &str) -> (String, bool) {
+    let mut confidence = "unknown".to_string();
+    let mut auto_generated = false;
+    if !content.starts_with("---") {
+        return (confidence, auto_generated);
+    }
+    let lines = content.lines().skip(1);
+    for line in lines {
+        if line.trim() == "---" {
+            break;
+        }
+        if let Some(rest) = line.strip_prefix("confidence:") {
+            confidence = rest.trim().to_string();
+        } else if let Some(rest) = line.strip_prefix("auto-generated:") {
+            auto_generated = rest.trim() == "true";
+        }
+    }
+    (confidence, auto_generated)
 }
 
 /// 全量遍历文件系统 + 内存子串匹配。
@@ -39,7 +70,8 @@ fn list_knowledge_internal(state: &AppState) -> Vec<KnowledgeEntry> {
                 .find(|l| l.starts_with("# "))
                 .map(|l| l[2..].trim().to_string())
                 .unwrap_or_else(|| id.clone());
-            entries.push(KnowledgeEntry { id, category: category.to_string(), title, content, source: source.to_string() });
+            let (confidence, auto_generated) = parse_frontmatter(&content);
+            entries.push(KnowledgeEntry { id, category: category.to_string(), title, content, source: source.to_string(), confidence, auto_generated });
         }
     }
     entries
@@ -94,8 +126,9 @@ pub fn recommend_knowledge_internal(
                 .find(|l| l.starts_with("# "))
                 .map(|l| l[2..].trim().to_string())
                 .unwrap_or_else(|| id.clone());
+            let (confidence, auto_generated) = parse_frontmatter(&content);
             all_entries.push(KnowledgeEntry {
-                id, category: category.to_string(), title, content, source: source.to_string(),
+                id, category: category.to_string(), title, content, source: source.to_string(), confidence, auto_generated,
             });
         }
     }
@@ -184,7 +217,7 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
     let full_content = format!("# {}\n\n{}", args.title, args.content);
     fs::write(&path, &full_content).map_err(|e| e.to_string())?;
 
-    Ok(KnowledgeEntry { id: final_slug, category: args.category, title: args.title, content: full_content, source: "manual".to_string() })
+    Ok(KnowledgeEntry { id: final_slug, category: args.category, title: args.title, content: full_content, source: "manual".to_string(), confidence: "high".to_string(), auto_generated: false })
 }
 
 /// 全量遍历文件系统 + 内存子串匹配。
@@ -216,7 +249,8 @@ pub fn search_knowledge(state: State<'_, AppState>, query: String) -> Vec<Knowle
                 .unwrap_or_else(|| id.clone());
             let source = if id.starts_with("auto-") { "auto" } else { "manual" };
             if title.to_lowercase().contains(&q) || content_lower.contains(&q) {
-                entries.push(KnowledgeEntry { id, category: category.to_string(), title, content, source: source.to_string() });
+                let (confidence, auto_generated) = parse_frontmatter(&content);
+            entries.push(KnowledgeEntry { id, category: category.to_string(), title, content, source: source.to_string(), confidence, auto_generated });
                 if entries.len() >= 20 { return entries; }
             }
         }
@@ -237,6 +271,104 @@ pub fn delete_knowledge(state: State<'_, AppState>, category: String, id: String
         .join("knowledge-base").join(&category).join(format!("{}.md", id));
     if path.exists() { fs::remove_file(&path).map_err(|e| e.to_string())?; }
     Ok(())
+}
+
+/// T4: 批量删除/归档自动生成卡片。归档目录：knowledge-base/.archive/{category}/
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupAutoArgs {
+    /// 限定分类（None 表示所有分类）
+    pub category: Option<String>,
+    /// 仅清理 confidence ≤ 此值；可选 "low" | "medium" | "high"
+    pub max_confidence: Option<String>,
+    /// 操作模式："delete" | "archive"
+    pub action: String,
+    /// 显式指定卡片 ID 列表（覆盖前两条筛选）
+    pub ids: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupAutoResult {
+    pub processed: usize,
+    pub failed: Vec<String>,
+}
+
+#[tauri::command]
+pub fn cleanup_auto_knowledge(
+    state: State<'_, AppState>,
+    args: CleanupAutoArgs,
+) -> Result<CleanupAutoResult, String> {
+    if args.action != "delete" && args.action != "archive" {
+        return Err(format!("不支持的操作：{}", args.action));
+    }
+    let kb_root = state.templates_base().join("knowledge-base");
+    let archive_root = kb_root.join(".archive");
+
+    let confidence_rank = |c: &str| -> u8 {
+        match c {
+            "low" => 1,
+            "medium" => 2,
+            "high" => 3,
+            _ => 0, // unknown
+        }
+    };
+    let max_rank = args.max_confidence.as_deref().map(confidence_rank);
+
+    let candidates: Vec<KnowledgeEntry> = list_knowledge_internal(&state)
+        .into_iter()
+        .filter(|e| {
+            if let Some(ref cat) = args.category {
+                if &e.category != cat { return false; }
+            }
+            // Only target auto-generated cards
+            if e.source != "auto" && !e.auto_generated { return false; }
+            if let Some(rank) = max_rank {
+                if confidence_rank(&e.confidence) > rank { return false; }
+            }
+            if let Some(ref ids) = args.ids {
+                if !ids.contains(&e.id) { return false; }
+            }
+            true
+        })
+        .collect();
+
+    let mut processed = 0usize;
+    let mut failed = Vec::new();
+    for entry in candidates {
+        let src_path = kb_root.join(&entry.category).join(format!("{}.md", entry.id));
+        if !src_path.exists() {
+            failed.push(entry.id.clone());
+            continue;
+        }
+        if args.action == "delete" {
+            match fs::remove_file(&src_path) {
+                Ok(()) => processed += 1,
+                Err(_) => failed.push(entry.id.clone()),
+            }
+        } else {
+            // archive: move to .archive/{category}/
+            let dst_dir = archive_root.join(&entry.category);
+            if let Err(e) = fs::create_dir_all(&dst_dir) {
+                eprintln!("[cleanup] mkdir failed: {e}");
+                failed.push(entry.id.clone());
+                continue;
+            }
+            let dst_path = dst_dir.join(format!("{}.md", entry.id));
+            match fs::rename(&src_path, &dst_path) {
+                Ok(()) => processed += 1,
+                Err(_) => {
+                    // fallback: copy + remove
+                    match fs::copy(&src_path, &dst_path).and_then(|_| fs::remove_file(&src_path)) {
+                        Ok(_) => processed += 1,
+                        Err(_) => failed.push(entry.id.clone()),
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(CleanupAutoResult { processed, failed })
 }
 
 /// Return full markdown content of a single knowledge entry.

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { useAiStream } from "@/hooks/use-ai-stream"
-import { api, type UiSpecEntry, type MotionIntensity, type CodebaseFingerprint } from "@/lib/tauri-api"
+import { api, type UiSpecEntry, type MotionIntensity, type CodebaseFingerprint, type PrototypeVersionEntry } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus } from "@/lib/utils"
@@ -15,6 +15,8 @@ import { PhaseEmptyState } from "@/components/phase-empty-state"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { PreflightCard } from "@/components/preflight-card"
+import { PlanModeDialog } from "@/components/plan-mode-dialog"
+import { VersionManagerDialog } from "@/components/version-manager-dialog"
 
 const PROTOTYPE_FILE = "06-prototype.html"
 
@@ -443,6 +445,47 @@ export function PrototypePage() {
   const [fingerprint, setFingerprint] = useState<CodebaseFingerprint | null>(null)
   const [extractingFingerprint, setExtractingFingerprint] = useState(false)
 
+  // T11: prototype version directory list + active selection
+  const [prototypeVersions, setPrototypeVersions] = useState<PrototypeVersionEntry[]>([])
+  const [activeProtoDir, setActiveProtoDir] = useState<string>("")
+  // T13: version metadata manager
+  const [versionManagerOpen, setVersionManagerOpen] = useState(false)
+  const reloadPrototypeVersions = useCallback(async () => {
+    if (!projectId) return
+    try {
+      const list = await api.listPrototypeVersions(projectId)
+      setPrototypeVersions(list)
+    } catch (err) {
+      console.error("[Prototype] reload versions:", err)
+    }
+  }, [projectId])
+
+  // Plan mode confirmation
+  const [planModeOpen, setPlanModeOpen] = useState(false)
+  const planModeIntentRef = useRef<null | (() => void)>(null)
+  const planModeSkipKey = `plan-mode-skip:prototype:${projectId}`
+
+  const withPlanMode = useCallback((intent: () => void) => {
+    if (localStorage.getItem(planModeSkipKey)) {
+      intent()
+      return
+    }
+    planModeIntentRef.current = intent
+    setPlanModeOpen(true)
+  }, [planModeSkipKey])
+
+  const handlePlanModeConfirm = useCallback(() => {
+    setPlanModeOpen(false)
+    const intent = planModeIntentRef.current
+    planModeIntentRef.current = null
+    intent?.()
+  }, [])
+
+  const handlePlanModeCancel = useCallback(() => {
+    setPlanModeOpen(false)
+    planModeIntentRef.current = null
+  }, [])
+
   // Design spec selector
   const [designSpecs, setDesignSpecs] = useState<UiSpecEntry[]>([])
   const [selectedSpec, setSelectedSpec] = useState<string>("ai-contextual")
@@ -503,23 +546,53 @@ export function PrototypePage() {
   const detectAndLoad = useCallback(async (): Promise<boolean> => {
     if (!projectId) return false
 
-    // 1. Multi-file: manifest.json
+    // T11: scan all 06-prototype*/ directories first
+    let versions: PrototypeVersionEntry[] = []
     try {
-      const raw = await api.readProjectFile(projectId, "06-prototype/manifest.json")
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        const sections: ManifestSection[] = parsed.sections ?? []
-        if (sections.length > 0) {
-          setManifest(sections)
-          setActivePageId(sections[0].id)
-          setProtoDir("06-prototype/")
-          setExistingHtml(null)
+      versions = await api.listPrototypeVersions(projectId)
+    } catch { /* keep versions empty, fallthrough */ }
+    setPrototypeVersions(versions)
+
+    // Determine which directory to load
+    const targetDir = (() => {
+      if (activeProtoDir && versions.some((v) => v.dir === activeProtoDir)) return activeProtoDir
+      // Prefer "06-prototype/" (default), else last entry by sort_key
+      const def = versions.find((v) => v.dir === "06-prototype/")
+      return def?.dir ?? versions[versions.length - 1]?.dir ?? ""
+    })()
+
+    if (targetDir) {
+      // 1. Multi-file: manifest.json
+      try {
+        const raw = await api.readProjectFile(projectId, `${targetDir}manifest.json`)
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          const sections: ManifestSection[] = parsed.sections ?? []
+          if (sections.length > 0) {
+            setManifest(sections)
+            setActivePageId(sections[0].id)
+            setProtoDir(targetDir)
+            setActiveProtoDir(targetDir)
+            setExistingHtml(null)
+            return true
+          }
+        }
+      } catch { /* not found or invalid */ }
+
+      // 2. Single-file in directory
+      try {
+        const html = await api.readProjectFile(projectId, `${targetDir}index.html`)
+        if (html) {
+          setExistingHtml(html)
+          setProtoDir(targetDir)
+          setActiveProtoDir(targetDir)
+          setManifest(null)
           return true
         }
-      }
-    } catch { /* not found or invalid */ }
+      } catch {}
+    }
 
-    // 2. Single-file flat
+    // 3. Legacy single-file flat (no directory)
     try {
       const html = await api.readProjectFile(projectId, PROTOTYPE_FILE)
       if (html) {
@@ -530,19 +603,8 @@ export function PrototypePage() {
       }
     } catch {}
 
-    // 3. Single-file in directory
-    try {
-      const html = await api.readProjectFile(projectId, "06-prototype/index.html")
-      if (html) {
-        setExistingHtml(html)
-        setProtoDir("06-prototype/")
-        setManifest(null)
-        return true
-      }
-    } catch {}
-
     return false
-  }, [projectId])
+  }, [projectId, activeProtoDir])
 
   // ── Load on mount ──────────────────────────────────────────────────
 
@@ -589,10 +651,11 @@ export function PrototypePage() {
     const section = manifest.find(s => s.id === activePageId)
     if (!section) return
 
+    const dir = protoDir || "06-prototype/"
     let cancelled = false
     async function loadPage() {
       try {
-        const html = await api.readProjectFile(projectId!, `06-prototype/${section!.file}`)
+        const html = await api.readProjectFile(projectId!, `${dir}${section!.file}`)
         if (!cancelled) setPageHtml(html)
       } catch {
         if (!cancelled) setPageHtml(null)
@@ -668,9 +731,11 @@ export function PrototypePage() {
   // ── Actions ───────────────────────────────────────────────────────
 
   const handleGenerate = useCallback(() => {
-    startedRef.current = true
-    start([{ role: "user", content: "请生成产品原型" }], { excludedContext, designSpec: selectedSpec })
-  }, [start, excludedContext, selectedSpec])
+    withPlanMode(() => {
+      startedRef.current = true
+      start([{ role: "user", content: "请生成产品原型" }], { excludedContext, designSpec: selectedSpec })
+    })
+  }, [withPlanMode, start, excludedContext, selectedSpec])
 
   const handleExtractFingerprint = useCallback(async () => {
     if (!projectId) return
@@ -708,15 +773,17 @@ export function PrototypePage() {
   }, [fingerprint])
 
   const handleRegenerate = useCallback(() => {
-    reset()
-    setExistingHtml(null)
-    setManifest(null)
-    setActivePageId("")
-    setPageHtml(null)
-    setBlobUrl(null)
-    startedRef.current = true
-    start([{ role: "user", content: "请重新生成产品原型" }], { excludedContext, designSpec: selectedSpec })
-  }, [reset, start, excludedContext, selectedSpec])
+    withPlanMode(() => {
+      reset()
+      setExistingHtml(null)
+      setManifest(null)
+      setActivePageId("")
+      setPageHtml(null)
+      setBlobUrl(null)
+      startedRef.current = true
+      start([{ role: "user", content: "请重新生成产品原型" }], { excludedContext, designSpec: selectedSpec })
+    })
+  }, [withPlanMode, reset, start, excludedContext, selectedSpec])
 
   const handleAdvance = useCallback(async () => {
     if (!projectId) return
@@ -854,7 +921,46 @@ export function PrototypePage() {
     <div className="mx-auto w-full max-w-[900px]">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-base font-semibold text-[var(--text-primary)]">原型设计</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-base font-semibold text-[var(--text-primary)]">原型设计</h1>
+          {prototypeVersions.length > 1 && (
+            <>
+              <span className="text-[13px] text-[var(--text-secondary)]">·</span>
+              <select
+                value={activeProtoDir || protoDir}
+                onChange={(e) => {
+                  setActiveProtoDir(e.target.value)
+                  setExistingHtml(null)
+                  setManifest(null)
+                  setActivePageId("")
+                  setPageHtml(null)
+                  setBlobUrl(null)
+                  setLoading(true)
+                  // detectAndLoad will run via useEffect on activeProtoDir change
+                  setTimeout(() => detectAndLoad().finally(() => setLoading(false)), 0)
+                }}
+                className="text-[13px] text-[var(--accent-color)] bg-transparent border-none outline-none cursor-pointer font-medium"
+              >
+                {prototypeVersions.map((v) => (
+                  <option key={v.dir} value={v.dir}>
+                    {v.customLabel ?? v.label}
+                    {v.hasManifest ? " · 多页" : ""}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+          {prototypeVersions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setVersionManagerOpen(true)}
+              className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--accent-color)] transition-colors cursor-pointer"
+              title="管理版本元数据（业务标签）"
+            >
+              管理
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={handleRegenerate} disabled={isStreaming}>
             &#x21bb; 重新生成
@@ -1101,6 +1207,26 @@ export function PrototypePage() {
           </div>
           <iframe src={blobUrl} className="w-full h-full border-none" title="原型全屏预览" />
         </div>
+      )}
+
+      {/* Plan Mode confirmation */}
+      <PlanModeDialog
+        open={planModeOpen}
+        phase="prototype"
+        onConfirm={handlePlanModeConfirm}
+        onCancel={handlePlanModeCancel}
+      />
+
+      {/* T13: Version metadata manager */}
+      {projectId && (
+        <VersionManagerDialog
+          open={versionManagerOpen}
+          onClose={() => setVersionManagerOpen(false)}
+          projectId={projectId}
+          mode="prototype"
+          prototypeEntries={prototypeVersions}
+          onSaved={reloadPrototypeVersions}
+        />
       )}
     </div>
   )
