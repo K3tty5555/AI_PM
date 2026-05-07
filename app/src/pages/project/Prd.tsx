@@ -10,7 +10,7 @@ import { useAiStream } from "@/hooks/use-ai-stream"
 import { useToolStream } from "@/hooks/use-tool-stream"
 import { useProgressiveReveal } from "@/hooks/use-progressive-reveal"
 import { RevealContainer } from "@/components/RevealContainer"
-import { api, type PrdStyleEntry } from "@/lib/tauri-api"
+import { api, type PrdStyleEntry, type PrdFileEntry } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
 import { cn, extractStreamStatus } from "@/lib/utils"
@@ -33,13 +33,33 @@ import { ExportDropdown } from "@/components/prd-toolbar"
 import { PrdExportResult } from "@/components/prd-export-result"
 import { PdfCoverDialog } from "@/components/pdf-cover-dialog"
 import { DocxRecipeDialog } from "@/components/docx-recipe-dialog"
+import { PlanModeDialog } from "@/components/plan-mode-dialog"
+import { VersionManagerDialog } from "@/components/version-manager-dialog"
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-function prdFile(version: number) {
+/** Default filename for a freshly-generated version. */
+function defaultPrdFile(version: number) {
   return `05-prd/05-PRD-v${version}.0.md`
+}
+
+/** Resolve PRD file path from sortKey, using actual entries when available. */
+function prdFileFor(sortKey: number, entries: PrdFileEntry[]) {
+  const entry = entries.find((e) => e.sortKey === sortKey)
+  if (entry) return `05-prd/${entry.file}`
+  // Fallback: legacy naming (sortKey is V{N}.0 → N)
+  return defaultPrdFile(Math.max(1, Math.round(sortKey / 100)))
+}
+
+/** Display label for a given sortKey. */
+function prdLabelFor(sortKey: number, entries: PrdFileEntry[]) {
+  const entry = entries.find((e) => e.sortKey === sortKey)
+  if (entry) return entry.customLabel ?? entry.label
+  // Legacy: V{N}.0
+  const major = Math.max(1, Math.round(sortKey / 100))
+  return `V${major}.0`
 }
 
 // ---------------------------------------------------------------------------
@@ -155,8 +175,11 @@ export function PrdPage() {
   const [selectedStyle, setSelectedStyle] = useState<string>("")
 
   // Version management
-  const [currentVersion, setCurrentVersion] = useState(1)
-  const [versions, setVersions] = useState<number[]>([1])
+  const [currentVersion, setCurrentVersion] = useState(100)
+  const [versions, setVersions] = useState<number[]>([100])
+  const [prdEntries, setPrdEntries] = useState<PrdFileEntry[]>([])
+  const prdFile = useCallback((sortKey: number) => prdFileFor(sortKey, prdEntries), [prdEntries])
+  const prdLabel = useCallback((sortKey: number) => prdLabelFor(sortKey, prdEntries), [prdEntries])
 
   // Diff view
   const [diffMode, setDiffMode] = useState(false)
@@ -174,6 +197,27 @@ export function PrdPage() {
   const [pmLintOpen, setPmLintOpen] = useState(false)
   const [pmLintStatuses, setPmLintStatuses] = useState<Record<string, PmLintStatus>>({})
   const [assistInputVersion, setAssistInputVersion] = useState(0)
+
+  // Plan mode confirmation
+  const [planModeOpen, setPlanModeOpen] = useState(false)
+  const planModeIntentRef = useRef<null | (() => void)>(null)
+  const planModeSkipKey = `plan-mode-skip:prd:${projectId}`
+
+  // T8: PRD summary status (≥20KB 自动生成 _summaries/prd-summary.md)
+  const [summary, setSummary] = useState<{ size: number; content: string } | null>(null)
+  const [summaryOpen, setSummaryOpen] = useState(false)
+
+  // T12: PRD version metadata manager
+  const [versionManagerOpen, setVersionManagerOpen] = useState(false)
+  const reloadPrdEntries = useCallback(async () => {
+    if (!projectId) return
+    try {
+      const entries = await api.listPrdFiles(projectId)
+      setPrdEntries(entries)
+    } catch (err) {
+      console.error("[Prd] reload entries:", err)
+    }
+  }, [projectId])
 
   // Sample PRD dialog
   const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
@@ -454,27 +498,38 @@ export function PrdPage() {
         if (!cancelled && r) setReviewContent(r)
       }).catch((err) => console.error("[Prd]", err))
 
-      // Load versions
-      api.listPrdVersions(projectId).then((vers) => {
-        if (!cancelled && vers.length > 0) {
-          setVersions(vers)
-          setCurrentVersion(vers[vers.length - 1])
+      // T8: Detect adaptive PRD summary (non-blocking)
+      api.readProjectFile(projectId, "_summaries/prd-summary.md").then((s) => {
+        if (!cancelled && s) {
+          setSummary({ size: s.length, content: s })
         }
       }).catch(() => {})
 
       try {
-        // Load latest version
-        const latestVer = await api.getLatestPrdVersion(projectId)
-        const content = await api.readProjectFile(projectId, prdFile(latestVer))
-        if (!cancelled) {
-          setCurrentVersion(latestVer)
-          if (content) {
+        // Load files (T10: scan 05-prd/*.md, recognize V1.x business naming)
+        const entries = await api.listPrdFiles(projectId)
+        if (cancelled) return
+        setPrdEntries(entries)
+
+        // Sorted ascending by sortKey; pick last as latest
+        const recognized = entries.filter((e) => e.recognized)
+        const latestEntry = recognized[recognized.length - 1] ?? entries[entries.length - 1]
+
+        if (latestEntry) {
+          const sortKey = latestEntry.recognized ? latestEntry.sortKey : 100
+          setCurrentVersion(sortKey)
+          setVersions(recognized.length > 0 ? recognized.map((e) => e.sortKey) : [100])
+          const content = await api.readProjectFile(projectId, `05-prd/${latestEntry.file}`)
+          if (!cancelled && content) {
             setExistingMarkdown(content)
-          } else if (autostart) {
-            if (!startedRef.current) {
-              startedRef.current = true
-              start([{ role: "user", content: "请生成 PRD" }])
-            }
+          } else if (!cancelled && autostart && !startedRef.current) {
+            startedRef.current = true
+            start([{ role: "user", content: "请生成 PRD" }])
+          }
+        } else if (autostart) {
+          if (!cancelled && !startedRef.current) {
+            startedRef.current = true
+            start([{ role: "user", content: "请生成 PRD" }])
           }
         }
       } catch (err) {
@@ -511,31 +566,57 @@ export function PrdPage() {
     setEditedMarkdown(newMarkdown)
   }, [])
 
+  /** Wrap a stream-start intent with plan-mode confirmation. Skip if user previously chose "don't show again". */
+  const withPlanMode = useCallback((intent: () => void) => {
+    if (localStorage.getItem(planModeSkipKey)) {
+      intent()
+      return
+    }
+    planModeIntentRef.current = intent
+    setPlanModeOpen(true)
+  }, [planModeSkipKey])
+
+  const handlePlanModeConfirm = useCallback(() => {
+    setPlanModeOpen(false)
+    const intent = planModeIntentRef.current
+    planModeIntentRef.current = null
+    intent?.()
+  }, [])
+
+  const handlePlanModeCancel = useCallback(() => {
+    setPlanModeOpen(false)
+    planModeIntentRef.current = null
+  }, [])
+
   /** Core: actually start the PRD stream */
   const startPrdStream = useCallback((withIllustration: boolean) => {
-    setAutoIllustration(withIllustration)
-    lastIllustrationTextRef.current = ""
-    startedRef.current = true
-    start([{ role: "user", content: "请生成 PRD" }], {
-      excludedContext,
-      styleId: selectedStyle || undefined,
+    withPlanMode(() => {
+      setAutoIllustration(withIllustration)
+      lastIllustrationTextRef.current = ""
+      startedRef.current = true
+      start([{ role: "user", content: "请生成 PRD" }], {
+        excludedContext,
+        styleId: selectedStyle || undefined,
+      })
     })
-  }, [start, excludedContext, selectedStyle])
+  }, [withPlanMode, start, excludedContext, selectedStyle])
 
   /** Core: actually start the PRD re-generation stream */
   const startPrdRegenStream = useCallback((withIllustration: boolean) => {
-    setAutoIllustration(withIllustration)
-    lastIllustrationTextRef.current = ""
-    reset()
-    assistReset()
-    setExistingMarkdown(null)
-    setEditedMarkdown(null)
-    startedRef.current = true
-    const prompt = reviewContent
-      ? `请根据以下需求评审报告的意见，修订 PRD 文档。更新版本号（如 v1.0→v1.1），在修订日志中注明本次修改原因和涉及模块，并按评审意见完善对应章节内容。\n\n评审报告：\n${reviewContent}`
-      : "请重新生成 PRD"
-    start([{ role: "user", content: prompt }], { excludedContext })
-  }, [reset, assistReset, start, excludedContext, reviewContent])
+    withPlanMode(() => {
+      setAutoIllustration(withIllustration)
+      lastIllustrationTextRef.current = ""
+      reset()
+      assistReset()
+      setExistingMarkdown(null)
+      setEditedMarkdown(null)
+      startedRef.current = true
+      const prompt = reviewContent
+        ? `请根据以下需求评审报告的意见，修订 PRD 文档。更新版本号（如 v1.0→v1.1），在修订日志中注明本次修改原因和涉及模块，并按评审意见完善对应章节内容。\n\n评审报告：\n${reviewContent}`
+        : "请重新生成 PRD"
+      start([{ role: "user", content: prompt }], { excludedContext })
+    })
+  }, [withPlanMode, reset, assistReset, start, excludedContext, reviewContent])
 
   /** Decide whether to show illustration dialog or go straight to stream */
   const maybeShowIllustrationDialog = useCallback((onConfirm: (enabled: boolean) => void) => {
@@ -820,7 +901,7 @@ export function PrdPage() {
             <span className="text-[13px] text-[var(--text-secondary)]">·</span>
           )}
           {versions.length <= 1 ? (
-            <span className="text-[13px] text-[var(--text-secondary)]">v{currentVersion}.0</span>
+            <span className="text-[13px] text-[var(--text-secondary)]">{prdLabel(currentVersion)}</span>
           ) : (
             <select
               value={currentVersion}
@@ -837,9 +918,29 @@ export function PrdPage() {
               className="text-[13px] text-[var(--accent-color)] bg-transparent border-none outline-none cursor-pointer font-medium"
             >
               {versions.map((v) => (
-                <option key={v} value={v}>v{v}.0</option>
+                <option key={v} value={v}>{prdLabel(v)}</option>
               ))}
             </select>
+          )}
+          {prdEntries.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setVersionManagerOpen(true)}
+              className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--accent-color)] transition-colors cursor-pointer"
+              title="管理版本元数据（业务标签 / 父版本）"
+            >
+              管理
+            </button>
+          )}
+          {summary && (
+            <button
+              type="button"
+              onClick={() => setSummaryOpen(true)}
+              className="rounded-md border border-[var(--border)] bg-[var(--accent-color)]/5 px-2 py-0.5 text-[11px] text-[var(--accent-color)] hover:bg-[var(--accent-color)]/10 transition-colors cursor-pointer"
+              title="点击查看自适应摘要"
+            >
+              已生成摘要 · {Math.round(summary.size / 1024)}KB
+            </button>
           )}
           {hasContent && (
             <PrdScoreBadge
@@ -1199,7 +1300,7 @@ export function PrdPage() {
               }}
               className="text-xs bg-transparent border border-[var(--border)] rounded px-1.5 py-0.5 outline-none"
             >
-              {versions.map((v) => <option key={v} value={v}>v{v}.0</option>)}
+              {versions.map((v) => <option key={v} value={v}>{prdLabel(v)}</option>)}
             </select>
             <span className="text-xs text-[var(--text-tertiary)]">→</span>
             <select
@@ -1212,14 +1313,14 @@ export function PrdPage() {
               }}
               className="text-xs bg-transparent border border-[var(--border)] rounded px-1.5 py-0.5 outline-none"
             >
-              {versions.map((v) => <option key={v} value={v}>v{v}.0</option>)}
+              {versions.map((v) => <option key={v} value={v}>{prdLabel(v)}</option>)}
             </select>
           </div>
           <PrdDiffViewer
             oldText={diffOldText}
             newText={diffNewText}
-            oldLabel={`v${diffOldVer}.0`}
-            newLabel={`v${diffNewVer}.0`}
+            oldLabel={prdLabel(diffOldVer)}
+            newLabel={prdLabel(diffNewVer)}
           />
         </div>
       )}
@@ -1339,6 +1440,52 @@ export function PrdPage() {
         projectId={projectId}
         onConfirm={handleIllustrationConfirm}
       />
+
+      {/* Plan Mode confirmation */}
+      <PlanModeDialog
+        open={planModeOpen}
+        phase="prd"
+        onConfirm={handlePlanModeConfirm}
+        onCancel={handlePlanModeCancel}
+      />
+
+      {/* T12: Version manager */}
+      <VersionManagerDialog
+        open={versionManagerOpen}
+        onClose={() => setVersionManagerOpen(false)}
+        projectId={projectId}
+        mode="prd"
+        prdEntries={prdEntries}
+        onSaved={reloadPrdEntries}
+      />
+
+      {/* T8: Summary viewer */}
+      {summaryOpen && summary && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[4px]"
+          style={{ animation: "fadeIn 150ms var(--ease-decelerate)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setSummaryOpen(false) }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-[720px] max-h-[80vh] overflow-y-auto rounded-xl bg-[var(--background)] p-6 shadow-[var(--shadow-xl)]"
+            style={{ animation: "fadeInUp 200ms var(--ease-decelerate)" }}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">PRD 自适应摘要</h2>
+                <p className="text-xs text-[var(--text-tertiary)]">PRD ≥ 20KB 时自动生成，原型/审计阶段优先读摘要节省 token</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setSummaryOpen(false)}>
+                <X className="size-4" />
+              </Button>
+            </div>
+            <div className="h-px bg-[var(--border)] mb-4" />
+            <PrdViewer markdown={summary.content} isStreaming={false} />
+          </div>
+        </div>
+      )}
     </div>
     </PhaseShell>
   )

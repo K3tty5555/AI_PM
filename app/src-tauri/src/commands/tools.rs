@@ -18,6 +18,8 @@ const VALID_TOOLS: &[&str] = &[
     "ai-pm-knowledge",
     "ai-pm-design-spec",
     "ai-pm-driver",
+    "multi-perspective-review",
+    "pm-gap-research",
 ];
 
 #[derive(Debug, Deserialize)]

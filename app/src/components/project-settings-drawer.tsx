@@ -1,10 +1,22 @@
 import { useEffect, useState, useCallback, useRef } from "react"
-import { X, Lock } from "lucide-react"
-import { api } from "@/lib/tauri-api"
+import { X, Lock, ChevronDown, ChevronRight, FileText } from "lucide-react"
+import { api, type MemoryFileEntry } from "@/lib/tauri-api"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { PrdViewer } from "@/components/prd-viewer"
 import { PHASE_ORDER, PHASE_LABELS, REQUIRED_PHASES } from "@/lib/phase-meta"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+
+const MEMORY_LABELS: Record<string, string> = {
+  "L0-identity.md": "L0 · 项目身份",
+  "L1-decisions.md": "L1 · 关键决策",
+  "L2-analysis.md": "L2 · 分析摘要",
+  "layout-shell.md": "原型布局指纹",
+}
+
+function memoryLabelFor(name: string): string {
+  return MEMORY_LABELS[name] ?? name
+}
 
 interface ProjectSettingsDrawerProps {
   open: boolean
@@ -26,7 +38,11 @@ const PHASE_DESCRIPTIONS: Record<string, string> = {
 
 export function ProjectSettingsDrawer({ open, projectId, onClose }: ProjectSettingsDrawerProps) {
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState<"phases" | "prompts">("phases")
+  const [activeTab, setActiveTab] = useState<"phases" | "prompts" | "memory">("phases")
+  const [memoryFiles, setMemoryFiles] = useState<MemoryFileEntry[]>([])
+  const [memoryLoading, setMemoryLoading] = useState(false)
+  const [memoryContents, setMemoryContents] = useState<Record<string, string>>({})
+  const [expandedMemory, setExpandedMemory] = useState<Set<string>>(new Set())
   const [phaseStatuses, setPhaseStatuses] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   // Prompt editor state
@@ -80,6 +96,13 @@ export function ProjectSettingsDrawer({ open, projectId, onClose }: ProjectSetti
 
   useEffect(() => {
     if (!open) return
+    if (activeTab === "memory" && memoryFiles.length === 0 && !memoryLoading) {
+      setMemoryLoading(true)
+      api.listMemoryFiles(projectId)
+        .then((list) => setMemoryFiles(list))
+        .catch((err) => console.error("[Drawer] listMemoryFiles:", err))
+        .finally(() => setMemoryLoading(false))
+    }
     const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
     document.addEventListener("keydown", handleKey)
     return () => document.removeEventListener("keydown", handleKey)
@@ -107,7 +130,7 @@ export function ProjectSettingsDrawer({ open, projectId, onClose }: ProjectSetti
 
         {/* Tabs */}
         <div className="flex gap-1 px-6 pt-4 pb-2">
-          {(["phases", "prompts"] as const).map((tab) => (
+          {(["phases", "prompts", "memory"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -118,7 +141,7 @@ export function ProjectSettingsDrawer({ open, projectId, onClose }: ProjectSetti
                   : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]",
               )}
             >
-              {tab === "phases" ? "阶段管理" : "Prompt 定制"}
+              {tab === "phases" ? "阶段管理" : tab === "prompts" ? "Prompt 定制" : "项目记忆"}
             </button>
           ))}
         </div>
@@ -280,6 +303,88 @@ export function ProjectSettingsDrawer({ open, projectId, onClose }: ProjectSetti
             onCancel={() => setConfirmClear(false)}
           />
         </div>
+        )}
+
+        {/* T6: Memory tab */}
+        {activeTab === "memory" && (
+          <div className="px-6 py-5">
+            <h3 className="text-sm font-medium text-[var(--text-primary)] mb-1">项目记忆</h3>
+            <p className="text-xs text-[var(--text-tertiary)] leading-relaxed mb-4">
+              CLI 流程会自动写入 _memory/ 目录：L0 项目身份、L1 关键决策、L2 分析摘要、原型布局指纹。客户端只读展示。
+            </p>
+
+            {memoryLoading && (
+              <div className="space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-16 rounded-lg bg-[var(--secondary)] animate-pulse" />
+                ))}
+              </div>
+            )}
+
+            {!memoryLoading && memoryFiles.length === 0 && (
+              <div className="rounded-lg border border-dashed border-[var(--border)] p-6 text-center">
+                <FileText className="size-6 mx-auto mb-2 text-[var(--text-tertiary)]" strokeWidth={1.5} />
+                <p className="text-sm text-[var(--text-secondary)]">尚未生成项目记忆</p>
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                  完成需求 / PRD / 原型阶段后由 CLI 流程自动写入
+                </p>
+              </div>
+            )}
+
+            {!memoryLoading && memoryFiles.length > 0 && (
+              <div className="space-y-2">
+                {memoryFiles.map((f) => {
+                  const expanded = expandedMemory.has(f.name)
+                  const content = memoryContents[f.name]
+                  return (
+                    <div key={f.name} className="rounded-lg border border-[var(--border)] overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setExpandedMemory((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(f.name)) {
+                              next.delete(f.name)
+                            } else {
+                              next.add(f.name)
+                            }
+                            return next
+                          })
+                          if (!expanded && !content) {
+                            try {
+                              const raw = await api.readProjectFile(projectId, `_memory/${f.name}`)
+                              setMemoryContents((prev) => ({ ...prev, [f.name]: raw ?? "（文件为空）" }))
+                            } catch (err) {
+                              console.error("[Drawer] readMemory:", err)
+                              setMemoryContents((prev) => ({ ...prev, [f.name]: `读取失败：${String(err)}` }))
+                            }
+                          }
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-[var(--hover-bg)] transition-colors cursor-pointer"
+                      >
+                        {expanded
+                          ? <ChevronDown className="size-3.5 text-[var(--text-tertiary)]" strokeWidth={1.75} />
+                          : <ChevronRight className="size-3.5 text-[var(--text-tertiary)]" strokeWidth={1.75} />}
+                        <span className="flex-1 text-sm text-[var(--text-primary)]">{memoryLabelFor(f.name)}</span>
+                        <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
+                          {f.size < 1024 ? `${f.size} B` : `${(f.size / 1024).toFixed(1)} KB`}
+                        </span>
+                      </button>
+                      {expanded && (
+                        <div className="border-t border-[var(--border)] px-3 py-3 bg-[var(--secondary)]/30">
+                          {content !== undefined ? (
+                            <PrdViewer markdown={content} isStreaming={false} />
+                          ) : (
+                            <p className="text-xs text-[var(--text-tertiary)]">读取中...</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
