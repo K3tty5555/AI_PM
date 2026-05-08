@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
-import { FileText, FolderOpen, RefreshCw } from "lucide-react"
+import { FileText, FolderOpen, RefreshCw, Microscope, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ProgressBar } from "@/components/ui/progress-bar"
@@ -17,6 +17,8 @@ import { ReferenceFiles } from "@/components/reference-files"
 import { PreflightCard } from "@/components/preflight-card"
 import { PlanModeDialog } from "@/components/plan-mode-dialog"
 import { VersionManagerDialog } from "@/components/version-manager-dialog"
+import { MultiReviewDialog } from "@/components/multi-review-dialog"
+import { GapResearchDialog } from "@/components/gap-research-dialog"
 
 const PROTOTYPE_FILE = "06-prototype.html"
 
@@ -450,6 +452,8 @@ export function PrototypePage() {
   const [activeProtoDir, setActiveProtoDir] = useState<string>("")
   // T13: version metadata manager
   const [versionManagerOpen, setVersionManagerOpen] = useState(false)
+  const [multiReviewOpen, setMultiReviewOpen] = useState(false)
+  const [gapResearchOpen, setGapResearchOpen] = useState(false)
   const reloadPrototypeVersions = useCallback(async () => {
     if (!projectId) return
     try {
@@ -962,6 +966,28 @@ export function PrototypePage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {hasContent && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMultiReviewOpen(true)}
+                title="多角色审视当前原型（架构师/前端/UI/UX）"
+              >
+                <Microscope className="size-3.5" />
+                多视角
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setGapResearchOpen(true)}
+                title="为已知盲区生成会议讨论提纲"
+              >
+                <HelpCircle className="size-3.5" />
+                缺口提纲
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="sm" onClick={handleRegenerate} disabled={isStreaming}>
             &#x21bb; 重新生成
           </Button>
@@ -1226,6 +1252,26 @@ export function PrototypePage() {
           mode="prototype"
           prototypeEntries={prototypeVersions}
           onSaved={reloadPrototypeVersions}
+        />
+      )}
+
+      {/* Multi-perspective review (against current prototype HTML) */}
+      {projectId && (
+        <MultiReviewDialog
+          open={multiReviewOpen}
+          onClose={() => setMultiReviewOpen(false)}
+          projectId={projectId}
+          initialContent={displayHtml ?? ""}
+          sourceLabel={`原型 ${prototypeVersions.find(v => v.dir === (activeProtoDir || protoDir))?.label ?? "默认"}`}
+        />
+      )}
+
+      {/* Gap research */}
+      {projectId && (
+        <GapResearchDialog
+          open={gapResearchOpen}
+          onClose={() => setGapResearchOpen(false)}
+          projectId={projectId}
         />
       )}
     </div>

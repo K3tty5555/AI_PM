@@ -11,6 +11,9 @@ import { PhaseShell } from "@/components/phase-shell"
 import { ContextPills } from "@/components/context-pills"
 import { ReferenceFiles } from "@/components/reference-files"
 import { AgentErrorsBanner } from "@/components/agent-errors-banner"
+import { MultiReviewDialog } from "@/components/multi-review-dialog"
+import { GapResearchDialog } from "@/components/gap-research-dialog"
+import { Microscope, HelpCircle } from "lucide-react"
 import { api } from "@/lib/tauri-api"
 import { useToast } from "@/hooks/use-toast"
 import { StreamProgress } from "@/components/StreamProgress"
@@ -128,6 +131,8 @@ export function AnalysisPage() {
 
   // T5: agent_errors banner refresh trigger (increment after stream finishes)
   const [agentErrorsKey, setAgentErrorsKey] = useState(0)
+  const [multiReviewOpen, setMultiReviewOpen] = useState(false)
+  const [gapResearchOpen, setGapResearchOpen] = useState(false)
 
   // AI stream hook
   const { text, isStreaming, isThinking, elapsedSeconds, error, streamMeta, toolStatus, start, reset } = useAiStream({
@@ -418,14 +423,38 @@ export function AnalysisPage() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-[18px] font-semibold text-[var(--text-primary)]">需求分析</h1>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRestart}
-            disabled={isStreaming}
-          >
-            &#x21bb; 重新分析
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasContent && !isStreaming && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMultiReviewOpen(true)}
+                  title="多角色审视当前分析报告"
+                >
+                  <Microscope className="size-3.5" />
+                  多视角
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setGapResearchOpen(true)}
+                  title="为已知盲区生成会议讨论提纲"
+                >
+                  <HelpCircle className="size-3.5" />
+                  缺口提纲
+                </Button>
+              </>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRestart}
+              disabled={isStreaming}
+            >
+              &#x21bb; 重新分析
+            </Button>
+          </div>
         </div>
 
         <div className="h-px bg-[var(--border)]" />
@@ -604,6 +633,26 @@ export function AnalysisPage() {
           </div>
         </div>
       </div>
+
+      {/* Multi-perspective review (against current analysis report) */}
+      {projectId && (
+        <MultiReviewDialog
+          open={multiReviewOpen}
+          onClose={() => setMultiReviewOpen(false)}
+          projectId={projectId}
+          initialContent={displayContent ?? ""}
+          sourceLabel="需求分析报告"
+        />
+      )}
+
+      {/* Gap research */}
+      {projectId && (
+        <GapResearchDialog
+          open={gapResearchOpen}
+          onClose={() => setGapResearchOpen(false)}
+          projectId={projectId}
+        />
+      )}
     </PhaseShell>
   )
 }
