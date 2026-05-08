@@ -75,6 +75,83 @@ pub fn read_project_file(
     }
 }
 
+/// 读取二进制文件（图片/视频/字体）返回 base64 + MIME，用于原型 data URI 内联。
+/// 供 Prototype.tsx 把 <img src=> / iframe / CSS url() 转成可独立渲染的 data URI。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BinaryFileResult {
+    pub mime: String,
+    pub base64: String,
+    pub size: u64,
+}
+
+fn guess_mime(path: &Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("svg") => "image/svg+xml",
+        Some("ico") => "image/x-icon",
+        Some("avif") => "image/avif",
+        Some("mp4") => "video/mp4",
+        Some("webm") => "video/webm",
+        Some("mp3") => "audio/mpeg",
+        Some("wav") => "audio/wav",
+        Some("ogg") => "audio/ogg",
+        Some("woff") => "font/woff",
+        Some("woff2") => "font/woff2",
+        Some("ttf") => "font/ttf",
+        Some("otf") => "font/otf",
+        _ => "application/octet-stream",
+    }
+}
+
+#[tauri::command]
+pub fn read_project_file_base64(
+    state: State<AppState>,
+    project_id: String,
+    file_name: String,
+) -> Result<Option<BinaryFileResult>, String> {
+    use base64::Engine;
+    let output_dir: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        match db.query_row(
+            "SELECT output_dir FROM projects WHERE id = ?1",
+            params![&project_id],
+            |row| row.get(0),
+        ) {
+            Ok(dir) => dir,
+            Err(_) => return Ok(None),
+        }
+    };
+
+    let file_path = validate_path_within(&file_name, &output_dir)?;
+    if !file_path.exists() || !file_path.is_file() {
+        return Ok(None);
+    }
+
+    // Cap at 20 MB to avoid loading huge assets into the IPC payload
+    const MAX_SIZE: u64 = 20 * 1024 * 1024;
+    let metadata = file_path.metadata().map_err(|e| e.to_string())?;
+    if metadata.len() > MAX_SIZE {
+        return Err(format!(
+            "文件过大（{:.1} MB），原型内联限制 20 MB",
+            metadata.len() as f64 / 1024.0 / 1024.0
+        ));
+    }
+
+    let bytes = fs::read(&file_path).map_err(|e| format!("读取失败: {e}"))?;
+    let base64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    let mime = guess_mime(&file_path).to_string();
+    Ok(Some(BinaryFileResult { mime, base64, size: metadata.len() }))
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveFileArgs {
