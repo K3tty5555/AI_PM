@@ -31,8 +31,6 @@ export const TOOL_LABELS: Record<string, string> = {
   persona: "产品分身",
   "design-spec": "设计规范",
   doctor: "诊断中心",
-  "multi-review": "多视角审视",
-  "gap-research": "缺口讨论提纲",
 }
 
 export interface PhaseMeta {

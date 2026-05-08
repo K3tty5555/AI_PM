@@ -7,7 +7,7 @@ import {
   Zap, CalendarDays, BarChart2, Mic, Library, Bot, Palette, LayoutGrid, ImagePlus,
   CheckCircle2, SkipForward, Settings2,
   FolderOpen, Pencil, Trash2, ArrowRight, RefreshCw, FileText,
-  Star, Stethoscope, Microscope, HelpCircle,
+  Star, Stethoscope,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PHASE_LABELS } from "@/lib/phase-meta"
@@ -113,8 +113,6 @@ const TOOLS_ACTION = [
   { path: "/tools/weekly",    label: "工作周报",   icon: CalendarDays },
   { path: "/tools/data",      label: "数据洞察",   icon: BarChart2    },
   { path: "/tools/interview", label: "调研访谈",   icon: Mic          },
-  { path: "/tools/gap-research", label: "缺口讨论提纲", icon: HelpCircle },
-  { path: "/tools/multi-review", label: "多视角审视",   icon: Microscope },
   { path: "/tools/illustration", label: "流程图配图", icon: ImagePlus },
 ]
 

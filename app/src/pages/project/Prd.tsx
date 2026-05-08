@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { PrdIllustrationDialog, getIllustrationSkipKey } from "@/components/prd-illustration-dialog"
-import { ArrowRight, Check, Copy, ShieldCheck, Sparkles, X } from "lucide-react"
+import { ArrowRight, Check, Copy, ShieldCheck, Sparkles, X, Microscope, HelpCircle } from "lucide-react"
 import { PrdViewer } from "@/components/prd-viewer"
 import { PrdToc, slugify } from "@/components/prd-toc"
 import { useAiStream } from "@/hooks/use-ai-stream"
@@ -35,6 +35,8 @@ import { PdfCoverDialog } from "@/components/pdf-cover-dialog"
 import { DocxRecipeDialog } from "@/components/docx-recipe-dialog"
 import { PlanModeDialog } from "@/components/plan-mode-dialog"
 import { VersionManagerDialog } from "@/components/version-manager-dialog"
+import { MultiReviewDialog } from "@/components/multi-review-dialog"
+import { GapResearchDialog } from "@/components/gap-research-dialog"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -209,6 +211,8 @@ export function PrdPage() {
 
   // T12: PRD version metadata manager
   const [versionManagerOpen, setVersionManagerOpen] = useState(false)
+  const [multiReviewOpen, setMultiReviewOpen] = useState(false)
+  const [gapResearchOpen, setGapResearchOpen] = useState(false)
   const reloadPrdEntries = useCallback(async () => {
     if (!projectId) return
     try {
@@ -972,6 +976,24 @@ export function PrdPage() {
                 <ShieldCheck className="size-3.5" />
                 {pmLintStreaming ? "体检中" : "PM 体检"}
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMultiReviewOpen(true)}
+                title="多角色审视当前 PRD（架构师/后端/前端/UI/UX）"
+              >
+                <Microscope className="size-3.5" />
+                多视角
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setGapResearchOpen(true)}
+                title="为已知盲区生成会议讨论提纲"
+              >
+                <HelpCircle className="size-3.5" />
+                缺口提纲
+              </Button>
               <ExportDropdown
                 onCopyMd={handleCopyMarkdown}
                 copied={copied}
@@ -1457,6 +1479,22 @@ export function PrdPage() {
         mode="prd"
         prdEntries={prdEntries}
         onSaved={reloadPrdEntries}
+      />
+
+      {/* Multi-perspective review (inline against current PRD content) */}
+      <MultiReviewDialog
+        open={multiReviewOpen}
+        onClose={() => setMultiReviewOpen(false)}
+        projectId={projectId}
+        initialContent={displayMarkdown ?? ""}
+        sourceLabel={`PRD ${prdLabel(currentVersion)}`}
+      />
+
+      {/* Gap research (free-form gap input) */}
+      <GapResearchDialog
+        open={gapResearchOpen}
+        onClose={() => setGapResearchOpen(false)}
+        projectId={projectId}
       />
 
       {/* T8: Summary viewer */}
