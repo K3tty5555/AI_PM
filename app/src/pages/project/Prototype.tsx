@@ -120,6 +120,137 @@ async function inlineExternalJs(
   return result
 }
 
+// ── Inline binary assets (img / video / audio / font) as data URI ─────
+// Used to make the prototype self-contained inside Blob URL rendering.
+
+/** Resolve a relative URL against a base directory (handles ../ correctly). */
+function resolvePath(baseDir: string, href: string): string {
+  if (/^https?:\/\/|^\/\/|^data:|^blob:/.test(href)) return href
+  // Strip query/hash; data URI inlining can't handle those anyway
+  const cleanHref = href.split("?")[0].split("#")[0]
+  if (cleanHref.startsWith("/")) return cleanHref.slice(1)
+  // Normalize: split, walk, drop ".."
+  const parts = (baseDir + cleanHref).split("/")
+  const stack: string[] = []
+  for (const p of parts) {
+    if (p === "" || p === ".") continue
+    if (p === "..") {
+      stack.pop()
+    } else {
+      stack.push(p)
+    }
+  }
+  return stack.join("/")
+}
+
+/** Cache reads to avoid duplicate IPC for shared assets across tags. */
+async function readBinaryDataUri(
+  projectId: string,
+  path: string,
+  cache: Map<string, string | null>,
+): Promise<string | null> {
+  if (cache.has(path)) return cache.get(path) ?? null
+  try {
+    const result = await api.readProjectFileBase64(projectId, path)
+    if (!result) {
+      cache.set(path, null)
+      return null
+    }
+    const dataUri = `data:${result.mime};base64,${result.base64}`
+    cache.set(path, dataUri)
+    return dataUri
+  } catch {
+    cache.set(path, null)
+    return null
+  }
+}
+
+async function inlineImgTags(
+  html: string,
+  projectId: string,
+  baseDir: string,
+  cache: Map<string, string | null>,
+): Promise<string> {
+  const imgRe = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi
+  const matches = [...html.matchAll(imgRe)]
+  if (!matches.length) return html
+
+  let result = html
+  for (const m of matches) {
+    const src = m[1]
+    if (/^https?:\/\/|^\/\/|^data:|^blob:/.test(src)) continue
+    const path = resolvePath(baseDir, src)
+    const dataUri = await readBinaryDataUri(projectId, path, cache)
+    if (!dataUri) continue
+    const replaced = m[0].replace(src, dataUri)
+    result = result.replace(m[0], replaced)
+  }
+  return result
+}
+
+async function inlineCssUrls(
+  html: string,
+  projectId: string,
+  baseDir: string,
+  cache: Map<string, string | null>,
+): Promise<string> {
+  // Match url(...) inside any context (style tags, inline style, html attrs)
+  const urlRe = /url\(\s*(?:"([^"]+)"|'([^']+)'|([^)\s]+))\s*\)/gi
+  const matches = [...html.matchAll(urlRe)]
+  if (!matches.length) return html
+
+  let result = html
+  for (const m of matches) {
+    const raw = m[1] ?? m[2] ?? m[3] ?? ""
+    if (!raw || /^https?:\/\/|^\/\/|^data:|^blob:/.test(raw)) continue
+    const path = resolvePath(baseDir, raw)
+    const dataUri = await readBinaryDataUri(projectId, path, cache)
+    if (!dataUri) continue
+    result = result.replace(m[0], `url("${dataUri}")`)
+  }
+  return result
+}
+
+async function inlineIframes(
+  html: string,
+  projectId: string,
+  baseDir: string,
+  cache: Map<string, string | null>,
+  depth: number = 0,
+): Promise<string> {
+  // Prevent runaway recursion if iframes reference each other
+  if (depth >= 2) return html
+  const iframeRe = /<iframe\b([^>]*?)\bsrc\s*=\s*["']([^"']+)["']([^>]*?)>(\s*<\/iframe>)?/gi
+  const matches = [...html.matchAll(iframeRe)]
+  if (!matches.length) return html
+
+  let result = html
+  for (const m of matches) {
+    const src = m[2]
+    if (/^https?:\/\/|^\/\/|^data:|^blob:|^about:/.test(src)) continue
+    const path = resolvePath(baseDir, src)
+    let inner: string | null = null
+    try {
+      inner = await api.readProjectFile(projectId, path)
+    } catch { /* not found */ }
+    if (!inner) continue
+
+    // Recurse: inline assets inside the iframe HTML
+    const innerBaseDir = path.replace(/[^/]*$/, "")
+    let innerInlined = await inlineExternalCss(inner, projectId, innerBaseDir)
+    innerInlined = await inlineExternalJs(innerInlined, projectId, innerBaseDir)
+    innerInlined = await inlineImgTags(innerInlined, projectId, innerBaseDir, cache)
+    innerInlined = await inlineCssUrls(innerInlined, projectId, innerBaseDir, cache)
+    innerInlined = await inlineIframes(innerInlined, projectId, innerBaseDir, cache, depth + 1)
+
+    // Switch from src= to srcdoc= (escape quotes)
+    const escaped = innerInlined.replace(/"/g, "&quot;")
+    const newTag = `<iframe${m[1]}srcdoc="${escaped}"${m[3]}></iframe>`
+    result = result.replace(m[0], newTag)
+  }
+  return result
+}
+
 // ── Audit report parser ───────────────────────────────────────────────
 
 interface AuditItem {
@@ -682,8 +813,13 @@ export function PrototypePage() {
     let currentUrl: string | null = null
 
     async function prepare() {
+      const cache = new Map<string, string | null>()
       let inlined = await inlineExternalCss(displayHtml!, projectId!, protoDir)
       inlined = await inlineExternalJs(inlined, projectId!, protoDir)
+      // 内联二进制资源：图片、CSS url()、iframe（递归）
+      inlined = await inlineImgTags(inlined, projectId!, protoDir, cache)
+      inlined = await inlineCssUrls(inlined, projectId!, protoDir, cache)
+      inlined = await inlineIframes(inlined, projectId!, protoDir, cache, 0)
       if (cancelled) return
 
       // Inject resize script for iframe height auto-adaptation

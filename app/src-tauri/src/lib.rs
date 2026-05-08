@@ -182,6 +182,7 @@ pub fn run() {
             commands::projects::advance_phase,
             commands::projects::update_phase,
             commands::files::read_project_file,
+            commands::files::read_project_file_base64,
             commands::files::save_project_file,
             commands::files::read_file,
             commands::files::list_project_context,
