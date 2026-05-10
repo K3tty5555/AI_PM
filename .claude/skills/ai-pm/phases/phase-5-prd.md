@@ -370,7 +370,7 @@ Agent({
 
 ❌ **越界**：
 > | 状态管理 | LangGraph checkpointer + 独立 Message History |
-> | LLM Fallback链 | DeepSeek → Qwen → 某 AI 公司星火 |
+> | LLM Fallback链 | 模型A → 模型B → 模型C |
 > | 对话框架 | AGENT_CHAT_UI 组件库 |
 
 **为什么不好**：PM 不决定模型、状态管理库、组件库。
@@ -383,12 +383,12 @@ Agent({
 ### 反例 4：接口字段名/枚举值越界
 
 ❌ **越界**：
-> 搜题工具 zhixue-topic-query（输入需含 lib_scope 题库范围列表：[zhixue, district, school, personal]）
+> 搜题工具 edu-topic-query（输入需含 lib_scope 题库范围列表：[platform, district, school, personal]）
 
-**为什么不好**：字段名 `lib_scope`、枚举值 `[zhixue, district, school, personal]` 是研发与对接团队对齐后定的。
+**为什么不好**：字段名 `lib_scope`、枚举值 `[platform, district, school, personal]` 是研发与对接团队对齐后定的。
 
 ✅ **正确**（业务能力描述）：
-> 题目检索：按知识点+难度+题型筛题。输入语义含「4 类题库范围（智学/区本/校本/个人）」，由研发与题库团队对齐字段后落到接口文档，本 PRD 不预设。
+> 题目检索：按知识点+难度+题型筛题。输入语义含「4 类题库范围（平台库/区本/校本/个人）」，由研发与题库团队对齐字段后落到接口文档，本 PRD 不预设。
 
 ---
 

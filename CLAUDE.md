@@ -28,8 +28,9 @@ cd AI_PM
 .claude/
 ├── agents/                自定义 sub-agent（含 pm-agent KettyWu 灵魂）
 └── skills/                技能集合（ai-pm 主控 / ai-pm-prd / ai-pm-driver / ...）
+.ai-shared/                Claude ↔ Codex 协作桥接（见下方 .ai-shared 规范）
 output/                    项目输出（不纳入版本库）
-templates/                 模板库（PRD 风格、设计规范等）
+templates/                 模板库（PRD 风格、设计规范等，仅含通用示例）
 AI_PM_教程中心.html          可视化使用指南，直接用浏览器打开
 CLAUDE.md                  本文件
 README.md                  项目介绍
@@ -145,6 +146,35 @@ README.md                  项目介绍
 ### 自我迭代 → `self-improving` 技能
 
 开发过程中遇到流程不顺、规范缺失、反复踩坑时，调用 `self-improving` 技能进行复盘，将经验沉淀回本文件或对应 skill 文件。
+
+## .ai-shared 目录规范
+
+Claude ↔ Codex 上下文交换桥接目录，部分子目录受 `.gitignore` 保护。
+
+| 子目录/文件 | git 追踪 | 说明 |
+|------------|---------|------|
+| `README.md`、`*/README.md` | ✅ | 目录结构说明 |
+| `pending-memory/*.md` | ❌ | Codex→Claude 内存交接，含项目偏好，仅本机 |
+| `context/open-questions.md` | ❌ | 含内部字段/埋点细节，仅本机 |
+| `context/product-decisions.md` | ❌ | 含产品命名/场景定义，仅本机 |
+| `memory-snapshots/`、`conversations/` | ❌ | 快照与会话记录，仅本机 |
+
+**铁律**：写入 `.ai-shared/` 的内容文件一律按"仅本机"处理，不得假设会上传 GitHub。
+
+## 版本库隐私规范
+
+以下内容禁止出现在任何 git 追踪文件中：
+
+- **公司/产品名称**：templates/、.claude/skills/ 下的示例和反例只用通用占位（如"某 K12 教育平台"、`edu-topic-query`）
+- **内部 API 字段名/枚举值**：不得出现真实接口路径、字段名、枚举值（如 `lib_scope: [company_code, ...]`）
+- **内部产品线代号**：代码仓名称、内部服务名等一律替换为 `<your-codebase-path>/模块名` 形式
+- **品牌色/设计 Token**：设计规范示例只保留通用色系，公司品牌色写 `根据产品实际情况填写`
+
+**自检命令**（开源前/PR 前跑一次）：
+```bash
+git ls-files | xargs grep -l "公司名|内部关键词" 2>/dev/null
+git ls-files | cat   # 检查文件名本身是否含公司名
+```
 
 ## 禁止事项
 

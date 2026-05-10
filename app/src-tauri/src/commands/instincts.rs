@@ -49,7 +49,7 @@ pub fn ensure_instinct_dirs() -> Result<PathBuf, String> {
 /// observations: 3
 /// first_seen: 2026-03-15
 /// last_seen: 2026-03-27
-/// source_projects: ["某 K12 教育平台考试报告", "员工培训系统"]
+/// source_projects: ["某教育平台考试报告", "员工培训系统"]
 /// ---
 ///
 /// PRD 不写背景章节，开头直接是功能模块。

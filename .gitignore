@@ -57,10 +57,13 @@ AI_PM_提效分享.html
 /app/docs/plans/
 
 # AI shared local context copies
-# Keep bridge docs/scripts versioned, but do not upload local memory snapshots
-# or raw/summarized AI conversation records.
+# Keep bridge docs/scripts versioned, but do not upload local memory snapshots,
+# pending memory handoffs, context content, or AI conversation records.
 .ai-shared/memory-snapshots/
 .ai-shared/conversations/
+.ai-shared/pending-memory/
+.ai-shared/context/open-questions.md
+.ai-shared/context/product-decisions.md
 .ai-shared/memory-index.md
 .ai-shared/agent-index.md
 .ai-shared/skill-index.md

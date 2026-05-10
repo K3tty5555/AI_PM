@@ -21,7 +21,7 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 | # | 越界类型 | 例子 |
 |---|---------|------|
 | 1 | 技术栈选型 | 「用 Pinia / Vue3 / Redis」「LangGraph checkpointer」「LLM Fallback 链：DeepSeek → Qwen」 |
-| 2 | 接口字段名/路径/枚举值 | `GET /api/questions` / `lib_scope: [zhixue, district, school, personal]` |
+| 2 | 接口字段名/路径/枚举值 | `GET /api/questions` / `lib_scope: [platform, district, school, personal]` |
 | 3 | 视觉毫秒/像素/色号 | 「hover 浮起 + 阴影加深」「3px 绿色强调条」「光环柔光闪烁 400ms」「≥1440px：360px」「`right:0`」 |
 | 4 | 算法实现细节 | prompt 文案、chunk_size、bge-m3、BM25、模型名 |
 | 5 | 给最终用户透露版本号 | 「这功能 V1.5 上线」「等下个迭代」 |
