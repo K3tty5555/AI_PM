@@ -198,18 +198,40 @@ echo "🔨 开始构建企业版（Tauri release build）..."
 cd "$APP"
 npm run tauri build
 
-# ── 查找 DMG 并复制到根目录 ──────────────────────────────────────────────────
-DMG=$(find "$TAURI/target/release/bundle/dmg" -name "*.dmg" 2>/dev/null | head -1)
-if [ -z "$DMG" ]; then
-    echo "❌ 未找到 DMG 产物，请检查构建日志"
+# ── 查找构建产物 ─────────────────────────────────────────────────────────────
+APP_BUNDLE=$(find "$TAURI/target/release/bundle/macos" -name "*.app" 2>/dev/null | head -1)
+if [ -z "$APP_BUNDLE" ]; then
+    echo "❌ 未找到 .app 产物，请检查构建日志"
     exit 1
 fi
 
+# ── Ad-hoc 签名（无证书时避免 macOS "已损坏" 报错）────────────────────────
+echo ""
+echo "🔏 Ad-hoc 签名（无证书，收件人首次打开需右键→打开）..."
+codesign --force --deep --sign - "$APP_BUNDLE"
+echo "   签名完成：$(basename "$APP_BUNDLE")"
+
+# ── 重新打包 DMG ─────────────────────────────────────────────────────────────
 VERSION=$(python3 -c "import json; print(json.load(open('$CONF.ent.bak'))['version'])")
 DEST="$ROOT/AI_PM_v${VERSION}_enterprise.dmg"
-cp "$DMG" "$DEST"
+APP_NAME=$(basename "$APP_BUNDLE")
+
+echo ""
+echo "📦 重新打包 DMG..."
+TMPDIR=$(mktemp -d)
+cp -R "$APP_BUNDLE" "$TMPDIR/"
+hdiutil create \
+    -volname "AI PM v${VERSION}" \
+    -srcfolder "$TMPDIR" \
+    -ov -format UDZO \
+    -o "$DEST"
+rm -rf "$TMPDIR"
 
 echo ""
 echo "✅ 企业版 DMG 已生成："
 echo "   $DEST"
 echo "   大小：$(du -sh "$DEST" | cut -f1)"
+echo ""
+echo "📋 分发说明（告知收件人）："
+echo "   首次打开时若提示"无法验证开发者"，右键点击应用→选择"打开"即可。"
+echo "   若仍提示问题，终端执行：xattr -cr /Applications/${APP_NAME}"
