@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/session-start.sh"
+            "command": "bash -c 'test -f .claude/hooks/session-start.sh && bash .claude/hooks/session-start.sh || true'"
           }
         ]
       }
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/memory-backup.sh"
+            "command": "bash -c 'test -f .claude/hooks/memory-backup.sh && bash .claude/hooks/memory-backup.sh || true'"
           }
         ]
       },
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/skill-sync-check.sh"
+            "command": "bash -c 'test -f .claude/hooks/skill-sync-check.sh && bash .claude/hooks/skill-sync-check.sh || true'"
           }
         ]
       }
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/knowledge-capture.sh",
+            "command": "bash -c 'test -f .claude/hooks/knowledge-capture.sh && bash .claude/hooks/knowledge-capture.sh || echo {}'",
             "timeout": 5000
           }
         ]
@@ -64,7 +64,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/knowledge-capture.sh",
+            "command": "bash -c 'test -f .claude/hooks/knowledge-capture.sh && bash .claude/hooks/knowledge-capture.sh || echo {}'",
             "timeout": 5000
           }
         ]
@@ -75,7 +75,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/knowledge-capture.sh",
+            "command": "bash -c 'test -f .claude/hooks/knowledge-capture.sh && bash .claude/hooks/knowledge-capture.sh || echo {}'",
             "timeout": 5000
           }
         ]
