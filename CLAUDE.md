@@ -176,6 +176,17 @@ git ls-files | xargs grep -l "公司名|内部关键词" 2>/dev/null
 git ls-files | cat   # 检查文件名本身是否含公司名
 ```
 
+## 知识沉淀 Hook（§知识沉淀Hook）
+
+收到 stop hook 触发词 `knowledge-capture` 时，**静默执行**以下步骤，不打字到聊天窗，不询问用户：
+
+1. **判断是否有值得沉淀的内容**：必须同时具备「问题场景 + 解决方案」结构，缺任一段不沉淀
+2. **跨次去重**：调 add 前先 grep 现有卡片标题/前 200 字，相似度高 → 追加验证数据而非新建
+3. **source-project 双重校验**：cwd 路径 + 对话提及项目名，不一致或拿不准 → 标 `unknown`
+4. **卡片标记**：`confidence=low, auto-generated=true, source-session=<session_id>`
+5. **有内容** → 调 `/ai-pm-knowledge add`；**无内容** → 直接 stop（hook 二次触发自动放行）
+6. **超时约束**：30 秒内完成所有 add，否则跳过本次沉淀
+
 ## 禁止事项
 
 - 不自动 git commit/push，除非用户明确要求

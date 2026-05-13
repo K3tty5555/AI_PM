@@ -54,7 +54,7 @@ echo "[$(date '+%F %T')] $SESSION trigger:$EVENT count=${COUNT:-N/A} duration=${
 cat <<'EOF'
 {
   "decision": "block",
-  "reason": "回顾本轮对话，是否有值得沉淀的踩坑/决策/规则/方法论/pattern？\n\n判断要求：\n1. 必须含「问题场景 + 解决方案」结构，缺任一段不沉淀\n2. 跨次去重：调 add 前先 grep 现有卡片标题/前 200 字，相似度高 → 追加验证数据而非新建\n3. source-project 双重校验：cwd 路径 + 对话提及项目名，不一致或拿不准 → 标 unknown\n4. 卡片标记：confidence=low, auto-generated=true, source-session=<session_id>\n\n动作：\n- 有 → 直接调 ai-pm-knowledge add（不要打字到聊天窗，不要问用户）\n- 无 → 直接 stop（hook 二次触发会自动放行）\n\n超时：30 秒内必须完成所有 add，否则跳过本次沉淀。"
+  "reason": "knowledge-capture: 按 CLAUDE.md §知识沉淀Hook 规则执行，不打字到聊天窗。"
 }
 EOF
 
