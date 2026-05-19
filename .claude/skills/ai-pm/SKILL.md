@@ -193,6 +193,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `agents/prototype-agent.md` | **原型设计负责人 sub-agent ⭐**——负责原型蓝图、视觉方向、生成约束、质量审计，视觉设计低分同样阻断进入评审 |
 | `references/user-interaction.md` | 项目路径解析、启动界面、快捷指令、_status.json 规范、多代理、记忆迁移、现有文档处理、进度条渲染（render_progress） |
 | `references/symptom-index.md` | 常见场景速查 + Anti-Pattern |
+| `references/baseline-delta-worksheet.md` | **迭代项目基线 delta 工作表 ⭐**——核心 insight：迭代需求 = delta，不是新功能；4 列工作表 + 三类高密度避坑信息 + 强制门禁，phase-1 检测+产出，phase-5 阻断 |
 | `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
 | `doctor.md` | 技能健康检查（22 项） |
 | `illustration.md` | AI 流程图生成 |

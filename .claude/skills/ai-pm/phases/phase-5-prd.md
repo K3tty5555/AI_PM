@@ -57,6 +57,36 @@ ls "{project_dir}/05-prd/"*.docx 2>/dev/null
 
 **注意**：渲染/转换失败不中断主流程，输出 `SKIP:{文件名}:{原因}` 后继续执行。
 
+## 迭代项目基线 delta 强制检查（门禁）
+
+**核心原则**：迭代项目的需求 = delta，不是新功能。没有 delta 工作表就写 PRD，会漏掉「老系统能做但新流程缺」这类系统性的坑。
+
+### 检查逻辑
+
+```bash
+# 1. 判断是否为迭代项目（任一满足）
+test -d {project_dir}/07-references && [ "$(ls -A {project_dir}/07-references 2>/dev/null)" ]
+grep -E "V[0-9]|迭代|历史版本|老版本|上一版|V[0-9]\.[0-9]" {project_dir}/_memory/L1-decisions.md 2>/dev/null
+
+# 2. 若为迭代项目，检查 01-baseline-delta.md
+test -f {project_dir}/01-baseline-delta.md
+```
+
+### 阻断规则
+
+| 情况 | 动作 |
+|------|------|
+| 0→1 项目 | 跳过本检查，进入下一步 |
+| 迭代项目 + 无 `01-baseline-delta.md` | **阻断**，回退到 Phase 1 补：「检测到迭代型项目（07-references 非空），但缺少基线 delta 工作表。请先运行 `/ai-pm continue` 回到 Phase 1 补出 `01-baseline-delta.md`，方法论见 `references/baseline-delta-worksheet.md`。」 |
+| 迭代项目 + 有 `01-baseline-delta.md` 但有未填写行 | **阻断**，列出未填写的行号让用户补全 |
+| 迭代项目 + delta 工作表完整 | 通过，进入下一步；**写 PRD 过程中持续对照 mitigation 列**，确保每条 delta 都有 PRD 章节承接 |
+
+### 与 PRD 写作的衔接
+
+写功能章节时，对每条 delta 工作表中标注「PRD 干预」的行：
+- 写完对应章节后，回查工作表，标记「已落实」
+- 全部落实后才能进入 `prd_done` 子步骤
+
 ## 知识库推荐触发（Plan Mode 前执行）
 
 在展示 Plan Mode 前，先检查是否有相关知识可推荐：
