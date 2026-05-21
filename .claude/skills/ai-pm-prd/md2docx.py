@@ -141,8 +141,9 @@ def _prompt_mermaid_choice(code):
 # ─── 原有代码 ───────────────────────────────────────────────────────────
 from pathlib import Path
 from docx import Document
-from docx.shared import Pt, Cm, RGBColor
+from docx.shared import Pt, Cm, RGBColor, Twips
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ROW_HEIGHT_RULE
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
@@ -256,12 +257,25 @@ def shade_cell(cell, hex_color='F5F5F7'):
     shd.set(qn('w:fill'), hex_color)
     tcPr.append(shd)
 
+def set_cell_margins(cell, top=80, bottom=80, left=120, right=120):
+    """设置单元格内边距（单位 twips，1cm≈567twips）"""
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    tcMar = OxmlElement('w:tcMar')
+    for side, val in [('top', top), ('bottom', bottom), ('left', left), ('right', right)]:
+        m = OxmlElement(f'w:{side}')
+        m.set(qn('w:w'), str(val))
+        m.set(qn('w:type'), 'dxa')
+        tcMar.append(m)
+    tcPr.append(tcMar)
+
 def fill_cell(cell, text, is_header=False, screenshot_map=None):
     """
     填充单元格内容。
     若 text 包含 [xxx原型]，在单元格内插图（图在上，描述文字在下）。
     """
     cell.text = ''
+    set_cell_margins(cell)
     para = cell.paragraphs[0]
     para.paragraph_format.space_after = Pt(2)
 
@@ -317,7 +331,7 @@ def _char_weight(s):
         weight += 1.5 if ord(ch) > 127 else 1.0
     return weight
 
-def compute_smart_widths(rows_cells, total_width=16.0, min_width=1.5, max_width=6.0, narrow_threshold=6):
+def compute_smart_widths(rows_cells, total_width=16.0, min_width=1.8, max_width=8.0, narrow_threshold=5):
     """混合策略列宽计算（方案 3，迭代版保证总宽 = total_width）
     1) 识别窄列（max 字符权重 ≤ narrow_threshold）→ 固定 min_width
     2) 宽列按字符权重比例分配剩余宽度
@@ -384,7 +398,7 @@ def apply_col_widths(table, rows_cells):
     if n_cols == 0:
         return
     if n_cols == 2:
-        widths = [4.0, 12.0]
+        widths = compute_smart_widths(rows_cells, total_width=16.0, min_width=2.5, max_width=10.0, narrow_threshold=8)
     else:
         widths = compute_smart_widths(rows_cells)
     # 设置 w:tblGrid（飞书优先读取此处）
@@ -433,6 +447,8 @@ def add_table(doc, lines, screenshot_map=None):
         row_cells = cells(row_data)
         all_rows_cells.append(row_cells)
         row = table.add_row()
+        row.height = Cm(0.75)
+        row.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
         for i, val in enumerate(row_cells):
             if i < len(row.cells):
                 fill_cell(row.cells[i], val, screenshot_map=screenshot_map)
