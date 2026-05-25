@@ -17,7 +17,9 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) WebSearch WebFetch
 
 ## 输出
 
-`{项目目录}/03-competitor-report.md`（竞品分析报告）
+- **单 PRD 项目**：`{项目目录}/03-competitor-report.md`
+- **多版本项目**：`{项目目录}/03-competitor-report-V{当前版本}.md` + frontmatter（`version / status / phase=竞品研究 / upstream-from / created`）
+- 详见 `templates/project-index/README.md` 「多版本 0x 文件约定」段；落盘后同步 patch 根 README「上游产物版本归属」表
 
 ## 执行步骤
 

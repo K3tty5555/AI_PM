@@ -17,7 +17,9 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ## 输出
 
-`{项目目录}/04-user-stories.md`（用户故事文档）
+- **单 PRD 项目**：`{项目目录}/04-user-stories.md`
+- **多版本项目**：`{项目目录}/04-user-stories-V{当前版本}.md` + frontmatter（`version / status / phase=用户故事 / upstream-from / created`）
+- 详见 `templates/project-index/README.md` 「多版本 0x 文件约定」段；落盘后同步 patch 根 README「上游产物版本归属」表
 
 ## 执行步骤
 

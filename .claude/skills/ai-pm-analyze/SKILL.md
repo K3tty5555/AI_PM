@@ -22,7 +22,19 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ## 输出
 
-`{项目目录}/02-analysis-report.md`（需求分析报告）
+- **单 PRD 项目**：`{项目目录}/02-analysis-report.md`
+- **多版本项目（已存在 V1+ PRD）**：`{项目目录}/02-analysis-report-V{当前版本}.md`，frontmatter 含 `version / status / phase / upstream-from / created` 自描述
+
+### 多版本约定（详见 `templates/project-index/README.md` 多版本 0x 文件约定段）
+
+落盘前**强制检查**：
+1. 查 `05-prd/README.md` 当前活跃版本号
+2. 如果 ≥V2 且存在历史版本 → 文件名必须带 `-V{当前版本}.md` 后缀
+3. 如果是历史项目从单 PRD 升级到多 PRD（临界点）→ 先把旧 `02-analysis-report.md` 重命名为 `-V1.md` + 加 V1 frontmatter，再写新版本
+4. 写入 frontmatter（version / status / phase=需求分析 / upstream-from / created / note）
+5. 同步 patch 根 README「上游产物版本归属」表
+
+不写 frontmatter 不算完成此步骤。
 
 ## 执行步骤
 
