@@ -147,11 +147,38 @@ from docx.enum.table import WD_ROW_HEIGHT_RULE
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-# Chrome headless 二进制路径
-CHROME = os.path.expanduser(
-    '~/Library/Caches/ms-playwright/chromium-1212/chrome-mac-arm64/'
-    'Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'
-)
+def _chrome_sort_key(path):
+    nums = [int(n) for n in re.findall(r'(?:chromium|chrome)-(\d+)', str(path))]
+    return nums[-1] if nums else 0
+
+def _detect_chrome_binary():
+    """自动探测 Chrome/Chromium 二进制，避免 Playwright 版本号硬编码失效。"""
+    env_keys = ['CHROME', 'CHROME_PATH', 'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH']
+    candidates = []
+    for key in env_keys:
+        val = os.environ.get(key)
+        if val:
+            candidates.append(Path(os.path.expanduser(val)))
+
+    cache_dir = Path.home() / 'Library' / 'Caches' / 'ms-playwright'
+    patterns = [
+        'chromium_headless_shell-*/chrome-headless-shell-mac-arm64/chrome-headless-shell',
+        'chromium-*/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
+    ]
+    for pattern in patterns:
+        candidates.extend(sorted(cache_dir.glob(pattern), key=_chrome_sort_key, reverse=True))
+
+    candidates.extend([
+        Path('/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
+        Path('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
+    ])
+
+    for candidate in candidates:
+        if candidate.exists() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return None
+
+CHROME = _detect_chrome_binary()
 
 MERMAID_LOCAL = '/tmp/mermaid.min.js'   # 首次用时执行: curl -sL https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js -o /tmp/mermaid.min.js
 
@@ -166,6 +193,10 @@ body {{background:white;padding:16px;font-family:-apple-system,"PingFang SC",san
 
 def render_mermaid(code):
     """渲染 Mermaid 代码为 PNG（内联 JS，无需 --allow-file-access-from-files）"""
+    if not CHROME:
+        print('  ⚠️ 未找到 Chrome/Chromium，跳过 Mermaid 图片渲染')
+        return None
+
     if not os.path.exists(MERMAID_LOCAL):
         print(f'  ⚠️ 本地 mermaid.js 不存在，尝试下载...')
         try:
@@ -218,6 +249,151 @@ def render_mermaid(code):
         pass  # Pillow 未安装时保留原图
 
     return out_png
+
+def _read_json_file(path):
+    try:
+        return json.loads(Path(path).read_text(encoding='utf-8'))
+    except Exception as e:
+        print(f'  ⚠️ JSON 读取失败 {path}: {e}')
+        return None
+
+def _add_image_mapping(image_map, key, img_path, source='prototype'):
+    key = str(key or '').strip()
+    if not key:
+        return
+    image_map[key] = str(img_path)
+    # 支持 [xxx原型] 中只写冒号后的短标题，如 [4 步透明组卷流原型]
+    if '：' in key:
+        short_key = key.split('：', 1)[1].strip()
+        if short_key and short_key not in image_map:
+            image_map[short_key] = str(img_path)
+
+def _extract_section_refs(text):
+    return re.findall(r'§\s*([0-9]+(?:\.[0-9]+)*)', str(text or ''))
+
+def _extract_heading_ref(heading_text):
+    m = re.match(r'^([0-9]+(?:\.[0-9]+)*)\b', str(heading_text or '').strip())
+    return m.group(1) if m else None
+
+def _is_visual_anchor_relevant(item, prd_identity):
+    """避免一个项目多个 PRD 共用同一 visual manifest 时互相插错图。"""
+    section = str(item.get('prdSection', ''))
+    identity = str(prd_identity or '')
+    for keyword in ['组卷', '某模块', '搜题', '找题']:
+        if keyword in section and keyword not in identity:
+            return False
+    return True
+
+def _load_prototype_screenshot_map(manifest_path):
+    image_map = {}
+    if not manifest_path or not Path(manifest_path).exists():
+        return image_map
+
+    manifest_p = Path(manifest_path).resolve()
+    manifest = _read_json_file(manifest_p)
+    if not manifest:
+        return image_map
+
+    # screenshot 路径相对于 prototype 目录解析（即 manifest_path 的 parent.parent，
+    # 因 manifest 约定在 <prototype>/screenshots/manifest.json）。
+    # 这样支持单项目多个原型目录（如 06-prototype 与 06-prototype-v1.3 并存）。
+    prototype_dir = manifest_p.parent.parent
+    for s in manifest.get('sections', []):
+        img_path = (prototype_dir / s.get('screenshot', '')).resolve()
+        if img_path.exists():
+            label = s.get('label', '')
+            _add_image_mapping(image_map, label, img_path)
+            print(f'  截图映射: [{label}原型] → {img_path.name}')
+    return image_map
+
+def _load_visual_anchor_package(project_dir, prd_identity):
+    """加载 Codex 视觉锚点包，返回占位符映射和可自动插入的图片清单。"""
+    visual_dir = Path(project_dir) / '06-prototype-visual'
+    manifest_p = visual_dir / 'manifest.json'
+    image_map = {}
+    insertions = []
+
+    if not manifest_p.exists():
+        return image_map, insertions
+
+    manifest = _read_json_file(manifest_p)
+    if not manifest:
+        return image_map, insertions
+
+    if manifest.get('packageType') != 'visual-anchor-manifest':
+        return image_map, insertions
+
+    status = manifest.get('status')
+    if status == 'failed':
+        print('  ⚠️ 视觉锚点包状态为 failed，DOCX 导出跳过视觉锚点图')
+        return image_map, insertions
+    if status == 'partial':
+        print('  ⚠️ 视觉锚点包状态为 partial，仅嵌入已可用图片')
+
+    for item in manifest.get('images', []):
+        if item.get('usableForPrd') is not True:
+            continue
+        img_rel = item.get('image')
+        if not img_rel:
+            continue
+        img_path = (visual_dir / img_rel).resolve()
+        if not img_path.exists():
+            print(f'  ⚠️ 视觉锚点图不存在: {img_path}')
+            continue
+
+        label = item.get('label') or item.get('pageId') or img_path.stem
+        _add_image_mapping(image_map, label, img_path, source='visual-anchor')
+        _add_image_mapping(image_map, item.get('pageId'), img_path, source='visual-anchor')
+        _add_image_mapping(image_map, item.get('id'), img_path, source='visual-anchor')
+        print(f'  视觉锚点映射: [{label}原型] → {img_path.name}')
+
+        refs = _extract_section_refs(item.get('prdSection'))
+        target_ref = refs[-1] if refs else None
+        if target_ref and _is_visual_anchor_relevant(item, prd_identity):
+            insertions.append({
+                'id': item.get('id') or label,
+                'label': label,
+                'path': str(img_path),
+                'target_ref': target_ref,
+                'prd_section': item.get('prdSection', ''),
+            })
+
+    return image_map, insertions
+
+def _add_centered_image(doc, img_path, caption_text, width_cm=15):
+    para = doc.add_paragraph()
+    run = para.add_run()
+    run.add_picture(str(img_path), width=Cm(width_cm))
+    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    if caption_text:
+        caption = doc.add_paragraph(caption_text)
+        caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for r in caption.runs:
+            r.font.size = Pt(9)
+            r.font.color.rgb = RGBColor(0x86, 0x86, 0x8b)
+
+def _insert_visual_anchors_for_heading(doc, heading_text, visual_insertions, inserted_ids):
+    heading_ref = _extract_heading_ref(heading_text)
+    if not heading_ref:
+        return
+    for item in visual_insertions:
+        if item['id'] in inserted_ids:
+            continue
+        if item.get('target_ref') != heading_ref:
+            continue
+        try:
+            _add_centered_image(doc, item['path'], f'视觉锚点：{item["label"]}', width_cm=15)
+            inserted_ids.add(item['id'])
+            print(f'  ✅ 视觉锚点已嵌入: §{heading_ref} · {item["label"]}')
+        except Exception as e:
+            print(f'  ⚠️ 视觉锚点插入失败 [{item["label"]}]: {e}')
+
+def _visual_anchor_has_explicit_placeholder(md, item):
+    label = str(item.get('label') or '').strip()
+    keys = [label]
+    if '：' in label:
+        keys.append(label.split('：', 1)[1].strip())
+    return any(key and f'[{key}原型]' in md for key in keys)
 
 def set_heading_style(para, level):
     run = para.runs[0] if para.runs else para.add_run()
@@ -483,6 +659,9 @@ def _parse_pt(val):
 def convert(prd_path, output_path, manifest_path=None, recipe_config=None):
     prd_path = Path(prd_path)
     project_dir = prd_path.parent.parent
+    md = prd_path.read_text(encoding='utf-8')
+    first_heading = next((l for l in md.split('\n') if l.strip().startswith('#')), '')
+    prd_identity = f'{prd_path.name}\n{first_heading}'
 
     # Recipe defaults
     body_font = 'PingFang SC'
@@ -493,20 +672,15 @@ def convert(prd_path, output_path, manifest_path=None, recipe_config=None):
         body_size = _parse_pt(recipe_config.get('bodySize', '11pt'))
         print(f'  配方字体: {body_font} ({body_size}pt)')
 
-    # 加载截图映射 label → 本地路径
-    # screenshot 路径相对于 prototype 目录解析（即 manifest_path 的 parent.parent，
-    # 因 manifest 约定在 <prototype>/screenshots/manifest.json）。
-    # 这样支持单项目多个原型目录（如 06-prototype 与 06-prototype-v1.3 并存）。
-    screenshot_map = {}
-    if manifest_path and Path(manifest_path).exists():
-        manifest_p = Path(manifest_path).resolve()
-        manifest = json.loads(manifest_p.read_text())
-        prototype_dir = manifest_p.parent.parent
-        for s in manifest['sections']:
-            img_path = (prototype_dir / s['screenshot']).resolve()
-            if img_path.exists():
-                screenshot_map[s['label']] = str(img_path)
-                print(f'  截图映射: [{s["label"]}原型] → {img_path.name}')
+    # 加载截图 / 视觉锚点映射 label → 本地路径
+    screenshot_map = _load_prototype_screenshot_map(manifest_path)
+    visual_map, visual_insertions = _load_visual_anchor_package(project_dir, prd_identity)
+    screenshot_map.update(visual_map)
+    visual_insertions = [
+        item for item in visual_insertions
+        if not _visual_anchor_has_explicit_placeholder(md, item)
+    ]
+    inserted_visual_anchor_ids = set()
 
     doc = Document()
     style = doc.styles['Normal']
@@ -514,7 +688,6 @@ def convert(prd_path, output_path, manifest_path=None, recipe_config=None):
     style.font.size = Pt(body_size)
     style.element.rPr.rFonts.set(qn('w:eastAsia'), body_font)
 
-    md = prd_path.read_text(encoding='utf-8')
     lines = md.split('\n')
     i = 0
     while i < len(lines):
@@ -528,6 +701,7 @@ def convert(prd_path, output_path, manifest_path=None, recipe_config=None):
             para.clear()
             add_inline_formats(para, m.group(2))
             set_heading_style(para, level)
+            _insert_visual_anchors_for_heading(doc, m.group(2), visual_insertions, inserted_visual_anchor_ids)
             i += 1
             continue
 
@@ -664,6 +838,10 @@ def convert(prd_path, output_path, manifest_path=None, recipe_config=None):
         add_inline_formats(para, line)
         para.paragraph_format.space_after = Pt(6)
         i += 1
+
+    for item in visual_insertions:
+        if item['id'] not in inserted_visual_anchor_ids:
+            print(f'  ⚠️ 视觉锚点未自动匹配章节: {item["label"]} ({item["prd_section"]})')
 
     doc.save(output_path)
     print(f'✅ DOCX 已生成: {output_path}')
