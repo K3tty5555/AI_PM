@@ -658,3 +658,18 @@ wc -c {project_dir}/05-prd/05-PRD-v1.0.md
    提取 3-5 条最关键的决策即可，不要穷举。
 
 格式参考 `references/project-memory.md` 的 L1-decisions.md 格式。
+
+---
+
+## 输出收尾：patch 05-prd/README 索引（强制步骤）
+
+PRD 文件落盘 + 摘要 + 成本记录 + L1-decisions 全部完成后，**最后**一步是 patch `{项目}/05-prd/README.md`（详见 `ai-pm-prd/SKILL.md` 步骤 5.5 的完整约束）。
+
+**核心约束**（不重复 ai-pm-prd 主文档）：
+
+- 状态字段只能从枚举选：`A 级定稿 / B 级 / C 级 / 草稿 / 已废弃 / 已超出版本`
+- AI patch 只 INSERT 新条目，不 DELETE/REWRITE 历史链
+- 跨版本关系从 PRD 正文「版本范围说明」抽取，不能自己推断
+- 模板见 `templates/project-index/prd-readme.template.md`
+
+不 patch 05-prd/README 不算 phase-5-prd 完成。

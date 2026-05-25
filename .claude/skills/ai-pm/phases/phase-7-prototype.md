@@ -413,3 +413,18 @@ checkpoint 更新规则同 `phase-5-prd.md`，字段为 `checkpoints.prototype`�
    - **待验证假设**：来自 `07-audit-report.md` 中「未覆盖功能」或「部分覆盖」条目，标记为需后续验证
 
 格式参考 `references/project-memory.md` 的 L2-prototype.md 格式（该文件已存在于技能目录中）。
+
+---
+
+## 输出收尾：patch 根 README「当前阶段」（强制步骤）
+
+原型生成 + 审计落盘 + L2-prototype 全部完成后，**最后**一步是 patch `{项目}/README.md` 的「**当前阶段**」字段（详见 `ai-pm-prototype/SKILL.md` 步骤 5.9 的完整约束）。
+
+**核心约束**：
+
+- 格式：`{场景} 原型已完成（{质量自检总分}/12），{下一步 phase 描述}`
+- 只更新「当前阶段」这一行（位于根 README 第 5-6 行附近）
+- 不动其他字段（当前版本 / 关键时间点 等由 ai-pm 或 PM 维护）
+- 模板见 `templates/project-index/root-readme.template.md`
+
+不 patch 根 README 不算 phase-7-prototype 完成。

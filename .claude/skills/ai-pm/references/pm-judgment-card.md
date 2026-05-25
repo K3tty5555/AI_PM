@@ -272,16 +272,24 @@ PM 关心的是**用户用脚投票**——拿不到精确评测数据时用行�
 
 **触发场景**：用户让 AI 写/扩展 PRD 新章节（特别是涉及「已存在于历史版本」的功能）。
 
-**Step 1 · 列项目内可能相关的资料**
+**Step 1 · 先读项目 README 索引（优先），README 不全才退到 ls**
 
 ```bash
-ls output/projects/{当前项目}/05-prd/        # 历史 PRD
-ls output/projects/{当前项目}/07-references/ # 参考文档
-ls output/projects/{当前项目}/_memory/       # 项目记忆
-grep -rl "{关键词}" output/projects/{当前项目}/ # 主题搜索
+# 优先：读 README 索引（项目级门面 + 各子目录索引）
+cat output/projects/{当前项目}/README.md           # 项目门面 + 当前版本 + 当前阶段
+cat output/projects/{当前项目}/05-prd/README.md    # PRD 索引（活跃版本 + 历史链 + 跨版本约束）
+cat output/projects/{当前项目}/07-references/README.md  # references 索引（按主题分类 + 用途）
+
+# 退路：README 不存在或显然不全时 ls + grep
+ls output/projects/{当前项目}/05-prd/
+ls output/projects/{当前项目}/07-references/
+ls output/projects/{当前项目}/_memory/
+grep -rl "{关键词}" output/projects/{当前项目}/
 ```
 
-把找到的资料列给用户：「我准备读 A/B/C，要不要补充？」
+把 README 列的资料 + 补充 ls 发现的未索引文件，一起列给用户：「我准备读 A/B/C（README 索引）+ D/E（README 漏掉的新增），要不要补充？」
+
+**优势**：README 是 PM 维护过的，可信度高于 AI 自己 ls；同时通过对比 README 和 ls 结果，能发现 README 漏更新的资料并提示 PM 补 patch（README 索引模板见 `templates/project-index/`）。
 
 **Step 2 · 信源优先级（严格遵守）**
 

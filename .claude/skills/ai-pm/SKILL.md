@@ -94,17 +94,21 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 
 ```
 {projects_dir}/{项目名}/           ← projects_dir 由 ~/.ai-pm-config 决定
+├── README.md                    项目门面索引（自动维护，新会话冷启动必读）
 ├── 00-office-hours.md           需求速评（可选）
 ├── 01-requirement-draft.md      需求草稿
 ├── 02-analysis-report.md        需求分析
 ├── 03-competitor-report.md      竞品研究
 ├── 04-user-stories.md           用户故事
 ├── 05-prd/
+│   ├── README.md                PRD 索引（活跃/历史/跨版本关系，由 ai-pm-prd 自动 patch）
 │   └── 05-PRD-v1.0.md           PRD 文档
 ├── 06-prototype/
 │   └── index.html               可交互原型
 ├── 07-audit-report.md          原型完整性审计（自动生成）
-├── 07-references/               参考资源（URL/截图）
+├── 07-references/
+│   ├── README.md                参考资料索引（主题分类 + 用途，AI 维护，不确定标 [待 PM 补充]）
+│   └── ...                      参考资源（URL/截图）
 ├── 08-review-report-v1.md       评审报告
 ├── 09-analytics-requirement.md  埋点方案（可选）
 ├── 10-retrospective.md          项目复盘（可选）
@@ -117,6 +121,44 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
     ├── L2-prototype.md          原型设计记录（按需）
     └── layout-shell.md          代码仓设计指纹（--codebase 提取）
 ```
+
+### 项目 README 索引体系（3 层）
+
+每个项目根目录有 3 份 README 索引文件，由 skill 自动维护：
+
+| 文件 | 内容 | 维护者 |
+|------|------|--------|
+| `{项目}/README.md` | 项目门面 + 当前版本 + 当前阶段 + 索引指针 | ai-pm 初始化生成；ai-pm-prototype 改「当前阶段」；版本号变化改「当前版本」 |
+| `{项目}/05-prd/README.md` | PRD 活跃版本 + 历史版本链 + 跨版本关系 | ai-pm-prd 生成/修改/重命名/废弃 PRD 时 patch |
+| `{项目}/07-references/README.md` | 参考资料按主题分类 + 用途 | 加/删 references 时 AI 提示 patch |
+
+模板位于 `templates/project-index/`：`root-readme.template.md` / `prd-readme.template.md` / `references-readme.template.md`。详细设计见 `docs/plans/2026-05-25-project-readme-index-design.md`。
+
+### 新项目初始化：生成 README 索引骨架
+
+新项目目录创建后，**立即**复制 3 份模板到项目对应位置并填充已知字段：
+
+```bash
+cp templates/project-index/root-readme.template.md {项目}/README.md
+cp templates/project-index/prd-readme.template.md {项目}/05-prd/README.md
+cp templates/project-index/references-readme.template.md {项目}/07-references/README.md
+```
+
+模板里 `{{占位符}}` 用项目实际信息替换（项目名、定位、当前版本等）。PRD 索引和 references 索引的表格初始为空（只有 section 标题），后续由 ai-pm-prd / 手动加 references 时自动 patch。
+
+### 新会话冷启动：读 README 索引建立项目认知
+
+如果 cwd 在 `output/projects/{项目名}/` 或子目录下，**优先**依次读：
+
+1. `README.md`（项目门面 + 当前版本 + 索引指针）
+2. `05-prd/README.md`（PRD 活跃版本 + 历史链）
+3. `07-references/README.md`（参考资料索引）
+4. `_status.json`（状态配置）
+5. `_memory/` 分层文件（动态状态）
+
+读完后再开始任何 PRD / 原型工作。
+
+**优先级**：本 step 高于 `pm-judgment-card §9.0` Resource-first Step 1 的 `ls` 兜底——README 存在时不需要 ls 探索。
 
 ---
 
