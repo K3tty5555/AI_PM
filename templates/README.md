@@ -28,6 +28,10 @@ templates/
 │   ├── enterprise-sample/         #    企业规范示例
 │   └── [用户自定义规范]/           #    你的 UI 规范
 │
+├── visual-anchor/                 # 🖼️ 原型视觉锚点包协议模板
+│   ├── request.template.json      #    Claude/Codex 交接输入
+│   └── manifest.template.json     #    Codex 视觉稿生成回写
+│
 ├── retrospectives/                # 🔍 项目复盘模板
 │   └── retrospective-template.md  #    复盘报告模板
 │
@@ -95,6 +99,7 @@ cp templates/ui-specs/enterprise-sample/* \
 | `configs/` | 项目配置、参考资源配置 | 按需复制 |
 | `prd-styles/` | PRD 写作风格（章节结构、用词习惯、导出模板） | 常用 |
 | `ui-specs/` | UI 设计规范（颜色、字体、组件） | 常用 |
+| `visual-anchor/` | 原型视觉锚点包 request/manifest 协议 | 需要视觉锚定原型时 |
 | `retrospectives/` | 项目复盘报告模板 | 项目结束时 |
 | `agent-team/` | 多代理协作任务、状态模板 | 复杂项目 |
 
@@ -116,6 +121,7 @@ cp templates/ui-specs/enterprise-sample/* \
 |----------|-----------|----------|---------|
 | **写作风格** | `prd-styles/` | PRD 文字描述、章节结构 | 生成 PRD 文档时 |
 | **UI 规范** | `ui-specs/` | 原型视觉、颜色、字体、间距 | 生成原型时 |
+| **视觉锚点包** | `visual-anchor/` | 跨 Claude/Codex 的视觉稿生成交接 | 高保真原型或现网改版时 |
 | **项目配置** | `configs/` | 项目基本信息、参考资源 | 项目初始化时 |
 | **协作模板** | `agent-team/` | 任务分配、状态跟踪 | 多代理协作时 |
 

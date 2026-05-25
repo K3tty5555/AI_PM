@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "packageType": "visual-anchor-request",
+  "requiredRuntime": "codex",
+  "projectName": "{{PROJECT_NAME}}",
+  "projectDir": "output/projects/{{PROJECT_NAME}}",
+  "createdAt": "{{ISO8601}}",
+  "createdBy": "claude",
+  "gateMode": "soft",
+  "flowMode": "visual-first",
+  "sourcePrd": {
+    "path": "05-prd/05-PRD-v1.0.md",
+    "summaryPath": "_summaries/prd-summary.md",
+    "version": "v1.0"
+  },
+  "referenceAssets": [
+    {
+      "id": "ref-current-screen-1",
+      "type": "screenshot",
+      "path": "07-references/current-screen-1.png",
+      "role": "current-product",
+      "notes": "说明这张图主要参考什么：导航、密度、组件、颜色、流程或状态"
+    }
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "label": "首页工作台",
+      "prdSection": "6.1",
+      "purpose": "说明该页面解决什么问题",
+      "device": "web",
+      "aspectRatio": "16:9",
+      "priority": "P0",
+      "mustShow": [
+        "左侧导航",
+        "顶部上下文",
+        "核心操作入口",
+        "业务真实数据"
+      ],
+      "states": ["default", "loading", "empty"]
+    },
+    {
+      "id": "core-flow",
+      "label": "核心流程页",
+      "prdSection": "6.2",
+      "purpose": "说明主任务如何在该页完成",
+      "device": "web",
+      "aspectRatio": "16:9",
+      "priority": "P0",
+      "mustShow": [
+        "筛选或输入区",
+        "结果区",
+        "确认/修改入口",
+        "状态反馈"
+      ],
+      "states": ["default", "success", "error"]
+    }
+  ],
+  "visualConstraints": {
+    "productType": "B端业务系统",
+    "density": "high",
+    "designMode": "follow-reference",
+    "layoutShell": "优先继承参考图导航与主内容区结构",
+    "mustKeep": [
+      "参考图的信息密度",
+      "参考图的导航节奏",
+      "业务卡片和表格的比例关系"
+    ],
+    "mustAvoid": [
+      "营销页式大标题",
+      "通用灰白卡片堆叠",
+      "没有业务字段的占位数据",
+      "过度渐变和装饰光效"
+    ]
+  },
+  "generation": {
+    "provider": "codex-imagegen",
+    "targetQuality": "design-mockup",
+    "maxImages": 5,
+    "defaultSize": "2560x1440"
+  },
+  "acceptance": {
+    "minImages": 3,
+    "requireVisualFingerprint": true,
+    "requireAudit": true
+  }
+}

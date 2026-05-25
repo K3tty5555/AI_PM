@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "packageType": "visual-anchor-manifest",
+  "status": "ready",
+  "generatedAt": "{{ISO8601}}",
+  "generatedBy": "codex",
+  "requestPath": "request.json",
+  "visualFingerprint": "visual-fingerprint.md",
+  "auditPath": "audit.md",
+  "images": [
+    {
+      "id": "img-home",
+      "pageId": "home",
+      "label": "首页工作台",
+      "prdSection": "6.1",
+      "role": "primary-screen",
+      "image": "images/01-home.png",
+      "prompt": "prompts/01-home.md",
+      "referenceAssetIds": ["ref-current-screen-1"],
+      "usableForPrd": true,
+      "usableForHtmlConstraint": true,
+      "notes": "用于约束首页布局密度、导航结构和任务卡片样式"
+    }
+  ],
+  "quality": {
+    "visualConsistency": 4,
+    "prdCoverage": 4,
+    "textLegibility": 3,
+    "businessRealism": 4,
+    "overall": "ready"
+  },
+  "knownRisks": [
+    "图片中文字仅用于视觉表达，不能作为 PRD 字段或研发文案事实源"
+  ]
+}
