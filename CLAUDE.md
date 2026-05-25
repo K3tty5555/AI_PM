@@ -89,6 +89,23 @@ README.md                  项目介绍
 3. **Phase 7 脚手架**（`phase-7-prototype.md`）—— 在页面框架搭建前锁定页面/流程/状态/视觉方向；落盘后做 PRD 覆盖 + 交互体验 + 视觉设计审计
 4. **质量门槛**—— 12 分制：PRD 覆盖 / 交互体验 / 视觉设计各 0-4 分；任一维度 < 3 或总分 < 9，必须修完再评审
 
+### 视觉锚点包（Codex 生图协作）
+
+当项目需要继承现网截图、历史原型或参考资料的视觉节奏，或用户明确要求高保真/视觉稿级原型时，启用 `{项目目录}/06-prototype-visual/`：
+
+- Claude Code 写出或读取 `request.json`，但不直接调用 Codex 或生图工具。
+- Codex 读取 `request.json`，生成 `visual-fingerprint.md`、`prompts/`、`images/`、`manifest.json`、`audit.md`。
+- `manifest.json status=ready` 时，HTML 原型生成前必须读取视觉指纹和图片清单，并继承布局节奏、组件比例、页面密度、色彩气质和禁忌项。
+- 图片中文字只作为视觉表达，不作为 PRD 字段、研发文案或最终用户话术事实源。
+
+状态检查命令：
+
+```bash
+node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
+```
+
+模板位置：`templates/visual-anchor/`。
+
 **铁律（原型必守）**：
 - 原型不是线框草图，必须可评审、可体验、视觉可信
 - 视觉设计是原型质量的一部分，不能因为是原型就接受模板套壳、灰白卡片、假数据糊弄
