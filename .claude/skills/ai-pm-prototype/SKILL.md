@@ -3,9 +3,10 @@ name: ai-pm-prototype
 description: >-
   原型生成技能。基于 PRD 生成可交互的单页网页原型，支持移动端和 Web 端。
   首次生成时询问设计规范（公司规范 / AI 情境定制 / 主流组件库），项目内记住偏好。
+  若项目存在 Codex 生成的视觉锚点包（06-prototype-visual/manifest.json），生成 HTML 前必须读取并遵循。
   当用户说「生成原型」「做原型」「可交互原型」「HTML原型」「页面原型」「低保真」「高保真原型」
   「画个界面」「把PRD做成原型」时，立即使用此技能。
-argument-hint: "[PRD路径 | --mobile | --web]"
+argument-hint: "[PRD路径 | --mobile | --web | --visual | --visual-strict]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 ---
 
@@ -18,6 +19,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 - 主要：`{项目目录}/05-prd/05-PRD-v1.0.md`（PRD）
 - 可选：`templates/ui-specs/{规范名}/`（自定义设计规范）
 - 可选：`{项目目录}/.ai-pm-config.json`（项目配置，含 designSystem 字段）
+- 可选：`{项目目录}/06-prototype-visual/manifest.json`（Codex 生成的视觉锚点包）
+- 可选：`{项目目录}/06-prototype-visual/visual-fingerprint.md`（视觉指纹）
 
 ## 输出
 
@@ -52,6 +55,20 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 
 两项结果写入 `{项目目录}/.ai-pm-config.json`，继续步骤2。
 
+### 步骤1.5：视觉锚点包检查（如有）
+
+检查 `{项目目录}/06-prototype-visual/manifest.json`：
+
+- **`status=ready`** → 读取 `manifest.json`、`visual-fingerprint.md`、`audit.md`（如有），并把 `images[].image` 作为 HTML 原型视觉约束；继续步骤2
+- **`status=partial`** → 读取 `visual-fingerprint.md` 和已生成图片；允许继续，但完成后的审计报告必须提示“视觉锚点包未完成”，并列出缺失页面；若 `request.json` 中 `gateMode=strict`，暂停并提示先切到 Codex 补齐
+- **`status=failed`** → 降级为普通 HTML 原型，审计报告记录失败原因
+- **不存在** → 普通原型继续；若用户明确选择“视觉锚定原型 / --visual-strict”，先写出 `06-prototype-visual/request.json` 后暂停，不直接调用生图
+
+**读取要求**：
+- `visual-fingerprint.md` 用于约束布局节奏、组件形态、页面密度、色彩气质和禁忌项
+- `manifest.images[].image` 用于约束页面整体视觉和关键状态，但图片中文字不作为最终文案事实源
+- HTML 原型仍必须可点击、可走主流程；视觉锚点图不能替代交互原型
+
 ### 步骤2：原型蓝图 + 视觉方向
 
 生成 HTML 前先按 `prototype-agent` 的 Mode A 产出原型蓝图；Agent 工具不可用时，主对话按同一角色规则执行。
@@ -66,6 +83,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 
 视觉设计是原型质量的一部分：
 - 有代码仓设计指纹时，优先复用其布局、色值、组件密度
+- 有视觉锚点包且 `status=ready` 时，优先遵循视觉锚点包中的视觉指纹和图片约束
 - 有用户选定设计规范时，按该规范生成
 - AI 情境定制时，必须给出符合产品场景的视觉主张，不退回通用 SaaS 模板
 
@@ -81,6 +99,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 
 生成时必须遵循蓝图和以下底线：
 - 不套通用模板，不用灰白卡片 + 蓝按钮糊弄
+- 若存在 ready 状态视觉锚点包，不得偏离其布局节奏、组件比例、页面密度和业务骨架
 - B 端不能做成营销页，C 端不能做成后台表格脸
 - 核心按钮必须可点，点击后有状态变化
 - 假数据必须贴近 PRD 业务，不使用"测试数据/示例内容/张三"这类占位内容

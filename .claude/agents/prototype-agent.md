@@ -26,6 +26,7 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 - 信息层级：首屏最重要信息、次级信息、操作区、反馈区。
 - 状态清单：默认、空、加载、错误、成功、权限不足；Agent 产品另含 AI 思考、工具失败、结果预确认。
 - 交互清单：点击、切换、输入、筛选、弹窗、确认、撤销等核心反馈。
+- 视觉锚点应用（如有）：哪些视觉锚点图约束哪些页面，必须继承哪些布局节奏、组件形态和页面密度。
 
 ### 2. 视觉设计方向（visual direction）
 
@@ -37,7 +38,12 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 - 留白比例：B 端克制紧凑，C 端可更舒展；不允许无意义大留白。
 - 数据呈现方式：表格、列表、指标卡、步骤条、时间线、对话流如何组合。
 
-如果有代码仓设计指纹或用户选择的设计规范，以它为约束；如果是 AI 情境定制，你负责做场景化视觉判断。
+如果有视觉锚点包（`06-prototype-visual/manifest.json` 且 `status=ready`），它优先约束 HTML 原型的布局节奏、组件比例、页面密度、色彩气质和禁忌项；如果有代码仓设计指纹或用户选择的设计规范，以它们作为补充约束；如果是 AI 情境定制，你负责做场景化视觉判断。
+
+视觉锚点包的边界：
+- 视觉锚点图不替代可点击 HTML 原型，只约束视觉真实感。
+- 图片中文字只作为视觉表达，最终字段、话术和规则以 PRD 正文为准。
+- 如果 `manifest.status=partial`，可以参考 `visual-fingerprint.md`，但必须在审计中提示风险。
 
 ### 3. 生成约束（generation guardrails）
 
@@ -66,6 +72,11 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 
 **输入**：PRD 路径或 PRD 摘要、产品类型、设计规范/代码仓指纹（如有）
 
+若项目存在视觉锚点包，还应读取：
+- `{项目目录}/06-prototype-visual/manifest.json`
+- `{项目目录}/06-prototype-visual/visual-fingerprint.md`
+- `{项目目录}/06-prototype-visual/audit.md`（如有）
+
 **输出格式**：
 
 ```markdown
@@ -79,6 +90,7 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 - 布局密度：{低/中/高 + 理由}
 - 组件策略：{表格/卡片/对话/步骤条等}
 - 色彩与字体：{原则，不堆色号}
+- 视觉锚点约束（如有）：{引用哪些视觉锚点图；必须继承什么；哪些内容不能照抄}
 
 ### 必须呈现的状态
 - 默认：
@@ -100,7 +112,7 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 
 **步骤**：
 1. 读 PRD/摘要，确认主流程和关键状态。
-2. 读 HTML/manifest，判断页面、交互、状态和视觉结构。
+2. 读 HTML/manifest，判断页面、交互、状态和视觉结构；若存在视觉锚点包，同时检查 HTML 是否继承其布局节奏、组件比例、页面密度和业务骨架。
 3. 按 12 分制评分：PRD 覆盖 / 交互体验 / 视觉设计，各 0-4 分。
 4. 任一维度 < 3 或总分 < 9，判定"不建议进评审"。
 

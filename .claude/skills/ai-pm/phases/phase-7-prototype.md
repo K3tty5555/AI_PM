@@ -114,18 +114,20 @@ ls "{project_dir}/05-prd/"*.docx 2>/dev/null
 ```
 即将开始：原型生成
 ─────────────────────────────
-执行步骤（共 9 步）：
+执行步骤（共 10 步）：
   1. 原型生成前确认（含 token 消耗提示）
-  2. 原型蓝图 + 视觉方向
-  3. 动效档位选择
-  4. 页面框架搭建
-  5. 各页面生成
-  6. 样式精修
-  7. 原型落盘 + 成本记录
-  8. 完整性 + 设计质量审计（自动）
-  9. 审计报告落盘
+  2. 视觉锚点包检查（如有）
+  3. 原型蓝图 + 视觉方向
+  4. 动效档位选择
+  5. 页面框架搭建
+  6. 各页面生成
+  7. 样式精修
+  8. 原型落盘 + 成本记录
+  9. 完整性 + 设计质量审计（自动）
+  10. 审计报告落盘
 
 读取文件：_summaries/prd-summary.md（或 05-prd/05-PRD-v1.0.md）
+可选读取：06-prototype-visual/manifest.json, 06-prototype-visual/visual-fingerprint.md
 写入文件：06-prototype/index.html, 07-audit-report.md
 
 继续？[Y/n]
@@ -147,6 +149,36 @@ ls "{project_dir}/05-prd/"*.docx 2>/dev/null
 
 基于 PRD 生成可交互的单页网页原型。生成前提示 Token 消耗并等待用户确认。
 
+### 启动前：视觉锚点包检查
+
+在 Prototype Agent 质量前置之前，检查 `{project_dir}/06-prototype-visual/manifest.json`：
+
+1. **存在且 `status=ready`**
+   - 读取 `manifest.json`
+   - 读取 `visual-fingerprint.md`
+   - 如存在 `audit.md`，读取其中“可交接给 Claude Code 的约束”
+   - 汇总 `images[].label`、`images[].image`、`images[].usableForHtmlConstraint`
+   - 原型蓝图和 HTML 生成必须遵循视觉锚点包中的布局节奏、组件比例、页面密度、色彩气质和禁忌项
+   - 向用户提示："检测到视觉锚点包，已作为 HTML 原型视觉约束读取。"
+
+2. **存在但 `status=partial`**
+   - 读取 `visual-fingerprint.md` 和已生成/计划生成的图片清单
+   - 允许继续普通原型流程，但必须在审计报告中标注“视觉锚点包未完成”，并列出缺失页面
+   - 若 `request.json` 中 `gateMode=strict`，暂停并提示用户先切到 Codex 生成完整视觉锚点包
+
+3. **存在但 `status=failed`**
+   - 不阻断普通 HTML 原型
+   - 在审计报告中标注视觉锚点包失败原因，降级使用 PRD / 设计规范 / `layout-shell.md`
+
+4. **不存在**
+   - 普通原型继续执行
+   - 若用户明确选择“视觉锚定原型 / --visual-strict”，先写出 `06-prototype-visual/request.json` 后暂停，提示用户切到 Codex 生成视觉锚点包
+
+**边界**：
+- Claude Code 只读取和生成 `request.json`，不直接调用 Codex 或生图工具。
+- 视觉锚点图只约束 HTML 原型的布局、密度、组件形态和视觉气质，不替代可点击交互。
+- 图片中文字只作为视觉表达，最终文案、字段和规则以 PRD 正文为准。
+
 ### 启动前：Prototype Agent 质量前置
 
 原型生成不是直接写 HTML。进入 `layout_structure` 前，必须先按 `.claude/agents/prototype-agent.md` 的 Mode A 产出原型蓝图；如果 Agent 工具不可用，主对话按同一角色规则执行。
@@ -155,7 +187,7 @@ ls "{project_dir}/05-prd/"*.docx 2>/dev/null
 
 ```
 Agent(subagent_type=prototype-agent, prompt="
-读取 PRD/摘要、项目记忆、设计规范/代码仓指纹（如有），输出原型蓝图。
+读取 PRD/摘要、项目记忆、设计规范/代码仓指纹（如有）、视觉锚点包（如有），输出原型蓝图。
 重点包括：页面与主流程、信息层级、状态清单、交互清单、视觉设计方向、生成硬约束。
 视觉设计是原型质量的一部分，不能因为是原型就接受模板套壳或灰白卡片。
 ")
@@ -171,6 +203,7 @@ Agent(subagent_type=prototype-agent, prompt="
 
 **落地要求**：
 - HTML 生成必须显式遵循蓝图，不允许重新自由发挥。
+- 若有 `{project_dir}/06-prototype-visual/manifest.json` 且状态为 `ready`，HTML 生成必须优先遵循 `visual-fingerprint.md` 与 `manifest.images[].image` 指向的视觉锚点图。
 - 若有 `{project_dir}/_memory/layout-shell.md`，蓝图中的视觉方向必须以代码仓指纹为优先约束。
 - AI 情境定制模式下，prototype-agent 负责做场景化视觉判断，不能退回通用 SaaS 模板。
 - 蓝图可作为上下文使用；若当前运行环境允许写文件，可同步记录到 `_memory/L2-prototype.md` 的「设计选择」草稿中。
