@@ -217,15 +217,30 @@ def render_mermaid(code):
     html_file.close()
 
     # Chrome headless 截图（内联 JS，无需 --allow-file-access-from-files）
-    # shell=True 避免 macOS 下 Python subprocess list 模式与 Chrome 进程组的兼容问题
-    # 渲染完成后等待 2s，让 Chrome 完全释放资源，避免多实例连续调用时 exit 133（SIGTRAP）
+    # 每次使用独立 user-data-dir，避免多实例/缓存 profile 导致 Chrome trap 或卡死。
     out_png = tempfile.mktemp(suffix='.png', dir='/tmp')
     try:
-        cmd = (f'"{CHROME}" --headless=new --no-sandbox --disable-gpu '
-               f'--screenshot="{out_png}" --window-size=700,1200 '
-               f'--hide-scrollbars --virtual-time-budget=8000 '
-               f'"file://{html_file.name}" 2>/dev/null')
-        subprocess.run(cmd, shell=True, timeout=30)
+        with tempfile.TemporaryDirectory(prefix='md2docx-chrome-profile-', dir='/tmp') as profile_dir:
+            rendered = False
+            for headless_arg in ['--headless', '--headless=new']:
+                args = [
+                    CHROME,
+                    headless_arg,
+                    '--no-sandbox',
+                    '--disable-gpu',
+                    f'--user-data-dir={profile_dir}',
+                    f'--screenshot={out_png}',
+                    '--window-size=700,1200',
+                    '--hide-scrollbars',
+                    '--virtual-time-budget=8000',
+                    f'file://{html_file.name}',
+                ]
+                result = subprocess.run(args, timeout=30, capture_output=True)
+                if result.returncode == 0 and os.path.exists(out_png):
+                    rendered = True
+                    break
+            if not rendered:
+                return None
     except (subprocess.TimeoutExpired, Exception):
         return None
     finally:
