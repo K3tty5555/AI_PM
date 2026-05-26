@@ -17,9 +17,16 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ## 输出
 
-- **单 PRD 项目**：`{项目目录}/04-user-stories.md`
-- **多版本项目**：`{项目目录}/04-user-stories-V{当前版本}.md` + frontmatter（`version / status / phase=用户故事 / upstream-from / created`）
-- 详见 `templates/project-index/README.md` 「多版本 0x 文件约定」段；落盘后同步 patch 根 README「上游产物版本归属」表
+**所有项目统一用文件夹结构**：`{项目目录}/04-user-stories/V{当前版本}.md` + frontmatter（`version / status / phase=用户故事 / upstream-from / created`）。
+
+落盘前**强制步骤**：
+1. 查 `05-prd/README.md` 当前活跃版本号
+2. 确认 `04-user-stories/` 文件夹存在；不存在则 `mkdir`
+3. **临界点检查**：如果文件夹外存在旧版 `04-user-stories.md`（或 `-V1.md` 等 v1 后缀文件）→ 先 `mv` 到 `04-user-stories/V1.md` 并补 V1 frontmatter
+4. 写入 `04-user-stories/V{当前版本}.md` + frontmatter
+5. 同步 patch 根 README「上游产物版本归属」表
+
+详见 `templates/project-index/README.md` 「0x 上游产物文件夹约定」段。
 
 ## 执行步骤
 

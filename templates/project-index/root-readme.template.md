@@ -27,18 +27,19 @@
 
 | 产物 | {{V1.0}} | {{V1.1（当前活跃）}} | {{V2.0（草稿）}} |
 |---|---|---|---|
-| 01 需求草稿 | `01-requirement-draft-V1.md` 历史定稿 | ⚠️ 待补 / 占位 | — |
-| 02 需求分析 | `02-analysis-report-V1.md` 历史定稿 | ⚠️ 待补 / 占位 | — |
-| 03 竞品研究 | `03-competitor-report-V1.md` 历史定稿 | ⚠️ 待补 / 占位 | — |
-| 04 用户故事 | `04-user-stories-V1.md` 历史定稿 | ⚠️ 待补 / 占位 | — |
+| 01 需求草稿 | `01-requirement-draft/V1.md` 历史定稿 | ⚠️ `V2.md` 占位待补 | — |
+| 02 需求分析 | `02-analysis-report/V1.md` 历史定稿 | ⚠️ `V2.md` 占位待补 | — |
+| 03 竞品研究 | `03-competitor-report/V1.md` 历史定稿 | ⚠️ `V2.md` 占位待补 | — |
+| 04 用户故事 | `04-user-stories/V1.md` 历史定稿 | ⚠️ `V2.md` 占位待补 | — |
 | 05 PRD | 详见 `05-prd/README.md` | 详见 `05-prd/README.md` | 详见 `05-prd/README.md` |
 | 06 原型 | — | ⚠️ 待启动 | — |
-| 08 评审 | — | ✅ / ⚠️ | — |
+| 08 评审 | `08-reviews/V1-initial.md` | ✅ / ⚠️ | — |
 
 **版本约定**：
-- 文件名后缀 `-Vx.md` 标明所属版本
-- 每个 0x 文件 frontmatter 含 `version` / `status` 字段（`历史定稿 / A 级定稿 / 草稿 / 待补 / 已废弃`）自描述
+- 0x 上游产物**用文件夹**组织（详见 `templates/project-index/README.md` 的「0x 上游产物文件夹约定」段）
+- 每个 0x 文件夹内 `Vx.md` frontmatter 含 `version` / `status` 字段自描述
 - 新版本占位文档由 ai-pm-analyze / ai-pm-story / ai-pm-research 启动正式产出时**重写**（不是修改）
+- 08 评审用 `08-reviews/` 文件夹，多次评审按 `V{n}-{round/version}.md` 命名
 
 ---
 

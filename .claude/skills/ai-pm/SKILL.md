@@ -93,34 +93,52 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 ## 项目目录结构
 
 ```
-{projects_dir}/{项目名}/           ← projects_dir 由 ~/.ai-pm-config 决定
-├── README.md                    项目门面索引（自动维护，新会话冷启动必读）
-├── 00-office-hours.md           需求速评（可选）
-├── 01-requirement-draft.md      需求草稿
-├── 02-analysis-report.md        需求分析
-├── 03-competitor-report.md      竞品研究
-├── 04-user-stories.md           用户故事
-├── 05-prd/
-│   ├── README.md                PRD 索引（活跃/历史/跨版本关系，由 ai-pm-prd 自动 patch）
-│   └── 05-PRD-v1.0.md           PRD 文档
-├── 06-prototype/
-│   └── index.html               可交互原型
-├── 07-audit-report.md          原型完整性审计（自动生成）
-├── 07-references/
-│   ├── README.md                参考资料索引（主题分类 + 用途，AI 维护，不确定标 [待 PM 补充]）
-│   └── ...                      参考资源（URL/截图）
-├── 08-review-report-v1.md       评审报告
-├── 09-analytics-requirement.md  埋点方案（可选）
-├── 10-retrospective.md          项目复盘（可选）
-└── _summaries/                  阶段摘要（自动生成，用于上下文压缩）
-│   └── prd-summary.md           PRD 摘要（PRD ≥ 20KB 时自动生成）
-└── _memory/                     项目记忆（自动维护，勿手动删除）
-    ├── L0-identity.md           产品定位/用户/约束（~100 tokens）
-    ├── L1-decisions.md          关键决策 + why（~300 tokens）
-    ├── L2-analysis.md           分析/竞品洞察（按需）
-    ├── L2-prototype.md          原型设计记录（按需）
-    └── layout-shell.md          代码仓设计指纹（--codebase 提取）
+{projects_dir}/{项目名}/                   ← projects_dir 由 ~/.ai-pm-config 决定
+├── README.md                            项目门面索引（自动维护，新会话冷启动必读）
+├── 00-office-hours.md                   需求速评（可选，单文件）
+├── 01-requirement-draft/                需求草稿（文件夹，多版本）
+│   ├── README.md                        版本索引（可选）
+│   └── V1.md                            V1 时期草稿
+├── 02-analysis-report/                  需求分析
+│   └── V1.md
+├── 03-competitor-report/                竞品研究
+│   └── V1.md
+├── 04-user-stories/                     用户故事
+│   └── V1.md
+├── 05-prd/                              PRD（已是文件夹）
+│   ├── README.md                        PRD 索引（活跃/历史/跨版本关系，由 ai-pm-prd 自动 patch）
+│   └── 05-PRD-v1.0.md
+├── 06-prototype/                        原型
+│   └── index.html
+├── 07-references/                       参考资料
+│   ├── README.md                        参考资料索引（主题分类 + 用途，AI 维护，不确定标 [待 PM 补充]）
+│   └── ...
+├── 07-audit-report.md                   原型完整性审计（单文件，自动生成）
+├── 08-reviews/                          评审报告（文件夹，多次评审）
+│   ├── README.md                        评审历史索引（可选）
+│   └── V1-initial.md                    V1 初评 / V3-round2.md / V3-v1.3.md 等
+├── 09-analytics-requirement.md          埋点方案（可选，单文件）
+├── 10-retrospective.md                  项目复盘（可选，单文件）
+├── 11-{自定义 phase}/                    其他自定义 phase（按需用文件夹）
+├── _summaries/                          阶段摘要（自动生成，用于上下文压缩）
+│   └── prd-summary.md
+└── _memory/                             项目记忆（自动维护，勿手动删除）
+    ├── L0-identity.md                   产品定位/用户/约束（~100 tokens）
+    ├── L1-decisions.md                  关键决策 + why（~300 tokens）
+    ├── L2-analysis.md                   分析/竞品洞察（按需）
+    ├── L2-prototype.md                  原型设计记录（按需）
+    └── layout-shell.md                  代码仓设计指纹（--codebase 提取）
 ```
+
+### 命名约定（v2 文件夹规范）
+
+| 类型 | 命名 | 示例 |
+|------|------|------|
+| 单文件 phase | `{NN}-{name}.md` | `00-office-hours.md` / `07-audit-report.md` / `09-analytics-requirement.md` / `10-retrospective.md` |
+| 多版本 phase | `{NN}-{name}/{Vx}.md` | `01-requirement-draft/V1.md` / `08-reviews/V3-round2.md` |
+| 已有文件夹 phase | `{NN}-{name}/...` | `05-prd/` / `06-prototype/` / `07-references/` |
+
+**关键规则**：01-04 + 08 即使**单 PRD 项目也用文件夹**（只放 `V1.md`），保持命名一致，避免单→多版本临界点时的搬家成本。
 
 ### 项目 README 索引体系（3 层）
 

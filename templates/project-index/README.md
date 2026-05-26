@@ -24,29 +24,46 @@
 - **历史链**：AI patch 时只 INSERT 新条目，不 DELETE/REWRITE 旧条目
 - **跨版本关系**：必须从 PRD 正文「版本范围说明」抽取，不能自己推断
 
-## 多版本 0x 文件约定（重要）
+## 0x 上游产物文件夹约定（重要）
 
-当项目跨多个 PRD 版本迭代时，**01-04 上游产物也必须按版本拆分**，避免 AI 把旧版本的需求草稿误当作当前版本上下文。
+**所有 0x 上游产物都用文件夹组织**——和 05-prd/ 06-prototype/ 07-references/ 11-* 保持一致的根目录命名风格，根目录不再被多版本文件撑满。
 
-### 文件命名
+### 目录结构
 
 ```
-01-requirement-draft-V1.md     ← V1 时期需求草稿（历史定稿）
-01-requirement-draft-V2.md     ← V2 时期需求草稿（历史定稿或当前活跃）
-01-requirement-draft-V3.md     ← V3 时期占位（待补）
-02-analysis-report-V1.md
-02-analysis-report-V2.md
-...
+{项目}/
+├── 01-requirement-draft/
+│   ├── README.md        ← 版本索引（可选；单 PRD 项目可省略）
+│   ├── V1.md
+│   ├── V2.md
+│   └── V3.md
+├── 02-analysis-report/
+│   ├── V1.md
+│   └── V2.md
+├── 03-competitor-report/
+│   └── V1.md
+├── 04-user-stories/
+│   └── V1.md
+├── 05-prd/              ← 已是文件夹（不变）
+├── 06-prototype/        ← 已是文件夹（不变）
+├── 07-references/       ← 已是文件夹（不变）
+├── 08-reviews/          ← 同 phase 多次评审都放这里
+│   ├── README.md        ← 评审历史索引（可选）
+│   ├── V1-initial.md
+│   ├── V3-initial.md
+│   ├── V3-round2.md
+│   └── V3-v1.3.md
+└── 11-{...}/            ← 其他自定义 phase 文件夹保持一致
 ```
 
-### Frontmatter 自描述（每个 0x-*-Vx.md 文件头）
+### Frontmatter 自描述（每个文件夹内 Vx.md 文件头）
 
 ```markdown
 ---
 version: V2
 status: 历史定稿     # 枚举：历史定稿 / A 级定稿 / 草稿 / 待补 / 已废弃
-phase: 需求草稿       # 01-04 对应的 phase 中文名
-upstream-from: 01-requirement-draft-V1.md  # 可选，指向上一版同名文件
+phase: 需求草稿       # 01-04 / 08 对应的 phase 中文名
+upstream-from: V1.md  # 可选，指向同文件夹上一版
 created: 2026-03-10
 note: V2「{场景}」时期产出。V3 需重新走 01-04 流程。
 ---
@@ -59,7 +76,7 @@ note: V2「{场景}」时期产出。V3 需重新走 01-04 流程。
 version: V3
 status: 待补
 phase: 需求草稿
-upstream-from: 01-requirement-draft-V2.md
+upstream-from: V2.md
 ---
 
 # 01 需求草稿 V3 · 占位
@@ -73,16 +90,41 @@ upstream-from: 01-requirement-draft-V2.md
 - [ ] ...
 
 ## 上游引用
-- V2 同期：[`01-requirement-draft-V2.md`](./...)
+- V2 同期：[`V2.md`](./V2.md)
 - V3 PRD：`05-prd/...`
 
 ---
 *占位文档。正式启动 V3 时由 ai-pm-{phase} 重写。*
 ```
 
-### 单 PRD 项目可省略
+### 子目录 README.md（多版本时可选）
 
-单 PRD 项目（V1.0 唯一版本）按现有 `01-requirement-draft.md` 无后缀命名即可，不强制加 V1 后缀。**多版本启动时** ai-pm-analyze / ai-pm-story / ai-pm-research / ai-pm-prd 落盘前**先检查**是否单版本→多版本临界点，触发 rename。
+```markdown
+# 01 需求草稿 · 版本索引
+
+| 版本 | 文件 | 状态 | 主交付 |
+|---|---|---|---|
+| V1 | `V1.md` | 历史定稿 | 一句话主交付 |
+| V2 | `V2.md` | 历史定稿 | 一句话主交付 |
+| V3 | `V3.md` | 待补 | — |
+
+> 跨版本关系详见根 README「上游产物版本归属」表。
+```
+
+### 单 PRD 项目
+
+单 PRD 项目（V1.0 唯一版本）也用文件夹结构：
+
+```
+01-requirement-draft/
+└── V1.md
+```
+
+虽然只有一个 V1.md，但保持命名一致；后续升级到 V2 时只需新建 `V2.md` 即可，零迁移成本。
+
+### 临界点处理
+
+单 PRD → 多 PRD 临界点（项目即将从 V1 进入 V2）时，**不需要 rename**——V1.md 已在文件夹里。直接在同文件夹添加 V2.md 即可。这是 v2 文件夹约定相比 v1 `-Vx` 后缀的最大优势。
 
 ## 详细设计 / 实施计划
 
