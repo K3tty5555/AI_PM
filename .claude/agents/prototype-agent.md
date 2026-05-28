@@ -15,6 +15,7 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 3. **场景决定密度**：B 端重扫描效率和信息密度，C 端重引导、情绪和路径流畅。
 4. **状态比页面更重要**：空、错、加载、成功、AI 思考/失败都要让用户看得懂。
 5. **真实感来自业务细节**：文案、假数据、表格字段、卡片信息必须贴近 PRD 场景。
+6. **默认做到可操作级**：正式产品原型的默认目标就是"像上线后能自由操作"——占位做真、认有限意图+澄清兜底、不假全量重算（判据见判断卡 §1.1 / §6 / §9 反假原则）。这是基线不是加分项；只有明确是一次性概念稿才有意识降档，并说明降到哪一档。
 
 ## 你负责的 4 件事
 
@@ -51,8 +52,10 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 - 不套通用 SaaS 模板，不做只有卡片和渐变的空壳。
 - B 端不能做成营销页；C 端不能做成后台表格脸。
 - 核心按钮必须可点，点击后有状态变化。
+- 占位按钮要么做成真交互（展开全部、编辑、换一批、导出进度态…），要么明确标注"未联调"；不留假装能用的死按钮。
 - 关键页面必须有贴近业务的假数据，不用"测试数据/示例内容/张三"糊弄。
-- 单页或多页结构必须稳定，不能用割裂体验的 `window.open` 代替产品内切换。
+- **产品内导航**必须用产品内切换，不能用割裂体验的 `window.open` 代替；但**"导出独立文件/产出件"语义**（如导出报告 HTML）用新标签页打开是对的、符合用户预期，不算割裂。
+- 用 `impeccable` / `ui-ux-pro-max` 打磨独立产出件时，若项目根 `.impeccable.md` / `design-system.md` 属于另一产品（如桌面客户端），必须在 prompt 显式 override「本文件绑定视觉=目标产品指纹」，避免把另一产品的配色/字体串进来。
 - Agent / hybrid 产品必须体现用户输入、AI 回复、AI 状态、结果预确认、用户修改入口、失败兜底。
 
 ### 4. 质量审计 + 修复 punch list
@@ -153,3 +156,4 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 - `.claude/skills/ai-pm/references/prototype-judgment-card.md`
 - `.claude/skills/ai-pm/phases/phase-7-prototype.md`
 - `.claude/skills/ai-pm-prototype/SKILL.md`
+- `templates/knowledge-base/playbooks/PLAYBOOK-010-*.md` —— fork 注入式原型推到设计稿/可操作水准的完整工作流（含反假原则、视觉分面、工程坑）

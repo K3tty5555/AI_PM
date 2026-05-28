@@ -12,7 +12,11 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 
 # 原型生成
 
-本技能必须同时使用 `.claude/agents/prototype-agent.md` 和 `.claude/skills/ai-pm/references/prototype-judgment-card.md` 的质量标准。原型不是线框草图，必须达到"可评审、可体验、视觉可信"。
+本技能必须同时使用 `.claude/agents/prototype-agent.md` 和 `.claude/skills/ai-pm/references/prototype-judgment-card.md` 的质量标准。
+
+**默认目标 = 可操作级**（判断卡 §1.1，三档里最高档，上面没有更高的）——原型要能像上线后一样**自由操作**：占位按钮做成真交互（不留死按钮）、认有限意图+澄清兜底（不硬解析任意输入）、不假全量重算（只重计数可见数字）、L2 人机确认是真检查点。只有明确是一次性概念稿/纯内部碰撞才**有意识地**降档到可评审级或示意级，并说明原因；不主动降。
+
+**验证必带视觉核对**（判断卡 §11）——经用户允许跑浏览器时，每个关键状态（每道闸、每个异常态、每个产出件页面）都要 `browser_take_screenshot` 在目标视口下肉眼核对。DOM 断言（存在/计数/可见/类名/文本）只验逻辑，验不出溢出/折行/竖排/对齐等纯视觉 bug，**全绿也照样错**；没截图核对的状态在审计里如实标"仅 DOM 验证、未视觉核对"，不谎报"全过"。
 
 ## 输入
 
