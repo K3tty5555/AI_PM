@@ -29,6 +29,16 @@ if [ "$PHASE_FILES" -gt 0 ]; then
   echo "   输入 /ai-pm continue 恢复，或 /ai-pm new 开始新项目"
 fi
 
+# README 索引漂移检测（A 档：只提醒，不自动写）——当前覆盖 07-references
+if [ -x "$ROOT/scripts/ai-sync/check-readme-index-drift.js" ] && command -v node >/dev/null 2>&1; then
+  DRIFT_OUT=$(node "$ROOT/scripts/ai-sync/check-readme-index-drift.js" "$PROJECTS_DIR/$LATEST" 2>/dev/null)
+  if [ "$?" -eq 3 ]; then
+    echo ""
+    echo "📑 README 索引漂移（$LATEST/07-references）——在该 README 表格登记后，下次冷启动自动消失："
+    echo "$DRIFT_OUT" | grep -E '🔴|🟡'
+  fi
+fi
+
 # Knowledge hook 周报：距上次显示 >= 7 天就自动跑一次注入欢迎信息
 LAST_REPORT="$HOME/.ai-pm/last_weekly_report.ts"
 mkdir -p "$(dirname "$LAST_REPORT")" 2>/dev/null

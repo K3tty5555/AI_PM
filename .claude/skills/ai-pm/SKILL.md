@@ -152,6 +152,8 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 
 模板位于 `templates/project-index/`：`root-readme.template.md` / `prd-readme.template.md` / `references-readme.template.md`。详细设计见 `docs/plans/2026-05-25-project-readme-index-design.md`。
 
+**漂移检测（A 档·只提醒不自动写）**：SessionStart hook 对最近活跃项目跑 `scripts/ai-sync/check-readme-index-drift.js`，对比 `07-references/` 目录顶层 entries 与该 README 表格已登记路径，有「未索引（🔴 目录有但 README 没登记）」或「孤儿（🟡 README 登记但目录已删）」时在欢迎区提醒；登记/清理后下次冷启动自动消失。目前仅覆盖 references，prd/root README 因含纯语义状态（当前阶段/PRD 状态）暂不纳入。
+
 ### 新项目初始化：生成 README 索引骨架
 
 新项目目录创建后，**立即**复制 3 份模板到项目对应位置并填充已知字段：
