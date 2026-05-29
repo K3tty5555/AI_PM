@@ -335,7 +335,7 @@ phases.retrospective = true  → 写完 10-retrospective.md 后（可选）
 ```
 ── 所有项目（3 个）──
 
-某教育 AI 助手   Phase 5/8   🔴 ~130K tokens   2026-03-27
+某 Agent 项目     Phase 5/8   🔴 ~130K tokens   2026-03-27
 新版考试答题卡   Phase 4/8   ~98K tokens       2026-03-13
 web端考试阅卷    Phase 7/8   ~92K tokens       2026-03-13
 ```

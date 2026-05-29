@@ -57,7 +57,7 @@ test -d {project_dir}/07-references && [ "$(ls -A {project_dir}/07-references 2>
 grep -E "V[0-9]|迭代|历史版本|老版本|上一版|V[0-9]\.[0-9]" {project_dir}/_memory/L1-decisions.md 2>/dev/null
 
 # 3. 用户需求描述含迭代关键词（脑判）
-# 关键词：迭代 / 扩展 / 兼容老 / 接入老 / V2/V3 / 升级 / 老卡
+# 关键词：迭代 / 扩展 / 兼容老 / 接入老 / V2/V3 / 升级 / 兼容旧版
 ```
 
 - **判断为迭代型** → 进入「迭代项目分支」

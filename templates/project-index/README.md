@@ -133,4 +133,4 @@ upstream-from: V2.md
 
 ## 试点参考
 
-「某教育 AI 助手」项目（`output/projects/某教育 AI 助手/`）已 retrofit 这 3 份 README 作为 baseline，可参考其结构和粒度。
+某 Agent 项目（`output/projects/{你的项目名}/`）已 retrofit 这 3 份 README 作为 baseline，可参考其结构和粒度。
