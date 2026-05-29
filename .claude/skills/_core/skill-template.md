@@ -14,7 +14,7 @@ argument-hint: "[参数说明]"
 
 ## 执行协议
 
-本技能遵循 [AI_PM 公共执行协议](./common-protocol.md)。
+本技能遵循 AI_PM 公共执行协议（见 `.claude/skills/ai-pm/SKILL.md` 与 `CLAUDE.md` 的强制规范）。
 
 ## 质量门禁
 
@@ -23,7 +23,7 @@ argument-hint: "[参数说明]"
 - [ ] 检查项1
 - [ ] 检查项2
 
-详见 [质量门禁标准](./quality-gates.md)。
+（PRD 类技能的质量门禁见 `references/pm-judgment-card.md`；原型类见 `references/prototype-judgment-card.md`。）
 
 ## 工作流程
 

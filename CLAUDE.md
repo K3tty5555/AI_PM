@@ -136,6 +136,8 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 
 ## 开发工具规范
 
+> 注：本节提到的 `impeccable`、`skill-creator`、`self-improving`、`ui-ux-pro-max` 等是**外部插件/技能**，随 Claude Code 插件市场或本机环境提供，**不随本仓库分发**。clone 本仓后若未安装对应插件，相关命令不可用——按需自行安装。
+
 ### 客户端设计规范
 
 客户端（Tauri App）有独立设计规范：**`docs/design-system.md`**，所有新页面、新组件必须遵循。核心要点：

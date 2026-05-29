@@ -11,6 +11,8 @@ ai-pm（主控）
   │               └── baoyu-imagine（AI配图模式，可选）
   ├── Phase 7 → ai-pm-prototype
   ├── Phase 8 → ai-pm-review
+  │               └── ai-pm-review-modify（评审出问题后，按反馈修订 PRD/原型）
+  ├── Phase 9 → ai-pm-retrospective（全流程复盘）
   └── --team  → agent-team
                   ├── ai-pm-analyze
                   ├── ai-pm-research

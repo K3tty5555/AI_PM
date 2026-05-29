@@ -25,17 +25,7 @@ Always be concrete: name components, states, spacing, typography, and interactio
 ## 3) Use Bundled Assets
 This skill bundles data you can cite for inspiration/standards.
 
-- **Design intelligence data**: Read from `skills/ui-ux-pro-max/assets/data/` when you need palettes, patterns, or UI/UX heuristics.
-- **Upstream reference**: If you need more phrasing/examples, consult `skills/ui-ux-pro-max/references/upstream-skill-content.md`.
-
-## 4) Optional Script (Design System Generator)
-If you need to quickly generate tokens and page-specific overrides, use the bundled script:
-
-```bash
-python3 skills/ui-ux-pro-max/scripts/design_system.py --help
-```
-
-Prefer running it when the user wants a structured token output (ASCII-friendly).
+- **Design intelligence data**: Read the CSVs under `skills/ui-ux-pro-max/assets/data/` when you need palettes, patterns, typography, UI/UX heuristics, chart/icon guidance, or per-stack notes (`assets/data/stacks/*.csv`).
 
 ## Output Standards
 - Default to ASCII-only tokens/variables unless the project already uses Unicode.

@@ -156,4 +156,4 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 - `.claude/skills/ai-pm/references/prototype-judgment-card.md`
 - `.claude/skills/ai-pm/phases/phase-7-prototype.md`
 - `.claude/skills/ai-pm-prototype/SKILL.md`
-- `templates/knowledge-base/playbooks/PLAYBOOK-010-*.md` —— fork 注入式原型推到设计稿/可操作水准的完整工作流（含反假原则、视觉分面、工程坑）
+- `templates/knowledge-base/playbooks/PLAYBOOK-010-*.md`（本机沉淀，开源仓不含）—— fork 注入式原型推到设计稿/可操作水准的完整工作流（含反假原则、视觉分面、工程坑）

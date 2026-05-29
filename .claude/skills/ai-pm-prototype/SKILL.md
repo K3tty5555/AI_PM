@@ -6,6 +6,7 @@ description: >-
   若项目存在 Codex 生成的视觉锚点包（06-prototype-visual/manifest.json），生成 HTML 前必须读取并遵循。
   当用户说「生成原型」「做原型」「可交互原型」「HTML原型」「页面原型」「低保真」「高保真原型」
   「画个界面」「把PRD做成原型」时，立即使用此技能。
+  边界：本技能用于「把已有 PRD/需求做成可评审原型」；脱离 PRD 的纯视觉探索、通用 UI 组件生成或视觉精修，用 ui-ux-pro-max 或 impeccable。
 argument-hint: "[PRD路径 | --mobile | --web | --visual | --visual-strict]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 ---
