@@ -1,6 +1,6 @@
+use crate::commands::stream::ChatMessage;
 use async_trait::async_trait;
 use tauri::AppHandle;
-use crate::commands::stream::ChatMessage;
 
 pub struct StreamResult {
     pub full_text: String,
@@ -22,5 +22,5 @@ pub trait AiProvider: Send + Sync {
 
 pub mod ai_call;
 pub mod anthropic;
-pub mod openai;
 pub mod claude_cli;
+pub mod openai;

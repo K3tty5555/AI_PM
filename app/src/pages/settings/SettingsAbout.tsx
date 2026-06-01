@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Loader2, FolderOpen, ExternalLink } from "lucide-react"
+import { Loader2, FolderOpen } from "lucide-react"
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog"
-import { open as openUrl } from "@tauri-apps/plugin-shell"
 import { getVersion } from "@tauri-apps/api/app"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -250,15 +249,6 @@ export function SettingsAbout() {
             <p className="text-sm text-[var(--text-secondary)]">
               基于 Claude API 的产品经理工作台
             </p>
-            <button
-              type="button"
-              onClick={() => openUrl("https://github.com/K3tty5555/AI_PM")}
-              className="flex w-fit items-center gap-1.5 text-sm text-[var(--accent-color)] hover:underline"
-            >
-              <ExternalLink className="size-3.5" strokeWidth={1.75} />
-              github.com/K3tty5555/AI_PM
-            </button>
-
             {/* Manual update check */}
             <div className="mt-1 flex flex-col gap-2">
               <div className="flex items-center gap-3">
@@ -317,13 +307,9 @@ export function SettingsAbout() {
                   >
                     重试
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => openUrl("https://github.com/K3tty5555/AI_PM/releases/latest")}
-                    className="text-sm text-[var(--accent-color)] hover:underline"
-                  >
-                    前往 GitHub 手动下载
-                  </button>
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    请从你的发布渠道手动下载安装包
+                  </span>
                 </div>
               )}
             </div>

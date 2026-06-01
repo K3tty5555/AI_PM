@@ -1,8 +1,16 @@
 import { useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import * as LucideIcons from "lucide-react"
+import { AlignLeft, FileText, Image, Send, Video, type LucideIcon } from "lucide-react"
 import { usePlaza } from "@/hooks/use-plaza"
 import { cn } from "@/lib/utils"
+
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  "align-left": AlignLeft,
+  "file-text": FileText,
+  image: Image,
+  send: Send,
+  video: Video,
+}
 
 export function ToolPlazaPage() {
   const navigate = useNavigate()
@@ -37,12 +45,7 @@ export function ToolPlazaPage() {
   const skills = manifest.skills.filter((s) => s.category === activeCategory)
 
   function CategoryIcon({ name }: { name: string }) {
-    const pascal = name
-      .split("-")
-      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-      .join("")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Icon = (LucideIcons as Record<string, any>)[pascal] as React.FC<{ className?: string }> | undefined
+    const Icon = CATEGORY_ICONS[name]
     return Icon ? <Icon className="size-4" /> : null
   }
 

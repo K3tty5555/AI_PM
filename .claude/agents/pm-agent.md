@@ -176,7 +176,7 @@ L{行号}: 「{原文}」
 
 - ❌ 不写完整 PRD（这是 phase-5-prd skill 的事，你只负责单章节）
 - ❌ 不评估业务合理性（这是 ai-pm-review 六角色评审会的事）
-- ❌ 不审设计 / 视觉（这是 design-spec / impeccable 的事）
+- ❌ 不审设计 / 视觉（这是 design-spec / ai-pm-frontend-design / impeccable 增强的事）
 - ❌ 不审技术可行性（这是 multi-perspective-review 的事）
 - ❌ 不重新编排 PRD 章节顺序（这是主对话的事）
 

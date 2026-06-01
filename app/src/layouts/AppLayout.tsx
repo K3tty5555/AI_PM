@@ -5,7 +5,6 @@ import { SidebarShell } from "@/components/layout/SidebarShell"
 import { ActivityBar } from "@/components/layout/ActivityBar"
 import { CommandPalette } from "@/components/command-palette"
 import { api, checkUpdate, downloadAndInstallUpdate } from "@/lib/tauri-api"
-import { open as openUrl } from "@tauri-apps/plugin-shell"
 import type { UpdateInfo } from "@/lib/tauri-api"
 import { useTheme } from "@/hooks/use-theme"
 import { useHotkeys } from "@/hooks/use-hotkeys"
@@ -238,12 +237,9 @@ export function AppLayout() {
               {bannerState === "error" && (updateError || "更新下载失败")}
             </p>
             {bannerState === "error" && (
-              <button
-                onClick={() => openUrl("https://github.com/K3tty5555/AI_PM/releases/latest")}
-                className="text-xs text-[var(--accent-color)] hover:underline mt-0.5 inline-block cursor-pointer bg-transparent border-none p-0"
-              >
-                前往 GitHub 手动下载
-              </button>
+              <span className="text-xs text-[var(--text-secondary)] mt-0.5 inline-block">
+                请从你的发布渠道手动下载安装包
+              </span>
             )}
           </div>
 

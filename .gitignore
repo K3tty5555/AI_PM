@@ -43,6 +43,7 @@ temp/
 # -----------------------------------------------------------------------------
 
 # Project outputs (may contain sensitive corporate data)
+# Includes output/projects/ and output/strategy-sandbox/ private user work.
 output/
 
 # Presentation files (local use only)

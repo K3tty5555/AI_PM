@@ -1,9 +1,9 @@
-use std::sync::OnceLock;
+use crate::commands::stream::ChatMessage;
+use crate::providers::{AiProvider, StreamResult};
 use async_trait::async_trait;
+use std::sync::OnceLock;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use crate::providers::{AiProvider, StreamResult};
-use crate::commands::stream::ChatMessage;
 
 pub struct ClaudeCliProvider {
     pub work_dir: String,
@@ -20,9 +20,7 @@ static ENRICHED_PATH_CACHE: OnceLock<String> = OnceLock::new();
 /// Build a PATH that includes common user binary locations.
 /// macOS .app and Windows installer both have minimal PATH.
 pub fn enriched_path() -> String {
-    ENRICHED_PATH_CACHE.get_or_init(|| {
-        build_enriched_path()
-    }).clone()
+    ENRICHED_PATH_CACHE.get_or_init(build_enriched_path).clone()
 }
 
 fn build_enriched_path() -> String {
@@ -33,9 +31,13 @@ fn build_enriched_path() -> String {
             let sys_path = std::env::var("PATH").unwrap_or_default();
             return if sys_path.is_empty() {
                 #[cfg(not(target_os = "windows"))]
-                { "/usr/local/bin:/usr/bin:/bin".to_string() }
+                {
+                    "/usr/local/bin:/usr/bin:/bin".to_string()
+                }
                 #[cfg(target_os = "windows")]
-                { std::env::var("PATH").unwrap_or_default() }
+                {
+                    std::env::var("PATH").unwrap_or_default()
+                }
             } else {
                 sys_path
             };
@@ -107,7 +109,10 @@ fn build_enriched_path() -> String {
             if fnm_current.exists() {
                 if let Ok(entries) = std::fs::read_dir(&fnm_current) {
                     // fnm creates temp dirs per shell; pick the latest
-                    if let Some(latest) = entries.flatten().max_by_key(|e| e.metadata().and_then(|m| m.modified()).ok()) {
+                    if let Some(latest) = entries
+                        .flatten()
+                        .max_by_key(|e| e.metadata().and_then(|m| m.modified()).ok())
+                    {
                         paths.push(latest.path().to_string_lossy().to_string());
                     }
                 }
@@ -136,18 +141,20 @@ static CLAUDE_BINARY_CACHE: OnceLock<String> = OnceLock::new();
 /// Resolve the full path to `claude` binary by searching enriched PATH.
 /// On Windows, tries claude.cmd, claude.exe, claude.ps1 in each directory.
 pub fn resolve_claude_binary() -> String {
-    CLAUDE_BINARY_CACHE.get_or_init(|| {
-        let path = enriched_path();
-        for dir in path.split(PATH_SEP) {
-            for bin in CLAUDE_BINARIES {
-                let candidate = std::path::Path::new(dir).join(bin);
-                if candidate.exists() {
-                    return candidate.to_string_lossy().to_string();
+    CLAUDE_BINARY_CACHE
+        .get_or_init(|| {
+            let path = enriched_path();
+            for dir in path.split(PATH_SEP) {
+                for bin in CLAUDE_BINARIES {
+                    let candidate = std::path::Path::new(dir).join(bin);
+                    if candidate.exists() {
+                        return candidate.to_string_lossy().to_string();
+                    }
                 }
             }
-        }
-        "claude".to_string() // fallback: let OS try
-    }).clone()
+            "claude".to_string() // fallback: let OS try
+        })
+        .clone()
 }
 
 /// Parse a semver-like version string, returning (major, minor, patch).
@@ -161,7 +168,9 @@ fn parse_version(version_str: &str) -> Option<(u32, u32, u32)> {
                 parts[0].parse::<u32>(),
                 parts[1].parse::<u32>(),
                 // patch may have trailing non-numeric chars like "26-beta"
-                parts[2].trim_end_matches(|c: char| !c.is_ascii_digit()).parse::<u32>(),
+                parts[2]
+                    .trim_end_matches(|c: char| !c.is_ascii_digit())
+                    .parse::<u32>(),
             ) {
                 return Some((major, minor, patch));
             }
@@ -182,11 +191,17 @@ impl ClaudeCliProvider {
             .env("PATH", enriched_path())
             .output()
             .await
-            .map_err(|_| "未找到 claude 命令，请先安装 Claude Code：https://claude.ai/code".to_string())?;
+            .map_err(|_| {
+                "未找到 claude 命令，请先安装 Claude Code：https://claude.ai/code".to_string()
+            })?;
 
         if output.status.success() {
             let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            let display = if version.is_empty() { "claude (已安装)".to_string() } else { version.clone() };
+            let display = if version.is_empty() {
+                "claude (已安装)".to_string()
+            } else {
+                version.clone()
+            };
             let supports_stream_json = parse_version(&version)
                 .map(|(major, _, _)| major >= 1)
                 .unwrap_or(false);
@@ -221,7 +236,9 @@ impl ClaudeCliProvider {
         app: &AppHandle,
         stream_key: &str,
     ) -> Result<StreamResult, String> {
-        let last_user = messages.iter().rev()
+        let last_user = messages
+            .iter()
+            .rev()
             .find(|m| m.role == "user")
             .map(|m| m.content.as_str())
             .unwrap_or("");
@@ -231,7 +248,8 @@ impl ClaudeCliProvider {
         let mut child = tokio::process::Command::new(resolve_claude_binary())
             .arg("--print")
             .arg("--dangerously-skip-permissions")
-            .arg("--allowedTools").arg("Read")
+            .arg("--allowedTools")
+            .arg("Read")
             .current_dir(&self.work_dir)
             .env_remove("CLAUDECODE")
             .env("PATH", enriched_path())
@@ -244,11 +262,15 @@ impl ClaudeCliProvider {
         let stderr_handle = child.stderr.take();
 
         if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(combined.as_bytes()).await
+            stdin
+                .write_all(combined.as_bytes())
+                .await
                 .map_err(|e| format!("写入 stdin 失败：{}", e))?;
         }
 
-        let mut stdout = child.stdout.take()
+        let mut stdout = child
+            .stdout
+            .take()
             .ok_or_else(|| "无法获取 stdout".to_string())?;
 
         let mut full_text = String::new();
@@ -262,13 +284,17 @@ impl ClaudeCliProvider {
                     Ok(n) => {
                         let chunk = String::from_utf8_lossy(&buf[..n]);
                         full_text.push_str(&chunk);
-                        let _ = app.emit("stream_chunk", serde_json::json!({ "streamKey": stream_key, "text": chunk.as_ref() }));
+                        let _ = app.emit(
+                            "stream_chunk",
+                            serde_json::json!({ "streamKey": stream_key, "text": chunk.as_ref() }),
+                        );
                     }
                     Err(e) => return Err(format!("读取 stdout 失败：{}", e)),
                 }
             }
             Ok(())
-        }).await;
+        })
+        .await;
 
         match result {
             Ok(Ok(())) => {}
@@ -280,7 +306,9 @@ impl ClaudeCliProvider {
             }
         }
 
-        let status = child.wait().await
+        let status = child
+            .wait()
+            .await
             .map_err(|e| format!("等待进程失败：{}", e))?;
 
         if !status.success() {
@@ -294,16 +322,26 @@ impl ClaudeCliProvider {
             let msg = if stderr_text.trim().is_empty() {
                 format!("claude 进程异常退出（exit code: {:?}）", status.code())
             } else {
-                format!("claude 执行出错：{}", stderr_text.trim().chars().take(300).collect::<String>())
+                format!(
+                    "claude 执行出错：{}",
+                    stderr_text.trim().chars().take(300).collect::<String>()
+                )
             };
             return Err(msg);
         }
 
         if full_text.trim().is_empty() {
-            return Err("claude 返回了空响应，请检查登录状态（运行 `claude` 确认可用）".to_string());
+            return Err(
+                "claude 返回了空响应，请检查登录状态（运行 `claude` 确认可用）".to_string(),
+            );
         }
 
-        Ok(StreamResult { full_text, input_tokens: None, output_tokens: None, cost_usd: None })
+        Ok(StreamResult {
+            full_text,
+            input_tokens: None,
+            output_tokens: None,
+            cost_usd: None,
+        })
     }
 
     /// stream-json 模式：解析 JSON 事件流，支持文本/思考/工具调用
@@ -314,7 +352,9 @@ impl ClaudeCliProvider {
         app: &AppHandle,
         stream_key: &str,
     ) -> Result<StreamResult, String> {
-        let last_user = messages.iter().rev()
+        let last_user = messages
+            .iter()
+            .rev()
             .find(|m| m.role == "user")
             .map(|m| m.content.as_str())
             .unwrap_or("");
@@ -344,12 +384,16 @@ impl ClaudeCliProvider {
 
         // Write prompt via stdin
         if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(combined.as_bytes()).await
+            stdin
+                .write_all(combined.as_bytes())
+                .await
                 .map_err(|e| format!("写入 stdin 失败：{}", e))?;
             // drop closes pipe → EOF
         }
 
-        let stdout = child.stdout.take()
+        let stdout = child
+            .stdout
+            .take()
             .ok_or_else(|| "无法获取 stdout".to_string())?;
 
         let reader = BufReader::new(stdout);
@@ -401,27 +445,36 @@ impl ClaudeCliProvider {
                                     "text" => {
                                         if let Some(text) = block["text"].as_str() {
                                             full_text.push_str(text);
-                                            let _ = app.emit("stream_chunk", serde_json::json!({
-                                                "streamKey": stream_key,
-                                                "text": text,
-                                            }));
+                                            let _ = app.emit(
+                                                "stream_chunk",
+                                                serde_json::json!({
+                                                    "streamKey": stream_key,
+                                                    "text": text,
+                                                }),
+                                            );
                                         }
                                     }
                                     "thinking" => {
                                         if let Some(thinking) = block["thinking"].as_str() {
-                                            let _ = app.emit("stream_thinking", serde_json::json!({
-                                                "streamKey": stream_key,
-                                                "text": thinking,
-                                            }));
+                                            let _ = app.emit(
+                                                "stream_thinking",
+                                                serde_json::json!({
+                                                    "streamKey": stream_key,
+                                                    "text": thinking,
+                                                }),
+                                            );
                                         }
                                     }
                                     "tool_use" => {
                                         let tool_name = block["name"].as_str().unwrap_or("unknown");
-                                        let _ = app.emit("stream_tool", serde_json::json!({
-                                            "streamKey": stream_key,
-                                            "tool": tool_name,
-                                            "status": "running",
-                                        }));
+                                        let _ = app.emit(
+                                            "stream_tool",
+                                            serde_json::json!({
+                                                "streamKey": stream_key,
+                                                "tool": tool_name,
+                                                "status": "running",
+                                            }),
+                                        );
                                     }
                                     _ => {} // skip other block types
                                 }
@@ -449,18 +502,22 @@ impl ClaudeCliProvider {
                             output_tokens = Some(out as u32);
                         }
                         // Clear tool status
-                        let _ = app.emit("stream_tool", serde_json::json!({
-                            "streamKey": stream_key,
-                            "tool": "",
-                            "status": "idle",
-                        }));
+                        let _ = app.emit(
+                            "stream_tool",
+                            serde_json::json!({
+                                "streamKey": stream_key,
+                                "tool": "",
+                                "status": "idle",
+                            }),
+                        );
                     }
                     // Skip system, rate_limit_event, etc.
                     _ => {}
                 }
             }
             Ok::<(), String>(())
-        }).await;
+        })
+        .await;
 
         match parse_result {
             Ok(Ok(())) => {}
@@ -472,7 +529,9 @@ impl ClaudeCliProvider {
             }
         }
 
-        let status = child.wait().await
+        let status = child
+            .wait()
+            .await
             .map_err(|e| format!("等待进程失败：{}", e))?;
 
         if !status.success() {
@@ -486,16 +545,26 @@ impl ClaudeCliProvider {
             let msg = if stderr_text.trim().is_empty() {
                 format!("claude 进程异常退出（exit code: {:?}）", status.code())
             } else {
-                format!("claude 执行出错：{}", stderr_text.trim().chars().take(300).collect::<String>())
+                format!(
+                    "claude 执行出错：{}",
+                    stderr_text.trim().chars().take(300).collect::<String>()
+                )
             };
             return Err(msg);
         }
 
         if full_text.trim().is_empty() {
-            return Err("claude 返回了空响应，请检查登录状态（运行 `claude` 确认可用）".to_string());
+            return Err(
+                "claude 返回了空响应，请检查登录状态（运行 `claude` 确认可用）".to_string(),
+            );
         }
 
-        Ok(StreamResult { full_text, input_tokens, output_tokens, cost_usd })
+        Ok(StreamResult {
+            full_text,
+            input_tokens,
+            output_tokens,
+            cost_usd,
+        })
     }
 }
 
@@ -521,9 +590,11 @@ impl AiProvider for ClaudeCliProvider {
         };
 
         if supports_stream_json {
-            self.stream_json(system_prompt, messages, app, stream_key).await
+            self.stream_json(system_prompt, messages, app, stream_key)
+                .await
         } else {
-            self.stream_print(system_prompt, messages, app, stream_key).await
+            self.stream_print(system_prompt, messages, app, stream_key)
+                .await
         }
     }
 }

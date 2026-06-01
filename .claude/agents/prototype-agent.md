@@ -55,7 +55,7 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 - 占位按钮要么做成真交互（展开全部、编辑、换一批、导出进度态…），要么明确标注"未联调"；不留假装能用的死按钮。
 - 关键页面必须有贴近业务的假数据，不用"测试数据/示例内容/张三"糊弄。
 - **产品内导航**必须用产品内切换，不能用割裂体验的 `window.open` 代替；但**"导出独立文件/产出件"语义**（如导出报告 HTML）用新标签页打开是对的、符合用户预期，不算割裂。
-- 用 `impeccable` / `ui-ux-pro-max` 打磨独立产出件时，若项目根 `.impeccable.md` / `design-system.md` 属于另一产品（如桌面客户端），必须在 prompt 显式 override「本文件绑定视觉=目标产品指纹」，避免把另一产品的配色/字体串进来。
+- 用 `ai-pm-frontend-design` 或外部 `impeccable` 打磨独立产出件时，若项目根 `.impeccable.md` / `design-system.md` 属于另一产品（如桌面客户端），必须在 prompt 显式 override「本文件绑定视觉=目标产品指纹」，避免把另一产品的配色/字体串进来。
 - Agent / hybrid 产品必须体现用户输入、AI 回复、AI 状态、结果预确认、用户修改入口、失败兜底。
 
 ### 4. 质量审计 + 修复 punch list

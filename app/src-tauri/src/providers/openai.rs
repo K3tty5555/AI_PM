@@ -1,7 +1,7 @@
+use crate::commands::stream::ChatMessage;
+use crate::providers::{AiProvider, StreamResult};
 use async_trait::async_trait;
 use tauri::{AppHandle, Emitter};
-use crate::providers::{AiProvider, StreamResult};
-use crate::commands::stream::ChatMessage;
 
 pub struct OpenAIProvider {
     pub api_key: String,
@@ -18,10 +18,12 @@ impl AiProvider for OpenAIProvider {
         app: &AppHandle,
         stream_key: &str,
     ) -> Result<StreamResult, String> {
-        let url = format!("{}/v1/chat/completions", self.base_url.trim_end_matches('/'));
-        let mut messages_json: Vec<serde_json::Value> = vec![
-            serde_json::json!({"role": "system", "content": system_prompt})
-        ];
+        let url = format!(
+            "{}/v1/chat/completions",
+            self.base_url.trim_end_matches('/')
+        );
+        let mut messages_json: Vec<serde_json::Value> =
+            vec![serde_json::json!({"role": "system", "content": system_prompt})];
         for m in messages {
             messages_json.push(serde_json::json!({"role": m.role, "content": m.content}));
         }
@@ -58,39 +60,41 @@ impl AiProvider for OpenAIProvider {
         let mut input_tokens: Option<u32> = None;
         let mut output_tokens: Option<u32> = None;
 
-        while let Some(chunk) = resp.chunk().await.map_err(|e| format!("Stream read error: {}", e))? {
+        while let Some(chunk) = resp
+            .chunk()
+            .await
+            .map_err(|e| format!("Stream read error: {}", e))?
+        {
             buffer.push_str(&String::from_utf8_lossy(&chunk));
-            loop {
-                if let Some(pos) = buffer.find("\n\n") {
-                    let event_str = buffer[..pos].to_string();
-                    buffer = buffer[pos + 2..].to_string();
-                    for line in event_str.lines() {
-                        if let Some(data) = line.strip_prefix("data: ") {
-                            if data == "[DONE]" { continue; }
-                            if let Ok(event) = serde_json::from_str::<serde_json::Value>(data) {
-                                if let Some(choices) = event["choices"].as_array() {
-                                    if let Some(choice) = choices.first() {
-                                        if let Some(text) = choice["delta"]["content"].as_str() {
-                                            if !text.is_empty() {
-                                                full_text.push_str(text);
-                                                let _ = app.emit("stream_chunk", serde_json::json!({ "streamKey": stream_key, "text": text }));
-                                            }
+            while let Some(pos) = buffer.find("\n\n") {
+                let event_str = buffer[..pos].to_string();
+                buffer = buffer[pos + 2..].to_string();
+                for line in event_str.lines() {
+                    if let Some(data) = line.strip_prefix("data: ") {
+                        if data == "[DONE]" {
+                            continue;
+                        }
+                        if let Ok(event) = serde_json::from_str::<serde_json::Value>(data) {
+                            if let Some(choices) = event["choices"].as_array() {
+                                if let Some(choice) = choices.first() {
+                                    if let Some(text) = choice["delta"]["content"].as_str() {
+                                        if !text.is_empty() {
+                                            full_text.push_str(text);
+                                            let _ = app.emit("stream_chunk", serde_json::json!({ "streamKey": stream_key, "text": text }));
                                         }
                                     }
                                 }
-                                if let Some(usage) = event.get("usage") {
-                                    if let Some(n) = usage["prompt_tokens"].as_u64() {
-                                        input_tokens = Some(n as u32);
-                                    }
-                                    if let Some(n) = usage["completion_tokens"].as_u64() {
-                                        output_tokens = Some(n as u32);
-                                    }
+                            }
+                            if let Some(usage) = event.get("usage") {
+                                if let Some(n) = usage["prompt_tokens"].as_u64() {
+                                    input_tokens = Some(n as u32);
+                                }
+                                if let Some(n) = usage["completion_tokens"].as_u64() {
+                                    output_tokens = Some(n as u32);
                                 }
                             }
                         }
                     }
-                } else {
-                    break;
                 }
             }
         }
@@ -102,13 +106,21 @@ impl AiProvider for OpenAIProvider {
                     .unwrap_or("API 返回了空响应，请检查 API 配置")
                     .to_string()
             } else if !buffer.trim().is_empty() {
-                format!("API 返回了空响应：{}", buffer.trim().chars().take(200).collect::<String>())
+                format!(
+                    "API 返回了空响应：{}",
+                    buffer.trim().chars().take(200).collect::<String>()
+                )
             } else {
                 "API 返回了空响应，请检查 API 配置".to_string()
             };
             return Err(error_msg);
         }
 
-        Ok(StreamResult { full_text, input_tokens, output_tokens, cost_usd: None })
+        Ok(StreamResult {
+            full_text,
+            input_tokens,
+            output_tokens,
+            cost_usd: None,
+        })
     }
 }

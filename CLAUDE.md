@@ -43,6 +43,7 @@ README.md                  项目介绍
 | `/ai-pm [需求]` | 完整产品流程（需求→PRD→原型） |
 | `/ai-pm --team [需求]` | 复杂需求，启用多代理协作 |
 | `/ai-pm priority` | 需求优先级评估（批量处理提报需求） |
+| `/ai-pm strategy` | 战略沙盘（项目级 / 产品级战略推演） |
 | `/ai-pm weekly` | 生成工作周报 |
 | `/ai-pm interview` | 现场调研/客户访谈模式 |
 | `/ai-pm data [文件]` | 数据洞察分析 |
@@ -121,7 +122,7 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 
 ## 强制规范（Claude 必须遵守）
 
-- UI/HTML 输出设计规范三档可选，**首次生成 HTML 时询问用户并记住项目偏好**：①公司/团队规范（已上传后自动生效）②AI 情境定制（frontend-design 根据产品场景自主设计）③主流组件库（Ant Design / Material / Element Plus 等）
+- UI/HTML 输出设计规范三档可选，**首次生成 HTML 时询问用户并记住项目偏好**：①公司/团队规范（已上传后自动生效）②AI 情境定制（自动注入项目自带 `ai-pm-frontend-design`，用户本机有 `impeccable:frontend-design` 时作为增强）③主流组件库（Ant Design / Material / Element Plus 等）
 - PRD/PDF/DOCX 导出的中文字体仍使用 `PingFang SC`，不受设计规范选择影响
 - 数据分析 Excel 文件必须用 `openpyxl data_only=True`
 - Chart.js `indexAxis:'y'` 必须在 `options` 顶层，不能放在 `scales` 里
@@ -136,7 +137,7 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 
 ## 开发工具规范
 
-> 注：本节提到的 `impeccable`、`skill-creator`、`self-improving`、`ui-ux-pro-max` 等是**外部插件/技能**，随 Claude Code 插件市场或本机环境提供，**不随本仓库分发**。clone 本仓后若未安装对应插件，相关命令不可用——按需自行安装。
+> 注：本节提到的 `impeccable`、`skill-creator`、`self-improving` 等是**外部插件/技能**，随 Claude Code 插件市场或本机环境提供，**不随本仓库分发**。clone 本仓后若未安装对应插件，AI_PM 仍使用项目自带 `ai-pm-frontend-design` 生成 HTML 原型/仪表盘；外部插件仅作为增强能力。
 
 ### 客户端设计规范
 
@@ -147,16 +148,16 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 - 微交互：按钮按压 `scale(0.97)`，导航项 hover 背景过渡，阶段切换 fadeInUp
 - ❌ 禁止：`uppercase tracking-[2px]`、`font-terminal` 用于 UI 元素、终末地风格
 
-### 新页面开发 → `impeccable` 套件
+### 新页面开发 → AI_PM 本地设计内核 + `impeccable` 增强
 
-- **客户端页面**（`app/src/pages/` 或 `app/src/components/`）：通过 `impeccable`（`frontend-design` 增强版）生成视觉初稿，再落地到 Tauri + React 代码。impeccable 会自动读取项目根目录的 `.impeccable.md` 获取设计上下文，无需每次手动说明规范。
+- **客户端页面**（`app/src/pages/` 或 `app/src/components/`）：优先使用外部 `impeccable` 做视觉初稿；不可用时严格遵循 `docs/design-system.md` 和项目根 `.impeccable.md`。
 - **AI 生成的 HTML 原型**：沿用三档选择机制（首次询问用户偏好并记住），**不受 `docs/design-system.md` 约束**。
 
-### UI/UX 审查与迭代 → `impeccable` + `ui-ux-pro-max`
+### UI/UX 审查与迭代 → `ai-pm-frontend-design` + `impeccable`
 
 - **客户端页面审查**：优先使用 `impeccable` 的审查命令：`/audit`（无障碍/性能/响应式）、`/critique`（UX 层级）、`/polish`（上线前精修）。
-- **客户端页面迭代**：复杂交互/流程重设计用 `ui-ux-pro-max` 先输出分析方案，参考基准为 `docs/design-system.md`。
-- **HTML 原型**：两个技能均可用，以用户选定的原型设计规范为准，不套用客户端规范。
+- **客户端页面迭代**：复杂交互/流程重设计优先使用 `impeccable` 套件，参考基准为 `docs/design-system.md`。
+- **HTML 原型 / 数据仪表盘**：AI_PM 客户端流式生成时自动注入项目自带 `ai-pm-frontend-design`；用户本机存在 `impeccable:frontend-design` 时追加为增强。以用户选定的原型设计规范为准，不套用客户端规范。
 
 ### 新技能开发 → `skill-creator` 技能
 

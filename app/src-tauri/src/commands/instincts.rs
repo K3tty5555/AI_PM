@@ -150,10 +150,10 @@ fn safe_slug(text: &str) -> String {
     for ch in text.chars() {
         if ch.is_ascii_alphanumeric() {
             slug.push(ch.to_ascii_lowercase());
-        } else if ch.is_whitespace() || matches!(ch, '-' | '_' | ':' | '：' | '/' | '\\') {
-            if !slug.ends_with('-') {
-                slug.push('-');
-            }
+        } else if (ch.is_whitespace() || matches!(ch, '-' | '_' | ':' | '：' | '/' | '\\'))
+            && !slug.ends_with('-')
+        {
+            slug.push('-');
         }
         if slug.len() >= 28 {
             break;

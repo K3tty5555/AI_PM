@@ -521,7 +521,7 @@ pub fn list_illustrations(
             let name = e.file_name().to_string_lossy().to_string();
             name.ends_with(".png") && !name.contains(".thumb.")
         })
-        .filter_map(|e| {
+        .map(|e| {
             let path = e.path();
             let file_name = e.file_name().to_string_lossy().to_string();
             let stem = file_name.trim_end_matches(".png");
@@ -556,14 +556,14 @@ pub fn list_illustrations(
 
             let size_bytes = e.metadata().ok().map(|m| m.len()).unwrap_or(0);
 
-            Some(IllustrationEntry {
+            IllustrationEntry {
                 file_path: path.to_string_lossy().to_string(),
                 thumb_path: thumb_path.to_string_lossy().to_string(),
                 file_name,
                 prompt,
                 created_at,
                 size_bytes,
-            })
+            }
         })
         .collect();
 
@@ -793,8 +793,8 @@ pub fn embed_illustration_in_prd(
 
     // 找到 mermaid_line_start 之后的 ``` 闭合行
     let mut close_line = mermaid_line_start;
-    for i in (mermaid_line_start + 1)..lines.len() {
-        if lines[i].trim() == "```" {
+    for (i, line) in lines.iter().enumerate().skip(mermaid_line_start + 1) {
+        if line.trim() == "```" {
             close_line = i;
             break;
         }

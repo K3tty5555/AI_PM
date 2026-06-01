@@ -159,19 +159,7 @@ MANUAL_DOWNLOAD_FN = '''
 code = code.replace(CHECK_UPDATE_FN, '\n')
 code = code.replace(MANUAL_DOWNLOAD_FN, '\n')
 
-# 5. JSX：GitHub 链接 button（精确文本）
-GITHUB_BTN = '''            <button
-              type="button"
-              onClick={() => openUrl("https://github.com/K3tty5555/AI_PM")}
-              className="flex w-fit items-center gap-1.5 text-sm text-[var(--accent-color)] hover:underline"
-            >
-              <ExternalLink className="size-3.5" strokeWidth={1.75} />
-              github.com/K3tty5555/AI_PM
-            </button>
-'''
-code = code.replace(GITHUB_BTN, '')
-
-# 6. JSX：{/* Manual update check */} 整块（精确起止）
+# 5. JSX：{/* Manual update check */} 整块（精确起止）
 idx_start = code.find('\n            {/* Manual update check */}')
 if idx_start != -1:
     # 找 mt-1 div 的闭合 </div>（在 start 之后第一个 "\n            </div>"）

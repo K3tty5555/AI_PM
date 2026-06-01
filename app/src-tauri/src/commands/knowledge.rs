@@ -1,12 +1,19 @@
+use crate::providers::ai_call::call_ai_non_streaming;
+use crate::state::AppState;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use tauri::State;
-use crate::state::AppState;
-use crate::providers::ai_call::call_ai_non_streaming;
 
-const CATEGORIES: &[&str] = &["patterns", "decisions", "pitfalls", "metrics", "playbooks", "insights"];
+const CATEGORIES: &[&str] = &[
+    "patterns",
+    "decisions",
+    "pitfalls",
+    "metrics",
+    "playbooks",
+    "insights",
+];
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KnowledgeEntry {
@@ -14,7 +21,7 @@ pub struct KnowledgeEntry {
     pub category: String,
     pub title: String,
     pub content: String,
-    pub source: String,  // "manual" or "auto"
+    pub source: String, // "manual" or "auto"
     /// frontmatter 解析的 confidence 字段（high/medium/low），缺失为 "unknown"
     #[serde(default = "default_confidence")]
     pub confidence: String,
@@ -58,20 +65,45 @@ fn list_knowledge_internal(state: &AppState) -> Vec<KnowledgeEntry> {
 
     for category in CATEGORIES {
         let cat_dir = kb_root.join(category);
-        if !cat_dir.exists() { continue; }
-        let Ok(dir) = fs::read_dir(&cat_dir) else { continue; };
+        if !cat_dir.exists() {
+            continue;
+        }
+        let Ok(dir) = fs::read_dir(&cat_dir) else {
+            continue;
+        };
         for file in dir.filter_map(|e| e.ok()) {
             let path = file.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
-            let Ok(content) = fs::read_to_string(&path) else { continue; };
-            let id = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
-            let source = if id.starts_with("auto-") { "auto" } else { "manual" };
-            let title = content.lines()
+            if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                continue;
+            }
+            let Ok(content) = fs::read_to_string(&path) else {
+                continue;
+            };
+            let id = path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let source = if id.starts_with("auto-") {
+                "auto"
+            } else {
+                "manual"
+            };
+            let title = content
+                .lines()
                 .find(|l| l.starts_with("# "))
                 .map(|l| l[2..].trim().to_string())
                 .unwrap_or_else(|| id.clone());
             let (confidence, auto_generated) = parse_frontmatter(&content);
-            entries.push(KnowledgeEntry { id, category: category.to_string(), title, content, source: source.to_string(), confidence, auto_generated });
+            entries.push(KnowledgeEntry {
+                id,
+                category: category.to_string(),
+                title,
+                content,
+                source: source.to_string(),
+                confidence,
+                auto_generated,
+            });
         }
     }
     entries
@@ -114,21 +146,44 @@ pub fn recommend_knowledge_internal(
     let mut all_entries = Vec::new();
     for category in CATEGORIES {
         let cat_dir = kb_root.join(category);
-        if !cat_dir.exists() { continue; }
-        let Ok(dir) = fs::read_dir(&cat_dir) else { continue; };
+        if !cat_dir.exists() {
+            continue;
+        }
+        let Ok(dir) = fs::read_dir(&cat_dir) else {
+            continue;
+        };
         for file in dir.filter_map(|e| e.ok()) {
             let path = file.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
-            let Ok(content) = fs::read_to_string(&path) else { continue; };
-            let id = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
-            let source = if id.starts_with("auto-") { "auto" } else { "manual" };
-            let title = content.lines()
+            if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                continue;
+            }
+            let Ok(content) = fs::read_to_string(&path) else {
+                continue;
+            };
+            let id = path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let source = if id.starts_with("auto-") {
+                "auto"
+            } else {
+                "manual"
+            };
+            let title = content
+                .lines()
                 .find(|l| l.starts_with("# "))
                 .map(|l| l[2..].trim().to_string())
                 .unwrap_or_else(|| id.clone());
             let (confidence, auto_generated) = parse_frontmatter(&content);
             all_entries.push(KnowledgeEntry {
-                id, category: category.to_string(), title, content, source: source.to_string(), confidence, auto_generated,
+                id,
+                category: category.to_string(),
+                title,
+                content,
+                source: source.to_string(),
+                confidence,
+                auto_generated,
             });
         }
     }
@@ -141,10 +196,16 @@ pub fn recommend_knowledge_internal(
             let content_lower = entry.content.to_lowercase();
             let mut score: i32 = 0;
             for kw in &keywords {
-                if title_lower.contains(kw.as_str()) { score += 3; }
-                if content_lower.contains(kw.as_str()) { score += 1; }
+                if title_lower.contains(kw.as_str()) {
+                    score += 3;
+                }
+                if content_lower.contains(kw.as_str()) {
+                    score += 1;
+                }
             }
-            if score == 0 { return None; }
+            if score == 0 {
+                return None;
+            }
             Some((entry, score))
         })
         .collect();
@@ -178,16 +239,30 @@ pub struct AddKnowledgeArgs {
 }
 
 #[tauri::command]
-pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Result<KnowledgeEntry, String> {
+pub fn add_knowledge(
+    state: State<'_, AppState>,
+    args: AddKnowledgeArgs,
+) -> Result<KnowledgeEntry, String> {
     if !CATEGORIES.contains(&args.category.as_str()) {
         return Err(format!("Invalid category: {}", args.category));
     }
-    let kb_dir = state.templates_base().join("knowledge-base").join(&args.category);
+    let kb_dir = state
+        .templates_base()
+        .join("knowledge-base")
+        .join(&args.category);
     fs::create_dir_all(&kb_dir).map_err(|e| e.to_string())?;
 
     // 用标题生成 slug
-    let slug: String = args.title.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' { c } else { '-' })
+    let slug: String = args
+        .title
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect::<String>()
         .split('-')
         .filter(|s| !s.is_empty())
@@ -195,11 +270,16 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
         .join("-")
         .to_lowercase();
     let slug = if slug.is_empty() {
-        format!("entry-{}", std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs())
-    } else { slug };
+        format!(
+            "entry-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs()
+        )
+    } else {
+        slug
+    };
 
     // Ensure slug is unique — append timestamp if path already exists
     let mut final_slug = slug.clone();
@@ -217,7 +297,15 @@ pub fn add_knowledge(state: State<'_, AppState>, args: AddKnowledgeArgs) -> Resu
     let full_content = format!("# {}\n\n{}", args.title, args.content);
     fs::write(&path, &full_content).map_err(|e| e.to_string())?;
 
-    Ok(KnowledgeEntry { id: final_slug, category: args.category, title: args.title, content: full_content, source: "manual".to_string(), confidence: "high".to_string(), auto_generated: false })
+    Ok(KnowledgeEntry {
+        id: final_slug,
+        category: args.category,
+        title: args.title,
+        content: full_content,
+        source: "manual".to_string(),
+        confidence: "high".to_string(),
+        auto_generated: false,
+    })
 }
 
 /// 全量遍历文件系统 + 内存子串匹配。
@@ -235,23 +323,50 @@ pub fn search_knowledge(state: State<'_, AppState>, query: String) -> Vec<Knowle
 
     for category in CATEGORIES {
         let cat_dir = kb_root.join(category);
-        if !cat_dir.exists() { continue; }
-        let Ok(dir) = fs::read_dir(&cat_dir) else { continue; };
+        if !cat_dir.exists() {
+            continue;
+        }
+        let Ok(dir) = fs::read_dir(&cat_dir) else {
+            continue;
+        };
         for file in dir.filter_map(|e| e.ok()) {
             let path = file.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
-            let Ok(content) = fs::read_to_string(&path) else { continue; };
+            if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                continue;
+            }
+            let Ok(content) = fs::read_to_string(&path) else {
+                continue;
+            };
             let content_lower = content.to_lowercase();
-            let id = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
-            let title = content.lines()
+            let id = path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let title = content
+                .lines()
                 .find(|l| l.starts_with("# "))
                 .map(|l| l[2..].trim().to_string())
                 .unwrap_or_else(|| id.clone());
-            let source = if id.starts_with("auto-") { "auto" } else { "manual" };
+            let source = if id.starts_with("auto-") {
+                "auto"
+            } else {
+                "manual"
+            };
             if title.to_lowercase().contains(&q) || content_lower.contains(&q) {
                 let (confidence, auto_generated) = parse_frontmatter(&content);
-            entries.push(KnowledgeEntry { id, category: category.to_string(), title, content, source: source.to_string(), confidence, auto_generated });
-                if entries.len() >= 20 { return entries; }
+                entries.push(KnowledgeEntry {
+                    id,
+                    category: category.to_string(),
+                    title,
+                    content,
+                    source: source.to_string(),
+                    confidence,
+                    auto_generated,
+                });
+                if entries.len() >= 20 {
+                    return entries;
+                }
             }
         }
     }
@@ -259,7 +374,11 @@ pub fn search_knowledge(state: State<'_, AppState>, query: String) -> Vec<Knowle
 }
 
 #[tauri::command]
-pub fn delete_knowledge(state: State<'_, AppState>, category: String, id: String) -> Result<(), String> {
+pub fn delete_knowledge(
+    state: State<'_, AppState>,
+    category: String,
+    id: String,
+) -> Result<(), String> {
     // Validate inputs to prevent path traversal
     if !CATEGORIES.contains(&category.as_str()) {
         return Err(format!("Invalid category: {}", category));
@@ -267,9 +386,14 @@ pub fn delete_knowledge(state: State<'_, AppState>, category: String, id: String
     if id.contains('/') || id.contains('\\') || id.contains("..") {
         return Err("Invalid id".to_string());
     }
-    let path = state.templates_base()
-        .join("knowledge-base").join(&category).join(format!("{}.md", id));
-    if path.exists() { fs::remove_file(&path).map_err(|e| e.to_string())?; }
+    let path = state
+        .templates_base()
+        .join("knowledge-base")
+        .join(&category)
+        .join(format!("{}.md", id));
+    if path.exists() {
+        fs::remove_file(&path).map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 
@@ -319,15 +443,23 @@ pub fn cleanup_auto_knowledge(
         .into_iter()
         .filter(|e| {
             if let Some(ref cat) = args.category {
-                if &e.category != cat { return false; }
+                if &e.category != cat {
+                    return false;
+                }
             }
             // Only target auto-generated cards
-            if e.source != "auto" && !e.auto_generated { return false; }
+            if e.source != "auto" && !e.auto_generated {
+                return false;
+            }
             if let Some(rank) = max_rank {
-                if confidence_rank(&e.confidence) > rank { return false; }
+                if confidence_rank(&e.confidence) > rank {
+                    return false;
+                }
             }
             if let Some(ref ids) = args.ids {
-                if !ids.contains(&e.id) { return false; }
+                if !ids.contains(&e.id) {
+                    return false;
+                }
             }
             true
         })
@@ -336,7 +468,9 @@ pub fn cleanup_auto_knowledge(
     let mut processed = 0usize;
     let mut failed = Vec::new();
     for entry in candidates {
-        let src_path = kb_root.join(&entry.category).join(format!("{}.md", entry.id));
+        let src_path = kb_root
+            .join(&entry.category)
+            .join(format!("{}.md", entry.id));
         if !src_path.exists() {
             failed.push(entry.id.clone());
             continue;
@@ -379,15 +513,20 @@ pub async fn get_knowledge_content(
     id: String,
 ) -> Result<String, String> {
     // Prevent path traversal — consolidated guard (matches delete_knowledge entry pattern)
-    if category.contains('/') || category.contains('.') ||
-       id.contains('/') || id.contains('\\') || id.contains("..") {
+    if category.contains('/')
+        || category.contains('.')
+        || id.contains('/')
+        || id.contains('\\')
+        || id.contains("..")
+    {
         return Err("无效路径".to_string());
     }
     // Validate category against whitelist
     if !CATEGORIES.contains(&category.as_str()) {
         return Err("无效分类".to_string());
     }
-    let path = state.templates_base()
+    let path = state
+        .templates_base()
         .join("knowledge-base")
         .join(&category)
         .join(format!("{}.md", id));
@@ -413,7 +552,8 @@ pub fn recommend_knowledge(
             "SELECT output_dir FROM projects WHERE id = ?1",
             params![&args.project_id],
             |row| row.get(0),
-        ).map_err(|e| format!("项目不存在: {}", e))?
+        )
+        .map_err(|e| format!("项目不存在: {}", e))?
     };
 
     // 2. Read analysis report and extract headings as keywords

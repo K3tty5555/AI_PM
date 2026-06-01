@@ -49,6 +49,9 @@ log "Frontend build"
   run npm run build
 )
 
+log "Updater endpoint"
+run node "$ROOT/scripts/configure-updater-endpoint.js" --require
+
 log "Tauri release build"
 (
   cd "$APP_DIR"

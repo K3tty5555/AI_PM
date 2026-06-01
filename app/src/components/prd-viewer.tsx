@@ -2,12 +2,42 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import { MermaidRenderer } from "@/components/mermaid-renderer"
 import { LocalImage } from "@/components/local-image"
 import { Lightbox } from "@/components/lightbox"
 import { slugify } from "@/components/prd-toc"
 import { api } from "@/lib/tauri-api"
 import { cn } from "@/lib/utils"
+
+const prdSanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    a: [
+      ...(defaultSchema.attributes?.a ?? []),
+      "target",
+      "rel",
+    ],
+    code: [
+      ...(defaultSchema.attributes?.code ?? []),
+      ["className", /^language-[\w-]+$/],
+    ],
+    img: [
+      ...(defaultSchema.attributes?.img ?? []),
+      "loading",
+      "width",
+      "height",
+    ],
+  },
+  protocols: {
+    ...defaultSchema.protocols,
+    src: [
+      ...(defaultSchema.protocols?.src ?? []),
+      "data",
+    ],
+  },
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -555,7 +585,7 @@ function PrdViewer({ markdown, isStreaming, editable: editableProp, onEdit }: Pr
       )}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, prdSanitizeSchema]]}
         components={components}
       >
         {markdown}

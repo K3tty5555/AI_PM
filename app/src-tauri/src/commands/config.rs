@@ -1,29 +1,22 @@
+use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use tauri::State;
-use crate::state::AppState;
 
 const DEFAULT_MODEL: &str = "claude-sonnet-4-6";
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Backend {
+    #[default]
     Api,
     ClaudeCli,
 }
 
-impl Default for Backend {
-    fn default() -> Self {
-        Backend::Api
-    }
-}
-
 /// 判断是否为 Anthropic 原生 API（否则走 OpenAI 兼容格式）
 pub fn is_anthropic(base_url: &str, model: &str) -> bool {
-    base_url.contains("anthropic.com")
-        || model.starts_with("claude-")
-        || base_url.is_empty()
+    base_url.contains("anthropic.com") || model.starts_with("claude-") || base_url.is_empty()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -79,7 +72,12 @@ pub fn read_config_internal(config_dir: &str) -> Option<ClaudeConfig> {
                 return Some(config);
             }
             // API mode: requires api_key
-            if config.api_key.as_ref().map(|k| !k.is_empty()).unwrap_or(false) {
+            if config
+                .api_key
+                .as_ref()
+                .map(|k| !k.is_empty())
+                .unwrap_or(false)
+            {
                 return Some(config);
             }
         }
@@ -212,8 +210,12 @@ pub fn save_config(
     }
 
     // Write back
-    fs::create_dir_all(Path::new(&config_path).parent().ok_or("无效的配置路径".to_string())?)
-        .map_err(|e| e.to_string())?;
+    fs::create_dir_all(
+        Path::new(&config_path)
+            .parent()
+            .ok_or("无效的配置路径".to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
     fs::write(
         &config_path,
         serde_json::to_string_pretty(&existing).map_err(|e| e.to_string())?,
@@ -323,8 +325,12 @@ pub fn save_projects_dir(
 
     existing["projectsDir"] = serde_json::Value::String(path.clone());
 
-    fs::create_dir_all(Path::new(&config_path).parent().ok_or("无效的配置路径".to_string())?)
-        .map_err(|e| e.to_string())?;
+    fs::create_dir_all(
+        Path::new(&config_path)
+            .parent()
+            .ok_or("无效的配置路径".to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
     fs::write(
         &config_path,
         serde_json::to_string_pretty(&existing).map_err(|e| e.to_string())?,

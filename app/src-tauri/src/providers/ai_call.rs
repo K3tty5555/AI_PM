@@ -1,6 +1,6 @@
-use tokio::io::AsyncWriteExt;
 use crate::commands::config::{is_anthropic, read_config_internal, Backend};
-use crate::providers::claude_cli::{resolve_claude_binary, enriched_path};
+use crate::providers::claude_cli::{enriched_path, resolve_claude_binary};
+use tokio::io::AsyncWriteExt;
 
 /// Call AI via Anthropic or OpenAI-compatible API (non-streaming).
 pub async fn call_ai_via_api(

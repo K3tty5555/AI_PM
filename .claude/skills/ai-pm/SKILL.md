@@ -73,6 +73,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | 命令 | 说明 |
 |------|------|
 | `/ai-pm priority` | 需求优先级评估（MoSCoW / RICE） |
+| `/ai-pm strategy` | 战略沙盘：项目级 / 产品级多项目战略推演，重对话、轻文档，不进入 PRD / 原型 / 评审链路 |
 | `/ai-pm weekly` | 生成工作周报 |
 | `/ai-pm interview` | 现场调研模式（面对面访谈） |
 | `/ai-pm data [文件]` | 数据洞察，从 CSV/Excel/JSON 中发现需求 |
@@ -261,3 +262,4 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `illustration.md` | AI 流程图生成 |
 | `instinct.md` | 自学习系统 |
 | `web-analysis.md` | 网页分析 |
+| `../ai-pm-strategy/SKILL.md` | 战略沙盘：独立高阶产品战略推演 skill |

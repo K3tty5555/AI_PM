@@ -3,7 +3,7 @@ use crate::state::AppState;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -81,13 +81,13 @@ pub fn phase_config(
             "ai-pm-data",
             &["05-prd/05-PRD-v1.0.md"],
             "09-analytics-requirement.md",
-            &[],
+            &["ai-pm-frontend-design", "impeccable:frontend-design"],
         )),
         "prototype" => Some((
             "ai-pm-prototype",
             &["05-prd/05-PRD-v1.0.md"],
             "06-prototype.html",
-            &["ui-ux-pro-max", "frontend-design"],
+            &["ai-pm-frontend-design", "impeccable:frontend-design"],
         )),
         "review" => Some((
             "ai-pm-review",
@@ -120,6 +120,7 @@ pub fn phase_config(
 /// Search order:
 ///   1. ~/.claude/skills/<name>/SKILL.md  (user-installed skills)
 ///   2. installPath from ~/.claude/plugins/installed_plugins.json  (plugins)
+///
 /// Returns None silently if not found — phases degrade gracefully.
 fn load_user_companion(skill_name: &str) -> Option<String> {
     let home = dirs::home_dir()?;
@@ -130,7 +131,9 @@ fn load_user_companion(skill_name: &str) -> Option<String> {
         .join(skill_name)
         .join("SKILL.md");
     if skill_path.exists() {
-        return fs::read_to_string(&skill_path).ok();
+        if let Some(skill_dir) = skill_path.parent() {
+            return load_skill_from_dir(skill_dir, skill_name).ok();
+        }
     }
 
     // 2. Plugin cache via installed_plugins.json
@@ -139,16 +142,20 @@ fn load_user_companion(skill_name: &str) -> Option<String> {
         if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
             if let Some(plugins) = cfg.get("plugins").and_then(|v| v.as_object()) {
                 for (key, entries) in plugins {
-                    // key format: "frontend-design@claude-plugins-official"
+                    // key format: "skill-name@plugin-provider"
                     let plugin_short = key.split('@').next().unwrap_or("");
                     if plugin_short.eq_ignore_ascii_case(skill_name) {
                         if let Some(first) = entries.as_array().and_then(|a| a.first()) {
                             if let Some(install_path) =
                                 first.get("installPath").and_then(|v| v.as_str())
                             {
-                                let md = Path::new(install_path).join("SKILL.md");
-                                if let Ok(content) = fs::read_to_string(&md) {
-                                    return Some(content);
+                                let root = Path::new(install_path);
+                                for skill_dir in
+                                    [root.to_path_buf(), root.join("skills").join(skill_name)]
+                                {
+                                    if skill_dir.join("SKILL.md").is_file() {
+                                        return load_skill_from_dir(&skill_dir, skill_name).ok();
+                                    }
                                 }
                             }
                         }
@@ -161,8 +168,66 @@ fn load_user_companion(skill_name: &str) -> Option<String> {
     None
 }
 
+fn prefer_bundled_companion(skill_name: &str) -> bool {
+    skill_name.starts_with("ai-pm-") || skill_name == "Humanizer-zh"
+}
+
+const MAX_REFERENCE_FILE_BYTES: u64 = 64 * 1024;
+const MAX_REFERENCE_TOTAL_BYTES: u64 = 192 * 1024;
+
+fn collect_reference_files(dir: &Path, files: &mut Vec<PathBuf>) {
+    if let Ok(entries) = fs::read_dir(dir) {
+        let mut entries: Vec<_> = entries.filter_map(|e| e.ok()).collect();
+        entries.sort_by_key(|e| e.file_name());
+        for entry in entries {
+            let path = entry.path();
+            if path.is_dir() {
+                collect_reference_files(&path, files);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("md") {
+                files.push(path);
+            }
+        }
+    }
+}
+
+fn append_reference_sections(sections: &mut Vec<String>, skill_dir: &Path) {
+    let references_dir = skill_dir.join("references");
+    if !references_dir.is_dir() {
+        return;
+    }
+
+    let mut files = Vec::new();
+    collect_reference_files(&references_dir, &mut files);
+
+    let mut total_bytes = 0;
+    for path in files {
+        let Ok(metadata) = path.metadata() else {
+            continue;
+        };
+        if metadata.len() > MAX_REFERENCE_FILE_BYTES {
+            continue;
+        }
+        if total_bytes + metadata.len() > MAX_REFERENCE_TOTAL_BYTES {
+            break;
+        }
+        if let Ok(content) = fs::read_to_string(&path) {
+            let label = path
+                .strip_prefix(&references_dir)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .to_string();
+            sections.push(format!("\n<!-- reference: {} -->\n{}", label, content));
+            total_bytes += metadata.len();
+        }
+    }
+}
+
 pub fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String> {
     let skill_dir = Path::new(skills_root).join(skill_name);
+    load_skill_from_dir(&skill_dir, skill_name)
+}
+
+fn load_skill_from_dir(skill_dir: &Path, skill_name: &str) -> Result<String, String> {
     let entry = skill_dir.join("SKILL.md");
 
     if !entry.exists() {
@@ -173,7 +238,7 @@ pub fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String>
         ));
     }
 
-    let mut files: Vec<String> = fs::read_dir(&skill_dir)
+    let mut files: Vec<String> = fs::read_dir(skill_dir)
         .map_err(|e| e.to_string())?
         .filter_map(|e| e.ok())
         .map(|e| e.file_name().to_string_lossy().to_string())
@@ -198,8 +263,13 @@ pub fn load_skill(skills_root: &str, skill_name: &str) -> Result<String, String>
             sections.push(format!("\n<!-- sub-file: {} -->\n{}", label, content));
         }
     }
+    append_reference_sections(&mut sections, skill_dir);
 
     Ok(sections.join("\n"))
+}
+
+fn load_bundled_companion(skills_root: &str, skill_name: &str) -> Option<String> {
+    load_skill(skills_root, skill_name).ok()
 }
 
 pub fn load_knowledge(templates_base: &Path) -> String {
@@ -348,6 +418,7 @@ fn load_context_files(output_dir: &str, excluded: &[String]) -> String {
     format!("### 工具上下文\n\n{}\n", blocks.join("\n\n---\n\n"))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_system_prompt(
     skills_root: &str,
     output_dir: &str,
@@ -369,11 +440,17 @@ fn build_system_prompt(
 ) -> Result<String, String> {
     let mut skill_content = load_skill(skills_root, skill_name)?;
 
-    // Append companion skills (Humanizer-zh, ui-ux-pro-max, frontend-design…)
-    // Priority: user's ~/.claude install → bundled resources fallback
+    // Append companion skills.
+    // AI_PM-owned skills prefer bundled resources for clone-user consistency.
+    // External skills such as impeccable prefer the user's ~/.claude install.
     for &companion in companion_skills {
-        let content =
-            load_user_companion(companion).or_else(|| load_skill(skills_root, companion).ok());
+        let content = if prefer_bundled_companion(companion) {
+            load_bundled_companion(skills_root, companion)
+                .or_else(|| load_user_companion(companion))
+        } else {
+            load_user_companion(companion)
+                .or_else(|| load_bundled_companion(skills_root, companion))
+        };
         if let Some(c) = content {
             skill_content.push_str(&format!(
                 "\n\n---\n\n<!-- companion: {} -->\n\n{}",
@@ -843,12 +920,11 @@ pub async fn start_stream(
         .map(|m| m.content.as_str());
 
     // Resolve bundled skills directory from app resources
-    let skills_root = resolve_skills_root(&app).map_err(|e| {
+    let skills_root = resolve_skills_root(&app).inspect_err(|e| {
         let _ = app.emit(
             "stream_error",
-            serde_json::json!({ "streamKey": &stream_key, "message": &e }),
+            serde_json::json!({ "streamKey": &stream_key, "message": e }),
         );
-        e
     })?;
 
     let config = read_config_internal(&state.config_dir).ok_or_else(|| {
@@ -882,12 +958,11 @@ pub async fn start_stream(
         &project_type,
         custom_prompt.as_deref(),
     )
-    .map_err(|e| {
+    .inspect_err(|e| {
         let _ = app.emit(
             "stream_error",
-            serde_json::json!({ "streamKey": &stream_key, "message": &e }),
+            serde_json::json!({ "streamKey": &stream_key, "message": e }),
         );
-        e
     })?;
 
     let stream_start = Instant::now();
@@ -1006,4 +1081,62 @@ pub async fn start_stream(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_skill_root(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("ai-pm-{name}-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&dir).expect("create temp skill root");
+        dir
+    }
+
+    #[test]
+    fn load_skill_includes_reference_markdown() {
+        let root = test_skill_root("references");
+        let skill_dir = root.join("sample-skill");
+        let refs_dir = skill_dir.join("references").join("nested");
+        fs::create_dir_all(&refs_dir).expect("create references dir");
+        fs::write(skill_dir.join("SKILL.md"), "# Sample Skill\n").expect("write skill");
+        fs::write(skill_dir.join("extra.md"), "extra body\n").expect("write extra");
+        fs::write(skill_dir.join("references").join("a.md"), "reference a\n").expect("write ref a");
+        fs::write(refs_dir.join("b.md"), "reference b\n").expect("write ref b");
+
+        let loaded =
+            load_skill(root.to_str().expect("utf8 root"), "sample-skill").expect("load skill");
+
+        assert!(loaded.contains("# Sample Skill"));
+        assert!(loaded.contains("<!-- sub-file: extra -->"));
+        assert!(loaded.contains("extra body"));
+        assert!(loaded.contains("<!-- reference: a.md -->"));
+        assert!(loaded.contains("reference a"));
+        assert!(loaded.contains("<!-- reference: nested/b.md -->"));
+        assert!(loaded.contains("reference b"));
+
+        fs::remove_dir_all(root).expect("cleanup temp skill root");
+    }
+
+    #[test]
+    fn load_skill_skips_oversized_reference_files() {
+        let root = test_skill_root("large-reference");
+        let skill_dir = root.join("sample-skill");
+        let refs_dir = skill_dir.join("references");
+        fs::create_dir_all(&refs_dir).expect("create references dir");
+        fs::write(skill_dir.join("SKILL.md"), "# Sample Skill\n").expect("write skill");
+        fs::write(
+            refs_dir.join("too-large.md"),
+            "x".repeat((MAX_REFERENCE_FILE_BYTES + 1) as usize),
+        )
+        .expect("write large ref");
+
+        let loaded =
+            load_skill(root.to_str().expect("utf8 root"), "sample-skill").expect("load skill");
+
+        assert!(loaded.contains("# Sample Skill"));
+        assert!(!loaded.contains("too-large.md"));
+
+        fs::remove_dir_all(root).expect("cleanup temp skill root");
+    }
 }

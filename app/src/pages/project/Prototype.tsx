@@ -1312,6 +1312,8 @@ export function PrototypePage() {
                 <iframe
                   ref={iframeRef}
                   src={blobUrl}
+                  sandbox="allow-downloads allow-forms allow-modals allow-popups allow-scripts"
+                  referrerPolicy="no-referrer"
                   style={{
                     width: deviceWidth === 0 ? "100%" : deviceWidth,
                     height: iframeHeight,
@@ -1367,7 +1369,13 @@ export function PrototypePage() {
               退出全屏
             </Button>
           </div>
-          <iframe src={blobUrl} className="w-full h-full border-none" title="原型全屏预览" />
+          <iframe
+            src={blobUrl}
+            sandbox="allow-downloads allow-forms allow-modals allow-popups allow-scripts"
+            referrerPolicy="no-referrer"
+            className="w-full h-full border-none"
+            title="原型全屏预览"
+          />
         </div>
       )}
 

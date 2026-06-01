@@ -6,7 +6,6 @@
   AI-powered product manager toolkit — from idea clarification to PRD, analytics design, prototype, review, and retrospective.
 </p>
 <p align="center">
-  <a href="https://github.com/K3tty5555/AI_PM/releases"><img src="https://img.shields.io/github/v/release/K3tty5555/AI_PM?style=flat-square" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
 </p>
 <p align="center">
@@ -77,7 +76,7 @@ Office Hours → Requirement → Analysis → Research → Stories → PRD → A
 ### Option 1: Claude Code Edition
 
 ```bash
-git clone https://github.com/K3tty5555/AI_PM.git
+git clone <repository-url>
 cd AI_PM
 claude
 ```
@@ -90,9 +89,11 @@ Then run:
 
 AI PM will guide requirement clarification first, then move through the product workflow.
 
+HTML prototypes and dashboards use the bundled `ai-pm-frontend-design` skill by default. External Claude Code plugins such as `impeccable` are optional enhancements, not runtime requirements.
+
 ### Option 2: Desktop App
 
-Download from [Releases](https://github.com/K3tty5555/AI_PM/releases):
+Download from your release channel:
 
 - macOS: `AI.PM_x.x.x_universal.dmg`
 - Windows: `AI.PM_x.x.x_x64-setup.exe`
@@ -111,6 +112,7 @@ On first launch, configure one AI backend in Settings:
 | `/ai-pm office-hours` | Early requirement discussion / feasibility check |
 | `/ai-pm --team [idea]` | Multi-agent workflow for complex requirements |
 | `/ai-pm continue` | Resume the last unfinished project |
+| `/ai-pm strategy` | Strategy sandbox for project-level or product-level strategic thinking |
 | `/ai-pm driver [PRD]` | PM-style quality gate before review |
 | `/ai-pm-prd` | Generate or update PRD |
 | `/ai-pm-data metrics` | Analytics and metric design |
@@ -156,6 +158,10 @@ Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/a
 | Export Scripts | Python 3, Node scripts, Chrome-based PDF rendering |
 | Collaboration Context | `.ai-shared` indexes and `scripts/ai-sync` checks |
 | CI/CD | GitHub Actions, macOS universal binary, Windows x64 |
+
+## Release Configuration
+
+Release builds require the `AI_PM_UPDATER_ENDPOINT` environment variable or repository secret. It must point to the deployed HTTPS `latest.json` manifest used by the desktop updater.
 
 ## Project Structure
 

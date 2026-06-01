@@ -6,7 +6,6 @@
   AI 产品经理能力套件 — 从需求澄清到 PRD、埋点、原型、评审和复盘。
 </p>
 <p align="center">
-  <a href="https://github.com/K3tty5555/AI_PM/releases"><img src="https://img.shields.io/github/v/release/K3tty5555/AI_PM?style=flat-square" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
 </p>
 <p align="center">
@@ -77,7 +76,7 @@ AI PM 是一套 AI 产品经理能力套件。你可以从一句粗糙想法开�
 ### 方式一：Claude Code 版
 
 ```bash
-git clone https://github.com/K3tty5555/AI_PM.git
+git clone <repository-url>
 cd AI_PM
 claude
 ```
@@ -92,7 +91,7 @@ AI PM 会先引导需求澄清，再推进完整产品工作流。
 
 ### 方式二：桌面客户端
 
-从 [Releases](https://github.com/K3tty5555/AI_PM/releases) 下载安装包：
+从你的发布渠道下载安装包：
 
 - macOS：`AI.PM_x.x.x_universal.dmg`
 - Windows：`AI.PM_x.x.x_x64-setup.exe`
@@ -156,6 +155,10 @@ AI PM 会先引导需求澄清，再推进完整产品工作流。
 | 导出脚本 | Python 3、Node 脚本、Chrome PDF 渲染 |
 | AI 协作上下文 | `.ai-shared` 索引和 `scripts/ai-sync` 检查脚本 |
 | CI/CD | GitHub Actions、macOS 通用二进制、Windows x64 |
+
+## 发布配置
+
+发布构建需要配置 `AI_PM_UPDATER_ENDPOINT` 环境变量或仓库 Secret，值必须是桌面端更新器使用的 HTTPS `latest.json` 清单地址。
 
 ## 项目结构
 

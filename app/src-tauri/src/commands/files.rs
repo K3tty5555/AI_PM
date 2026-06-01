@@ -1,3 +1,4 @@
+use crate::state::AppState;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rusqlite::params;
@@ -5,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use tauri::{AppHandle, Manager, State};
-use crate::state::AppState;
 
 /// 校验文件路径在指定基础目录内，防止路径遍历
 fn validate_path_within(file_name: &str, base_dir: &str) -> Result<std::path::PathBuf, String> {
@@ -18,24 +18,25 @@ fn validate_path_within(file_name: &str, base_dir: &str) -> Result<std::path::Pa
     let full_path = base.join(file_name);
 
     // 2. canonicalize 基础目录
-    let canonical_base = std::fs::canonicalize(base)
-        .map_err(|e| format!("无法解析基础目录: {e}"))?;
+    let canonical_base =
+        std::fs::canonicalize(base).map_err(|e| format!("无法解析基础目录: {e}"))?;
 
     // 3. 对目标路径 canonicalize（处理不存在的文件/目录）
     let canonical_path = if full_path.exists() {
-        std::fs::canonicalize(&full_path)
-            .map_err(|e| format!("无法解析文件路径: {e}"))?
+        std::fs::canonicalize(&full_path).map_err(|e| format!("无法解析文件路径: {e}"))?
     } else {
         // 向上找到第一个已存在的祖先目录
         let mut ancestor = full_path.parent();
         while let Some(a) = ancestor {
-            if a.exists() { break; }
+            if a.exists() {
+                break;
+            }
             ancestor = a.parent();
         }
-        let canonical_ancestor = std::fs::canonicalize(
-            ancestor.unwrap_or(base)
-        ).map_err(|e| format!("无法解析父目录: {e}"))?;
-        let remaining = full_path.strip_prefix(ancestor.unwrap_or(base))
+        let canonical_ancestor = std::fs::canonicalize(ancestor.unwrap_or(base))
+            .map_err(|e| format!("无法解析父目录: {e}"))?;
+        let remaining = full_path
+            .strip_prefix(ancestor.unwrap_or(base))
             .unwrap_or(full_path.as_path());
         canonical_ancestor.join(remaining)
     };
@@ -149,7 +150,11 @@ pub fn read_project_file_base64(
     let bytes = fs::read(&file_path).map_err(|e| format!("读取失败: {e}"))?;
     let base64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
     let mime = guess_mime(&file_path).to_string();
-    Ok(Some(BinaryFileResult { mime, base64, size: metadata.len() }))
+    Ok(Some(BinaryFileResult {
+        mime,
+        base64,
+        size: metadata.len(),
+    }))
 }
 
 #[derive(Debug, Deserialize)]
@@ -205,7 +210,10 @@ pub fn read_file(path: String) -> Result<String, String> {
     let metadata = std::fs::metadata(&canonical).map_err(|e| format!("读取文件失败：{}", e))?;
     const MAX_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
     if metadata.len() > MAX_SIZE {
-        return Err(format!("文件过大（{}MB），最大支持 10MB", metadata.len() / 1024 / 1024));
+        return Err(format!(
+            "文件过大（{}MB），最大支持 10MB",
+            metadata.len() / 1024 / 1024
+        ));
     }
     std::fs::read_to_string(&canonical).map_err(|e| format!("读取文件失败：{}", e))
 }
@@ -279,7 +287,8 @@ pub async fn export_prd_docx(
             "SELECT output_dir FROM projects WHERE id = ?1",
             params![&project_id],
             |row| row.get(0),
-        ).map_err(|_| "项目不存在".to_string())?
+        )
+        .map_err(|_| "项目不存在".to_string())?
     };
 
     let prd_path = Path::new(&output_dir).join("05-prd").join("05-PRD-v1.0.md");
@@ -287,30 +296,31 @@ pub async fn export_prd_docx(
         return Err("PRD 文件不存在，请先完成 PRD 生成".to_string());
     }
 
-    let docx_path = Path::new(&output_dir).join("05-prd").join("05-PRD-v1.0.docx");
+    let docx_path = Path::new(&output_dir)
+        .join("05-prd")
+        .join("05-PRD-v1.0.docx");
 
     // Bundled script path from app resources
     let skills_root = crate::commands::stream::resolve_skills_root(&app)?;
-    let script_path = Path::new(&skills_root)
-        .join("ai-pm-prd")
-        .join("md2docx.py");
+    let script_path = Path::new(&skills_root).join("ai-pm-prd").join("md2docx.py");
 
     if !script_path.exists() {
         return Err(format!("导出脚本未找到：{}", script_path.display()));
     }
 
     // Optional manifest for prototype screenshots
-    let manifest_path = Path::new(&output_dir).join("06-prototype").join("manifest.json");
+    let manifest_path = Path::new(&output_dir)
+        .join("06-prototype")
+        .join("manifest.json");
 
     let mut cmd = tokio::process::Command::new("python3");
-    cmd.arg(&script_path)
-        .arg(&prd_path)
-        .arg(&docx_path);
+    cmd.arg(&script_path).arg(&prd_path).arg(&docx_path);
     if manifest_path.exists() {
         cmd.arg(&manifest_path);
     }
     if let Some(r) = &recipe {
-        let recipe_file = state.templates_base()
+        let recipe_file = state
+            .templates_base()
             .join("presets")
             .join("docx-recipes.json");
         if recipe_file.exists() {
@@ -332,10 +342,16 @@ pub async fn export_prd_docx(
         let msg = if stderr.contains("ModuleNotFoundError") || stderr.contains("No module named") {
             "缺少 Python 依赖，请运行：pip3 install python-docx".to_string()
         } else if !stderr.trim().is_empty() {
-            format!("导出失败：{}", stderr.trim().chars().take(300).collect::<String>())
+            format!(
+                "导出失败：{}",
+                stderr.trim().chars().take(300).collect::<String>()
+            )
         } else {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            format!("导出失败：{}", stdout.trim().chars().take(300).collect::<String>())
+            format!(
+                "导出失败：{}",
+                stdout.trim().chars().take(300).collect::<String>()
+            )
         };
         return Err(msg);
     }
@@ -360,7 +376,8 @@ pub fn list_prd_versions(
             "SELECT output_dir FROM projects WHERE id = ?1",
             params![&project_id],
             |row| row.get(0),
-        ).map_err(|_| "项目不存在".to_string())?
+        )
+        .map_err(|_| "项目不存在".to_string())?
     };
 
     let prd_dir = Path::new(&output_dir).join("05-prd");
@@ -428,8 +445,14 @@ static PRD_VERSION_RE: Lazy<Regex> = Lazy::new(|| {
 ///   "其他.md"                                          → ("未版本", 0)
 fn parse_prd_filename(name: &str) -> (String, u32, bool) {
     if let Some(caps) = PRD_VERSION_RE.captures(name) {
-        let major: u32 = caps.get(1).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
-        let minor: u32 = caps.get(2).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
+        let major: u32 = caps
+            .get(1)
+            .and_then(|m| m.as_str().parse().ok())
+            .unwrap_or(0);
+        let minor: u32 = caps
+            .get(2)
+            .and_then(|m| m.as_str().parse().ok())
+            .unwrap_or(0);
         let label = if minor == 0 {
             format!("V{major}.0")
         } else {
@@ -608,11 +631,7 @@ pub fn list_memory_files(
             let mtime = meta
                 .modified()
                 .ok()
-                .and_then(|t| {
-                    chrono::DateTime::<chrono::Utc>::from(t)
-                        .to_rfc3339()
-                        .into()
-                })
+                .and_then(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339().into())
                 .unwrap_or_default();
             entries.push(MemoryFile {
                 name,
@@ -623,14 +642,22 @@ pub fn list_memory_files(
     }
     // Sort by canonical layered order: L0 → L1 → L2 → others
     let layer_order = |name: &str| -> u8 {
-        if name.starts_with("L0-") { 0 }
-        else if name.starts_with("L1-") { 1 }
-        else if name.starts_with("L2-") { 2 }
-        else if name.starts_with("layout-") { 3 }
-        else { 4 }
+        if name.starts_with("L0-") {
+            0
+        } else if name.starts_with("L1-") {
+            1
+        } else if name.starts_with("L2-") {
+            2
+        } else if name.starts_with("layout-") {
+            3
+        } else {
+            4
+        }
     };
     entries.sort_by(|a, b| {
-        layer_order(&a.name).cmp(&layer_order(&b.name)).then_with(|| a.name.cmp(&b.name))
+        layer_order(&a.name)
+            .cmp(&layer_order(&b.name))
+            .then_with(|| a.name.cmp(&b.name))
     });
     Ok(entries)
 }
@@ -664,18 +691,26 @@ pub fn set_prd_version_meta(
 
     let status_path = Path::new(&output_dir).join("_status.json");
     let mut json: serde_json::Value = if status_path.exists() {
-        let raw = fs::read_to_string(&status_path).map_err(|e| format!("读取 _status.json 失败: {e}"))?;
+        let raw =
+            fs::read_to_string(&status_path).map_err(|e| format!("读取 _status.json 失败: {e}"))?;
         serde_json::from_str(&raw).map_err(|e| format!("_status.json 不是合法 JSON: {e}"))?
     } else {
         serde_json::json!({})
     };
 
     // Ensure prd_versions is an array
-    if !json.get("prd_versions").map(|v| v.is_array()).unwrap_or(false) {
+    if !json
+        .get("prd_versions")
+        .map(|v| v.is_array())
+        .unwrap_or(false)
+    {
         json["prd_versions"] = serde_json::json!([]);
     }
 
-    let arr = json.get_mut("prd_versions").and_then(|v| v.as_array_mut()).unwrap();
+    let arr = json
+        .get_mut("prd_versions")
+        .and_then(|v| v.as_array_mut())
+        .unwrap();
 
     // Find or create entry
     let mut found = false;
@@ -697,7 +732,10 @@ pub fn set_prd_version_meta(
     }
     if !found {
         let mut entry = serde_json::Map::new();
-        entry.insert("file".to_string(), serde_json::Value::String(args.file.clone()));
+        entry.insert(
+            "file".to_string(),
+            serde_json::Value::String(args.file.clone()),
+        );
         if let Some(label) = args.label {
             entry.insert("label".to_string(), serde_json::Value::String(label));
         }
@@ -740,17 +778,25 @@ pub fn set_prototype_version_meta(
     let dir_key = args.dir.trim_end_matches('/').to_string();
     let status_path = Path::new(&output_dir).join("_status.json");
     let mut json: serde_json::Value = if status_path.exists() {
-        let raw = fs::read_to_string(&status_path).map_err(|e| format!("读取 _status.json 失败: {e}"))?;
+        let raw =
+            fs::read_to_string(&status_path).map_err(|e| format!("读取 _status.json 失败: {e}"))?;
         serde_json::from_str(&raw).map_err(|e| format!("_status.json 不是合法 JSON: {e}"))?
     } else {
         serde_json::json!({})
     };
 
-    if !json.get("prototype_versions").map(|v| v.is_array()).unwrap_or(false) {
+    if !json
+        .get("prototype_versions")
+        .map(|v| v.is_array())
+        .unwrap_or(false)
+    {
         json["prototype_versions"] = serde_json::json!([]);
     }
 
-    let arr = json.get_mut("prototype_versions").and_then(|v| v.as_array_mut()).unwrap();
+    let arr = json
+        .get_mut("prototype_versions")
+        .and_then(|v| v.as_array_mut())
+        .unwrap();
 
     let mut found = false;
     for item in arr.iter_mut() {
@@ -795,7 +841,8 @@ pub fn list_prd_files(
             "SELECT output_dir FROM projects WHERE id = ?1",
             params![&project_id],
             |row| row.get(0),
-        ).map_err(|_| "项目不存在".to_string())?
+        )
+        .map_err(|_| "项目不存在".to_string())?
     };
 
     let prd_dir = Path::new(&output_dir).join("05-prd");
@@ -816,8 +863,12 @@ pub fn list_prd_files(
                     arr.into_iter()
                         .filter_map(|item| {
                             let file = item.get("file")?.as_str()?.to_string();
-                            let custom = item.get("label").and_then(|v| v.as_str()).map(String::from);
-                            let parent = item.get("parent").and_then(|v| v.as_str()).map(String::from);
+                            let custom =
+                                item.get("label").and_then(|v| v.as_str()).map(String::from);
+                            let parent = item
+                                .get("parent")
+                                .and_then(|v| v.as_str())
+                                .map(String::from);
                             Some((file, (custom, parent)))
                         })
                         .collect()
@@ -839,10 +890,7 @@ pub fn list_prd_files(
                 continue;
             }
             let (label, sort_key, recognized) = parse_prd_filename(&name);
-            let (custom_label, parent) = status_meta
-                .get(&name)
-                .cloned()
-                .unwrap_or((None, None));
+            let (custom_label, parent) = status_meta.get(&name).cloned().unwrap_or((None, None));
             entries.push(PrdFileEntry {
                 file: name,
                 label,
@@ -855,13 +903,11 @@ pub fn list_prd_files(
     }
 
     // Sort: recognized versions by sort_key asc, then unrecognized by filename
-    entries.sort_by(|a, b| {
-        match (a.recognized, b.recognized) {
-            (true, true) => a.sort_key.cmp(&b.sort_key),
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            (false, false) => a.file.cmp(&b.file),
-        }
+    entries.sort_by(|a, b| match (a.recognized, b.recognized) {
+        (true, true) => a.sort_key.cmp(&b.sort_key),
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        (false, false) => a.file.cmp(&b.file),
     });
 
     Ok(entries)
@@ -882,7 +928,8 @@ pub fn export_prd_share_html(
             "SELECT name, output_dir FROM projects WHERE id = ?1",
             params![&project_id],
             |row| Ok((row.get(0)?, row.get(1)?)),
-        ).map_err(|_| "项目不存在".to_string())?
+        )
+        .map_err(|_| "项目不存在".to_string())?
     };
 
     // Read PRD markdown
@@ -890,11 +937,12 @@ pub fn export_prd_share_html(
     if !prd_path.exists() {
         return Err("PRD 文件不存在，请先完成 PRD 生成".to_string());
     }
-    let markdown = fs::read_to_string(&prd_path)
-        .map_err(|e| format!("读取 PRD 失败: {}", e))?;
+    let markdown = fs::read_to_string(&prd_path).map_err(|e| format!("读取 PRD 失败: {}", e))?;
 
     // Load HTML template from bundled resources
-    let resource_base = app.path().resource_dir()
+    let resource_base = app
+        .path()
+        .resource_dir()
         .map_err(|e| format!("无法获取资源目录: {}", e))?;
     let template_path = resource_base.join("resources/templates/share-template.html");
     let template_fallback = resource_base.join("templates/share-template.html");
@@ -904,7 +952,8 @@ pub fn export_prd_share_html(
         fs::read_to_string(&template_fallback)
     } else {
         return Err(format!("分享页模板未找到: {}", template_path.display()));
-    }.map_err(|e| format!("读取模板失败: {}", e))?;
+    }
+    .map_err(|e| format!("读取模板失败: {}", e))?;
 
     // Escape markdown for embedding in <script> tag
     // Replace </script with <\/script to prevent premature tag close
@@ -917,9 +966,10 @@ pub fn export_prd_share_html(
         .replace("{{MARKDOWN_CONTENT}}", &escaped_md);
 
     // Write to output
-    let html_path = Path::new(&output_dir).join("05-prd").join("PRD-分享页.html");
-    fs::write(&html_path, &html)
-        .map_err(|e| format!("写入分享页失败: {}", e))?;
+    let html_path = Path::new(&output_dir)
+        .join("05-prd")
+        .join("PRD-分享页.html");
+    fs::write(&html_path, &html).map_err(|e| format!("写入分享页失败: {}", e))?;
 
     Ok(html_path.to_string_lossy().to_string())
 }
@@ -935,24 +985,22 @@ fn html_escape(s: &str) -> String {
 
 #[tauri::command]
 pub fn list_docx_recipes(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    let path = state.templates_base()
+    let path = state
+        .templates_base()
         .join("presets")
         .join("docx-recipes.json");
-    let content = fs::read_to_string(&path)
-        .map_err(|_| "DOCX 配方文件不存在".to_string())?;
-    serde_json::from_str(&content)
-        .map_err(|e| format!("DOCX 配方文件格式错误: {}", e))
+    let content = fs::read_to_string(&path).map_err(|_| "DOCX 配方文件不存在".to_string())?;
+    serde_json::from_str(&content).map_err(|e| format!("DOCX 配方文件格式错误: {}", e))
 }
 
 #[tauri::command]
 pub fn list_pdf_covers(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    let path = state.templates_base()
+    let path = state
+        .templates_base()
         .join("presets")
         .join("pdf-covers.json");
-    let content = fs::read_to_string(&path)
-        .map_err(|_| "PDF 封面配置文件不存在".to_string())?;
-    serde_json::from_str(&content)
-        .map_err(|e| format!("PDF 封面配置格式错误: {}", e))
+    let content = fs::read_to_string(&path).map_err(|_| "PDF 封面配置文件不存在".to_string())?;
+    serde_json::from_str(&content).map_err(|e| format!("PDF 封面配置格式错误: {}", e))
 }
 
 #[tauri::command]
@@ -973,7 +1021,8 @@ pub async fn export_prd_pdf(
             "SELECT output_dir FROM projects WHERE id = ?1",
             params![&project_id],
             |row| row.get(0),
-        ).map_err(|_| "项目不存在".to_string())?
+        )
+        .map_err(|_| "项目不存在".to_string())?
     };
     let pdf_path = std::path::Path::new(&output_dir)
         .join("05-prd")
@@ -1000,7 +1049,10 @@ pub async fn export_prd_pdf(
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("PDF 生成失败: {}", stderr.chars().take(300).collect::<String>()));
+        return Err(format!(
+            "PDF 生成失败: {}",
+            stderr.chars().take(300).collect::<String>()
+        ));
     }
 
     if !pdf_path.exists() {
@@ -1029,7 +1081,8 @@ fn find_chrome_binary() -> Option<String> {
             for entry in entries.flatten() {
                 let name = entry.file_name().to_string_lossy().to_string();
                 if name.starts_with("chromium-") {
-                    let bin = entry.path()
+                    let bin = entry
+                        .path()
                         .join("chrome-mac")
                         .join("Chromium.app")
                         .join("Contents")
@@ -1049,10 +1102,8 @@ fn find_chrome_binary() -> Option<String> {
 #[tauri::command]
 pub fn reveal_file(path: String) -> Result<(), String> {
     // canonicalize + 限制在用户主目录下
-    let canonical = std::fs::canonicalize(&path)
-        .map_err(|e| format!("路径无效: {e}"))?;
-    let home = dirs::home_dir()
-        .ok_or("无法获取用户主目录".to_string())?;
+    let canonical = std::fs::canonicalize(&path).map_err(|e| format!("路径无效: {e}"))?;
+    let home = dirs::home_dir().ok_or("无法获取用户主目录".to_string())?;
     if !canonical.starts_with(&home) {
         return Err("只能打开用户目录下的文件".to_string());
     }
@@ -1068,16 +1119,16 @@ pub fn reveal_file(path: String) -> Result<(), String> {
 #[tauri::command]
 pub fn open_file(path: String) -> Result<(), String> {
     // canonicalize + 限制在用户主目录下
-    let canonical = std::fs::canonicalize(&path)
-        .map_err(|e| format!("路径无效: {e}"))?;
-    let home = dirs::home_dir()
-        .ok_or("无法获取用户主目录".to_string())?;
+    let canonical = std::fs::canonicalize(&path).map_err(|e| format!("路径无效: {e}"))?;
+    let home = dirs::home_dir().ok_or("无法获取用户主目录".to_string())?;
     if !canonical.starts_with(&home) {
         return Err("只能打开用户目录下的文件".to_string());
     }
 
     // 扩展名白名单
-    let allowed_exts = ["md", "pdf", "docx", "html", "txt", "json", "csv", "xlsx", "png", "jpg"];
+    let allowed_exts = [
+        "md", "pdf", "docx", "html", "txt", "json", "csv", "xlsx", "png", "jpg",
+    ];
     if let Some(ext) = canonical.extension().and_then(|e| e.to_str()) {
         if !allowed_exts.contains(&ext.to_lowercase().as_str()) {
             return Err(format!("不支持打开 .{ext} 类型的文件"));
@@ -1087,7 +1138,7 @@ pub fn open_file(path: String) -> Result<(), String> {
     }
 
     std::process::Command::new("open")
-        .arg(&canonical.to_string_lossy().as_ref())
+        .arg(canonical.to_string_lossy().as_ref())
         .spawn()
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -1109,7 +1160,9 @@ pub fn write_file(path: String, content: String) -> Result<(), String> {
             std::fs::canonicalize(p).map_err(|e| e.to_string())?
         } else if let Some(parent) = p.parent() {
             if parent.exists() {
-                std::fs::canonicalize(parent).map_err(|e| e.to_string())?.join(p.file_name().unwrap_or_default())
+                std::fs::canonicalize(parent)
+                    .map_err(|e| e.to_string())?
+                    .join(p.file_name().unwrap_or_default())
             } else {
                 p.to_path_buf()
             }
@@ -1176,7 +1229,7 @@ pub fn upload_reference_file(
     fs::create_dir_all(&refs_dir).map_err(|e| format!("创建目录失败：{}", e))?;
 
     let dest = refs_dir.join(&file_name);
-    fs::copy(&src, &dest).map_err(|e| format!("复制文件失败：{}", e))?;
+    fs::copy(src, &dest).map_err(|e| format!("复制文件失败：{}", e))?;
 
     Ok(file_name)
 }
@@ -1212,11 +1265,7 @@ pub fn list_reference_files(
         .filter_map(|e| e.ok())
         .filter(|e| {
             let path = e.path();
-            path.is_file()
-                && !e
-                    .file_name()
-                    .to_string_lossy()
-                    .starts_with('.')
+            path.is_file() && !e.file_name().to_string_lossy().starts_with('.')
         })
         .map(|e| {
             let name = e.file_name().to_string_lossy().to_string();
@@ -1254,7 +1303,9 @@ pub fn delete_reference_file(
     };
 
     // Phase 2: delete file without holding the lock
-    let file_path = Path::new(&output_dir).join("07-references").join(&file_name);
+    let file_path = Path::new(&output_dir)
+        .join("07-references")
+        .join(&file_name);
     if file_path.exists() {
         fs::remove_file(&file_path).map_err(|e| format!("删除文件失败：{}", e))?;
     }
@@ -1284,7 +1335,11 @@ pub fn get_project_design_spec(
     match fs::read_to_string(&spec_file) {
         Ok(s) => {
             let trimmed = s.trim().to_string();
-            if trimmed.is_empty() { Ok(None) } else { Ok(Some(trimmed)) }
+            if trimmed.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(trimmed))
+            }
         }
         Err(_) => Ok(None),
     }
@@ -1303,7 +1358,8 @@ pub fn set_project_design_spec(
             "SELECT output_dir FROM projects WHERE id = ?1",
             params![&project_id],
             |row| row.get(0),
-        ).map_err(|e| e.to_string())?
+        )
+        .map_err(|e| e.to_string())?
     };
 
     let spec_file = Path::new(&output_dir).join(".design-spec");
@@ -1319,11 +1375,13 @@ pub async fn score_prd(
     // Phase 1: read PRD under lock, then release
     let (prd_content, config_dir) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let output_dir: String = db.query_row(
-            "SELECT output_dir FROM projects WHERE id = ?1",
-            params![&project_id],
-            |row| row.get(0),
-        ).map_err(|_| "项目不存在".to_string())?;
+        let output_dir: String = db
+            .query_row(
+                "SELECT output_dir FROM projects WHERE id = ?1",
+                params![&project_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| "项目不存在".to_string())?;
 
         let prd_dir = Path::new(&output_dir).join("05-prd");
         // Find latest version
@@ -1333,15 +1391,16 @@ pub async fn score_prd(
                 let name = entry.file_name().to_string_lossy().to_string();
                 if let Some(rest) = name.strip_prefix("05-PRD-v") {
                     if let Some(ver_str) = rest.strip_suffix(".0.md") {
-                        if let Ok(ver) = ver_str.parse::<u32>() { versions.push(ver); }
+                        if let Ok(ver) = ver_str.parse::<u32>() {
+                            versions.push(ver);
+                        }
                     }
                 }
             }
         }
         let ver = versions.iter().max().copied().unwrap_or(1);
         let prd_path = prd_dir.join(format!("05-PRD-v{}.0.md", ver));
-        let content = fs::read_to_string(&prd_path)
-            .map_err(|_| "PRD 文件不存在".to_string())?;
+        let content = fs::read_to_string(&prd_path).map_err(|_| "PRD 文件不存在".to_string())?;
         (content, state.config_dir.clone())
         // db guard drops here
     };
@@ -1367,8 +1426,14 @@ pub async fn score_prd(
     // Parse JSON — try direct parse, then extract between { }
     let trimmed = raw.trim();
     let stripped = if trimmed.starts_with("```") {
-        trimmed.trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim()
-    } else { trimmed };
+        trimmed
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim()
+    } else {
+        trimmed
+    };
 
     if let Ok(v) = serde_json::from_str::<serde_json::Value>(stripped) {
         return Ok(v);
@@ -1380,7 +1445,10 @@ pub async fn score_prd(
             }
         }
     }
-    Err(format!("AI 返回的评分格式无法解析：{}", stripped.chars().take(200).collect::<String>()))
+    Err(format!(
+        "AI 返回的评分格式无法解析：{}",
+        stripped.chars().take(200).collect::<String>()
+    ))
 }
 
 /// Extract plain text from a DOCX file (zip + XML parsing).
@@ -1394,8 +1462,7 @@ pub fn extract_docx_text(path: String) -> Result<String, String> {
         return Err("文件大小超过 50MB 限制".to_string());
     }
 
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| format!("无效的 DOCX 文件: {}", e))?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("无效的 DOCX 文件: {}", e))?;
 
     // Security: check for path traversal
     for i in 0..archive.len() {
@@ -1406,11 +1473,13 @@ pub fn extract_docx_text(path: String) -> Result<String, String> {
         }
     }
 
-    let mut doc_xml = archive.by_name("word/document.xml")
+    let mut doc_xml = archive
+        .by_name("word/document.xml")
         .map_err(|_| "DOCX 中未找到 document.xml".to_string())?;
 
     let mut xml_content = String::new();
-    doc_xml.read_to_string(&mut xml_content)
+    doc_xml
+        .read_to_string(&mut xml_content)
         .map_err(|e| format!("读取 document.xml 失败: {}", e))?;
 
     // Parse XML and extract <w:t> text nodes
@@ -1422,7 +1491,8 @@ pub fn extract_docx_text(path: String) -> Result<String, String> {
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(quick_xml::events::Event::Start(ref e)) | Ok(quick_xml::events::Event::Empty(ref e)) => {
+            Ok(quick_xml::events::Event::Start(ref e))
+            | Ok(quick_xml::events::Event::Empty(ref e)) => {
                 let local = e.local_name();
                 if local.as_ref() == b"p" {
                     if in_paragraph && !text.ends_with('\n') {
@@ -1479,21 +1549,65 @@ struct ScanRule {
 }
 
 static SAFE_EMAIL_DOMAINS: &[&str] = &[
-    "example.com", "example.org", "test.com", "localhost",
-    "placeholder.com", "foo.com", "bar.com",
+    "example.com",
+    "example.org",
+    "test.com",
+    "localhost",
+    "placeholder.com",
+    "foo.com",
+    "bar.com",
 ];
 
-static SCAN_RULES: Lazy<Vec<ScanRule>> = Lazy::new(|| vec![
-    ScanRule { name: "api_key", pattern: Regex::new(r"\b(?:sk-|key-|token-)[a-zA-Z0-9_\-]{20,}\b").unwrap(), severity: "high" },
-    ScanRule { name: "db_connection", pattern: Regex::new(r"(?:postgres|mysql|mongodb|redis)://[^\s]+").unwrap(), severity: "high" },
-    ScanRule { name: "password", pattern: Regex::new(r"(?i)password\s*[:=]\s*['\x22][^'\x22]+['\x22]").unwrap(), severity: "high" },
-    ScanRule { name: "private_key", pattern: Regex::new(r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----").unwrap(), severity: "high" },
-    ScanRule { name: "internal_ip", pattern: Regex::new(r"\b(?:192\.168|10\.|172\.(?:1[6-9]|2\d|3[01]))\.\d+\.\d+\b").unwrap(), severity: "medium" },
-    ScanRule { name: "internal_domain", pattern: Regex::new(r"[a-z0-9\-]+\.(?:internal|local|corp|intranet)\b").unwrap(), severity: "medium" },
-    ScanRule { name: "phone", pattern: Regex::new(r"\b1[3-9]\d{9}\b").unwrap(), severity: "medium" },
-    ScanRule { name: "id_card", pattern: Regex::new(r"\b\d{17}[\dXx]\b").unwrap(), severity: "medium" },
-    ScanRule { name: "email", pattern: Regex::new(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}").unwrap(), severity: "medium" },
-]);
+static SCAN_RULES: Lazy<Vec<ScanRule>> = Lazy::new(|| {
+    vec![
+        ScanRule {
+            name: "api_key",
+            pattern: Regex::new(r"\b(?:sk-|key-|token-)[a-zA-Z0-9_\-]{20,}\b").unwrap(),
+            severity: "high",
+        },
+        ScanRule {
+            name: "db_connection",
+            pattern: Regex::new(r"(?:postgres|mysql|mongodb|redis)://[^\s]+").unwrap(),
+            severity: "high",
+        },
+        ScanRule {
+            name: "password",
+            pattern: Regex::new(r"(?i)password\s*[:=]\s*['\x22][^'\x22]+['\x22]").unwrap(),
+            severity: "high",
+        },
+        ScanRule {
+            name: "private_key",
+            pattern: Regex::new(r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----").unwrap(),
+            severity: "high",
+        },
+        ScanRule {
+            name: "internal_ip",
+            pattern: Regex::new(r"\b(?:192\.168|10\.|172\.(?:1[6-9]|2\d|3[01]))\.\d+\.\d+\b")
+                .unwrap(),
+            severity: "medium",
+        },
+        ScanRule {
+            name: "internal_domain",
+            pattern: Regex::new(r"[a-z0-9\-]+\.(?:internal|local|corp|intranet)\b").unwrap(),
+            severity: "medium",
+        },
+        ScanRule {
+            name: "phone",
+            pattern: Regex::new(r"\b1[3-9]\d{9}\b").unwrap(),
+            severity: "medium",
+        },
+        ScanRule {
+            name: "id_card",
+            pattern: Regex::new(r"\b\d{17}[\dXx]\b").unwrap(),
+            severity: "medium",
+        },
+        ScanRule {
+            name: "email",
+            pattern: Regex::new(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}").unwrap(),
+            severity: "medium",
+        },
+    ]
+});
 
 /// Helper: safely take the first `n` chars from a string.
 fn take_chars(s: &str, n: usize) -> String {
@@ -1518,16 +1632,20 @@ fn scan_prd_sensitive(content: &str) -> Vec<SensitiveMatch> {
                 let matched_text = mat.as_str();
 
                 // Email whitelist check
-                if rule.name == "email" {
-                    if SAFE_EMAIL_DOMAINS.iter().any(|d| matched_text.ends_with(d)) {
-                        continue;
-                    }
+                if rule.name == "email"
+                    && SAFE_EMAIL_DOMAINS.iter().any(|d| matched_text.ends_with(d))
+                {
+                    continue;
                 }
 
                 // Generate preview (first 4 + last 4 chars)
                 let char_count = matched_text.chars().count();
                 let preview = if char_count > 12 {
-                    format!("{}****{}", take_chars(matched_text, 4), take_chars_end(matched_text, 4))
+                    format!(
+                        "{}****{}",
+                        take_chars(matched_text, 4),
+                        take_chars_end(matched_text, 4)
+                    )
                 } else {
                     "****".to_string()
                 };
@@ -1549,10 +1667,18 @@ fn scan_prd_sensitive(content: &str) -> Vec<SensitiveMatch> {
                     "internal_ip" => "[INTERNAL_IP]".to_string(),
                     "internal_domain" => "[INTERNAL_DOMAIN]".to_string(),
                     "phone" if char_count == 11 => {
-                        format!("{}****{}", take_chars(matched_text, 3), take_chars_end(matched_text, 4))
+                        format!(
+                            "{}****{}",
+                            take_chars(matched_text, 3),
+                            take_chars_end(matched_text, 4)
+                        )
                     }
                     "id_card" if char_count == 18 => {
-                        format!("{}**************{}", take_chars(matched_text, 3), take_chars_end(matched_text, 4))
+                        format!(
+                            "{}**************{}",
+                            take_chars(matched_text, 3),
+                            take_chars_end(matched_text, 4)
+                        )
                     }
                     "email" => {
                         if let Some(at) = matched_text.find('@') {
@@ -1591,7 +1717,8 @@ pub fn scan_sensitive(
             "SELECT output_dir FROM projects WHERE id = ?1",
             params![&project_id],
             |row| row.get(0),
-        ).map_err(|_| "项目不存在".to_string())?
+        )
+        .map_err(|_| "项目不存在".to_string())?
     };
 
     let prd_path = std::path::PathBuf::from(&output_dir)
@@ -1627,7 +1754,8 @@ static PLACEHOLDER_RULES: Lazy<Vec<PlaceholderRule>> = Lazy::new(|| {
     vec![
         PlaceholderRule {
             name: "chinese_placeholder",
-            pattern: Regex::new(r"\[(?:待补充|此处填写|待确认|待定|请填写|待更新)[^\]]*\]").unwrap(),
+            pattern: Regex::new(r"\[(?:待补充|此处填写|待确认|待定|请填写|待更新)[^\]]*\]")
+                .unwrap(),
         },
         PlaceholderRule {
             name: "english_placeholder",
@@ -1649,9 +1777,7 @@ static PLACEHOLDER_RULES: Lazy<Vec<PlaceholderRule>> = Lazy::new(|| {
 });
 
 /// Regex to detect Markdown links — matches inside these should be excluded
-static MD_LINK_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\[[^\]]*\]\([^)]+\)").unwrap()
-});
+static MD_LINK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\[[^\]]*\]\([^)]+\)").unwrap());
 
 fn scan_prd_placeholders(content: &str) -> Vec<PlaceholderMatch> {
     let mut matches = Vec::new();
@@ -1665,7 +1791,9 @@ fn scan_prd_placeholders(content: &str) -> Vec<PlaceholderMatch> {
         for rule in PLACEHOLDER_RULES.iter() {
             for mat in rule.pattern.find_iter(line) {
                 // Skip if match is inside a Markdown link
-                let in_link = link_ranges.iter().any(|(s, e)| mat.start() >= *s && mat.end() <= *e);
+                let in_link = link_ranges
+                    .iter()
+                    .any(|(s, e)| mat.start() >= *s && mat.end() <= *e);
                 if in_link {
                     continue;
                 }
@@ -1698,7 +1826,8 @@ pub fn scan_placeholders(
             "SELECT output_dir FROM projects WHERE id = ?1",
             params![&project_id],
             |row| row.get(0),
-        ).map_err(|_| "项目不存在".to_string())?
+        )
+        .map_err(|_| "项目不存在".to_string())?
     };
 
     let prd_path = std::path::PathBuf::from(&output_dir)

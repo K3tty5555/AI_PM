@@ -14,9 +14,7 @@ pub struct UpdateInfo {
 
 #[tauri::command]
 pub async fn check_update(app: AppHandle) -> Result<UpdateInfo, String> {
-    let updater = app
-        .updater()
-        .map_err(|e| e.to_string())?;
+    let updater = app.updater().map_err(|e| e.to_string())?;
 
     let result = timeout(Duration::from_secs(15), updater.check())
         .await
@@ -39,9 +37,7 @@ pub async fn check_update(app: AppHandle) -> Result<UpdateInfo, String> {
 
 #[tauri::command]
 pub async fn download_and_install_update(app: AppHandle) -> Result<(), String> {
-    let updater = app
-        .updater()
-        .map_err(|e| e.to_string())?;
+    let updater = app.updater().map_err(|e| e.to_string())?;
 
     let update = timeout(Duration::from_secs(15), updater.check())
         .await

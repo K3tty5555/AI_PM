@@ -30,6 +30,11 @@ jobs:
         run: npm ci
         working-directory: app
 
+      - name: Configure updater endpoint
+        run: node scripts/configure-updater-endpoint.js --require
+        env:
+          AI_PM_UPDATER_ENDPOINT: ${{ secrets.AI_PM_UPDATER_ENDPOINT }}
+
       - name: Verify signing key
         run: |
           if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
@@ -99,6 +104,12 @@ jobs:
       - name: Install frontend deps
         run: npm ci
         working-directory: app
+
+      - name: Configure updater endpoint
+        shell: bash
+        run: node scripts/configure-updater-endpoint.js --require
+        env:
+          AI_PM_UPDATER_ENDPOINT: ${{ secrets.AI_PM_UPDATER_ENDPOINT }}
 
       - name: Verify signing key
         shell: bash

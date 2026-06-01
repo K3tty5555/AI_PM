@@ -3,7 +3,8 @@ use rusqlite::{Connection, Result};
 pub fn init_db(db_path: &str) -> Result<Connection> {
     let conn = Connection::open(db_path)?;
 
-    conn.execute_batch("
+    conn.execute_batch(
+        "
         CREATE TABLE IF NOT EXISTS projects (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -37,7 +38,8 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
 
         PRAGMA journal_mode=WAL;
         PRAGMA foreign_keys=ON;
-    ")?;
+    ",
+    )?;
 
     let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_bs_proj_phase ON brainstorm_messages(project_id, phase, seq)", []);
 
@@ -47,7 +49,7 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
             id INTEGER PRIMARY KEY CHECK (id = 1),
             version INTEGER NOT NULL DEFAULT 0
         );
-        INSERT OR IGNORE INTO schema_version (id, version) VALUES (1, 0);"
+        INSERT OR IGNORE INTO schema_version (id, version) VALUES (1, 0);",
     )?;
 
     let current_version: i32 = conn.query_row(
@@ -58,18 +60,27 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
 
     // Version 1: add team_mode + status columns (ignore errors for backward compat)
     if current_version < 1 {
-        let _ = conn.execute("ALTER TABLE projects ADD COLUMN team_mode INTEGER NOT NULL DEFAULT 0", []);
-        let _ = conn.execute("ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'active'", []);
+        let _ = conn.execute(
+            "ALTER TABLE projects ADD COLUMN team_mode INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
+            [],
+        );
         conn.execute("UPDATE schema_version SET version = 1 WHERE id = 1", [])?;
     }
 
     // Version 2: add project_type column
     if current_version < 2 {
-        conn.execute("ALTER TABLE projects ADD COLUMN project_type TEXT DEFAULT 'general'", [])
-            .map_err(|e| {
-                eprintln!("Migration v2 failed (project_type): {e}");
-                e
-            })?;
+        conn.execute(
+            "ALTER TABLE projects ADD COLUMN project_type TEXT DEFAULT 'general'",
+            [],
+        )
+        .map_err(|e| {
+            eprintln!("Migration v2 failed (project_type): {e}");
+            e
+        })?;
         conn.execute("UPDATE schema_version SET version = 2 WHERE id = 1", [])?;
     }
 
@@ -81,8 +92,9 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
                 phase TEXT NOT NULL,
                 prompt_text TEXT NOT NULL,
                 PRIMARY KEY (project_id, phase)
-            );"
-        ).map_err(|e| {
+            );",
+        )
+        .map_err(|e| {
             eprintln!("Migration v3 failed (project_prompt_overrides): {e}");
             e
         })?;
@@ -91,21 +103,27 @@ pub fn init_db(db_path: &str) -> Result<Connection> {
 
     // Version 4: add industry column
     if current_version < 4 {
-        conn.execute("ALTER TABLE projects ADD COLUMN industry TEXT DEFAULT 'general'", [])
-            .map_err(|e| {
-                eprintln!("Migration v4 failed (industry): {e}");
-                e
-            })?;
+        conn.execute(
+            "ALTER TABLE projects ADD COLUMN industry TEXT DEFAULT 'general'",
+            [],
+        )
+        .map_err(|e| {
+            eprintln!("Migration v4 failed (industry): {e}");
+            e
+        })?;
         conn.execute("UPDATE schema_version SET version = 4 WHERE id = 1", [])?;
     }
 
     // Version 5: add motion_intensity column for prototype animation tier
     if current_version < 5 {
-        conn.execute("ALTER TABLE projects ADD COLUMN motion_intensity TEXT DEFAULT 'medium'", [])
-            .map_err(|e| {
-                eprintln!("Migration v5 failed (motion_intensity): {e}");
-                e
-            })?;
+        conn.execute(
+            "ALTER TABLE projects ADD COLUMN motion_intensity TEXT DEFAULT 'medium'",
+            [],
+        )
+        .map_err(|e| {
+            eprintln!("Migration v5 failed (motion_intensity): {e}");
+            e
+        })?;
         conn.execute("UPDATE schema_version SET version = 5 WHERE id = 1", [])?;
     }
 

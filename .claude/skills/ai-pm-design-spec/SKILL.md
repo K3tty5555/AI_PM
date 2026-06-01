@@ -94,7 +94,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 ## reset 执行步骤
 
 删除 `templates/ui-specs/.active-spec` 文件，
-输出确认：已清除公司规范，后续 HTML 输出将使用 AI 情境定制（frontend-design 根据产品场景自主设计）。
+输出确认：已清除公司规范，后续 HTML 输出将使用 AI 情境定制（自动注入项目自带 `ai-pm-frontend-design`；若用户本机存在 `impeccable:frontend-design`，则作为增强追加）。
 
 ## 与主技能集成
 
@@ -102,4 +102,3 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 1. 检查 `templates/ui-specs/.active-spec` 是否存在
 2. 若存在 → 加载对应 Token，替换 CSS 变量（公司规范模式）
 3. 若不存在 → 按项目 `.ai-pm-config.json` 的 `designMode` 执行（AI 情境定制 / 主流组件库）
-

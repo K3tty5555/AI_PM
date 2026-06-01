@@ -62,6 +62,7 @@ pub async fn check_env() -> Vec<DepStatus> {
             "PPT 生成后内容完整性验证",
         ),
         check_claude_cli(),
+        check_impeccable_frontend_dep(),
         check_playwright_mcp_dep(),
     ]
 }
@@ -188,6 +189,69 @@ fn check_claude_cli() -> DepStatus {
             None
         },
         feature_hint: "CLI 模式：联网搜索、Excel 读取、多 Agent 并行".into(),
+    }
+}
+
+fn detect_user_skill_or_plugin(skill_name: &str) -> bool {
+    let Some(home) = dirs::home_dir() else {
+        return false;
+    };
+
+    let skill_path = home
+        .join(".claude/skills")
+        .join(skill_name)
+        .join("SKILL.md");
+    if skill_path.is_file() {
+        return true;
+    }
+
+    let plugins_json = home.join(".claude/plugins/installed_plugins.json");
+    if let Ok(raw) = fs::read_to_string(&plugins_json) {
+        if let Ok(cfg) = serde_json::from_str::<serde_json::Value>(&raw) {
+            if let Some(plugins) = cfg.get("plugins").and_then(|v| v.as_object()) {
+                for (key, entries) in plugins {
+                    let plugin_short = key.split('@').next().unwrap_or("");
+                    if !plugin_short.eq_ignore_ascii_case(skill_name) {
+                        continue;
+                    }
+                    if let Some(first) = entries.as_array().and_then(|a| a.first()) {
+                        if let Some(install_path) =
+                            first.get("installPath").and_then(|v| v.as_str())
+                        {
+                            let root = Path::new(install_path);
+                            if root.join("SKILL.md").is_file()
+                                || root
+                                    .join("skills")
+                                    .join(skill_name)
+                                    .join("SKILL.md")
+                                    .is_file()
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    false
+}
+
+fn check_impeccable_frontend_dep() -> DepStatus {
+    let installed = detect_user_skill_or_plugin("impeccable:frontend-design");
+    DepStatus {
+        name: "impeccable-frontend-design".into(),
+        label: "Impeccable Frontend Design".into(),
+        installed,
+        version: None,
+        required: false,
+        auto_installable: false,
+        manual_hint: Some(
+            "可选增强：安装 Claude Code 的 impeccable 插件；未安装时使用 AI_PM 内置原型设计内核"
+                .into(),
+        ),
+        feature_hint: "HTML 原型、数据仪表盘、UI 视觉打磨增强".into(),
     }
 }
 
@@ -342,6 +406,7 @@ fn ai_context_diagnostics(app: &AppHandle) -> Vec<DiagnosticItem> {
         "ai-pm-data",
         "ai-pm-design-spec",
         "ai-pm-driver",
+        "ai-pm-frontend-design",
         "ai-pm-interview",
         "ai-pm-knowledge",
         "ai-pm-persona",
@@ -355,8 +420,6 @@ fn ai_context_diagnostics(app: &AppHandle) -> Vec<DiagnosticItem> {
         "ai-pm-story",
         "ai-pm-weekly",
         "Humanizer-zh",
-        "frontend-design",
-        "ui-ux-pro-max",
     ];
 
     let mut items = Vec::new();
@@ -529,6 +592,7 @@ pub async fn run_diagnostics(app: AppHandle, detailed: bool) -> Result<(), Strin
             "Word 文档中嵌入原型截图",
         ),
         check_claude_cli(),
+        check_impeccable_frontend_dep(),
         check_playwright_mcp_dep(),
     ];
 

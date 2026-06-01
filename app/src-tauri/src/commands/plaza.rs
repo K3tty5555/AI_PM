@@ -16,9 +16,9 @@ pub struct RunPlazaSkillArgs {
 /// Some plaza skills share a single underlying CLI skill name.
 fn resolve_cli_skill_name(skill_id: &str) -> &str {
     match skill_id {
-        "minimax-multimodal-image"
-        | "minimax-multimodal-video"
-        | "minimax-multimodal-audio" => "minimax-multimodal-toolkit",
+        "minimax-multimodal-image" | "minimax-multimodal-video" | "minimax-multimodal-audio" => {
+            "minimax-multimodal-toolkit"
+        }
         other => other,
     }
 }
@@ -42,8 +42,7 @@ pub fn load_plaza_manifest(app: AppHandle) -> Result<serde_json::Value, String> 
         if path.exists() {
             let content = std::fs::read_to_string(path)
                 .map_err(|e| format!("读取 plaza-manifest.json 失败: {e}"))?;
-            return serde_json::from_str(&content)
-                .map_err(|e| format!("解析 manifest 失败: {e}"));
+            return serde_json::from_str(&content).map_err(|e| format!("解析 manifest 失败: {e}"));
         }
     }
 
@@ -253,27 +252,34 @@ pub fn save_plaza_api_config(args: SavePlazaApiConfigArgs) -> Result<(), String>
         }
     }
 
-    let update_key = |env_map: &mut HashMap<String, String>, key_order: &mut Vec<String>, k: &str, v: &str| {
-        if !key_order.contains(&k.to_string()) {
-            key_order.push(k.to_string());
-        }
-        env_map.insert(k.to_string(), v.to_string());
-    };
+    let update_key =
+        |env_map: &mut HashMap<String, String>, key_order: &mut Vec<String>, k: &str, v: &str| {
+            if !key_order.contains(&k.to_string()) {
+                key_order.push(k.to_string());
+            }
+            env_map.insert(k.to_string(), v.to_string());
+        };
 
     if let Some(key) = &args.ark_api_key {
-        if !key.is_empty() { update_key(&mut env_map, &mut key_order, "ARK_API_KEY", key); }
+        if !key.is_empty() {
+            update_key(&mut env_map, &mut key_order, "ARK_API_KEY", key);
+        }
     }
     if let Some(key) = &args.minimax_api_key {
-        if !key.is_empty() { update_key(&mut env_map, &mut key_order, "MINIMAX_API_KEY", key); }
+        if !key.is_empty() {
+            update_key(&mut env_map, &mut key_order, "MINIMAX_API_KEY", key);
+        }
     }
     if let Some(gid) = &args.minimax_group_id {
-        if !gid.is_empty() { update_key(&mut env_map, &mut key_order, "MINIMAX_GROUP_ID", gid); }
+        if !gid.is_empty() {
+            update_key(&mut env_map, &mut key_order, "MINIMAX_GROUP_ID", gid);
+        }
     }
 
     let mut lines: Vec<String> = Vec::new();
     for key in &key_order {
-        if key.starts_with('\x00') {
-            lines.push(key[1..].to_string());
+        if let Some(stripped) = key.strip_prefix('\x00') {
+            lines.push(stripped.to_string());
         } else if let Some(val) = env_map.get(key) {
             lines.push(format!("{}={}", key, val));
         }

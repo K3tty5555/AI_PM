@@ -736,7 +736,7 @@ fn update_status_codebase_path(output_dir: &str, codebase: &Path) -> Result<(), 
     );
     obj.entry("memory".to_string())
         .or_insert_with(|| serde_json::json!({}));
-    if !obj.get("memory").and_then(|v| v.as_object()).is_some() {
+    if obj.get("memory").and_then(|v| v.as_object()).is_none() {
         obj.insert("memory".to_string(), serde_json::json!({}));
     }
     if let Some(memory) = obj.get_mut("memory").and_then(|v| v.as_object_mut()) {

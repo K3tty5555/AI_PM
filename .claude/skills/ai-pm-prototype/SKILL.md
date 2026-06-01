@@ -6,14 +6,14 @@ description: >-
   若项目存在 Codex 生成的视觉锚点包（06-prototype-visual/manifest.json），生成 HTML 前必须读取并遵循。
   当用户说「生成原型」「做原型」「可交互原型」「HTML原型」「页面原型」「低保真」「高保真原型」
   「画个界面」「把PRD做成原型」时，立即使用此技能。
-  边界：本技能用于「把已有 PRD/需求做成可评审原型」；脱离 PRD 的纯视觉探索、通用 UI 组件生成或视觉精修，用 ui-ux-pro-max 或 impeccable。
+  边界：本技能用于「把已有 PRD/需求做成可评审原型」；脱离 PRD 的纯视觉探索、通用 UI 组件生成或视觉精修，可使用外部 impeccable 增强，但 AI_PM 原型默认以 ai-pm-frontend-design 为本地设计内核。
 argument-hint: "[PRD路径 | --mobile | --web | --visual | --visual-strict]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 ---
 
 # 原型生成
 
-本技能必须同时使用 `.claude/agents/prototype-agent.md` 和 `.claude/skills/ai-pm/references/prototype-judgment-card.md` 的质量标准。
+本技能必须同时使用 `.claude/agents/prototype-agent.md`、`.claude/skills/ai-pm/references/prototype-judgment-card.md` 和 `.claude/skills/ai-pm-frontend-design/SKILL.md` 的质量标准。
 
 **默认目标 = 可操作级**（判断卡 §1.1，三档里最高档，上面没有更高的）——原型要能像上线后一样**自由操作**：占位按钮做成真交互（不留死按钮）、认有限意图+澄清兜底（不硬解析任意输入）、不假全量重算（只重计数可见数字）、L2 人机确认是真检查点。只有明确是一次性概念稿/纯内部碰撞才**有意识地**降档到可评审级或示意级，并说明原因；不主动降。
 
@@ -76,7 +76,13 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 
 ### 步骤2：原型蓝图 + 视觉方向
 
-生成 HTML 前先按 `prototype-agent` 的 Mode A 产出原型蓝图；Agent 工具不可用时，主对话按同一角色规则执行。
+生成 HTML 前先按 `ai-pm-frontend-design/references/design-brief.md` 形成内部 `Design Brief`，再按 `prototype-agent` 的 Mode A 产出原型蓝图；Agent 工具不可用时，主对话按同一角色规则执行。
+
+Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
+- 目标产品、目标用户、使用场景、核心任务
+- 设备形态、使用频率、协作关系、用户当时心态
+- 视觉气质、反向偏好、公司规范/视觉锚点/代码仓指纹等约束
+- 不确定但影响方向的问题；非关键缺口用假设补齐，不把假设当事实
 
 蓝图必须包括：
 - 页面/视图清单：每页目的、关键操作、是否需要截图占位
@@ -84,7 +90,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 - 信息层级：首屏重点、次级信息、操作区、反馈区
 - 状态清单：默认、空、加载、错误、成功；Agent 产品另含 AI 思考、工具失败、结果预确认
 - 视觉方向：布局密度、色彩气质、字体层级、组件风格、留白比例、数据呈现方式
-- 生成硬约束：5-8 条可执行约束
+- 交互硬化：触控目标、focus、hover 替代、表单校验、长文本、移动端适配
+- 生成硬约束：5-8 条可执行约束，必须覆盖反 AI 味、状态、响应式和业务假数据
 
 视觉设计是原型质量的一部分：
 - 有代码仓设计指纹时，优先复用其布局、色值、组件密度
@@ -110,6 +117,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 - 假数据必须贴近 PRD 业务，不使用"测试数据/示例内容/张三"这类占位内容
 - 空、加载、错误、成功状态必须至少覆盖主流程
 - Agent / hybrid 产品必须体现用户输入、AI 回复、AI 状态、结果预确认、用户修改入口、失败兜底
+- 按 `ai-pm-frontend-design/references/visual-system.md` 建立 4pt 间距、稳定字阶、语义色彩和反 AI 味视觉系统
+- 按 `ai-pm-frontend-design/references/interaction-hardening.md` 补齐 focus、触控、表单、响应式、错误和边界状态
 
 ## 技术规范
 
@@ -119,6 +128,10 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 加载 `templates/ui-specs/{规范名}/design-tokens.json`，将其中颜色、字体、间距、圆角 Token 映射为 CSS variables 写入 `<style>` 标签。
 
 **② AI 情境定制**
+客户端流式生成时会自动注入项目自带 `ai-pm-frontend-design`，并在用户本机存在时追加 `impeccable:frontend-design` 作为增强。执行本地设计内核的 Context Gathering：先识别目标产品、用户角色、设备形态、设计来源和状态清单，再决定视觉方向。
+
+若项目根 `.impeccable.md` 描述的是 AI_PM 桌面客户端，只能提取通用质量要求，不得把其品牌色、字体、圆角、导航结构套给另一个业务原型。不得退回 `ui-ux-pro-max` 或通用 AI 审美。
+
 不预设 CSS variables。生成 HTML 前先分析产品情境：
 - 行业属性（教育 / 金融 / 电商 / 工具…）
 - 用户群体（学生 / 教师 / 消费者 / 企业用户…）
@@ -162,7 +175,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 
 ### 步骤4.5：质量自检（落盘前）
 
-落盘前按 `prototype-judgment-card.md` 做 12 分制自检：
+落盘前先按 `ai-pm-frontend-design/references/audit-polish.md` 执行 `critique → audit → polish` 三段式自检，再按 `prototype-judgment-card.md` 做 12 分制自检：
 
 | 维度 | 通过标准 |
 |------|----------|
@@ -170,7 +183,13 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
 | 交互体验 | 核心任务可走通，点击/输入/切换有反馈 |
 | 视觉设计 | 视觉方向明确，密度、组件、假数据可信 |
 
-任一维度低于 3 分或总分低于 9 分，必须先自改 HTML，再进入截图与完成提示。
+三段式自检必须特别检查：
+- Anti AI Slop：紫蓝渐变、玻璃拟态、暗色发光、hero metric、机械卡片网格、灰白卡片蓝按钮等通用 AI 味
+- 交互状态：default / hover / focus / active / disabled / loading / error / success
+- 响应式与边界：移动端、长文本、触控目标、200% 缩放、横向溢出
+- UX 文案：按钮动作明确，错误给恢复路径，空状态给下一步，loading 说明正在做什么
+
+任一维度低于 3 分、总分低于 9 分，或三段式自检出现 stop condition，必须先自改 HTML，再进入截图与完成提示。
 
 ### 步骤5：截图与 manifest 生成
 

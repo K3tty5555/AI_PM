@@ -53,23 +53,21 @@ pub async fn run_tool(
     }
 
     // Load skill from bundled resources — I1: use shared load_skill (reads all sub-files)
-    let skills_root = crate::commands::stream::resolve_skills_root(&app).map_err(|e| {
+    let skills_root = crate::commands::stream::resolve_skills_root(&app).inspect_err(|e| {
         let _ = app.emit(
             "stream_error",
-            serde_json::json!({ "streamKey": &stream_key, "message": &e }),
+            serde_json::json!({ "streamKey": &stream_key, "message": e }),
         );
-        e
     })?;
 
     // I1: Replace manual SKILL.md read with shared load_skill that also loads sub-files.
     // I3: map_err emits stream_error before returning, satisfying Fix I3.
     let skill_content = crate::commands::stream::load_skill(&skills_root, &args.tool_name)
-        .map_err(|e| {
+        .inspect_err(|e| {
             let _ = app.emit(
                 "stream_error",
-                serde_json::json!({ "streamKey": &stream_key, "message": &e }),
+                serde_json::json!({ "streamKey": &stream_key, "message": e }),
             );
-            e
         })?;
 
     // Read config early — needed to determine file handling strategy
@@ -785,10 +783,11 @@ fn strip_html(html: String) -> String {
 
     while i < len {
         // Detect start of <script>/<style> blocks
-        if !skip_block && !in_tag {
-            if starts_with(&lower, i, "<script") || starts_with(&lower, i, "<style") {
-                skip_block = true;
-            }
+        if !skip_block
+            && !in_tag
+            && (starts_with(&lower, i, "<script") || starts_with(&lower, i, "<style"))
+        {
+            skip_block = true;
         }
         // Detect end of script/style blocks
         if skip_block {

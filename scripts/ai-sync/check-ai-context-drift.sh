@@ -110,6 +110,7 @@ if [[ -d "$SKILLS_DIR" ]]; then
     ai-pm-data \
     ai-pm-design-spec \
     ai-pm-driver \
+    ai-pm-frontend-design \
     ai-pm-interview \
     ai-pm-knowledge \
     ai-pm-persona \
@@ -122,9 +123,7 @@ if [[ -d "$SKILLS_DIR" ]]; then
     ai-pm-review-modify \
     ai-pm-story \
     ai-pm-weekly \
-    Humanizer-zh \
-    frontend-design \
-    ui-ux-pro-max
+    Humanizer-zh
   check_no_tracked_generated_skills
   check_resource_skill_drift
 fi

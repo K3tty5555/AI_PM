@@ -1,3 +1,5 @@
+use crate::state::AppState;
+use chrono::Utc;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -6,13 +8,34 @@ use std::io::Write as IoWrite;
 use std::path::{Path, PathBuf};
 use tauri::State;
 use uuid::Uuid;
-use chrono::Utc;
-use crate::state::AppState;
 
 const PHASES: &[&str] = &[
-    "office-hours", "requirement", "analysis", "research", "stories", "prd",
-    "analytics", "prototype", "review", "retrospective",
+    "office-hours",
+    "requirement",
+    "analysis",
+    "research",
+    "stories",
+    "prd",
+    "analytics",
+    "prototype",
+    "review",
+    "retrospective",
 ];
+
+type ProjectRow = (
+    String,
+    String,
+    Option<String>,
+    String,
+    String,
+    String,
+    String,
+    i64,
+    String,
+    String,
+    String,
+    String,
+);
 
 /// Sanitize legacy phase names. Falls back to "office-hours" for unknown values.
 fn sanitize_phase(phase: &str) -> &str {
@@ -87,7 +110,21 @@ pub struct ProjectDetail {
 #[tauri::command]
 pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, String> {
     // Phase 1: DB query under the lock — collect raw row tuples
-    type RowTuple = (String, String, Option<String>, String, String, String, String, String, i64, String, String, String, String);
+    type RowTuple = (
+        String,
+        String,
+        Option<String>,
+        String,
+        String,
+        String,
+        String,
+        String,
+        i64,
+        String,
+        String,
+        String,
+        String,
+    );
     let rows: Vec<RowTuple> = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut stmt = db
@@ -115,12 +152,16 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
                     row.get::<_, String>(4)?,
                     row.get::<_, String>(5)?,
                     row.get::<_, String>(6)?,
-                    row.get::<_, Option<String>>(7)?.unwrap_or_else(|| "active".to_string()),
+                    row.get::<_, Option<String>>(7)?
+                        .unwrap_or_else(|| "active".to_string()),
                     row.get::<_, i64>(8)?,
                     row.get::<_, Option<String>>(9)?.unwrap_or_default(),
-                    row.get::<_, Option<String>>(10)?.unwrap_or_else(|| "general".to_string()),
-                    row.get::<_, Option<String>>(11)?.unwrap_or_else(|| "general".to_string()),
-                    row.get::<_, Option<String>>(12)?.unwrap_or_else(|| "medium".to_string()),
+                    row.get::<_, Option<String>>(10)?
+                        .unwrap_or_else(|| "general".to_string()),
+                    row.get::<_, Option<String>>(11)?
+                        .unwrap_or_else(|| "general".to_string()),
+                    row.get::<_, Option<String>>(12)?
+                        .unwrap_or_else(|| "medium".to_string()),
                 ))
             })
             .map_err(|e| e.to_string())?
@@ -133,43 +174,68 @@ pub fn list_projects(state: State<AppState>) -> Result<Vec<ProjectSummary>, Stri
     // Phase 2: enrich with _status.json data (file I/O outside the lock)
     let projects = rows
         .into_iter()
-        .map(|(id, name, description, raw_phase, output_dir, created_at, updated_at,
-               status, completed_count, completed_phases_raw,
-               project_type, industry, motion_intensity)| {
-            let total_tokens = read_total_tokens_from_status(&output_dir);
-            ProjectSummary {
+        .map(
+            |(
                 id,
                 name,
                 description,
-                current_phase: sanitize_phase(&raw_phase).to_string(),
+                raw_phase,
                 output_dir,
                 created_at,
                 updated_at,
                 status,
                 completed_count,
-                total_phases: PHASES.len() as i64,
-                completed_phases: completed_phases_raw
-                    .split(',')
-                    .filter(|s| !s.is_empty())
-                    .map(String::from)
-                    .collect(),
+                completed_phases_raw,
                 project_type,
                 industry,
                 motion_intensity,
-                total_tokens,
-            }
-        })
+            )| {
+                let total_tokens = read_total_tokens_from_status(&output_dir);
+                ProjectSummary {
+                    id,
+                    name,
+                    description,
+                    current_phase: sanitize_phase(&raw_phase).to_string(),
+                    output_dir,
+                    created_at,
+                    updated_at,
+                    status,
+                    completed_count,
+                    total_phases: PHASES.len() as i64,
+                    completed_phases: completed_phases_raw
+                        .split(',')
+                        .filter(|s| !s.is_empty())
+                        .map(String::from)
+                        .collect(),
+                    project_type,
+                    industry,
+                    motion_intensity,
+                    total_tokens,
+                }
+            },
+        )
         .collect();
 
     Ok(projects)
 }
 
 #[tauri::command]
-pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result<ProjectDetail, String> {
+pub fn create_project(
+    state: State<AppState>,
+    args: CreateProjectArgs,
+) -> Result<ProjectDetail, String> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
-    let output_dir = state.projects_base().join(&args.name).to_string_lossy().to_string();
-    let team_mode_int: i64 = if args.team_mode.unwrap_or(false) { 1 } else { 0 };
+    let output_dir = state
+        .projects_base()
+        .join(&args.name)
+        .to_string_lossy()
+        .to_string();
+    let team_mode_int: i64 = if args.team_mode.unwrap_or(false) {
+        1
+    } else {
+        0
+    };
     let project_type = args.project_type.unwrap_or_else(|| "general".to_string());
     let industry = args.industry.unwrap_or_else(|| "general".to_string());
 
@@ -230,8 +296,8 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
         updated_at: now,
         team_mode: args.team_mode.unwrap_or(false),
         status: "active".to_string(),
-        project_type: project_type,
-        industry: industry,
+        project_type,
+        industry,
         motion_intensity: "medium".to_string(),
         phases,
     })
@@ -240,10 +306,24 @@ pub fn create_project(state: State<AppState>, args: CreateProjectArgs) -> Result
 #[tauri::command]
 pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectDetail>, String> {
     // Phase 1: query DB under the lock
-    let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, motion_intensity_val, phases) = {
+    let (
+        pid,
+        name,
+        description,
+        current_phase,
+        output_dir,
+        created_at,
+        updated_at,
+        team_mode_val,
+        status,
+        project_type_val,
+        industry_val,
+        motion_intensity_val,
+        phases,
+    ) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
 
-        let result: rusqlite::Result<(String, String, Option<String>, String, String, String, String, i64, String, String, String, String)> =
+        let result: rusqlite::Result<ProjectRow> =
             db.query_row(
                 "SELECT id, name, description, current_phase, output_dir, created_at, updated_at, COALESCE(team_mode, 0), COALESCE(status, 'active'), COALESCE(project_type, 'general'), COALESCE(industry, 'general'), COALESCE(motion_intensity, 'medium')
                  FROM projects WHERE id = ?1",
@@ -251,7 +331,20 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?, row.get(8)?, row.get(9)?, row.get(10)?, row.get(11)?)),
             );
 
-        let (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, motion_intensity_val) = match result {
+        let (
+            pid,
+            name,
+            description,
+            current_phase,
+            output_dir,
+            created_at,
+            updated_at,
+            team_mode_val,
+            status,
+            project_type_val,
+            industry_val,
+            motion_intensity_val,
+        ) = match result {
             Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
             Err(e) => return Err(e.to_string()),
             Ok(row) => row,
@@ -281,7 +374,21 @@ pub fn get_project(state: State<AppState>, id: String) -> Result<Option<ProjectD
             .filter_map(|r| r.ok())
             .collect();
 
-        (pid, name, description, current_phase, output_dir, created_at, updated_at, team_mode_val, status, project_type_val, industry_val, motion_intensity_val, phases)
+        (
+            pid,
+            name,
+            description,
+            current_phase,
+            output_dir,
+            created_at,
+            updated_at,
+            team_mode_val,
+            status,
+            project_type_val,
+            industry_val,
+            motion_intensity_val,
+            phases,
+        )
         // db guard drops here
     };
 
@@ -350,11 +457,7 @@ pub fn delete_project(state: State<AppState>, id: String) -> Result<(), String> 
 }
 
 #[tauri::command]
-pub fn rename_project(
-    state: State<AppState>,
-    id: String,
-    new_name: String,
-) -> Result<(), String> {
+pub fn rename_project(state: State<AppState>, id: String, new_name: String) -> Result<(), String> {
     // Validate: non-empty, no path separators or traversal
     if new_name.is_empty()
         || new_name.contains('/')
@@ -586,7 +689,7 @@ pub fn advance_phase(state: State<AppState>, id: String) -> Result<Option<String
         let mut stmt = db
             .prepare("SELECT phase, status FROM project_phases WHERE project_id = ?1")
             .map_err(|e| e.to_string())?;
-        let _ = stmt.query_map(params![&id], |row| {
+        stmt.query_map(params![&id], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
         })
         .map_err(|e| e.to_string())?
@@ -661,7 +764,10 @@ fn read_status_json(output_dir: &str) -> Option<serde_json::Value> {
 }
 
 /// 从已解析的 status_json 中提取指定 phase 的 checkpoint
-fn extract_checkpoint(status_json: &Option<serde_json::Value>, phase: &str) -> Option<PhaseCheckpoint> {
+fn extract_checkpoint(
+    status_json: &Option<serde_json::Value>,
+    phase: &str,
+) -> Option<PhaseCheckpoint> {
     let v = status_json.as_ref()?;
     let cp = v.get("checkpoints")?.get(phase)?;
     let pending_step = cp.get("pending_step")?.as_str()?.to_string();
@@ -679,13 +785,20 @@ fn extract_checkpoint(status_json: &Option<serde_json::Value>, phase: &str) -> O
     if pending_step.is_empty() || total_steps == 0 {
         return None;
     }
-    Some(PhaseCheckpoint { pending_step, completed_steps, total_steps })
+    Some(PhaseCheckpoint {
+        pending_step,
+        completed_steps,
+        total_steps,
+    })
 }
 
 /// 从 _status.json 读取 cost.total_estimate
 fn read_total_tokens_from_status(output_dir: &str) -> Option<u64> {
     let v = read_status_json(output_dir)?;
-    v.get("cost")?.get("total_estimate")?.as_u64().filter(|&n| n > 0)
+    v.get("cost")?
+        .get("total_estimate")?
+        .as_u64()
+        .filter(|&n| n > 0)
 }
 
 #[derive(Debug, Deserialize)]
@@ -701,7 +814,8 @@ pub fn set_team_mode(state: State<'_, AppState>, args: SetTeamModeArgs) -> Resul
     db.execute(
         "UPDATE projects SET team_mode = ?1 WHERE id = ?2",
         params![args.enabled as i64, &args.id],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -713,7 +827,10 @@ pub struct SetMotionIntensityArgs {
 }
 
 #[tauri::command]
-pub fn set_motion_intensity(state: State<'_, AppState>, args: SetMotionIntensityArgs) -> Result<(), String> {
+pub fn set_motion_intensity(
+    state: State<'_, AppState>,
+    args: SetMotionIntensityArgs,
+) -> Result<(), String> {
     let valid = ["low", "medium", "high"];
     if !valid.contains(&args.intensity.as_str()) {
         return Err(format!("无效的动效档位: {}", args.intensity));
@@ -722,7 +839,8 @@ pub fn set_motion_intensity(state: State<'_, AppState>, args: SetMotionIntensity
     db.execute(
         "UPDATE projects SET motion_intensity = ?1 WHERE id = ?2",
         params![&args.intensity, &args.id],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -748,7 +866,13 @@ pub fn scan_legacy_projects(
         return Err(format!("目录不存在: {}", dir));
     }
 
-    fn map_phase(p: &str) -> &str { if p == "competitor" { "research" } else { p } }
+    fn map_phase(p: &str) -> &str {
+        if p == "competitor" {
+            "research"
+        } else {
+            p
+        }
+    }
 
     // Lock held for the full scan; acceptable since project count is small (<50) and scan is user-initiated.
     let db = state.db.lock().map_err(|e| e.to_string())?;
@@ -844,12 +968,12 @@ fn phase_output_file(phase: &str) -> Option<&'static str> {
     match phase {
         "office-hours" => Some("00-office-hours.md"),
         "requirement" => Some("01-requirement-draft.md"),
-        "analysis"    => Some("02-analysis-report.md"),
-        "research"    => Some("03-competitor-report.md"),
-        "stories"     => Some("04-user-stories.md"),
-        "prd"         => Some("05-prd"),
-        "prototype"   => Some("06-prototype"),
-        "review"      => Some("08-review-report.md"),
+        "analysis" => Some("02-analysis-report.md"),
+        "research" => Some("03-competitor-report.md"),
+        "stories" => Some("04-user-stories.md"),
+        "prd" => Some("05-prd"),
+        "prototype" => Some("06-prototype"),
+        "review" => Some("08-review-report.md"),
         _ => None,
     }
 }
@@ -893,7 +1017,11 @@ pub fn get_agent_errors(
         .iter()
         .map(|(key, val)| AgentError {
             key: key.clone(),
-            error: val.get("error").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            error: val
+                .get("error")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
             timestamp: val
                 .get("timestamp")
                 .and_then(|v| v.as_str())
@@ -928,7 +1056,9 @@ pub fn clear_agent_errors(
 
     let path = Path::new(&output_dir).join("_status.json");
     let mut json: serde_json::Value = match fs::read_to_string(&path) {
-        Ok(raw) => serde_json::from_str(&raw).map_err(|e| format!("_status.json 不是合法 JSON: {e}"))?,
+        Ok(raw) => {
+            serde_json::from_str(&raw).map_err(|e| format!("_status.json 不是合法 JSON: {e}"))?
+        }
         Err(_) => return Ok(()),
     };
 
@@ -1094,16 +1224,21 @@ pub fn import_legacy_projects(
         };
 
         let output_dir = match target_dir_opt {
-            Some(target_dir) => match copy_dir_recursive(std::path::Path::new(&pi.project.dir), &target_dir) {
-                Ok(()) => target_dir.to_string_lossy().to_string(),
-                Err(e) => {
-                    eprintln!("[import] Failed to copy '{}': {}", pi.project.name, e);
-                    let _ = std::fs::remove_dir_all(&target_dir);
-                    pi.project.dir.clone()
+            Some(target_dir) => {
+                match copy_dir_recursive(std::path::Path::new(&pi.project.dir), &target_dir) {
+                    Ok(()) => target_dir.to_string_lossy().to_string(),
+                    Err(e) => {
+                        eprintln!("[import] Failed to copy '{}': {}", pi.project.name, e);
+                        let _ = std::fs::remove_dir_all(&target_dir);
+                        pi.project.dir.clone()
+                    }
                 }
-            },
+            }
             None => {
-                eprintln!("[import] Target dirs for '{}' already exist, using original path", pi.project.name);
+                eprintln!(
+                    "[import] Target dirs for '{}' already exist, using original path",
+                    pi.project.name
+                );
                 pi.project.dir.clone()
             }
         };
@@ -1149,7 +1284,11 @@ pub fn import_legacy_projects(
                 } else {
                     None
                 };
-                let completed_at: Option<&str> = if status == "completed" { Some(&now) } else { None };
+                let completed_at: Option<&str> = if status == "completed" {
+                    Some(&now)
+                } else {
+                    None
+                };
 
                 db.execute(
                     "INSERT INTO project_phases (id, project_id, phase, status, output_file, completed_at)
@@ -1200,7 +1339,8 @@ pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResu
             .prepare("SELECT id, name, output_dir FROM projects")
             .map_err(|e| e.to_string())?;
 
-        let collected = stmt.query_map([], |row| {
+        let collected = stmt
+            .query_map([], |row| {
                 Ok(Row {
                     id: row.get(0)?,
                     name: row.get(1)?,
@@ -1273,7 +1413,8 @@ pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResu
         let db = state.db.lock().map_err(|e| e.to_string())?;
         for (id, new_path) in updates {
             // Find the name for error reporting
-            let name = rows.iter()
+            let name = rows
+                .iter()
                 .find(|r| r.id == id)
                 .map(|r| r.name.clone())
                 .unwrap_or_else(|| id.clone());
@@ -1294,11 +1435,19 @@ pub fn migrate_projects_to_app_dir(state: State<AppState>) -> Result<MigrateResu
         }
     }
 
-    Ok(MigrateResult { migrated, skipped, failed })
+    Ok(MigrateResult {
+        migrated,
+        skipped,
+        failed,
+    })
 }
 
 #[tauri::command]
-pub fn set_project_status(state: State<AppState>, id: String, status: String) -> Result<(), String> {
+pub fn set_project_status(
+    state: State<AppState>,
+    id: String,
+    status: String,
+) -> Result<(), String> {
     if status != "active" && status != "completed" {
         return Err(format!("无效状态: {}", status));
     }
@@ -1307,7 +1456,8 @@ pub fn set_project_status(state: State<AppState>, id: String, status: String) ->
     db.execute(
         "UPDATE projects SET status = ?1, updated_at = ?2 WHERE id = ?3",
         rusqlite::params![&status, &now, &id],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1321,9 +1471,15 @@ pub struct BatchResult {
 }
 
 #[tauri::command]
-pub fn batch_delete_projects(state: State<AppState>, ids: Vec<String>) -> Result<BatchResult, String> {
+pub fn batch_delete_projects(
+    state: State<AppState>,
+    ids: Vec<String>,
+) -> Result<BatchResult, String> {
     if ids.is_empty() {
-        return Ok(BatchResult { succeeded: vec![], failed: vec![] });
+        return Ok(BatchResult {
+            succeeded: vec![],
+            failed: vec![],
+        });
     }
 
     // Phase 1: DB transaction — collect output_dirs and delete records
@@ -1333,7 +1489,8 @@ pub fn batch_delete_projects(state: State<AppState>, ids: Vec<String>) -> Result
 
     {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        db.execute("BEGIN IMMEDIATE", []).map_err(|e| e.to_string())?;
+        db.execute("BEGIN IMMEDIATE", [])
+            .map_err(|e| e.to_string())?;
 
         for id in &ids {
             let dir: Option<String> = db
@@ -1383,7 +1540,10 @@ pub fn batch_set_project_status(
         return Err(format!("无效状态: {}", status));
     }
     if ids.is_empty() {
-        return Ok(BatchResult { succeeded: vec![], failed: vec![] });
+        return Ok(BatchResult {
+            succeeded: vec![],
+            failed: vec![],
+        });
     }
 
     let db = state.db.lock().map_err(|e| e.to_string())?;
@@ -1391,7 +1551,8 @@ pub fn batch_set_project_status(
     let mut succeeded: Vec<String> = Vec::new();
     let mut failed: Vec<(String, String)> = Vec::new();
 
-    db.execute("BEGIN IMMEDIATE", []).map_err(|e| e.to_string())?;
+    db.execute("BEGIN IMMEDIATE", [])
+        .map_err(|e| e.to_string())?;
 
     for id in &ids {
         match db.execute(
@@ -1409,7 +1570,10 @@ pub fn batch_set_project_status(
 }
 
 #[tauri::command]
-pub async fn export_projects_zip(state: State<'_, AppState>, ids: Vec<String>) -> Result<String, String> {
+pub async fn export_projects_zip(
+    state: State<'_, AppState>,
+    ids: Vec<String>,
+) -> Result<String, String> {
     if ids.is_empty() {
         return Err("没有选中的项目".to_string());
     }
@@ -1458,29 +1622,35 @@ pub async fn export_projects_zip(state: State<'_, AppState>, ids: Vec<String>) -
     let zip_path_clone = zip_path.clone();
 
     tokio::task::spawn_blocking(move || {
-        let file = fs::File::create(&zip_path_clone)
-            .map_err(|e| format!("创建 zip 文件失败: {}", e))?;
+        let file =
+            fs::File::create(&zip_path_clone).map_err(|e| format!("创建 zip 文件失败: {}", e))?;
         let mut zip_writer = zip::ZipWriter::new(file);
         let options = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated);
 
         for (project_name, dir) in &dirs_to_zip {
-            for entry in walkdir::WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+            for entry in walkdir::WalkDir::new(dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
                 let path = entry.path();
                 if path.is_file() {
                     let relative = path.strip_prefix(dir).unwrap_or(path);
                     let archive_path = format!("{}/{}", project_name, relative.to_string_lossy());
-                    zip_writer.start_file(&archive_path, options)
+                    zip_writer
+                        .start_file(&archive_path, options)
                         .map_err(|e| format!("zip 写入失败: {}", e))?;
-                    let data = fs::read(path)
-                        .map_err(|e| format!("读取文件失败: {}", e))?;
-                    zip_writer.write_all(&data)
+                    let data = fs::read(path).map_err(|e| format!("读取文件失败: {}", e))?;
+                    zip_writer
+                        .write_all(&data)
                         .map_err(|e| format!("zip 写入失败: {}", e))?;
                 }
             }
         }
 
-        zip_writer.finish().map_err(|e| format!("zip 完成失败: {}", e))?;
+        zip_writer
+            .finish()
+            .map_err(|e| format!("zip 完成失败: {}", e))?;
         Ok::<String, String>(zip_path_clone.to_string_lossy().to_string())
     })
     .await
@@ -1513,7 +1683,9 @@ pub fn suggest_skip_phases(
     };
 
     let analysis_path = Path::new(&output_dir).join("02-analysis-report.md");
-    let content = fs::read_to_string(&analysis_path).unwrap_or_default().to_lowercase();
+    let content = fs::read_to_string(&analysis_path)
+        .unwrap_or_default()
+        .to_lowercase();
 
     let mut suggestions = Vec::new();
 
@@ -1540,9 +1712,18 @@ pub fn suggest_skip_phases(
     }
 
     // Rule 3: no data/analytics keywords → skip analytics
-    let has_data_keywords = ["数据", "埋点", "指标", "转化", "追踪", "漏斗", "analytics", "tracking"]
-        .iter()
-        .any(|kw| content.contains(kw));
+    let has_data_keywords = [
+        "数据",
+        "埋点",
+        "指标",
+        "转化",
+        "追踪",
+        "漏斗",
+        "analytics",
+        "tracking",
+    ]
+    .iter()
+    .any(|kw| content.contains(kw));
     if !has_data_keywords {
         suggestions.push(SkipSuggestion {
             phase: "analytics".to_string(),
@@ -1551,9 +1732,11 @@ pub fn suggest_skip_phases(
     }
 
     // Rule 4: no UI/interaction keywords → skip prototype
-    let has_ui_keywords = ["界面", "交互", "ui", "ux", "页面", "原型", "布局", "样式", "前端"]
-        .iter()
-        .any(|kw| content.contains(kw));
+    let has_ui_keywords = [
+        "界面", "交互", "ui", "ux", "页面", "原型", "布局", "样式", "前端",
+    ]
+    .iter()
+    .any(|kw| content.contains(kw));
     if !has_ui_keywords {
         suggestions.push(SkipSuggestion {
             phase: "prototype".to_string(),
@@ -1585,7 +1768,8 @@ pub fn skip_phases(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let now = Utc::now().to_rfc3339();
 
-    db.execute("BEGIN IMMEDIATE", []).map_err(|e| e.to_string())?;
+    db.execute("BEGIN IMMEDIATE", [])
+        .map_err(|e| e.to_string())?;
 
     for phase in &phases {
         db.execute(
@@ -1659,7 +1843,8 @@ pub fn save_project_prompt(
         db.execute(
             "DELETE FROM project_prompt_overrides WHERE project_id = ?1 AND phase = ?2",
             params![&project_id, &phase],
-        ).map_err(|e| e.to_string())?;
+        )
+        .map_err(|e| e.to_string())?;
     } else {
         db.execute(
             "INSERT OR REPLACE INTO project_prompt_overrides (project_id, phase, prompt_text) VALUES (?1, ?2, ?3)",
@@ -1670,15 +1855,13 @@ pub fn save_project_prompt(
 }
 
 #[tauri::command]
-pub fn clear_project_prompts(
-    state: State<AppState>,
-    project_id: String,
-) -> Result<(), String> {
+pub fn clear_project_prompts(state: State<AppState>, project_id: String) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.execute(
         "DELETE FROM project_prompt_overrides WHERE project_id = ?1",
         params![&project_id],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1690,7 +1873,7 @@ pub struct PrerequisiteItem {
     pub id: String,
     pub label: String,
     pub passed: bool,
-    pub check_type: String,  // "auto" | "manual"
+    pub check_type: String, // "auto" | "manual"
     pub hint: Option<String>,
     pub navigate_to: Option<String>,
 }
@@ -1707,7 +1890,8 @@ pub fn check_phase_prerequisites(
             "SELECT output_dir FROM projects WHERE id = ?1",
             rusqlite::params![&project_id],
             |row| row.get(0),
-        ).map_err(|_| "项目不存在".to_string())?
+        )
+        .map_err(|_| "项目不存在".to_string())?
     };
 
     let dir = PathBuf::from(&output_dir);
@@ -1722,7 +1906,11 @@ pub fn check_phase_prerequisites(
                 label: "需求分析报告".to_string(),
                 passed: analysis_exists,
                 check_type: "auto".to_string(),
-                hint: if analysis_exists { None } else { Some("建议先完成需求分析（Phase 2）".to_string()) },
+                hint: if analysis_exists {
+                    None
+                } else {
+                    Some("建议先完成需求分析（Phase 2）".to_string())
+                },
                 navigate_to: Some("analysis".to_string()),
             });
 
@@ -1733,7 +1921,11 @@ pub fn check_phase_prerequisites(
                 label: "竞品研究报告".to_string(),
                 passed: competitor_exists,
                 check_type: "auto".to_string(),
-                hint: if competitor_exists { None } else { Some("建议先完成竞品研究（Phase 3）".to_string()) },
+                hint: if competitor_exists {
+                    None
+                } else {
+                    Some("建议先完成竞品研究（Phase 3）".to_string())
+                },
                 navigate_to: Some("research".to_string()),
             });
 
@@ -1744,7 +1936,11 @@ pub fn check_phase_prerequisites(
                 label: "用户故事".to_string(),
                 passed: stories_exists,
                 check_type: "auto".to_string(),
-                hint: if stories_exists { None } else { Some("建议先完成用户故事（Phase 4）".to_string()) },
+                hint: if stories_exists {
+                    None
+                } else {
+                    Some("建议先完成用户故事（Phase 4）".to_string())
+                },
                 navigate_to: Some("stories".to_string()),
             });
         }
@@ -1756,7 +1952,11 @@ pub fn check_phase_prerequisites(
                 label: "PRD 文档".to_string(),
                 passed: prd_exists,
                 check_type: "auto".to_string(),
-                hint: if prd_exists { None } else { Some("需要先生成 PRD（Phase 5）".to_string()) },
+                hint: if prd_exists {
+                    None
+                } else {
+                    Some("需要先生成 PRD（Phase 5）".to_string())
+                },
                 navigate_to: Some("prd".to_string()),
             });
         }

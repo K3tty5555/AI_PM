@@ -1,0 +1,3 @@
+display_name: AI PM 原型设计内核
+short_description: AI_PM 自带 HTML 原型与仪表盘设计内核
+default_prompt: 使用 ai-pm-frontend-design 生成一个高保真、可交互、业务贴合的 HTML 原型。

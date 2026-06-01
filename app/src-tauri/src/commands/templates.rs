@@ -1,8 +1,8 @@
+use crate::state::AppState;
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
 use tauri::State;
-use crate::state::AppState;
 
 // ─── PRD Style helpers ──────────────────────────────────────────────────────
 
@@ -19,7 +19,10 @@ fn is_safe_style_name(name: &str) -> bool {
 
 /// Load the content of the active (or named) PRD style to inject into the system prompt.
 /// Returns None silently if the style directory or files are missing.
-pub(crate) fn load_active_prd_style(templates_base: &std::path::Path, style_id: Option<&str>) -> Option<String> {
+pub(crate) fn load_active_prd_style(
+    templates_base: &std::path::Path,
+    style_id: Option<&str>,
+) -> Option<String> {
     let styles_dir = templates_base.join("prd-styles");
     if !styles_dir.exists() {
         return None;
@@ -32,16 +35,24 @@ pub(crate) fn load_active_prd_style(templates_base: &std::path::Path, style_id: 
         let active_file = styles_dir.join("_active");
         if active_file.exists() {
             let s = fs::read_to_string(&active_file).ok()?.trim().to_string();
-            if s.is_empty() { return None; }
+            if s.is_empty() {
+                return None;
+            }
             s
         } else {
             // Fall back to first directory that has style-config.json
-            let mut entries: Vec<_> = fs::read_dir(&styles_dir).ok()?
+            let mut entries: Vec<_> = fs::read_dir(&styles_dir)
+                .ok()?
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().is_dir() && e.path().join("style-config.json").exists())
                 .collect();
             entries.sort_by_key(|e| e.file_name());
-            entries.into_iter().next()?.file_name().to_string_lossy().to_string()
+            entries
+                .into_iter()
+                .next()?
+                .file_name()
+                .to_string_lossy()
+                .to_string()
         }
     };
 
@@ -56,13 +67,17 @@ pub(crate) fn load_active_prd_style(templates_base: &std::path::Path, style_id: 
     }
 
     let config = fs::read_to_string(&config_path).ok()?;
-    let profile = fs::read_to_string(style_dir.join("style-profile.json")).ok().unwrap_or_default();
+    let profile = fs::read_to_string(style_dir.join("style-profile.json"))
+        .ok()
+        .unwrap_or_default();
     let template = fs::read_to_string(style_dir.join("feishu-template.md"))
         .ok()
         .map(|t| format!("\n\n## 飞书文档模板（严格按此字段名和顺序输出）\n\n{t}"))
         .unwrap_or_default();
 
-    Some(format!("## 写作风格配置（{style_name}）\n\n{config}\n\n{profile}{template}"))
+    Some(format!(
+        "## 写作风格配置（{style_name}）\n\n{config}\n\n{profile}{template}"
+    ))
 }
 
 // ─── PRD Style Tauri commands ───────────────────────────────────────────────
@@ -101,15 +116,23 @@ pub struct PrdStyleEntry {
 #[tauri::command]
 pub fn list_prd_styles(state: State<'_, AppState>) -> Vec<PrdStyleEntry> {
     let dir = state.templates_base().join("prd-styles");
-    let Ok(entries) = fs::read_dir(&dir) else { return vec![] };
+    let Ok(entries) = fs::read_dir(&dir) else {
+        return vec![];
+    };
     let mut result: Vec<PrdStyleEntry> = entries
         .flatten()
         .filter_map(|e| {
             let p = e.path();
-            if !p.is_dir() { return None; }
+            if !p.is_dir() {
+                return None;
+            }
             let name = p.file_name()?.to_string_lossy().to_string();
-            if name.starts_with('.') { return None; }
-            if !p.join("style-config.json").exists() { return None; }
+            if name.starts_with('.') {
+                return None;
+            }
+            if !p.join("style-config.json").exists() {
+                return None;
+            }
             let has_persona = p.join("style-profile.json").exists();
             Some(PrdStyleEntry { name, has_persona })
         })
@@ -128,7 +151,10 @@ pub struct PrdStyleContent {
 }
 
 #[tauri::command]
-pub fn get_prd_style_content(state: State<'_, AppState>, name: String) -> Result<PrdStyleContent, String> {
+pub fn get_prd_style_content(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<PrdStyleContent, String> {
     if !is_safe_style_name(&name) {
         return Err(format!("无效风格名称: {}", name));
     }
@@ -136,12 +162,17 @@ pub fn get_prd_style_content(state: State<'_, AppState>, name: String) -> Result
     if !style_dir.exists() {
         return Err(format!("风格「{}」不存在", name));
     }
-    let config = fs::read_to_string(style_dir.join("style-config.json"))
-        .map_err(|e| e.to_string())?;
+    let config =
+        fs::read_to_string(style_dir.join("style-config.json")).map_err(|e| e.to_string())?;
     let profile = fs::read_to_string(style_dir.join("style-profile.json")).ok();
     let sample = fs::read_to_string(style_dir.join("sample.md")).ok();
     let has_template = style_dir.join("feishu-template.md").exists();
-    Ok(PrdStyleContent { config, profile, sample, has_template })
+    Ok(PrdStyleContent {
+        config,
+        profile,
+        sample,
+        has_template,
+    })
 }
 
 #[tauri::command]
@@ -180,18 +211,18 @@ pub fn rename_prd_style(
 }
 
 #[tauri::command]
-pub fn add_ui_spec(
-    state: State<'_, AppState>,
-    dir: String,
-) -> Result<String, String> {
+pub fn add_ui_spec(state: State<'_, AppState>, dir: String) -> Result<String, String> {
     let src = Path::new(&dir);
     if !src.is_dir() {
         return Err(format!("不是有效目录: {}", dir));
     }
     if !src.join("README.md").exists() && !src.join("design-tokens.json").exists() {
-        return Err("目录中未找到 README.md 或 design-tokens.json，请确认是 UI 规范目录".to_string());
+        return Err(
+            "目录中未找到 README.md 或 design-tokens.json，请确认是 UI 规范目录".to_string(),
+        );
     }
-    let name = src.file_name()
+    let name = src
+        .file_name()
         .ok_or("无法读取目录名")?
         .to_string_lossy()
         .to_string();
@@ -212,14 +243,20 @@ pub struct UiSpecEntry {
 #[tauri::command]
 pub fn list_ui_specs(state: State<'_, AppState>) -> Vec<UiSpecEntry> {
     let dir = state.templates_base().join("ui-specs");
-    let Ok(entries) = fs::read_dir(&dir) else { return vec![] };
+    let Ok(entries) = fs::read_dir(&dir) else {
+        return vec![];
+    };
     let mut result: Vec<UiSpecEntry> = entries
         .flatten()
         .filter_map(|e| {
             let p = e.path();
-            if !p.is_dir() { return None; }
+            if !p.is_dir() {
+                return None;
+            }
             let name = p.file_name()?.to_string_lossy().to_string();
-            if name.starts_with('.') { return None; }
+            if name.starts_with('.') {
+                return None;
+            }
             Some(UiSpecEntry { name })
         })
         .collect();
@@ -235,8 +272,16 @@ pub struct UiSpecContent {
 }
 
 #[tauri::command]
-pub fn get_ui_spec_content(state: State<'_, AppState>, name: String) -> Result<UiSpecContent, String> {
-    if name.is_empty() || name.starts_with('.') || name.contains('/') || name.contains('\\') || name.contains('\0') {
+pub fn get_ui_spec_content(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<UiSpecContent, String> {
+    if name.is_empty()
+        || name.starts_with('.')
+        || name.contains('/')
+        || name.contains('\\')
+        || name.contains('\0')
+    {
         return Err(format!("无效规范名称: {}", name));
     }
     let spec_dir = state.templates_base().join("ui-specs").join(&name);
@@ -276,10 +321,7 @@ pub fn rename_ui_spec(
 }
 
 #[tauri::command]
-pub fn delete_ui_spec(
-    state: State<'_, AppState>,
-    name: String,
-) -> Result<(), String> {
+pub fn delete_ui_spec(state: State<'_, AppState>, name: String) -> Result<(), String> {
     if !is_safe_style_name(&name) {
         return Err(format!("无效的规范名称: {}", name));
     }
@@ -291,10 +333,7 @@ pub fn delete_ui_spec(
 }
 
 #[tauri::command]
-pub fn delete_prd_style(
-    state: State<'_, AppState>,
-    name: String,
-) -> Result<(), String> {
+pub fn delete_prd_style(state: State<'_, AppState>, name: String) -> Result<(), String> {
     if !is_safe_style_name(&name) {
         return Err(format!("无效的风格名称: {}", name));
     }
@@ -305,7 +344,14 @@ pub fn delete_prd_style(
     fs::remove_dir_all(&style_dir).map_err(|e| e.to_string())
 }
 
-const KB_CATEGORIES: &[&str] = &["patterns", "decisions", "pitfalls", "metrics", "playbooks", "insights"];
+const KB_CATEGORIES: &[&str] = &[
+    "patterns",
+    "decisions",
+    "pitfalls",
+    "metrics",
+    "playbooks",
+    "insights",
+];
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -342,7 +388,9 @@ pub fn scan_legacy_knowledge(
         }
 
         let dest_dir = dest_root.join(category);
-        let Ok(entries) = fs::read_dir(&src_dir) else { continue };
+        let Ok(entries) = fs::read_dir(&src_dir) else {
+            continue;
+        };
 
         let mut total = 0usize;
         let mut new_count = 0usize;
@@ -395,7 +443,9 @@ pub fn import_legacy_knowledge(
         let dest_dir = dest_root.join(category);
         fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
 
-        let Ok(entries) = fs::read_dir(&src_dir) else { continue };
+        let Ok(entries) = fs::read_dir(&src_dir) else {
+            continue;
+        };
 
         for entry in entries.flatten() {
             let entry_path = entry.path();
@@ -470,7 +520,11 @@ pub fn scan_legacy_prd_styles(
         if !entry_path.is_dir() {
             continue;
         }
-        let name = entry_path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        let name = entry_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
         if name.starts_with('.') {
             continue;
         }
@@ -480,7 +534,11 @@ pub fn scan_legacy_prd_styles(
         let has_persona = entry_path.join("style-profile.json").exists();
         let already_exists = dest_root.join(&name).exists();
 
-        results.push(PrdStyleScan { name, has_persona, already_exists });
+        results.push(PrdStyleScan {
+            name,
+            has_persona,
+            already_exists,
+        });
     }
 
     results.sort_by(|a, b| a.name.cmp(&b.name));
@@ -509,7 +567,11 @@ pub fn import_legacy_prd_styles(
         if !entry_path.is_dir() {
             continue;
         }
-        let name = entry_path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        let name = entry_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
         if name.starts_with('.') {
             continue;
         }
@@ -547,17 +609,25 @@ pub fn scan_legacy_ui_specs(
         if !entry_path.is_dir() {
             continue;
         }
-        let name = entry_path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        let name = entry_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
         if name.starts_with('.') {
             continue;
         }
         // Valid ui-spec dir contains README.md or design-tokens.json
-        if !entry_path.join("README.md").exists() && !entry_path.join("design-tokens.json").exists() {
+        if !entry_path.join("README.md").exists() && !entry_path.join("design-tokens.json").exists()
+        {
             continue;
         }
         let already_exists = dest_root.join(&name).exists();
 
-        results.push(UiSpecScan { name, already_exists });
+        results.push(UiSpecScan {
+            name,
+            already_exists,
+        });
     }
 
     results.sort_by(|a, b| a.name.cmp(&b.name));
@@ -586,11 +656,16 @@ pub fn import_legacy_ui_specs(
         if !entry_path.is_dir() {
             continue;
         }
-        let name = entry_path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        let name = entry_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
         if name.starts_with('.') {
             continue;
         }
-        if !entry_path.join("README.md").exists() && !entry_path.join("design-tokens.json").exists() {
+        if !entry_path.join("README.md").exists() && !entry_path.join("design-tokens.json").exists()
+        {
             continue;
         }
         let dest_dir = dest_root.join(&name);
