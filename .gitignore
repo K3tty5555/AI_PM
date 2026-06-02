@@ -103,6 +103,13 @@ templates/knowledge-base/pitfalls/*
 templates/knowledge-base/playbooks/*
 !templates/knowledge-base/**/.gitkeep
 
+# 个人 PRD 风格 profile（persona analyze 产出，含真实 PRD 原句 sample_sentences）+ 当前生效风格
+# 团队标准 default / enterprise-standard 仍入库（已脱敏），个人微调 profile 一律本机
+templates/prd-styles/.active-persona
+templates/prd-styles/*/
+!templates/prd-styles/default/
+!templates/prd-styles/enterprise-standard/
+
 # -----------------------------------------------------------------------------
 # Design Source Files (Large & Proprietary)
 # -----------------------------------------------------------------------------

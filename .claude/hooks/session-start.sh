@@ -10,6 +10,18 @@ fi
 
 PROJECTS_DIR="output/projects"
 
+# 首次使用检测：无项目 + 无生效个人风格 → 建议先做初始化（不强制）
+HAS_PROJECT=""
+if [ -d "$PROJECTS_DIR" ] && [ -n "$(ls -A "$PROJECTS_DIR" 2>/dev/null)" ]; then
+  HAS_PROJECT="1"
+fi
+if [ -z "$HAS_PROJECT" ] && [ ! -f "$ROOT/templates/prd-styles/.active-persona" ]; then
+  echo "👋 看起来是第一次用 AI_PM。建议先花 2 分钟做个初始化："
+  echo "   /ai-pm init   —— 学你的写作风格 + 种知识库，之后产出更像你"
+  echo "   也可以直接 /ai-pm [一句话需求] 开干。"
+  exit 0
+fi
+
 if [ ! -d "$PROJECTS_DIR" ]; then
   exit 0
 fi

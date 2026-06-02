@@ -6,7 +6,7 @@
 
 ## 功能
 
-扫描所有技能文件，检查 22 项一致性指标，输出健康报告。
+扫描所有技能文件，检查 23 项一致性指标，输出健康报告。
 
 ## 检查项（6 类共 23 项）
 
@@ -40,10 +40,10 @@
 14. **frontmatter 完整性**: 检查每个技能的 SKILL.md 是否有标准的 YAML frontmatter（name, description）
 15. **manifest 版本**: 如果存在 `skill-manifest.json`，检查 version 字段是否与内容匹配
 
-### 资源与安全（7 项）
+### 资源与安全（8 项）
 
 16. **技能描述触发条件**: 检查每个技能 SKILL.md 的 description 字段是否包含用户说的话（搜索"当用户说"或类似触发关键词），缺失则警告
-17. **技能文件行数**: 扫描 `.claude/skills/` 下所有 SKILL.md，超过 500 行的文件标记为 ⚠️ 警告，建议拆分
+17. **技能文件行数**: 扫描 `.claude/skills/` 下所有 SKILL.md，超过 500 行的文件标记为 ⚠️ 警告，建议拆分。**已知豁免**（有意保留，不计入超标警告）：①`ai-pm/phases/phase-5-prd.md`——其写作脚手架 + 反例对比库是 pm-agent 不可用时的「就地回退路径」，被 CLAUDE.md / SKILL.md / pm-agent.md 标注为内嵌设计；②`ai-pm-interview/interview-phases.md`——按顺序执行的阶段控制流（文件管理 → Phase 0-3），纯模板已外移至 interview-templates.md，剩余为连贯控制流，硬拆会增加运行时跨文件导航成本
 18. **模板文件可读性**: 验证 `templates/` 下关键文件（`prd-styles/default/feishu-template.md`、`presets/industry-style-presets.json`、`presets/copywriting-frameworks.md`）是否可访问（文件存在且非空）
 19. **样例 PRD 字段一致性**: 读取 `templates/prd-styles/default/sample-*.md`，检查是否包含 feishu-template.md 中定义的核心章节（二、需求分析 / 三、功能清单 / 四、产品流程 / 六、详细功能设计）
 20. **硬编码密钥扫描**: 用精确正则 `sk-[a-zA-Z0-9]{20,}` 和 `AKIA[0-9A-Z]{16}` 扫描 `.claude/skills/` 和 `templates/` 目录下的所有文件，排除 `docs/` 和 `MEMORY.md`，匹配到则标记为 ❌ 错误

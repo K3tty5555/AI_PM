@@ -43,13 +43,15 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 
 | 命令 | 说明 |
 |------|------|
+| `/ai-pm init` | **首次初始化向导**（继承团队标准 + 个人微调 + 种知识库），流程见 `references/init-onboarding.md` |
 | `/ai-pm [需求描述]` | 创建新项目，进入需求澄清 |
 | `/ai-pm --team [需求]` | 启用多代理协作处理复杂需求 |
-| `/ai-pm` | 显示当前项目状态 / 欢迎界面 |
+| `/ai-pm` | 显示当前项目状态 / 欢迎界面（首次会建议先 `/ai-pm init`） |
 | `/ai-pm continue` | 恢复进行中的项目（从最后 checkpoint 子步骤继续） |
 | `/ai-pm list` | 列出所有项目 |
 | `/ai-pm new [项目名]` | 创建新项目（无 preset） |
 | `/ai-pm new [项目名] --preset=[预设名]` | 创建新项目并应用预设（内容复制到 _memory/L0-identity.md） |
+| `/ai-pm import <PRD路径>` | 把历史 PRD（通常在 `output/_prd-corpus/`）确认制立项为正式项目，详见「`/ai-pm import`」节 |
 | `/ai-pm switch [项目名]` | 切换项目 |
 | `/ai-pm reset` | 清空当前项目重新开始 |
 | `/ai-pm delete [项目名]` | 删除指定项目 |
@@ -83,11 +85,40 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm retrospective` | 项目复盘，生成 10-retrospective.md |
 | `/ai-pm instinct [list\|review\|import\|reset]` | 习惯直觉管理（自动学习的偏好） |
 | `/ai-pm driver [PRD路径]` | PM 风格 lint 命令入口（pm-agent 的 thin wrapper，单一事实源在 pm-agent）。仅用于历史 PRD 体检 / 大改后回归 / 评审前体检 |
-| `/ai-pm doctor` | 技能健康检查（15 项一致性扫描） |
+| `/ai-pm doctor` | 技能健康检查（23 项一致性扫描） |
 | `/ai-pm illustration [输入]` | AI 流程图生成（baoyu-imagine，支持 Mermaid 和自然语言） |
 | `/ai-pm config style` | PRD 写作风格管理 |
 | `/ai-pm config ui` | UI 设计规范管理 |
 | `/ai-pm [URL]` | 分析参考网页（Playwright MCP 抓取） |
+
+---
+
+## 首次初始化（`/ai-pm init`）
+
+新成员第一次用时的 2 分钟引导，**单一事实源在 `references/init-onboarding.md`**。三步、每步可跳过、绝不做硬门槛：
+
+1. **认识团队标准**（0 操作，只讲）—— 团队标准 = 内建 default 模板 + KettyWu 判断卡，永远生效，是「为主」那层。
+2. **个人微调**（可选）—— 引导上传过往 PRD → 调 `persona analyze/apply` 蒸馏个人风格，叠在团队标准之上；profile **本机不入库**（已 gitignore）。
+3. **种知识库**（可选）—— 从历史 PRD 提炼或口述团队约定 → 调 `knowledge add` 写入。
+
+init 是编排层，复用 persona / knowledge，不新增存储格式，不区分角色（"建立/改团队标准"是改 default 模板本身，不在 init 内）。欢迎区首次检测（无项目 + 无 `.active-persona`）会建议先跑 init，但用户可直接 `/ai-pm [需求]` 开干。
+
+**语料库 `output/_prd-corpus/`**：init 第 2 步上传的历史 PRD 机械复制到此（本机，`output/` 整体已 gitignore）。它是学习/参考语料，**不是活跃项目**——不放 `output/projects/`、不进 `/ai-pm list`。
+
+---
+
+## `/ai-pm import`（从历史 PRD 立项）
+
+把语料库（或任意路径）里的历史 PRD 转成正式项目，**确认制，不猜归属**：
+
+1. 读 `<PRD路径>`，提取标题、推断版本号
+2. **提议项目名 + 版本，展示给用户** → 用户可确认 / 改名 / 合并到已有项目 / 取消（不静默立项）
+3. 确认后建 `output/projects/{名}/` 标准骨架（README + `_memory/` + 按 v2 规范的 01-04/08 文件夹），PRD 落 `05-prd/05-PRD-v{n}.md`，README「当前阶段」标「PRD 完成 / 待原型」
+4. 从此与普通项目平权：进 `/ai-pm list`、支持 `continue`、可继续走原型/评审/PRD 迭代
+
+**边界（铁律）**：import **只从 05-prd 播种，不倒推 01-04 上游内容**——倒推 = 伪造"这份 PRD 当初基于什么需求/分析写出来"，踩"不脑补"红线。上游文件夹按约定建出但**留空**；用户要补齐再显式跑对应阶段，且产出标「AI 推断 · 待确认」，不作事实。
+
+import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → 提议命名 → 落 05-prd + 设当前阶段」。
 
 ---
 
@@ -251,14 +282,14 @@ Phase 8（可选）: 需求评审（六角色并行）
 | 文件 | 内容 |
 |------|------|
 | `references/pm-judgment-card.md` | **PM 风格判断卡 ⭐**——9 章节判断标准（角色 / 6 直觉 / 越界红线 / 责任分工 / Agent 5 件事写法 / 篇幅 / 修订日志 / 9 项 checklist），phase-5-prd 强制前置 |
-| `agents/pm-agent.md` | **KettyWu sub-agent ⭐**——内化判断卡 + 反例 + 填空模板，主对话调用 `Agent(subagent_type=pm-agent)` 写/审 PRD 单章节，比 driver 主动（driver 是 lint，pm-agent 是会写 PRD 的人）|
+| `../../agents/pm-agent.md` | **KettyWu sub-agent ⭐**——内化判断卡 + 反例 + 填空模板，主对话调用 `Agent(subagent_type=pm-agent)` 写/审 PRD 单章节，比 driver 主动（driver 是 lint，pm-agent 是会写 PRD 的人）|
 | `references/prototype-judgment-card.md` | **原型质量判断卡 ⭐**——页面/流程/状态/视觉设计红线 + 12 分制审计标准，phase-7-prototype 强制前置 |
-| `agents/prototype-agent.md` | **原型设计负责人 sub-agent ⭐**——负责原型蓝图、视觉方向、生成约束、质量审计，视觉设计低分同样阻断进入评审 |
+| `../../agents/prototype-agent.md` | **原型设计负责人 sub-agent ⭐**——负责原型蓝图、视觉方向、生成约束、质量审计，视觉设计低分同样阻断进入评审 |
 | `references/user-interaction.md` | 项目路径解析、启动界面、快捷指令、_status.json 规范、多代理、记忆迁移、现有文档处理、进度条渲染（render_progress） |
 | `references/symptom-index.md` | 常见场景速查 + Anti-Pattern |
 | `references/baseline-delta-worksheet.md` | **迭代项目基线 delta 工作表 ⭐**——核心 insight：迭代需求 = delta，不是新功能；4 列工作表 + 三类高密度避坑信息 + 强制门禁，phase-1 检测+产出，phase-5 阻断 |
 | `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
-| `doctor.md` | 技能健康检查（22 项） |
+| `doctor.md` | 技能健康检查（23 项） |
 | `illustration.md` | AI 流程图生成 |
 | `instinct.md` | 自学习系统 |
 | `web-analysis.md` | 网页分析 |
