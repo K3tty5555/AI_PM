@@ -47,6 +47,7 @@ scripts/ai-sync/check-ai-context-freshness.sh
 - 全部面向用户的回复使用简体中文。
 - PRD 默认只生成 Markdown，不主动导出 DOCX/PDF。
 - 未经用户允许，不运行 Playwright 相关命令，包括 `playwright install`、`playwright test`、`npm run test:e2e`。
+- 用户允许运行 Playwright 后，优先复用本机缓存 `/Users/xiaowu/Library/Caches/ms-playwright`；若 MCP 报浏览器缺失，先查该缓存和 `mcp-chrome-for-testing-*`，不要直接触发下载。
 - 操作前先查已有工具，PRD 导出优先复用 `md2docx.py`。
 - AI 给老师或最终用户的话术不能透露版本号、上线时间、下个迭代。
 - 客户端 UI 遵循 `docs/design-system.md`，不要回到终末地/终端风格。

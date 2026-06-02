@@ -134,6 +134,10 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 - Playwright MCP 配置为 headless Chromium（后台无界面运行），无需启动本地 HTTP 服务器
 - 查看原生 HTML 文件直接用 `file:///绝对路径/文件名.html`，不需要 `python3 -m http.server`
 - 截图/DOM 验证优先用 `browser_run_code` + `page.evaluate()` 而非 `browser_take_screenshot`（后者等待字体加载易超时）
+- 若 Playwright MCP 报 `Browser "chrome-for-testing" is not installed`，不要直接运行 `npx @playwright/mcp install-browser chrome-for-testing`；先检查并复用本机缓存 `/Users/xiaowu/Library/Caches/ms-playwright`
+- 本机已存在可用缓存：`chromium-1224`、`chromium-1223`、`chromium_headless_shell-1223`、`mcp-chrome-for-testing-*`
+- shell 脚本方式需要显式指定浏览器缓存时，使用 `PLAYWRIGHT_BROWSERS_PATH=/Users/xiaowu/Library/Caches/ms-playwright`
+- 只有确认缓存不可用且用户明确同意后，才下载安装 Playwright 浏览器
 
 ## 开发工具规范
 
