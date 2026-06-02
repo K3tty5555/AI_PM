@@ -123,6 +123,7 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 ## 强制规范（Claude 必须遵守）
 
 - UI/HTML 输出设计规范三档可选，**首次生成 HTML 时询问用户并记住项目偏好**：①公司/团队规范（已上传后自动生效）②AI 情境定制（自动注入项目自带 `ai-pm-frontend-design`，用户本机有 `impeccable:frontend-design` 时作为增强）③主流组件库（Ant Design / Material / Element Plus 等）
+- **用户指定代码仓/组件库做前端时，先高优先级评估并优先复用它的组件，而不是直接 CSS 复刻观感**：①先盘点库实际导出的组件（读 `index.d.ts`/`exports`），别只读它的 `DESIGN_PROMPT`/设计 token —— 读"复刻提示词"≠用组件（这步不能省，"没看就复刻"是根病）②逐区块映射，默认有组件就用；只有「库没有对应组件（图表/分层/连线/时间轴等定制布局）」或「评估后该组件质量/适配确实差」时才手写或换方案 ③弃用组件是逃生口、不是默认：必须**逐个**说清哪不行（可定制性/无障碍/视觉/bug），且优先「包一层 / 覆盖样式」而非整段重写，不能"觉得不好用"就整页推翻 ④所有手写/弃用组件的区块显式报给用户原因 ⑤"用这个仓库"语义不清（视觉参考 vs 真组件搭）时先问
 - PRD/PDF/DOCX 导出的中文字体仍使用 `PingFang SC`，不受设计规范选择影响
 - 数据分析 Excel 文件必须用 `openpyxl data_only=True`
 - Chart.js `indexAxis:'y'` 必须在 `options` 顶层，不能放在 `scales` 里
