@@ -63,8 +63,9 @@ AI_PM_提效分享.html
 .ai-shared/memory-snapshots/
 .ai-shared/conversations/
 .ai-shared/pending-memory/
-.ai-shared/context/open-questions.md
-.ai-shared/context/product-decisions.md
+# context/ 内容文件一律仅本机（铁律），只放行 README.md
+.ai-shared/context/*
+!.ai-shared/context/README.md
 .ai-shared/memory-index.md
 .ai-shared/agent-index.md
 .ai-shared/skill-index.md
