@@ -23,9 +23,21 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep)
 | `list` | 列出所有分类统计 |
 | `sync` | 从当前项目提取可沉淀知识 |
 | `suggest {词}` | 推荐相关知识（Phase 5 自动调用 / 用户直接调用，详见文末规范） |
-| `review-low` | 批量管理 auto-generated 卡片 |
+| `review-low` | 批量管理 auto-generated 卡片（质量门：升级/合并/删）|
+| `review-stale` | 超龄 state 卡 AI 分诊（安全网，只显式调用；AI 自动核实，只把残差升给你）|
 | `cleanup-auto` | 清理 / 归档 auto 卡片（紧急回滚 + 日常维护）|
 | 无参数 | 执行 list |
+
+---
+
+## 运行原则（静默护栏）
+
+知识库的治理（保鲜、退役、复核）必须**自动化优先、用户只兜残差**，且**绝不打断进行中的对话**。三条铁律压在所有命令之上：
+
+1. **静默护栏**：任何自动 / 治理动作都不得打断或刷屏用户正在进行的操作。耗时的执行（复核分诊、批量核实）**只在用户显式调用知识命令时**发生；自动路径（stop-hook 沉淀、写入时退役）必须**静默、亚秒级、零额外输出**——做不到就不做。
+   - ⛔ 反面教材：对话进行中突然长时间跑沉淀、把对话刷上去——这是抢用户话筒，禁止。
+2. **退役自动、保鲜随手**：知识过期不该是用户专门做的事，而是两件本就发生的事的副产品——写新知识时顺手让旧的退役（见 add/sync）、显式核实过源时顺手刷 `last-verified`。用户专门去"复核一批卡"应是**极少触发的安全网**，不是例行苦差。
+3. **signal 可信 > 堆机制**：`last-verified` 只代表"确认仍成立"，**绝不能因为被检索 / 展示就刷新**（那会让陈旧卡冒充新鲜，污染整个系统赖以存在的信号）。只有 AI 真的对着当前代码 / PRD / 文件核实过，才允许刷。
 
 ---
 
@@ -80,9 +92,11 @@ tags: []
 source-project:
 source-session:                    # auto 模式必填，前 8 位 session_id
 created: {YYYY-MM-DD}
+last-verified: {YYYY-MM-DD}        # 最后一次确认仍成立；新建时 = created。复核时刷新
 confidence: low
 auto-generated: false              # auto 模式必填 true
 auto-dedup-key:                    # auto 模式必填，核心概念-动词
+superseded-by:                     # 被新卡取代时填新卡 ID（如 INSIGHT-030）；默认空
 ---
 
 # {标题}
@@ -100,10 +114,19 @@ auto-dedup-key:                    # auto 模式必填，核心概念-动词
 {范围}
 ```
 
-完成后确认：
+### 写入时退役检查（add / sync 通用，静默）
+
+有意识写卡时（用户调 `add` 或确认 `sync` 候选），AI 在已有的同 category 去重扫描里**顺带**判断：本卡是否**明确取代**某一张**可指认的**旧卡（不是补充、不是相邻话题，是"同一问题的结论被本卡推翻"）。
+
+- **明确取代单张旧卡** → 静默把那张旧卡的 `superseded-by` set 为本卡 ID（旧卡自此 search/suggest 默认不出，`--include-superseded` 可追溯）；在「已保存」确认里**折叠一行**告知，不另起流程、不弹清单。
+- **模糊 / 拿不准 / 像是取代多张** → **两张并存，不动**。退役是可逆软隐藏，但仍按"宁可并存"处理，误判交给 review-stale 安全网。
+- ⚠️ 此步必须是**亚秒级的轻量 grep 判断**，做不到就跳过——不得为找取代关系拖慢用户正在做的 add/sync（静默护栏）。
+
+完成后确认（有退役时多折叠一行）：
 ```
 已保存 {ID}  {标题}
 → templates/knowledge-base/{分类}/{文件名}
+{若有退役：↳ 已标记 {旧ID}「{旧标题}」被本卡取代（--include-superseded 可追溯）}
 ```
 
 ### auto 模式（hook 触发时使用）
@@ -115,6 +138,7 @@ auto-dedup-key:                    # auto 模式必填，核心概念-动词
 | `confidence: low` | 自动生成默认低置信度 |
 | `auto-generated: true` | 标记为 hook 触发产生 |
 | `source-session: {前8位}` | 哪次会话产生的（来自 hook stdin 的 session_id） |
+| `last-verified: {created}` | auto 模式下 = created；后续复核（`review-stale`）时刷新 |
 | `auto-dedup-key` | 跨次去重 key，由 AI 生成（核心概念-动词，如 `filter-repo-untracked`、`force-with-lease-stale`） |
 
 **新建前必须做的去重检查**：
@@ -123,6 +147,8 @@ auto-dedup-key:                    # auto 模式必填，核心概念-动词
 2. 在 `templates/knowledge-base/{同 category}/` 下用 `grep -ri` 查相似 title
 3. 如果 `auto-dedup-key` 已存在 → **不新建**，把当前对话的"验证数据"段追加到旧卡末尾
 4. 否则正常新建
+
+**hook 路径不做退役判断**（静默护栏）：30 秒无人监督、预算又紧的自动沉淀，**只做 dedup-key 去重、不做"取代旧卡"判断**——退役会软隐藏卡片，不能在没人看着时发生。真正的退役留给有意识的 `add` / `sync`（写入时退役检查）和 `review-stale` 安全网去抓。
 
 **source-project 双重校验**：
 
@@ -141,9 +167,11 @@ tags: [git, filter-repo]
 source-project: _meta              # 或具体项目 / unknown
 source-session: 95603cf1
 created: 2026-05-05
+last-verified: 2026-05-05          # auto 模式 = created
 confidence: low                    # auto 模式默认 low
 auto-generated: true               # auto 模式必填
 auto-dedup-key: filter-repo-untracked  # auto 模式必填，核心概念-动词
+superseded-by:                     # 默认空；被取代时填新卡 ID
 ---
 ```
 
@@ -153,12 +181,12 @@ auto-dedup-key: filter-repo-untracked  # auto 模式必填，核心概念-动词
 
 1. 在 `templates/knowledge-base/` 递归搜索包含关键词的 .md（排除 README.md）
 2. 匹配范围：文件名、frontmatter tags/id、标题行、问题场景段落
-3. 有匹配时展示（最多 5 条）：
+3. 有匹配时展示（最多 5 条），每条带**时效标记**（见下方「时效性标记」）：
 ```
 {N} 条相关知识：
 
   1  [PATTERN-001]  渐进式功能引导
-     patterns  |  mobile, onboarding
+     patterns  |  mobile, onboarding  |  ⚠️ 94 天未复核（2026-03-01）
      场景：用户首次使用复杂功能...
 
 数字查看详情，回车跳过
@@ -187,6 +215,41 @@ done
 **显式包含 auto 卡片**：`/ai-pm knowledge search {词} --include-auto`
 
 suggest 同样默认过滤，理由相同（PRD 前推荐时不希望低质量噪音）。
+
+---
+
+## 时效性标记（search / suggest 共用）
+
+检索结果展示时，对每条命中卡片算 `age = today − last-verified`，按下表在该卡尾部追加标记：
+
+| 条件 | 展示标记 |
+|------|---------|
+| `age ≤ 90 天` | 不标（视为新鲜） |
+| `age > 90 天`，**state 类**（pitfalls/decisions/insights）| `⚠️ {age} 天未复核（{last-verified}）`——会烂的知识，催复核 |
+| `age > 90 天`，**technique 类**（patterns/metrics/playbooks）| `· {age} 天前`——中性显龄，**不带 ⚠️、不催办**（方法管用就一直管用）|
+| `last-verified` 缺失（改造前旧卡） | 回退用 `created` 算 age；`created` 也缺 → `· 龄未知` |
+
+**`superseded-by` 非空的卡片**：search / suggest **默认不出**（已被取代）；仅在 `search {词} --include-superseded` 追溯时展示，并标 `⛔ 已被 {新卡ID} 取代`。
+
+### last-verified 刷新纪律（signal 可信第一）
+
+`last-verified` 只有一个含义：**最后一次确认仍成立**。
+
+- ✅ **只在 AI 真的对着当前代码 / PRD / 文件核实过该卡结论时**才允许刷新（含 review-stale 档 1、edit 落盘、显式核源后）。
+- ⛔ **绝不因为卡片被检索命中 / 被展示 / 被读取就刷新**——那会让陈旧卡冒充新鲜，污染整个信号。展示≠核实。
+
+### 被动触发器（一行，可无视）
+
+search / suggest 跑完后，若**本次结果里**超过 **3 张 state 卡（pitfalls/decisions/insights）超龄**，在结果末尾挂**一行**提示，不弹清单、不强制动作、不触发任何执行：
+
+```
+（本次结果含 5 张超龄 state 卡，想集中清理可跑 /ai-pm knowledge review-stale）
+```
+
+- 只对 state 类计数；technique 类（patterns/metrics/playbooks）超龄只在该卡尾部显龄、**不计入触发、不催办**（方法管用就一直管用）。
+- 这是安全网唯一的"提醒"入口——让偶尔触发的 review-stale 有人记得跑，但绝不升级成唠叨（静默护栏）。
+
+> 90 天是动态衰老线，不是硬过期日——超龄只**暴露年龄、不删卡**。处置走 `review-stale`（AI 分诊、只升残差），日常退役靠写入时自动。判断类（pitfalls/decisions/insights）悄悄过期最危险，是催办的唯一对象。
 
 ---
 
@@ -276,7 +339,7 @@ grep -r "{keyword}" templates/knowledge-base/ --include="*.md" -l 2>/dev/null
 
 **默认过滤规则**（与 search 一致）：
 
-排除 `auto-generated: true` AND `confidence: low` 的卡片。手写卡片或已被 PM promote 到 medium/high 的 auto 卡片仍会出现。
+排除 `auto-generated: true` AND `confidence: low` 的卡片，以及 `superseded-by` 非空（已被取代）的卡片。手写卡片或已被 PM promote 到 medium/high 的 auto 卡片仍会出现。命中卡片按「时效性标记」section 算龄展示。
 
 ### 推荐展示（最多 3 条）
 
@@ -290,7 +353,7 @@ grep -r "{keyword}" templates/knowledge-base/ --include="*.md" -l 2>/dev/null
 ```
 📚 知识库推荐（基于关键词：{词1}、{词2}）
 
-① [{类型}] {标题}
+① [{类型}] {标题}   {超龄时：⚠️ {age} 天未复核}
   {问题/场景一句话}
   → {给 PRD 的提示，不超过 30 字}
 
@@ -344,6 +407,81 @@ find templates/knowledge-base -name '*.md' -exec grep -l 'auto-generated: true' 
 | promote-medium N | 同上，改为 medium |
 | drop N | rm 对应卡片 |
 | merge A,B → B | 把 A 的"验证数据"段 cat 到 B 末尾，rm A |
+
+> review-low 管**质量**（auto+low 该不该留），review-stale 管**年龄**（旧卡还成不成立）。两者互补，不互相替代。
+
+---
+
+## review-stale — 超龄卡片 AI 分诊（安全网）
+
+**永不自动跑**，只在用户显式 `/ai-pm knowledge review-stale` 时执行（静默护栏：耗时复核不抢进行中对话）。定位是**极少触发的安全网**——日常退役靠写入时自动、保鲜靠显式核源，这条只兜两者漏掉的残值。
+
+### 只盯 state 类卡（不催 technique 类）
+
+| 类别 | 卡 | 会不会烂 | review-stale |
+|------|-----|---------|-------------|
+| **state（状态类）** | pitfalls / decisions / insights | 会——随产品状态/版本变化失效 | **纳入分诊** |
+| **technique（技法类）** | patterns / metrics / playbooks | 多半不会——方法管用就一直管用 | 只被动显龄，**不催办** |
+
+### 第一步：脚本确定性出清单（不调模型）
+
+算龄、过滤、排序、出清单是**纯确定性活，零判断、零 token**，由脚本做，**不靠模型逐张算龄**：
+
+```bash
+scripts/review-stale-list.sh [阈值天数=90]    # 出超龄 state 卡清单（按龄降序）
+scripts/review-stale-list.sh 90 --all         # 附带 technique 类（中性显龄、不催办）
+```
+
+筛选规则（脚本已实现）：state 类（pitfalls/decisions/insights）+ `age > 阈值`（缺 `last-verified` 回退 `created`，都缺标"龄未知"）+ `superseded-by` 为空 + 排除 `auto-generated:true AND confidence:low`（未提升的 auto 卡归 `review-low` 质量门，不进年龄门）。这样清单 = review-stale 处理范围 = search/suggest 可见集，与被动触发器计数一致。
+
+AI 拿到这份清单后，才进入下一步分诊。
+
+### AI 先分诊，只把残差升给用户
+
+不再列卡让用户逐条选。AI 对筛出的每张卡**自己先判一遍**，分三档处理：
+
+1. **能核实 + 仍成立**（对着当前代码/PRD/文件核得动，结论没变）→ **AI 自动刷新 `last-verified` = today**，不打扰用户。
+2. **能核实 + 已失效**（结论被现状推翻）→ AI 备好处置建议（指向取代它的新卡 / 该改成什么 / 该删），**列入待确认清单**。
+3. **AI 核不动**（纯判断、依赖外部事实、需要用户拍板）→ **列入待确认清单**，标"需你判断"。
+
+呈现给用户的只有一份**精简清单**（档 1 不出现，已自动处理）：
+
+```
+review-stale 跑完：14 张超龄 state 卡，AI 自动确认仍成立 11 张（已刷新）。
+剩 3 张需你定：
+
+[1] DECISION-004 PRD 目录统一            AI：现状已不符 → 建议改/或被 DECISION-009 取代
+[2] PITFALL-016  filter-repo 拒绝 untracked  AI：仍复现 → 建议 ok（你确认即可）
+[3] INSIGHT-007  某场景用户偏好            AI：核不动（依赖外部判断）→ 需你定
+
+  ok N / super N→{ID} / edit N / drop N / skip
+```
+
+### 操作实现
+
+| 操作 | 实现 |
+|------|------|
+| 档 1 自动刷新 | AI 核实后 sed 改 `last-verified:` 为 today（无该行的旧卡在 `created:` 后插一行）；汇总成一句"自动确认 N 张"，不逐条刷屏 |
+| ok N | 用户确认仍成立 → sed 刷 `last-verified` = today |
+| super N → {ID} | sed 改 N 的 `superseded-by:` 为 {ID}；N 自此 search/suggest 默认不出，仅 `--include-superseded` 追溯 |
+| edit N | 走 add 的逐步引导改内容，落盘后刷 `last-verified` |
+| drop N | rm 对应卡 |
+
+> 关键：AI 能核的自己核掉（档 1），用户只面对"AI 拿不准 + 已失效"的少数残差。建议某项目状态大改后手动跑一次，平时不用管——被动触发器（见「时效性标记」）会在 state 卡堆积时提醒。
+
+### 未来形态（书面意图，暂不实现）
+
+当前「AI 分诊」由主 agent 串行做，够用。**待真实跑过几轮、确认规模与可核实比例后**，再考虑下面这套三层架构——别在没数据前投机实现（避免过度工程）：
+
+| 层 | 干什么 | 触发 |
+|----|--------|------|
+| **脚本（已实现）** | 算龄/过滤/排序/出清单、写 `superseded-by`、刷时间戳——零判断的确定性活 | `review-stale-list.sh` |
+| **subagent（暂不建）** | 不可省的仓库判断：「对当前源该结论还成立吗」「X 真取代 Y 吗」——隔离、并行、返回结构化裁决 | 仅清单很大（如 >30 张）时 fan-out；≤几张主 agent inline 即可 |
+| **主 agent** | 对话判断（录入/萃取，subagent 缺上下文做不了）+ 不可逆处置（`drop` 最终拍板） | 始终 |
+
+**可核实前提（卡住自动化上限）**：一张卡能被 subagent 自动核实，前提是它带**机器能跟着走的真值源指针**（如某 PRD/代码路径）。从某 PRD 长出的卡可核；"某工作流的坑"这类无源可对 → 永远只能升给用户判断。想扩大可自动核实集合，唯一办法是给卡加**可选** `verify-against:` 指针字段——新 schema，**标记在此、不强推**。
+
+**安全纪律**：subagent 的任何自动退役都记一行可 grep 的日志，判错一遍批量回滚（同"删前 grep 互链"纪律）；可逆操作（supersede/刷新）可自治，不可逆（drop）必升用户。
 
 ---
 

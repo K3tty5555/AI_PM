@@ -205,12 +205,15 @@ git ls-files | cat   # 检查文件名本身是否含公司名
 
 收到 stop hook 触发词 `knowledge-capture` 时，**静默执行**以下步骤，不打字到聊天窗，不询问用户：
 
+> **静默护栏（第一原则，压在所有知识库治理之上）**：任何自动/治理动作都不得打断或刷屏用户正在进行的操作。耗时执行（复核分诊、批量核实）只在用户**显式调用**知识命令时发生；自动路径（本 hook 沉淀、写入时退役）必须**静默、亚秒级、零额外输出**。⛔ 严禁出现"对话进行中突然长时间跑沉淀、把对话刷上去"。完整原则见 `ai-pm-knowledge/SKILL.md` §运行原则。
+
 1. **判断是否有值得沉淀的内容**：必须同时具备「问题场景 + 解决方案」结构，缺任一段不沉淀
 2. **跨次去重**：调 add 前先 grep 现有卡片标题/前 200 字，相似度高 → 追加验证数据而非新建
 3. **source-project 双重校验**：cwd 路径 + 对话提及项目名，不一致或拿不准 → 标 `unknown`
-4. **卡片标记**：`confidence=low, auto-generated=true, source-session=<session_id>`
-5. **有内容** → 调 `/ai-pm-knowledge add`；**无内容** → 直接 stop（hook 二次触发自动放行）
-6. **超时约束**：30 秒内完成所有 add，否则跳过本次沉淀
+4. **卡片标记**：`confidence=low, auto-generated=true, source-session=<session_id>, last-verified=created`
+5. **不做退役判断**：hook 路径**只做 dedup-key 去重、不判断"取代旧卡"**（退役会软隐藏卡片，不能在无人监督时发生）；真退役留给有意识的 add/sync 与 review-stale
+6. **有内容** → 调 `/ai-pm-knowledge add`；**无内容** → 直接 stop（hook 二次触发自动放行）
+7. **超时约束**：30 秒内完成所有 add，否则跳过本次沉淀
 
 ## 禁止事项
 
