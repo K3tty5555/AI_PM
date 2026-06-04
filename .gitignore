@@ -111,6 +111,12 @@ templates/prd-styles/*/
 !templates/prd-styles/default/
 !templates/prd-styles/enterprise-standard/
 
+# 个人 persona 本机备份（声音画像 / 写作风格等，含真实语料）
+# memory/ 是 live 权威源，此目录仅作仓库侧备份；只放行 README.md 和 .gitkeep
+templates/persona/*
+!templates/persona/README.md
+!templates/persona/.gitkeep
+
 # -----------------------------------------------------------------------------
 # Design Source Files (Large & Proprietary)
 # -----------------------------------------------------------------------------
