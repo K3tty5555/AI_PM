@@ -140,6 +140,15 @@ wb = openpyxl.load_workbook(file_path, data_only=True)
 
 ---
 
+## 数据严谨度（真做留存分析 / A-B 实验时强制；普通描述统计/趋势/仪表盘不触发）
+
+读取 `references/data-rigor-frameworks.md`：
+- **留存**别看被新用户稀释的整体留存率，按批次**分群（cohort）看留存曲线**——跌到走平=有粘性，一路跌到底=尝鲜不留。
+- **A/B**别拿波动当效果——盯样本量 / 最小可检验差异（MDE）/ 置信，结论三动作：**上线 / 继续观察 / 砍掉**。
+- PM 只到业务判断层；**具体检验方法、MDE/样本量怎么算由数据侧定，不写统计实现**。
+
+---
+
 ## Anti-Pattern
 
 - Excel 文件不用 `data_only=True` → 读到公式字符串

@@ -30,6 +30,11 @@
 | `ai-pm/references/user-interaction.md` | 路径解析、启动界面、_status.json 规范、记忆迁移 |
 | `ai-pm/references/symptom-index.md` | 常见场景速查 + Anti-Pattern |
 | `ai-pm/references/project-memory.md` | 项目记忆系统规范（L0/L1/L2） |
+| `ai-pm/references/localization-card.md` | 本地化引擎（一页纸过滤器）：外借框架入库前的三步过滤 + 术语表 + 标记约定 |
+| `ai-pm/references/risk-frameworks.md` | 上线前风险预演（pre-mortem 本地化），phase-8 评审前强制前置 |
+| `ai-pm/references/discovery-frameworks.md` | 假设-验证纪律（discovery 本地化），ai-pm-analyze 新场景/新用户行为时强制 |
+| `ai-pm/references/data-rigor-frameworks.md` | 数据严谨度（cohort/留存曲线/AB显著性 本地化），ai-pm-data 真做留存/AB 时强制 |
+| `ai-pm/references/competitive-frameworks.md` | 竞品对标卡（battlecard 本地化），ai-pm-research 对销售/竞品压力场景才触发 |
 
 ## 扩展功能文件
 
