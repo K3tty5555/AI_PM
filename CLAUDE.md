@@ -195,11 +195,14 @@ Claude ↔ Codex 上下文交换桥接目录，部分子目录受 `.gitignore` �
 - **内部产品线代号**：代码仓名称、内部服务名等一律替换为 `<your-codebase-path>/模块名` 形式
 - **品牌色/设计 Token**：设计规范示例只保留通用色系，公司品牌色写 `根据产品实际情况填写`
 
-**自检命令**（开源前/PR 前跑一次）：
+**自检命令**（开源前 / PR 前 / 推广成跨团队共享前跑一次）：
 ```bash
+bash scripts/check-share-readiness.sh   # 分享就绪自检：内部名/敏感目录/source-project 一次过，退出码可做 gate
+# 兜底手查：
 git ls-files | xargs grep -l "公司名|内部关键词" 2>/dev/null
 git ls-files | cat   # 检查文件名本身是否含公司名
 ```
+> KettyWu 是工具招牌 persona（作者同意署名），在白名单内、不拦。新增内部名往 `scripts/check-share-readiness.sh` 的 `DENYLIST` 补。
 
 ## 知识沉淀 Hook（§知识沉淀Hook）
 
