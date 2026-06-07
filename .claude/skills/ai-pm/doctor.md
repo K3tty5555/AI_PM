@@ -6,9 +6,9 @@
 
 ## 功能
 
-扫描所有技能文件，检查 23 项一致性指标，输出健康报告。
+扫描所有技能文件，检查 26 项一致性指标，输出健康报告。
 
-## 检查项（6 类共 23 项）
+## 检查项（7 类共 26 项）
 
 ### 命令路由一致性（3 项）
 
@@ -50,6 +50,12 @@
 21. **行业预设完整性**: 读取 `templates/presets/industry-style-presets.json`，检查 JSON 是否包含 7 个行业（general/finance/healthcare/tech/education/ecommerce/enterprise），每个行业必须有 label/accent/bg/font/keywords 字段
 22. **SKILL.md 路由表路径存在性**: 从 `ai-pm/SKILL.md` 的命令路由表和 Phase 路由表中提取引用的所有路径（子技能 `.claude/skills/{技能名}/SKILL.md` + Phase 文件 `phases/phase-N-xxx.md` + reference 文件 `references/*.md`），逐一检查文件是否存在
 23. **原型截图覆盖率**（仅当项目存在 PRD 时执行）：扫描最新版本 PRD MD 中 `## 六` 级别下的所有详细设计表格，统计含 `原型示意` 行的表格占比；低于 80% 且无 `无界面交互` 备注说明时，标记为 ⚠️ 警告，建议补全 Phase 7.6 截图插入
+
+### 本地化框架治理（3 项）
+
+24. **本地化标记完整性**：扫描 `.claude/skills/ai-pm/references/*-frameworks.md`（所有经本地化引擎入库的外借框架文件），检查 frontmatter 是否含 `localized: true`。缺失 → ❌ 错误（说明该框架绕过了 `localization-card.md` 闸门）。**豁免**：非 `-frameworks.md` 结尾的 reference（判断卡 / 引擎 / project-memory 等本土原生文件，不走本地化引擎，不需要标记）——含 `localization-card.md` 这个过滤器自身。
+25. **反例计数**：对同批 `references/*-frameworks.md`，检查 frontmatter 含 `counter-examples: N` 且 N ≥ 1。缺失或为 0 → ⚠️ 警告（本地化铁律要求每把枪必配 ≥1 组大陆反例）。注：doctor 只机械核对标记数字 ≥1；反例"是否真内嵌、组数对不对得上"由 add/sync 时人工或 pm-agent 核。
+26. **核心文件行业中立**：扫描必须保持行业中立的核心文件（`references/localization-card.md` + `references/pm-judgment-card.md` + `references/prototype-judgment-card.md`），grep 行业专属红线词清单（如「未成年人」「考试公平」「反洗钱」「适当性」「循证」等，清单随行业包扩充）。命中 → ⚠️ 警告（核心被某垂类污染的信号，需人工确认是否该挪进行业包 `pack[行业]`）。**说明**：① 框架文件 `*-frameworks.md` 豁免本项——其反例/示例位合法含行业词；② "框架方法体是否焊死行业红线"属语义判断，doctor 做不了，由本地化卡 5 问 + pm-agent dogfood 把关，doctor 只做核心中立文件的机械兜底。
 
 ## 执行方式
 
