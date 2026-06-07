@@ -11,18 +11,29 @@ cd "$(dirname "$0")/.." || exit 2
 
 fail=0
 
-# ── 1. 内部名 denylist（追踪文件里出现即泄漏；KettyWu 不在其列）──────────
-# 注：用通用占位描述，真实内部名按本机情况维护，不写进可分享文档的正文示例。
-DENYLIST='某 K12 教育平台|某 AI 公司|company|某教育 AI 助手|某 AI 助手|某产品|KettyWu|某产品经理|某产品经理|某产品经理|某平台|某角色'
+# ── 内部名清单（一次加载，check 1 + check 3 共用）─────────────────────────
+# ⚠️ 真实内部名清单放在本机 gitignore 的 scripts/.share-denylist（一行一个，支持正则），
+#    绝不写进本脚本任何位置——否则脚本自己就成泄漏源（把内部名明文广播出去，本工具踩过这坑）。
+#    格式见 scripts/.share-denylist.example。
+DENYLIST_FILE="$(dirname "$0")/.share-denylist"
+DENYLIST=""
+if [ -f "$DENYLIST_FILE" ]; then
+  DENYLIST=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$DENYLIST_FILE" | paste -sd '|' -)
+fi
 
+# ── 1. 追踪文件里出现内部名即泄漏 ─────────────────────────────────────────
 echo "── 1. 扫描追踪文件里的内部名 ──"
-hits=$(git ls-files | xargs grep -lE "$DENYLIST" 2>/dev/null | sort -u)
-if [ -n "$hits" ]; then
-  echo "❌ 以下追踪文件含内部名，分享前必须清成通用占位："
-  echo "$hits" | sed 's/^/   /'
-  fail=1
+if [ -z "$DENYLIST" ]; then
+  echo "⚠️ 未配置 $DENYLIST_FILE 或为空，跳过内部名扫描——分享前请照 scripts/.share-denylist.example 配置。"
 else
-  echo "✅ 无内部名泄漏"
+  hits=$(git ls-files | xargs grep -lE "$DENYLIST" 2>/dev/null | sort -u)
+  if [ -n "$hits" ]; then
+    echo "❌ 以下追踪文件含内部名，分享前必须清成通用占位："
+    echo "$hits" | sed 's/^/   /'
+    fail=1
+  else
+    echo "✅ 无内部名泄漏"
+  fi
 fi
 
 # ── 2. 敏感目录不得被追踪（应由 .gitignore 挡住）──────────────────────
@@ -41,16 +52,20 @@ else
   echo "✅ 知识库卡片 / persona 语料未被追踪（gitignore 生效，空库起步成立）"
 fi
 
-# ── 3. 追踪文件里是否残留 source-project 内部项目名 ───────────────────
+# ── 3. 追踪文件 frontmatter 里残留 source-project 内部项目名 ─────────────
 echo ""
 echo "── 3. 追踪文件里的 source-project 内部项目名 ──"
-leak3=$(git ls-files | xargs grep -lE '^source-project: .+(某 K12 教育平台|某教育 AI 助手|某产品|辅批|阅卷)' 2>/dev/null | sort -u)
-if [ -n "$leak3" ]; then
-  echo "❌ 以下追踪文件 frontmatter 残留内部项目名："
-  echo "$leak3" | sed 's/^/   /'
-  fail=1
+if [ -z "$DENYLIST" ]; then
+  echo "⚠️ 无内部名清单，跳过 source-project 扫描。"
 else
-  echo "✅ 无 source-project 内部项目名泄漏"
+  leak3=$(git ls-files | xargs grep -lE "^source-project:.*($DENYLIST)" 2>/dev/null | sort -u)
+  if [ -n "$leak3" ]; then
+    echo "❌ 以下追踪文件 frontmatter 残留内部项目名："
+    echo "$leak3" | sed 's/^/   /'
+    fail=1
+  else
+    echo "✅ 无 source-project 内部项目名泄漏"
+  fi
 fi
 
 echo ""

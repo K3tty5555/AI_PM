@@ -202,7 +202,7 @@ bash scripts/check-share-readiness.sh   # 分享就绪自检：内部名/敏感�
 git ls-files | xargs grep -l "公司名|内部关键词" 2>/dev/null
 git ls-files | cat   # 检查文件名本身是否含公司名
 ```
-> KettyWu 是工具招牌 persona（作者同意署名），在白名单内、不拦。新增内部名往 `scripts/check-share-readiness.sh` 的 `DENYLIST` 补。
+> KettyWu 是工具招牌 persona（作者同意署名），在白名单内、不拦。**内部名清单放本机 `scripts/.share-denylist`（gitignore，绝不入库）**，新增内部名往那里补；模板见 `scripts/.share-denylist.example`。脚本本身不存任何真实内部名——否则检漏脚本自己成泄漏源（本工具踩过这坑）。
 
 ## 知识沉淀 Hook（§知识沉淀Hook）
 

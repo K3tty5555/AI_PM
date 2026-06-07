@@ -1,0 +1,7 @@
+# 分享前内部名清单 —— 模板。复制成同目录 .share-denylist（本机 gitignore）后填真实内部名。
+# 一行一个，支持正则；# 开头为注释。check-share-readiness.sh 读它扫追踪文件。
+# ⚠️ 真实内部名只写进 .share-denylist（gitignore），绝不写进本 .example（它是追踪文件，会被分享）。
+公司简称示例
+产品代号示例
+内部人名示例
+内部服务名示例
