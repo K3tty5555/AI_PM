@@ -87,6 +87,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm driver [PRD路径]` | PM 风格 lint 命令入口（pm-agent 的 thin wrapper，单一事实源在 pm-agent）。仅用于历史 PRD 体检 / 大改后回归 / 评审前体检 |
 | `/ai-pm doctor` | 技能健康检查（26 项一致性扫描） |
 | `/ai-pm illustration [输入]` | AI 流程图生成（baoyu-imagine，支持 Mermaid 和自然语言） |
+| `/ai-pm release-docs [PRD路径\|项目名]` | 上线文档套件——基于实际上线功能产「更新公告 + 操作手册」，可发飞书云文档（去版本号），流程见 `release-docs.md` |
 | `/ai-pm config style` | PRD 写作风格管理 |
 | `/ai-pm config ui` | UI 设计规范管理 |
 | `/ai-pm [URL]` | 分析参考网页（Playwright MCP 抓取） |
@@ -291,6 +292,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
 | `doctor.md` | 技能健康检查（26 项） |
 | `illustration.md` | AI 流程图生成 |
+| `release-docs.md` | 上线文档套件命令流程（公告+手册+飞书发布），内核在 `references/release-docs-frameworks.md` |
 | `instinct.md` | 自学习系统 |
 | `web-analysis.md` | 网页分析 |
 | `../ai-pm-strategy/SKILL.md` | 战略沙盘：独立高阶产品战略推演 skill |

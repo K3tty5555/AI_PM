@@ -35,6 +35,8 @@
 | `ai-pm/references/discovery-frameworks.md` | 假设-验证纪律（discovery 本地化），ai-pm-analyze 新场景/新用户行为时强制 |
 | `ai-pm/references/data-rigor-frameworks.md` | 数据严谨度（cohort/留存曲线/AB显著性 本地化），ai-pm-data 真做留存/AB 时强制 |
 | `ai-pm/references/competitive-frameworks.md` | 竞品对标卡（battlecard 本地化），ai-pm-research 对销售/竞品压力场景才触发 |
+| `ai-pm/references/stakeholder-frameworks.md` | 协作地图（内）+ 客户决策地图（外）（stakeholder map 本地化），ai-pm-analyze 涉多团队/外部决策链时产出 |
+| `ai-pm/references/release-docs-frameworks.md` | 上线文档套件内核（更新公告+操作手册+飞书发布，去版本号），被 `/ai-pm release-docs` 调用 |
 
 ## 扩展功能文件
 
@@ -42,6 +44,7 @@
 |------|------|
 | `ai-pm/doctor.md` | 26 项健康检查 |
 | `ai-pm/illustration.md` | AI 流程图生成 |
+| `ai-pm/release-docs.md` | 上线文档套件命令流程（公告+手册+飞书发布） |
 | `ai-pm/instinct.md` | 自学习系统 |
 | `ai-pm/web-analysis.md` | 网页分析（Playwright） |
 

@@ -19,6 +19,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(python3)
 | `metrics` | 数据指标设计 |
 | `insight {文件路径}` | 数据洞察分析 |
 | `dashboard` | 项目仪表盘 |
+| `feedback {文件}` | 用户反馈文本分析（主题+情感+Top痛点 → 候选需求清单） |
 | 直接传入文件路径 | 自动执行 insight |
 | 无参数 | 显示帮助 |
 
@@ -48,6 +49,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(python3)
 ```
 
 **输出**: `{项目目录}/09-analytics-requirement.md`
+
+**北极星收敛（设计指标体系前先做）**：别一上来铺一堆指标。先收敛出**唯一一个能证明用户真拿到价值的领先指标**（客户中心、可短期撬动），再配 3-5 个输入指标。⚠️ 砍掉美式"必须导向营收/增长"的权重——B/G 端北极星不是营收，判据是「对齐产品愿景 + 用户感知到的价值」（如效率类产品 = 用户真用它解决了问题的频次）。
 
 ---
 
@@ -94,6 +97,27 @@ wb = openpyxl.load_workbook(file_path, data_only=True)
 ```
 
 **输出**: `{项目目录}/12-data-insight-dashboard/index.html`
+
+---
+
+## 4. feedback — 用户反馈文本分析
+
+把一堆非结构化反馈（评论 / 工单 / 调研开放题）→ 自动分主题 + 标情感 + 挑 Top 痛点 + 附用户原话。
+
+**用法**:
+```
+/ai-pm data feedback ./反馈.csv
+```
+
+**步骤**:
+1. 读文本（CSV/Excel 评论、工单导出；Excel 仍用 `openpyxl data_only=True`），按主题聚类
+2. 每个主题标情感倾向（正/负/中）+ 出现频次
+3. 挑 Top 痛点，每条附 2-3 句真实用户原话
+4. 标小样本风险（量太小别下结论）
+
+**出口 = 候选需求清单**：产出做成「带主题/痛点/频次/情感的候选需求」，**直接喂 `/ai-pm priority` 当输入**——「收集反馈 → 提炼痛点 → 排优先级」一条顺下来，但本步不替优先级做判断排序。
+
+**输出**: `{项目目录}/14-feedback-analysis.md`
 
 ---
 
