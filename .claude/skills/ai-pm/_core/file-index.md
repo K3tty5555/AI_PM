@@ -40,7 +40,7 @@
 
 | 文件 | 内容 |
 |------|------|
-| `ai-pm/doctor.md` | 22 项健康检查 |
+| `ai-pm/doctor.md` | 26 项健康检查 |
 | `ai-pm/illustration.md` | AI 流程图生成 |
 | `ai-pm/instinct.md` | 自学习系统 |
 | `ai-pm/web-analysis.md` | 网页分析（Playwright） |

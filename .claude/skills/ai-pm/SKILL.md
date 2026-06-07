@@ -85,7 +85,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm retrospective` | 项目复盘，生成 10-retrospective.md |
 | `/ai-pm instinct [list\|review\|import\|reset]` | 习惯直觉管理（自动学习的偏好） |
 | `/ai-pm driver [PRD路径]` | PM 风格 lint 命令入口（pm-agent 的 thin wrapper，单一事实源在 pm-agent）。仅用于历史 PRD 体检 / 大改后回归 / 评审前体检 |
-| `/ai-pm doctor` | 技能健康检查（23 项一致性扫描） |
+| `/ai-pm doctor` | 技能健康检查（26 项一致性扫描） |
 | `/ai-pm illustration [输入]` | AI 流程图生成（baoyu-imagine，支持 Mermaid 和自然语言） |
 | `/ai-pm config style` | PRD 写作风格管理 |
 | `/ai-pm config ui` | UI 设计规范管理 |
@@ -289,7 +289,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `references/symptom-index.md` | 常见场景速查 + Anti-Pattern |
 | `references/baseline-delta-worksheet.md` | **迭代项目基线 delta 工作表 ⭐**——核心 insight：迭代需求 = delta，不是新功能；4 列工作表 + 三类高密度避坑信息 + 强制门禁，phase-1 检测+产出，phase-5 阻断 |
 | `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
-| `doctor.md` | 技能健康检查（23 项） |
+| `doctor.md` | 技能健康检查（26 项） |
 | `illustration.md` | AI 流程图生成 |
 | `instinct.md` | 自学习系统 |
 | `web-analysis.md` | 网页分析 |
