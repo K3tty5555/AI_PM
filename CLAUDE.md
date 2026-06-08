@@ -51,6 +51,7 @@ README.md                  项目介绍
 | `/ai-pm design-spec` | 设计规范（加载公司/团队 UI 规范） |
 | `/ai-pm knowledge` | 知识库管理 |
 | `/ai-pm driver [PRD]` | PM 风格 lint（评审前体检），pm-agent 的命令糖衣 |
+| `/ai-pm release-docs [PRD\|项目]` | 上线文档套件（更新公告 + 操作手册，可发飞书；去版本号） |
 
 ## PRD 写作专项（PM Agent 4 层体系）
 

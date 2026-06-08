@@ -49,6 +49,17 @@ Office Hours → Requirement → Analysis → Research → Stories → PRD → A
 - **AI illustration** generation and embedding into PRD content
 - **Six-role review** from product, design, frontend, backend, QA, and operations perspectives
 
+### Localized PM Methods
+
+PM methods borrowed from established practice and **re-grounded for China-mainland enterprise reality** — localized, not translated. Each passes a localization filter, ships with local counter-examples, and folds into existing skills instead of adding command surface:
+
+- **Pre-mortem** risk rehearsal before the six-role review, with a general red-line / compliance slot
+- **Assumption validation** in requirement analysis — what we are betting on and how to test it cheaply
+- **Analytics rigor** — cohort retention, retention curves, A/B significance, North Star convergence, and user-feedback theme / sentiment analysis
+- **Competitive battlecards** for sales-facing situations
+- **Collaboration map + customer-decision map** for internal alignment and multi-layer customer decision chains
+- **Release docs** — generate update notes and a user manual from shipped features, then publish to Feishu (`/ai-pm release-docs`)
+
 ### Export and Tooling
 
 | Area | What it covers |
@@ -119,6 +130,7 @@ On first launch, configure one AI backend in Settings:
 | `/ai-pm-prototype` | Generate interactive HTML prototype |
 | `/ai-pm-review` | Six-role requirement review |
 | `/ai-pm retrospective` | Project retrospective and knowledge capture |
+| `/ai-pm release-docs [PRD\|project]` | Release update notes + user manual from shipped features, publish to Feishu |
 | `/ai-pm-priority` | Requirement priority assessment |
 | `/ai-pm-weekly` | Weekly report generation |
 | `/ai-pm-interview` | On-site interview mode |
