@@ -4,6 +4,7 @@
 # 背景：Claude Code 各文件（CLAUDE.md / agents / phase / 判断卡 / 模板）独立加载，
 # 同一条规则必须在多处各留一份副本（pointer 救不了生成时刻）。重复是架构必需，
 # 但会漂移（体检 2026-05-29 发现：自检项数 9/11、原型门槛 9/10 对不上）。
+# 自检现在统一用「§9 守门 checklist」表述，不再写死项数。
 # 本脚本不消除重复，只盯住几个关键事实别再跑偏。手动跑或挂 pre-commit。
 #
 # 用法：bash scripts/check-rule-drift.sh        # 退出码 0=一致，1=发现漂移
@@ -16,12 +17,12 @@ note_fail() { FAIL=1; printf '  ❌ %s\n' "$1"; }
 note_ok()   { printf '  ✅ %s\n' "$1"; }
 
 # 只扫 git 追踪的规则相关文件
-FILES=$(git ls-files | grep -E '^(CLAUDE\.md|\.claude/|templates/prd-styles/|templates/README)' | grep -E '\.md$')
+FILES=$(git ls-files | grep -E '^(CLAUDE\.md|\.claude/|templates/prd-styles/|templates/README|app/src-tauri/src/commands/)' | grep -E '\.(md|rs)$')
 
-echo "▶ 检查 1：自检项数应统一为「9 项」（不得出现 10/11 项自检）"
-BAD=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "(1[0-9]|[2-8]) ?项 ?(自检|checklist)" 2>/dev/null)
-if [ -n "$BAD" ]; then note_fail "出现非 9 项的自检表述："; printf '%s\n' "$BAD" | sed 's/^/       /'
-else note_ok "未发现 9 以外的自检项数"; fi
+echo "▶ 检查 1：PRD 守门自检 / PM 直觉不得写死项数"
+BAD=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "([0-9]+|[一二三四五六七八九十]+) ?项 ?(自检|checklist)|([0-9]+|[一二三四五六七八九十]+) ?条 ?PM ?直觉" 2>/dev/null)
+if [ -n "$BAD" ]; then note_fail "出现固定项数表述（应写「§9 守门 checklist / PM 直觉」）："; printf '%s\n' "$BAD" | sed 's/^/       /'
+else note_ok "未发现固定项数的 PRD 自检 / PM 直觉表述"; fi
 
 echo "▶ 检查 2：原型 12 分制通过门槛应统一为「总分 ≥ 9」（不得出现 >= 10 / 总分 10 才通过）"
 BAD=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "总分 ?(>=|≥) ?10|总分.{0,4}10.{0,6}(可进|通过|评审)" 2>/dev/null)

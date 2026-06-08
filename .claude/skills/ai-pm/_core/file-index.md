@@ -37,6 +37,7 @@
 | `ai-pm/references/competitive-frameworks.md` | 竞品对标卡（battlecard 本地化），ai-pm-research 对销售/竞品压力场景才触发 |
 | `ai-pm/references/stakeholder-frameworks.md` | 协作地图（内）+ 客户决策地图（外）（stakeholder map 本地化），ai-pm-analyze 涉多团队/外部决策链时产出 |
 | `ai-pm/references/release-docs-frameworks.md` | 上线文档套件内核（更新公告+操作手册+飞书发布，去版本号），被 `/ai-pm release-docs` 调用 |
+| `ai-pm/references/pm-skills-traceability.md` | pm-skills 对标追踪表（65 skills + 36 commands 的归属、暂缓和不拿理由） |
 
 ## 扩展功能文件
 

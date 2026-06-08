@@ -236,7 +236,7 @@ Phase 5: PRD 生成（**先过 PM 风格判断卡** + 应用选定风格 + 设�
     ↓  → 生成 05-prd/05-PRD-v1.0.md
     入口：强制读 references/pm-judgment-card.md
     写作：phase-5-prd.md 内嵌「写作脚手架（填空模板）+ 7 组反例对比库 + 自检三连问」
-    落盘前：9 项 checklist 自检
+    落盘前：§9 守门 checklist 自检
 Phase 6（可选）: 数据埋点设计
     ↓  → 生成 09-analytics-requirement.md
 Phase 7: 原型生成（Token 消耗提示后确认，先过 prototype-agent 蓝图与视觉方向）
@@ -282,7 +282,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 
 | 文件 | 内容 |
 |------|------|
-| `references/pm-judgment-card.md` | **PM 风格判断卡 ⭐**——9 章节判断标准（角色 / 6 直觉 / 越界红线 / 责任分工 / Agent 5 件事写法 / 篇幅 / 修订日志 / 9 项 checklist），phase-5-prd 强制前置 |
+| `references/pm-judgment-card.md` | **PM 风格判断卡 ⭐**——判断标准（角色 / PM 直觉 / 越界红线 / 责任分工 / Agent 5 件事写法 / 篇幅 / 修订日志 / §9 守门 checklist），phase-5-prd 强制前置 |
 | `../../agents/pm-agent.md` | **KettyWu sub-agent ⭐**——内化判断卡 + 反例 + 填空模板，主对话调用 `Agent(subagent_type=pm-agent)` 写/审 PRD 单章节，比 driver 主动（driver 是 lint，pm-agent 是会写 PRD 的人）|
 | `references/prototype-judgment-card.md` | **原型质量判断卡 ⭐**——页面/流程/状态/视觉设计红线 + 12 分制审计标准，phase-7-prototype 强制前置 |
 | `../../agents/prototype-agent.md` | **原型设计负责人 sub-agent ⭐**——负责原型蓝图、视觉方向、生成约束、质量审计，视觉设计低分同样阻断进入评审 |
@@ -290,6 +290,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `references/symptom-index.md` | 常见场景速查 + Anti-Pattern |
 | `references/baseline-delta-worksheet.md` | **迭代项目基线 delta 工作表 ⭐**——核心 insight：迭代需求 = delta，不是新功能；4 列工作表 + 三类高密度避坑信息 + 强制门禁，phase-1 检测+产出，phase-5 阻断 |
 | `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
+| `references/pm-skills-traceability.md` | pm-skills 对标追踪表（65 skills + 36 commands 的归属、暂缓和不拿理由），用于后续审计或防止重复搬运 |
 | `doctor.md` | 技能健康检查（26 项） |
 | `illustration.md` | AI 流程图生成 |
 | `release-docs.md` | 上线文档套件命令流程（公告+手册+飞书发布），内核在 `references/release-docs-frameworks.md` |

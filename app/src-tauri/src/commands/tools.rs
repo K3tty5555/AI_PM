@@ -186,7 +186,7 @@ pub async fn run_tool(
     // Rules kept consistent with stream.rs build_system_prompt (same 5 rules, same wording)
     let mut system_prompt = if args.tool_name == "ai-pm-driver" {
         format!(
-            "{}\n\n---\n\n### 桌面端 PM 风格 lint 模式（优先级最高）\n\n你正在 AI PM 桌面应用中运行 `ai-pm-driver`。用户输入可能是 PRD 文件路径，也可能是 PRD 全文。\n\n**执行规则：**\n1. 如果用户输入包含 PRD 全文，直接基于全文检查；如果只有路径，Claude CLI 模式可使用 Read 读取该文件\n2. 按 pm-agent 的 9 项自检 + 6 条越界红线输出 punch list\n3. 不重写 PRD，不输出完整修订稿，只指出问题、行号/位置、修改建议\n4. 第一行必须是 `# PM 风格体检报告`\n5. 禁止寒暄、禁止提问、禁止输出「已保存」等元信息\n6. 输出结构固定为：概况、必修问题、建议补齐、通过项、总评",
+            "{}\n\n---\n\n### 桌面端 PM 风格 lint 模式（优先级最高）\n\n你正在 AI PM 桌面应用中运行 `ai-pm-driver`。用户输入可能是 PRD 文件路径，也可能是 PRD 全文。\n\n**执行规则：**\n1. 如果用户输入包含 PRD 全文，直接基于全文检查；如果只有路径，Claude CLI 模式可使用 Read 读取该文件\n2. 按 pm-agent 的 §9 守门自检 + 6 条越界红线输出 punch list\n3. 不重写 PRD，不输出完整修订稿，只指出问题、行号/位置、修改建议\n4. 第一行必须是 `# PM 风格体检报告`\n5. 禁止寒暄、禁止提问、禁止输出「已保存」等元信息\n6. 输出结构固定为：概况、必修问题、建议补齐、通过项、总评",
             skill_content
         )
     } else {

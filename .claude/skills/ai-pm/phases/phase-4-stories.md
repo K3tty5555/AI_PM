@@ -7,7 +7,7 @@
 
 写故事前先读 `.claude/skills/ai-pm/references/pm-judgment-card.md` —— 特别是：
 - §1 角色定位：你是 PM，写产品决策不是写技术规约
-- §2 6 条 PM 直觉：详略 / 责任 / 评审判断
+- §2 PM 直觉：详略 / 责任 / 评审判断
 - §3 Agent PRD 5 件事 PM 写法（仅 agent/hybrid 适用）
 
 ## 产物结构（按 product_type 分支）

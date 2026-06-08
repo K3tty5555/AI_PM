@@ -32,13 +32,13 @@ Agent({
   description: "PM 风格 lint：审视 PRD",
   subagent_type: "pm-agent",
   prompt: """
-任务：审视下列 PRD 文件，按 9 项自检 + 6 越界红线扫描，输出 punch list。
+任务：审视下列 PRD 文件，按 pm-judgment-card §9 守门自检 + 6 越界红线扫描，输出 punch list。
 
 PRD 文件路径：{prd_file_path}
 
 要求：
 1. 读 PRD 全文（用 Read 工具，记录行号）
-2. 按 9 项 checklist 逐项扫，列出不通过项（行号 + 原文 + 修改建议）
+2. 按守门 checklist 逐项扫，列出不通过项（行号 + 原文 + 修改建议）
 3. 检查越界红线（技术栈 / 接口字段 / 视觉毫秒 / 算法实现 / 给用户透版本号 / 过细异常）
 4. 检查缺失项（影响范围 / 暂不纳入本期 / 责任分工 / 修订日志保留 PM-评审迭代）—— 复用对照表**不算通用缺失项**，仅功能迁移/接老存量类 PRD 缺它才标（普通迭代不需要，PITFALL-045）
 5. Agent / hybrid 产品额外查 4 项（行为契约带理由 / Few-shot 标 [算法补完] / 评测用接受度信号 / 失败兜底用户感知 only）
@@ -74,7 +74,7 @@ pm-agent 的 punch list 直接呈现给用户，不二次加工。
 | 第三方 PRD 接手 | 同上 |
 
 **不该用**：
-- ❌ pm-agent 刚写完的章节——已自检过 9 项，不重复跑
+- ❌ pm-agent 刚写完的章节——已过守门自检，不重复跑
 - ❌ 当 lint hook 用——driver 是 PM 主动审查，不是自动化
 
 ## 与其他评审 skill 的边界

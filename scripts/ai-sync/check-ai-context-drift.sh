@@ -64,28 +64,17 @@ check_no_tracked_generated_skills() {
 }
 
 check_resource_skill_drift() {
-  [[ -d "$TAURI_RESOURCE_SKILLS" ]] || return 0
-
-  local resource_only source_only
-  resource_only="$(
-    comm -13 \
-      <(find "$SKILLS_DIR" -maxdepth 2 -name 'SKILL.md' -type f | sed "s#^$SKILLS_DIR/##; s#/SKILL.md##" | sort) \
-      <(find "$TAURI_RESOURCE_SKILLS" -maxdepth 2 -name 'SKILL.md' -type f | sed "s#^$TAURI_RESOURCE_SKILLS/##; s#/SKILL.md##" | sort)
-  )"
-  source_only="$(
-    comm -23 \
-      <(find "$SKILLS_DIR" -maxdepth 2 -name 'SKILL.md' -type f | sed "s#^$SKILLS_DIR/##; s#/SKILL.md##" | sort) \
-      <(find "$TAURI_RESOURCE_SKILLS" -maxdepth 2 -name 'SKILL.md' -type f | sed "s#^$TAURI_RESOURCE_SKILLS/##; s#/SKILL.md##" | sort)
-  )"
-
-  if [[ -n "$resource_only" || -n "$source_only" ]]; then
-    echo "INFO: app/src-tauri/resources/skills differs from .claude/skills"
-    [[ -n "$resource_only" ]] && { echo "  resource only:"; echo "$resource_only" | sed 's/^/    - /'; }
-    [[ -n "$source_only" ]] && { echo "  source only:"; echo "$source_only" | sed 's/^/    - /'; }
-    echo "  Generated resources are ignored; Tauri build.rs will regenerate them from .claude/skills."
-  else
-    echo "OK: generated Tauri skill copies match Claude skills"
+  if [[ ! -x "$ROOT/scripts/check-skill-resource-drift.sh" ]]; then
+    echo "MISSING: scripts/check-skill-resource-drift.sh"
+    fail=1
+    return
   fi
+
+  if "$ROOT/scripts/check-skill-resource-drift.sh"; then
+    return
+  fi
+
+  fail=1
 }
 
 [[ -d "$MEMORY_DIR" ]] || { echo "MISSING: Claude memory dir $MEMORY_DIR"; echo "Set CLAUDE_MEMORY_DIR to your local Claude project memory path."; fail=1; }

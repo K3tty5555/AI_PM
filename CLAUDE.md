@@ -57,7 +57,7 @@ README.md                  项目介绍
 
 写 PRD 章节遵循 4 层架构（完整方法见 `.claude/skills/ai-pm/references/pm-judgment-card.md`）：
 
-1. **判断卡**（`references/pm-judgment-card.md`）—— 9 章节 PM 风格手册：角色定位 / 6 条 PM 直觉 / 越界红线 / 责任分工 / Agent 5 件事写法 / 模板使用原则 / 篇幅指引 / 修订日志规则 / 输出前 checklist
+1. **判断卡**（`references/pm-judgment-card.md`）—— PM 风格手册：角色定位 / PM 直觉 / 越界红线 / 责任分工 / Agent 5 件事写法 / 模板使用原则 / 篇幅指引 / 修订日志规则 / 输出前守门 checklist
 2. **pm-agent**（`agents/pm-agent.md`）—— KettyWu sub-agent 内化判断卡 + 越界红线 + 填空模板 + 自检。**写每个 PRD 章节前优先调用** `Agent(subagent_type=pm-agent, prompt=...)`
 3. **写作脚手架**（`phase-5-prd.md` 内嵌）—— 填空模板 + 7 组反例对比库 + 自检三连问；pm-agent 不可用时主对话回退路径
 4. **driver**（`ai-pm-driver/`）—— PM 风格 lint，pm-agent 的 thin wrapper。**评审前 / 大改后 / 历史 PRD 回归** 跑一次，不每章节都跑
@@ -198,7 +198,7 @@ Claude ↔ Codex 上下文交换桥接目录，部分子目录受 `.gitignore` �
 
 **自检命令**（开源前 / PR 前 / 推广成跨团队共享前跑一次）：
 ```bash
-bash scripts/check-share-readiness.sh   # 分享就绪自检：内部名/敏感目录/source-project 一次过，退出码可做 gate
+bash scripts/check-share-readiness.sh --strict   # 分享就绪自检：内部名/敏感目录/source-project 一次过，退出码可做 gate
 # 兜底手查：
 git ls-files | xargs grep -l "公司名|内部关键词" 2>/dev/null
 git ls-files | cat   # 检查文件名本身是否含公司名

@@ -590,7 +590,7 @@ Bad Output:
 
 ## 写完后自检（对照本文件 + PM 风格判断卡 §9）
 
-- [ ] **PM 风格判断卡 9 项 checklist 全过**（见 `pm-judgment-card.md` §9）
+- [ ] **PM 风格判断卡 §9 守门 checklist 全过**（见 `pm-judgment-card.md` §9）
 - [ ] 7 问自检卡每问能答上
 - [ ] A1 意图清单每个意图列了 ≥ 3 条用户说法
 - [ ] A2 In/Out/Edge 三段都不为空（Edge ≥ 3 条）

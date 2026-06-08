@@ -385,17 +385,39 @@ fn skill_exists(root: &Path, skill: &str) -> bool {
     root.join(skill).join("SKILL.md").is_file()
 }
 
-fn collect_skill_names(root: &Path) -> Vec<String> {
-    let mut names: Vec<String> = fs::read_dir(root)
-        .map(|rd| {
-            rd.filter_map(|e| e.ok())
-                .filter(|e| e.path().join("SKILL.md").is_file())
-                .map(|e| e.file_name().to_string_lossy().to_string())
-                .collect()
-        })
-        .unwrap_or_default();
-    names.sort();
-    names
+fn collect_skill_files(root: &Path) -> Vec<String> {
+    fn walk(base: &Path, dir: &Path, files: &mut Vec<String>) {
+        let Ok(entries) = fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(base, &path, files);
+                continue;
+            }
+            if path.file_name().and_then(|n| n.to_str()) == Some(".DS_Store") {
+                continue;
+            }
+            if let Ok(rel) = path.strip_prefix(base) {
+                files.push(rel.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    let mut files = Vec::new();
+    walk(root, root, &mut files);
+    files.sort();
+    files
+}
+
+fn summarize_paths(paths: &[String]) -> String {
+    let shown: Vec<&str> = paths.iter().take(8).map(String::as_str).collect();
+    let mut summary = shown.join("、");
+    if paths.len() > shown.len() {
+        summary.push_str(&format!(" 等 {} 个文件", paths.len()));
+    }
+    summary
 }
 
 fn ai_context_diagnostics(app: &AppHandle) -> Vec<DiagnosticItem> {
@@ -485,31 +507,52 @@ fn ai_context_diagnostics(app: &AppHandle) -> Vec<DiagnosticItem> {
         }
 
         if let Some(resource_root) = bundled_skills_dir(app) {
-            let source_names = collect_skill_names(&source_root);
-            let resource_names = collect_skill_names(&resource_root);
-            let resource_only: Vec<String> = resource_names
+            let source_files = collect_skill_files(&source_root);
+            let resource_files = collect_skill_files(&resource_root);
+            let source_only: Vec<String> = source_files
                 .iter()
-                .filter(|name| !source_names.contains(name))
+                .filter(|path| !resource_files.contains(path))
                 .cloned()
                 .collect();
-            if resource_only.is_empty() {
+            let resource_only: Vec<String> = resource_files
+                .iter()
+                .filter(|path| !source_files.contains(path))
+                .cloned()
+                .collect();
+            let changed: Vec<String> = source_files
+                .iter()
+                .filter(|path| resource_files.contains(path))
+                .filter(|path| {
+                    fs::read(source_root.join(path)).ok() != fs::read(resource_root.join(path)).ok()
+                })
+                .cloned()
+                .collect();
+
+            if source_only.is_empty() && resource_only.is_empty() && changed.is_empty() {
                 items.push(diagnostic_item(
                     "Skills 漂移检查",
                     "ai_context",
                     "ok",
-                    "resources/skills 未发现主源外残留 skill".to_string(),
+                    "resources/skills 内容与 .claude/skills 一致".to_string(),
                     None,
                 ));
             } else {
+                let mut parts = Vec::new();
+                if !source_only.is_empty() {
+                    parts.push(format!("资源缺少：{}", summarize_paths(&source_only)));
+                }
+                if !resource_only.is_empty() {
+                    parts.push(format!("资源多出：{}", summarize_paths(&resource_only)));
+                }
+                if !changed.is_empty() {
+                    parts.push(format!("内容不同：{}", summarize_paths(&changed)));
+                }
                 items.push(diagnostic_item(
                     "Skills 漂移检查",
                     "ai_context",
                     "warning",
-                    format!(
-                        "resources/skills 仍有主源外残留：{}",
-                        resource_only.join("、")
-                    ),
-                    Some("以 .claude/skills 为主源，同步或删除资源目录残留".to_string()),
+                    parts.join("；"),
+                    Some("运行 scripts/sync-skills-to-resources.sh 后重新检查".to_string()),
                 ));
             }
         }

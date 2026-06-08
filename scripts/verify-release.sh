@@ -34,6 +34,8 @@ require_dir() {
 
 log "Repository checks"
 run git -C "$ROOT" diff --check
+run "$ROOT/scripts/sync-skills-to-resources.sh"
+run "$ROOT/scripts/check-skill-resource-drift.sh"
 run "$ROOT/scripts/ai-sync/check-ai-context-drift.sh"
 
 log "Rust checks"
