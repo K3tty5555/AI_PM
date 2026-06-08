@@ -10,8 +10,8 @@
 
 | 阶段 | 存放位置 | 说明 |
 |------|---------|------|
-| Phase 2 生成 | `11-field-research/{访谈ID}/04-prd-draft-v*.md` | PRD 草案 |
-| Phase 2 生成 | `11-field-research/{访谈ID}/05-prototype-v*/` | 原型草案 |
+| Phase 2 生成 | `12-field-research/{访谈ID}/04-prd-draft-v*.md` | PRD 草案 |
+| Phase 2 生成 | `12-field-research/{访谈ID}/05-prototype-v*/` | 原型草案 |
 | Phase 3 迭代 | 同上，递增版本号 | 迭代版本 |
 | Phase 4 导出（客户确认后） | `05-prd/` 和 `06-prototype/` | 合并到主目录 |
 
@@ -28,7 +28,7 @@
 
 ```
 output/projects/{当前项目}/
-└── 11-field-research/                          # 现场调研总目录
+└── 12-field-research/                          # 现场调研总目录
     ├── .interview-index                        # 访谈索引（断点续传用）
     ├── interview-20250303-001/                 # 第1次访谈（时间戳+序号）
     │   ├── 00-meta.json                        # 访谈元数据（名称/状态/进度）
@@ -53,7 +53,7 @@ output/projects/{当前项目}/
 **解决问题**：中途退出后，可随时恢复访谈进度
 
 ```
-📄 文件：11-field-research/.interview-index
+📄 文件：12-field-research/.interview-index
 ```
 
 **索引内容示例**：
@@ -101,7 +101,7 @@ AI：📁 检测到你有未完成的访谈：
 
 ### 📤 资料上传说明
 
-**自动保存位置**：`11-field-research/{访谈ID}/01-prep/`
+**自动保存位置**：`12-field-research/{访谈ID}/01-prep/`
 
 | 上传类型 | 自动保存位置 | 示例 |
 |---------|------------|------|
@@ -146,10 +146,10 @@ AI：✅ 收到！针对「订单管理系统」准备访谈
 
 用户：补充资料
 
-AI：✅ 已为你创建访谈目录：`11-field-research/interview-20250303-001/`
+AI：✅ 已为你创建访谈目录：`12-field-research/interview-20250303-001/`
 
     💡 本次访谈自动编号：001
-    📁 所有资料将保存至：11-field-research/interview-20250303-001/01-prep/
+    📁 所有资料将保存至：12-field-research/interview-20250303-001/01-prep/
 
     📎 请提供已有功能信息（支持多选）：
     • 上传截图/设计稿（直接粘贴图片）
@@ -202,7 +202,7 @@ AI：📋 检测到你有 1 个未完成的访谈：
 【第二步】创建新访谈（如选择「新建」）
 
 AI：✅ 已为你创建访谈目录
-   📁 位置：11-field-research/interview-20250303-002/
+   📁 位置：12-field-research/interview-20250303-002/
    💾 支持断点续传，随时输入「保存」或「退出」
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -416,11 +416,11 @@ AI分析：
 
 **生成准备文档**：
 
-创建 `11-field-research/00-prep-notes.md` —— 内容用 [interview-templates.md](./interview-templates.md) §准备笔记 模板。
+创建 `12-field-research/00-prep-notes.md` —— 内容用 [interview-templates.md](./interview-templates.md) §准备笔记 模板。
 
 **生成访谈提纲**：
 
-创建 `11-field-research/01-interview-guide.md` —— 内容用 [interview-templates.md](./interview-templates.md) §访谈提纲 模板（含开场/痛点/需求/优先级/验收 5 组结构化问题 + 访谈技巧）。
+创建 `12-field-research/01-interview-guide.md` —— 内容用 [interview-templates.md](./interview-templates.md) §访谈提纲 模板（含开场/痛点/需求/优先级/验收 5 组结构化问题 + 访谈技巧）。
 
 ### 准备阶段结束
 
@@ -486,7 +486,7 @@ AI：✅ 已记录
 
 **记录格式**：
 
-系统自动整理到 `11-field-research/02-interview-notes.md` —— 每题一段，格式见 [interview-templates.md](./interview-templates.md) §访谈记录格式（原话 / 追问记录 / 关键信息提取 / 观察备注）。
+系统自动整理到 `12-field-research/02-interview-notes.md` —— 每题一段，格式见 [interview-templates.md](./interview-templates.md) §访谈记录格式（原话 / 追问记录 / 关键信息提取 / 观察备注）。
 
 ### 访谈控制指令
 
@@ -604,8 +604,8 @@ P2（可以有）：多种格式支持
 **⚠️ 草案隔离：所有产出物必须放在当前访谈目录内，不得直接写入项目主目录（05-prd/、06-prototype/）。**
 
 创建文件（在当前访谈目录下）：
-- `11-field-research/{访谈ID}/04-prd-draft-v1.md` - PRD 草案
-- `11-field-research/{访谈ID}/05-prototype-v1/` - 原型（草图或高保真）
+- `12-field-research/{访谈ID}/04-prd-draft-v1.md` - PRD 草案
+- `12-field-research/{访谈ID}/05-prototype-v1/` - 原型（草图或高保真）
 
 ---
 

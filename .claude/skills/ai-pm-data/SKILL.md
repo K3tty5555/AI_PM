@@ -45,10 +45,10 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(python3)
     ↓
 设计埋点方案（事件名、属性、触发时机）
     ↓
-输出 09-analytics-requirement.md
+输出 09-analytics/analytics-requirement.md
 ```
 
-**输出**: `{项目目录}/09-analytics-requirement.md`
+**输出**: `{项目目录}/09-analytics/analytics-requirement.md`
 
 **北极星收敛（设计指标体系前先做）**：别一上来铺一堆指标。先收敛出**唯一一个能证明用户真拿到价值的领先指标**（客户中心、可短期撬动），再配 3-5 个输入指标。⚠️ 砍掉美式"必须导向营收/增长"的权重——B/G 端北极星不是营收，判据是「对齐产品愿景 + 用户感知到的价值」（如效率类产品 = 用户真用它解决了问题的频次）。
 
@@ -81,9 +81,9 @@ wb = openpyxl.load_workbook(file_path, data_only=True)
 **执行方式**: 用 python3 直接执行分析脚本，脚本写入结果文件后退出。
 
 **输出**:
-- `{项目目录}/10-data-insight-report.md` — 洞察报告（含 Top 3 洞察摘要）
-- `{项目目录}/11-data-driven-requirements.md` — 数据驱动需求
-- `{项目目录}/12-data-insight-dashboard/index.html` — 可视化仪表盘
+- `{项目目录}/09-analytics/data-insight-report.md` — 洞察报告（含 Top 3 洞察摘要）
+- `{项目目录}/09-analytics/data-driven-requirements.md` — 数据驱动需求
+- `{项目目录}/09-analytics/dashboard/index.html` — 可视化仪表盘
 
 ---
 
@@ -96,7 +96,7 @@ wb = openpyxl.load_workbook(file_path, data_only=True)
 /ai-pm data dashboard
 ```
 
-**输出**: `{项目目录}/12-data-insight-dashboard/index.html`
+**输出**: `{项目目录}/09-analytics/dashboard/index.html`
 
 ---
 
@@ -117,7 +117,7 @@ wb = openpyxl.load_workbook(file_path, data_only=True)
 
 **出口 = 候选需求清单**：产出做成「带主题/痛点/频次/情感的候选需求」，**直接喂 `/ai-pm priority` 当输入**——「收集反馈 → 提炼痛点 → 排优先级」一条顺下来，但本步不替优先级做判断排序。
 
-**输出**: `{项目目录}/14-feedback-analysis.md`
+**输出**: `{项目目录}/09-analytics/feedback-analysis.md`
 
 ---
 

@@ -3,7 +3,7 @@
 > 从 `interview-phases.md` 外移的纯模板/示例内容。Phase 0/1/3 执行时按此写入对应项目文件。
 > 这些是落盘模板，不是控制流——改模板内容只动本文件即可。
 
-## 准备笔记（写入 `11-field-research/00-prep-notes.md`）
+## 准备笔记（写入 `12-field-research/00-prep-notes.md`）
 
 ```markdown
 # 现场调研准备笔记
@@ -32,7 +32,7 @@
 - [ ] 可交互原型
 ```
 
-## 访谈提纲（写入 `11-field-research/01-interview-guide.md`）
+## 访谈提纲（写入 `12-field-research/01-interview-guide.md`）
 
 ```markdown
 # 现场访谈提纲
@@ -98,7 +98,7 @@
 - ✅ 收集数据（次数、时间、金额等）
 ```
 
-## 访谈记录格式（写入 `11-field-research/02-interview-notes.md`，每题一段）
+## 访谈记录格式（写入 `12-field-research/02-interview-notes.md`，每题一段）
 
 ```markdown
 ## 问题 1：请介绍一下您目前如何使用这个功能？

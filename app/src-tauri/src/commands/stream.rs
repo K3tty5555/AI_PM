@@ -80,7 +80,7 @@ pub fn phase_config(
         "analytics" => Some((
             "ai-pm-data",
             &["05-prd/05-PRD-v1.0.md"],
-            "09-analytics-requirement.md",
+            "09-analytics/analytics-requirement.md",
             &["ai-pm-frontend-design", "impeccable:frontend-design"],
         )),
         "prototype" => Some((

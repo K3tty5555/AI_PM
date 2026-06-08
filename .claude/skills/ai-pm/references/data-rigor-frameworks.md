@@ -28,7 +28,7 @@ PM 只到**业务判断**层：要不要做显著性检验、样本够不够下�
 
 ## 输出
 
-接进 `10-data-insight-report.md`（洞察）或 `09-analytics-requirement.md`（A/B 设计），用业务语言写结论 + 对应动作，不写统计实现。
+接进 `09-analytics/data-insight-report.md`（洞察）或 `09-analytics/analytics-requirement.md`（A/B 设计），用业务语言写结论 + 对应动作，不写统计实现。
 
 ## 大陆反例（内嵌，2 组）
 

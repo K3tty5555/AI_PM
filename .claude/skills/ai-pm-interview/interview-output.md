@@ -29,13 +29,13 @@
 4. "全部导出" → 完整交付包
    📦 包含：PRD + 原型 + 纪要 + 迭代记录
 
-💡 导出位置：11-field-research/output/
+💡 导出位置：12-field-research/output/
 ```
 
 ### 导出文件结构（按访谈隔离）
 
 ```
-11-field-research/
+12-field-research/
 ├── .interview-index                      # 访谈索引（断点续传用）
 ├── interview-20250303-001/               # 第1次访谈
 │   ├── 00-meta.json                      # 访谈元数据
@@ -89,7 +89,7 @@
 🎉 现场调研模式完成！
 
 📁 本次访谈保存至：
-   11-field-research/interview-20250303-001/
+   12-field-research/interview-20250303-001/
 
 📊 本次调研产出：
    • 访谈记录：X 条

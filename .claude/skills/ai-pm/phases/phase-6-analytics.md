@@ -1,7 +1,7 @@
 # Phase 6: 数据埋点（可选）
 
 **输入**: `05-prd/05-PRD-v1.0.md`
-**输出**: `09-analytics-requirement.md`
+**输出**: `09-analytics/analytics-requirement.md`
 
 ## 执行方式
 

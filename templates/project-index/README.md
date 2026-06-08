@@ -26,7 +26,7 @@
 
 ## 0x 上游产物文件夹约定（重要）
 
-**所有 0x 上游产物都用文件夹组织**——和 05-prd/ 06-prototype/ 07-references/ 11-* 保持一致的根目录命名风格，根目录不再被多版本文件撑满。
+**所有 0x 上游产物都用文件夹组织**——和 05-prd/ 06-prototype/ 07-references/ 10+ 扩展目录保持一致的根目录命名风格，根目录不再被多版本文件撑满。
 
 ### 目录结构
 
@@ -53,7 +53,9 @@
 │   ├── V3-initial.md
 │   ├── V3-round2.md
 │   └── V3-v1.3.md
-└── 11-{...}/            ← 其他自定义 phase 文件夹保持一致
+├── 09-analytics/        ← 数据分析与指标产物
+├── 10-retrospective.md  ← 项目复盘（单文件）
+└── 11+ 注册扩展目录      ← 见下方「10+ 扩展目录注册表」
 ```
 
 ### Frontmatter 自描述（每个文件夹内 Vx.md 文件头）
@@ -134,3 +136,28 @@ upstream-from: V2.md
 ## 试点参考
 
 某 Agent 项目（`output/projects/{你的项目名}/`）已 retrofit 这 3 份 README 作为 baseline，可参考其结构和粒度。
+
+## 10+ 扩展目录注册表
+
+10 以后不得再自由占号。新增项目专项资产前，先复用下表；确实需要新类型时，先更新本表和 `ai-pm/SKILL.md` 的目录树，再让 skill 产出。
+
+| 路径 | 用途 | 说明 |
+|---|---|---|
+| `09-analytics/` | 数据分析与指标产物 | 指标设计、洞察报告、数据驱动需求、仪表盘、反馈分析、增长诊断统一放这里 |
+| `09-analytics/analytics-requirement.md` | 埋点方案 / 指标设计 | 原 `09-analytics-requirement.md` 迁入此路径 |
+| `09-analytics/data-insight-report.md` | 数据洞察报告 | 原 `10-data-insight-report.md` 迁入此路径 |
+| `09-analytics/data-driven-requirements.md` | 数据驱动需求 | 原 `11-data-driven-requirements.md` 迁入此路径 |
+| `09-analytics/dashboard/` | 数据仪表盘 | 原 `12-data-insight-dashboard/` 迁入此路径 |
+| `09-analytics/feedback-analysis.md` | 用户反馈文本分析 | 原 `14-feedback-analysis.md` 迁入此路径 |
+| `09-analytics/growth-diagnosis/` | 增长诊断 / 增长分析专项 | 例如旧 `09-growth-diagnosis/` |
+| `10-retrospective.md` | 项目复盘 | 保持单文件 |
+| `11-illustrations/` | PRD / 流程图 AI 配图 | 被 PRD 导出与插图命令使用，编号固定 |
+| `12-field-research/` | 现场调研草案隔离区 | 原 `11-field-research/` 迁入此路径，避免与插图冲突 |
+| `13-release-docs/` | 上线文档套件 | 更新公告 + 操作手册 |
+| `14-acceptance/` | 验收清单 / 验收记录 | 不生成 QA 全量用例，只放 PM/业务验收材料 |
+| `15-pilot/` | 试点计划 / 试点名单 / 试点脚本 | 试点执行材料 |
+| `16-agent-skills/` | Agent 技能规格 | prompt、tools、test cases、共享上下文 |
+| `17-next-version-prep/` | 下版本准备 | VNext 草稿、范围预研、版本差异准备 |
+| `_logs/` | 运行日志 / 临时调试日志 | 原 `logs/` 迁入此路径 |
+
+`output/` 顶层只允许放容器目录：`projects/`、`_archive/`、`_prd-corpus/`、`strategy-sandbox/`、`weekly/`、`priority/` 等。一次性分享资产、临时演示工程不放顶层，归档到 `output/_archive/`。

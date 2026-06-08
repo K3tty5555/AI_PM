@@ -150,11 +150,24 @@ import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → �
 ├── 08-reviews/                          评审报告（文件夹，多次评审）
 │   ├── README.md                        评审历史索引（可选）
 │   └── V1-initial.md                    V1 初评 / V3-round2.md / V3-v1.3.md 等
-├── 09-analytics-requirement.md          埋点方案（可选，单文件）
+├── 09-analytics/                        数据分析与指标产物（可选）
+│   ├── analytics-requirement.md         埋点方案 / 指标设计
+│   ├── data-insight-report.md           数据洞察报告
+│   ├── data-driven-requirements.md      数据驱动需求
+│   ├── dashboard/                       数据仪表盘
+│   ├── feedback-analysis.md             用户反馈文本分析
+│   └── growth-diagnosis/                增长诊断 / 增长分析专项
 ├── 10-retrospective.md                  项目复盘（可选，单文件）
-├── 11-{自定义 phase}/                    其他自定义 phase（按需用文件夹）
+├── 11-illustrations/                    PRD / 流程图 AI 配图
+├── 12-field-research/                   现场调研草案隔离区
+├── 13-release-docs/                     上线文档套件（公告 + 操作手册）
+├── 14-acceptance/                       验收清单 / 验收记录
+├── 15-pilot/                            试点计划 / 试点名单 / 试点脚本
+├── 16-agent-skills/                     Agent 技能规格 / prompt / test cases
+├── 17-next-version-prep/                下版本准备 / VNext 草稿
 ├── _summaries/                          阶段摘要（自动生成，用于上下文压缩）
 │   └── prd-summary.md
+├── _logs/                               运行日志 / 临时调试日志
 └── _memory/                             项目记忆（自动维护，勿手动删除）
     ├── L0-identity.md                   产品定位/用户/约束（~100 tokens）
     ├── L1-decisions.md                  关键决策 + why（~300 tokens）
@@ -167,11 +180,13 @@ import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → �
 
 | 类型 | 命名 | 示例 |
 |------|------|------|
-| 单文件 phase | `{NN}-{name}.md` | `00-office-hours.md` / `07-audit-report.md` / `09-analytics-requirement.md` / `10-retrospective.md` |
+| 单文件 phase | `{NN}-{name}.md` | `00-office-hours.md` / `07-audit-report.md` / `10-retrospective.md` |
 | 多版本 phase | `{NN}-{name}/{Vx}.md` | `01-requirement-draft/V1.md` / `08-reviews/V3-round2.md` |
 | 已有文件夹 phase | `{NN}-{name}/...` | `05-prd/` / `06-prototype/` / `07-references/` |
+| 扩展资产目录 | 只能使用注册编号 | `09-analytics/` / `11-illustrations/` / `12-field-research/` / `13-release-docs/` / `14-acceptance/` / `15-pilot/` / `16-agent-skills/` / `17-next-version-prep/` |
 
 **关键规则**：01-04 + 08 即使**单 PRD 项目也用文件夹**（只放 `V1.md`），保持命名一致，避免单→多版本临界点时的搬家成本。
+**扩展规则**：10 以后不得再自由占号；新增专项目录先写进本注册表，再由对应 skill 产出。一次性资产不放 `output/` 顶层，归档到 `output/_archive/`。
 
 ### 项目 README 索引体系（3 层）
 
@@ -238,7 +253,7 @@ Phase 5: PRD 生成（**先过 PM 风格判断卡** + 应用选定风格 + 设�
     写作：phase-5-prd.md 内嵌「写作脚手架（填空模板）+ 7 组反例对比库 + 自检三连问」
     落盘前：§9 守门 checklist 自检
 Phase 6（可选）: 数据埋点设计
-    ↓  → 生成 09-analytics-requirement.md
+    ↓  → 生成 09-analytics/analytics-requirement.md
 Phase 7: 原型生成（Token 消耗提示后确认，先过 prototype-agent 蓝图与视觉方向）
     ↓  → 生成 06-prototype/index.html
 Phase 7.5（自动触发）: PRD↔原型完整性 + 交互体验 + 视觉设计审计
