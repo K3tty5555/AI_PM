@@ -45,6 +45,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep)
 
 | 目录 | 类型 | 说明 |
 |------|------|------|
+| `chains/` | 牵动链 | 某场景改动牵到下游哪些功能（重关联、轻数值，给没经验的 PM 主动提醒）。老手深挖后顺手收、有自己的格式，**不走标准 add 模板**；suggest 里优先级最高 |
 | `patterns/` | 设计模式 | 可复用方案 |
 | `decisions/` | 决策记录 | 为什么选 A 不选 B |
 | `pitfalls/` | 踩坑记录 | 坑在哪，怎么躲 |
@@ -255,11 +256,12 @@ search / suggest 跑完后，若**本次结果里**超过 **3 张 state 卡（pi
 
 ## list — 列出知识库
 
-遍历 6 个子目录，统计 .md 文件（排除 README.md）：
+遍历 7 个子目录，统计 .md 文件（排除 README.md）：
 
 ```
 产品知识库
 
+  chains/      {N}  牵动链
   patterns/    {N}  设计模式
   decisions/   {N}  决策记录
   pitfalls/    {N}  踩坑记录
@@ -344,9 +346,10 @@ grep -r "{keyword}" templates/knowledge-base/ --include="*.md" -l 2>/dev/null
 ### 推荐展示（最多 3 条）
 
 按以下优先级排序并截取：
-1. `pitfalls/`（踩坑记录）— 优先级最高
-2. `patterns/`（设计模式）— 次高
-3. `decisions/`（决策记录）— 辅助参考
+1. `chains/`（牵动链）— **优先级最高**：当前改动会牵到哪些下游功能，没经验的 PM 最需要先看到（漏掉牵连＝事故）
+2. `pitfalls/`（踩坑记录）
+3. `patterns/`（设计模式）
+4. `decisions/`（决策记录）
 
 展示格式：
 

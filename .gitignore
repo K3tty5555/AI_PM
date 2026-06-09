@@ -102,6 +102,7 @@ templates/knowledge-base/metrics/*
 templates/knowledge-base/patterns/*
 templates/knowledge-base/pitfalls/*
 templates/knowledge-base/playbooks/*
+templates/knowledge-base/chains/*
 !templates/knowledge-base/**/.gitkeep
 
 # 个人 PRD 风格 profile（persona analyze 产出，含真实 PRD 原句 sample_sentences）+ 当前生效风格
