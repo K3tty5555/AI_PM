@@ -4,6 +4,10 @@
 
 ROOT="$(pwd)"
 
+# 字节透传：UTF-8 locale 下 bash 会揉烂变量里的多字节中文（项目名 $LATEST 回显成乱码），
+# 改用 C locale 让 bash 纯字节透传；PYTHONUTF8=1 保证 python 输出仍是 UTF-8。
+export LC_ALL=C PYTHONUTF8=1
+
 if [ -x "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" ]; then
   "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" 2>/dev/null || true
 fi
@@ -26,8 +30,13 @@ if [ ! -d "$PROJECTS_DIR" ]; then
   exit 0
 fi
 
-# 查找最近修改的项目（按修改时间排序，取最新）
-LATEST=$(ls -t "$PROJECTS_DIR" 2>/dev/null | head -1)
+# 查找最近修改的项目（用 python 取——hook 精简环境下 ls 读中文名会乱码/丢名，python 原生 UTF-8 不受 locale 影响）
+LATEST=$(python3 -c "
+import os,sys
+d='$PROJECTS_DIR'
+ps=[(os.path.getmtime(os.path.join(d,x)),x) for x in os.listdir(d) if os.path.isdir(os.path.join(d,x)) and not x.startswith('.')] if os.path.isdir(d) else []
+sys.stdout.buffer.write((max(ps)[1] if ps else '').encode('utf-8'))
+" 2>/dev/null)
 
 if [ -z "$LATEST" ]; then
   exit 0
@@ -39,6 +48,16 @@ PHASE_FILES=$(ls "$PROJECTS_DIR/$LATEST"/*.md 2>/dev/null | wc -l | tr -d ' ')
 if [ "$PHASE_FILES" -gt 0 ]; then
   echo "🔍 检测到进行中的项目：$LATEST（共 $PHASE_FILES 个文件）"
   echo "   输入 /ai-pm continue 恢复，或 /ai-pm new 开始新项目"
+fi
+
+# 开工前关联扫描（精确机制，治"旁边有对口项目却从零拼现状"的高频坑）
+# 把当前项目的同主题兄弟项目推到面前——push 不是 pull，让 AI 跳不掉
+if [ -f "$ROOT/scripts/related-scan.py" ] && command -v python3 >/dev/null 2>&1; then
+  REL_OUT=$(python3 "$ROOT/scripts/related-scan.py" --latest 2>/dev/null)
+  if echo "$REL_OUT" | grep -q "开工前关联扫描"; then
+    echo ""
+    echo "$REL_OUT"
+  fi
 fi
 
 # README 索引漂移检测（A 档：只提醒，不自动写）——当前覆盖 07-references

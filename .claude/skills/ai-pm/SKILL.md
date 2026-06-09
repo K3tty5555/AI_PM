@@ -227,6 +227,7 @@ cp templates/project-index/references-readme.template.md {项目}/07-references/
 3. `07-references/README.md`（参考资料索引）
 4. `_status.json`（状态配置）
 5. `_memory/` 分层文件（动态状态）
+6. **开工前关联扫描（强制）**：跑 `python3 scripts/related-scan.py "{项目名}"` —— 扫 `output/projects/` 里**同主题兄弟项目**，命中的先 `ls` 一眼再动手。治高频坑「旁边就有对口项目，却从零拼现状」（语义相关但名字没撞的，靠牵动链卡 suggest 补，本扫描不负责）。
 
 读完后再开始任何 PRD / 原型工作。
 
