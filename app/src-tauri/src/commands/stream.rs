@@ -75,7 +75,7 @@ pub fn phase_config(
                 "04-user-stories.md",
             ],
             "05-prd/05-PRD-v1.0.md",
-            &["Humanizer-zh"],
+            &["humanizer-pm"],
         )),
         "analytics" => Some((
             "ai-pm-data",
@@ -99,7 +99,7 @@ pub fn phase_config(
             "ai-pm-review-modify",
             &["08-review-report.md", "05-prd/05-PRD-v1.0.md"],
             "05-prd/05-PRD-v1.0.md",
-            &["Humanizer-zh"],
+            &["humanizer-pm"],
         )),
         "retrospective" => Some((
             "ai-pm-retrospective",
@@ -169,7 +169,7 @@ fn load_user_companion(skill_name: &str) -> Option<String> {
 }
 
 fn prefer_bundled_companion(skill_name: &str) -> bool {
-    skill_name.starts_with("ai-pm-") || skill_name == "Humanizer-zh"
+    skill_name.starts_with("ai-pm-") || skill_name == "humanizer-pm"
 }
 
 const MAX_REFERENCE_FILE_BYTES: u64 = 64 * 1024;

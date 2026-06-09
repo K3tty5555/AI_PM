@@ -441,7 +441,7 @@ fn ai_context_diagnostics(app: &AppHandle) -> Vec<DiagnosticItem> {
         "ai-pm-review-modify",
         "ai-pm-story",
         "ai-pm-weekly",
-        "Humanizer-zh",
+        "humanizer-pm",
     ];
 
     let mut items = Vec::new();

@@ -112,7 +112,7 @@ if [[ -d "$SKILLS_DIR" ]]; then
     ai-pm-review-modify \
     ai-pm-story \
     ai-pm-weekly \
-    Humanizer-zh
+    humanizer-pm
   check_no_tracked_generated_skills
   check_resource_skill_drift
 fi

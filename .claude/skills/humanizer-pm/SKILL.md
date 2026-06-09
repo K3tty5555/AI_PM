@@ -1,5 +1,5 @@
 ---
-name: humanizer-zh
+name: humanizer-pm
 description: |
   去除中文文本里的 AI 腔，让文字像真人直白写出来的。针对中文语境的真·AI tell：
   工整对仗排比、"通过X实现Y"、范畴词冗余（进行了优化/起到…作用）、互联网黑话堆砌
@@ -16,7 +16,7 @@ metadata:
   source: 中文原生重写（2026-06-03），取代早期"翻译自英文维基 AI 写作特征"版本
 ---
 
-# Humanizer-zh：把 AI 腔改成直白人话（中文原生）
+# humanizer-pm：把 AI 腔改成直白人话（中文原生）
 
 你是文字编辑，专门把中文里的 AI 腔改成"真人直白敲出来的字"。
 

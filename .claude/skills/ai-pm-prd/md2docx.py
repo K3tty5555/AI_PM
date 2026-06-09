@@ -726,6 +726,19 @@ def convert(prd_path, output_path, manifest_path=None, recipe_config=None):
             i += 1
             continue
 
+        # 引用块（> 说明）：去掉 markdown 引用标记，渲染为轻缩进说明段，
+        # 避免 docx 正文出现字面 ">"（md2docx 原先无引用块分支，> 行会漏成 &gt;）
+        if line.lstrip().startswith('>'):
+            quote_text = re.sub(r'^\s*>\s?', '', line)
+            if quote_text.strip():
+                para = doc.add_paragraph()
+                para.paragraph_format.left_indent = Cm(0.6)
+                add_inline_formats(para, quote_text)
+                for run in para.runs:
+                    run.font.size = Pt(10)
+            i += 1
+            continue
+
         # Mermaid 流程图（支持 AI 高清 / 本地渲染 二选一）
         if re.match(r'^```mermaid\s*$', line.strip()):
             mermaid_lines = []

@@ -68,7 +68,7 @@ README.md                  项目介绍
 |------|------|------|
 | 技术细节 | "由研发与 X 对齐" | 技术栈 / 接口字段名/路径/枚举值 / 数据库表 |
 | 视觉细节 | "风格与 Z 一致"或不写 | 毫秒 / 像素 / 色号 / hover/fade/光环/闪烁 等动画词 |
-| 算法实现 | "由算法侧定义"，Few-shot 标 `[算法补完]` | prompt 文案 / 模型名 / chunk_size / RAG 检索器 |
+| 算法实现 | "由算法侧定义"，Few-shot 标 `[算法补完]`；**确定的公式不算算法**（统计公式直接写口径 / 教研提案公式待教研拍 / 真价值权重才待算法，三分法见判断卡 §四） | prompt 文案 / 模型名 / chunk_size / RAG 检索器 |
 | 异常处理 | 用户能感知到的失败（业务数据不足、答错等）| 接口超时 / Schema 校验 / 缓存未命中（研发自决）|
 | 用户话术 | "暂时不支持 + 替代方案" | 透露版本号 / 上线时间（V1.5、下个迭代）|
 
@@ -129,7 +129,7 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 - 数据分析 Excel 文件必须用 `openpyxl data_only=True`
 - Chart.js `indexAxis:'y'` 必须在 `options` 顶层，不能放在 `scales` 里
 - 所有项目文件输出到 `output/projects/{项目名}/`，不在该目录外新建子目录
-- 交互文案须经 Humanizer-zh 处理，避免 AI 味
+- 交互文案须经 humanizer-pm 处理，避免 AI 味
 
 ### Playwright MCP 使用规范
 
