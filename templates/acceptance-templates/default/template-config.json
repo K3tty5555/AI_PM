@@ -1,0 +1,29 @@
+{
+  "templateInfo": {
+    "name": "default",
+    "description": "默认提单台账（缺陷/问题清单）·飞书 9 列",
+    "updatedAt": "2026-06-09"
+  },
+  "columns": [
+    {"key": "v",      "title": "版本",       "width": 8},
+    {"key": "no",     "title": "序号",       "width": 6},
+    {"key": "desc",   "title": "问题描述",   "width": 52, "align": "left", "wrap": true},
+    {"key": "shot",   "title": "截图",       "width": 58, "type": "image"},
+    {"key": "type",   "title": "问题类型",   "width": 20},
+    {"key": "pri",    "title": "优先级",     "width": 22},
+    {"key": "by",     "title": "提出人",     "width": 10},
+    {"key": "dev",    "title": "研发责任人", "width": 12},
+    {"key": "status", "title": "处理状态",   "width": 24, "align": "left", "wrap": true}
+  ],
+  "fillRule": {
+    "aiFills": ["v", "no", "desc", "shot", "type", "pri", "by"],
+    "leaveBlank": ["dev", "status"],
+    "note": "铁律：研发责任人/处理状态(dev/status)AI 永不自动填、留空给人；优先级(pri)AI 只草拟、标'待拍'；问题描述(desc)写大白话现象、技术根因挪 notes.md 说明页"
+  },
+  "render": {
+    "headerFill": "4A7DD4",
+    "font": "PingFang SC",
+    "thumbWidth": 900
+  },
+  "_howToCustomize": "复制本目录为 templates/acceptance-templates/{你的模板名}/，改 columns（增删列/改标题宽度/标 type=image 的列/align/wrap），用 /ai-pm acceptance --template={你的模板名} 启用。"
+}

@@ -89,8 +89,11 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm refresh [项目名] [--check]` | 项目状态对账：跨项目查 `_status.json` 滞后 / 索引漂移 / 死链；机械层自动修（状态日期、补登记占位），语义/有损改动只标给 PM，流程见 `refresh.md` |
 | `/ai-pm illustration [输入]` | AI 流程图生成（baoyu-imagine，支持 Mermaid 和自然语言） |
 | `/ai-pm release-docs [PRD路径\|项目名]` | 上线文档套件——基于实际上线功能产「更新公告 + 操作手册」，可发飞书云文档（去版本号），流程见 `release-docs.md` |
+| `/ai-pm acceptance [PRD\|清单路径]` | 产品验收——对照 PRD 验研发在测试环境的实现，出提单台账（缺陷清单），见 `ai-pm-acceptance` skill |
+| `/ai-pm acceptance --template=名` | 验收用指定产出模板（默认 default 9 列）|
 | `/ai-pm config style` | PRD 写作风格管理 |
 | `/ai-pm config ui` | UI 设计规范管理 |
+| `/ai-pm config acceptance` | 验收台账模板管理（默认 9 列，可自设，用法同 config style）|
 | `/ai-pm [URL]` | 分析参考网页（Playwright MCP 抓取） |
 
 ---
@@ -314,3 +317,4 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `instinct.md` | 自学习系统 |
 | `web-analysis.md` | 网页分析 |
 | `../ai-pm-strategy/SKILL.md` | 战略沙盘：独立高阶产品战略推演 skill |
+| `../ai-pm-acceptance/SKILL.md` | **产品验收 skill ⭐**——对照 PRD 验研发实现、出提单台账（产出模板可配置·默认 9 列），方法论在 `references/acceptance-judgment-card.md` |
