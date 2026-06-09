@@ -51,6 +51,16 @@ if [ -x "$ROOT/scripts/ai-sync/check-readme-index-drift.js" ] && command -v node
   fi
 fi
 
+# 项目状态保鲜 + 死链检测（A 档：只提醒，不自动写）——全项目扫描，区别于上面只查最近 1 个
+if [ -x "$ROOT/scripts/ai-sync/check-status-staleness.js" ] && command -v node >/dev/null 2>&1; then
+  STALE_OUT=$(node "$ROOT/scripts/ai-sync/check-status-staleness.js" "$PROJECTS_DIR" 2>/dev/null)
+  if [ "$?" -eq 3 ]; then
+    echo ""
+    echo "🗂️  项目状态/索引可能滞后（校准对应 _status.json.updated 或修死链后自动消失）："
+    echo "$STALE_OUT" | grep -E '🔸|✗'
+  fi
+fi
+
 # Knowledge hook 周报：距上次显示 >= 7 天就自动跑一次注入欢迎信息
 LAST_REPORT="$HOME/.ai-pm/last_weekly_report.ts"
 mkdir -p "$(dirname "$LAST_REPORT")" 2>/dev/null
