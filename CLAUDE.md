@@ -29,7 +29,7 @@ cd AI_PM
 ├── agents/                自定义 sub-agent（含 pm-agent KettyWu 灵魂）
 └── skills/                技能集合（ai-pm 主控 / ai-pm-prd / ai-pm-driver / ...）
 .ai-shared/                Claude ↔ Codex 协作桥接（见下方 .ai-shared 规范）
-output/                    项目输出（不纳入版本库）
+output/                    项目输出（projects/ 项目 + assets/ 产品级长期资产，不纳入版本库）
 templates/                 模板库（PRD 风格、设计规范等，仅含通用示例）
 AI_PM_教程中心.html          可视化使用指南，直接用浏览器打开
 CLAUDE.md                  本文件
@@ -128,7 +128,7 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 - PRD/PDF/DOCX 导出的中文字体仍使用 `PingFang SC`，不受设计规范选择影响
 - 数据分析 Excel 文件必须用 `openpyxl data_only=True`
 - Chart.js `indexAxis:'y'` 必须在 `options` 顶层，不能放在 `scales` 里
-- 所有项目文件输出到 `output/projects/{项目名}/`，不在该目录外新建子目录
+- 所有项目文件输出到 `output/projects/{项目名}/`；产品级长期资产（如全量需求池这类无项目流程、无完成态的活台账）放 `output/assets/{资产名}/`；不在这两处以外新建子目录
 - 交互文案须经 humanizer-pm 处理，避免 AI 味
 
 ### Playwright MCP 使用规范

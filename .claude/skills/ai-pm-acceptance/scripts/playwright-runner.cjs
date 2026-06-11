@@ -16,9 +16,13 @@ const path = require("path");
 function loadPlaywright() {
   const tries = [process.env.PLAYWRIGHT_CORE, "playwright-core"].filter(Boolean);
   for (const t of tries) { try { return require(t); } catch (_) {} }
+  // 再从 cwd / cwd/app / 本脚本目录 的 node_modules 找——playwright-core 常装在项目的 app 子目录下，
+  // 不在 skill 脚本的目录链上，标准 require 找不到。
+  const searchPaths = [process.cwd(), path.join(process.cwd(), "app"), __dirname];
+  try { return require(require.resolve("playwright-core", { paths: searchPaths })); } catch (_) {}
   throw new Error(
-    "找不到 playwright-core。装一下：`npm i playwright-core`（或在已有它的目录跑），" +
-    "或设环境变量 PLAYWRIGHT_CORE 指向它的路径。"
+    "找不到 playwright-core。装一下 `npm i playwright-core`，或设环境变量 PLAYWRIGHT_CORE 指向它的路径，" +
+    "或在含它的项目目录（如有 app/node_modules/playwright-core 的 repo 根）下跑。"
   );
 }
 const { chromium } = loadPlaywright();

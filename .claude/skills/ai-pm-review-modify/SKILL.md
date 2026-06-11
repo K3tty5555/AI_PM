@@ -4,7 +4,7 @@ description: >-
   PRD 评审后修改技能。基于评审报告和指定修改策略，对现有 PRD 进行定向修改，保持文档结构不变，
   只修改评审指出的问题，输出完整的修改后 PRD。
 argument-hint: "修改策略（全部修改 / 核心修改 / 最小修改 / 自定义）"
-allowed-tools: Read Write Edit Bash(mkdir)
+allowed-tools: Read Write Edit Bash(mkdir) Bash(grep)
 ---
 
 # PRD 评审后修改
@@ -30,6 +30,7 @@ allowed-tools: Read Write Edit Bash(mkdir)
 1. 读取评审报告，按指定策略筛选需要修复的问题
 2. 严格保持 PRD 原有结构、章节顺序和写作风格，不新增章节
 3. 只修改评审中明确指出的问题所在段落或条目，其余内容原样保留
+3.5. **修改处的 PM 质量纪律**（与写时同一套，见 `agents/pm-agent.md`）：①不踩 6 条越界红线（技术栈/接口字段/视觉毫秒/算法实现/透版本号/过细异常）②引用现网概念先回源核粒度（PM 直觉 #8），不凭印象改 ③不引入新术语——项目有 `05-prd/ai-md/_conventions.md` 时对照词表，确需新词标「待对齐」
 4. 在 PRD 修订日志末尾追加一行记录本次修改：
    ```
    | {今日日期} | v1.{N} | 评审修改：{策略}，修复{N}个问题 | 相关模块 | AI_PM | 基于评审报告 |

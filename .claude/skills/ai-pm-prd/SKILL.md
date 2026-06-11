@@ -5,7 +5,7 @@ description: >-
   当用户说「生成PRD」「写PRD」「产品需求文档」「需求文档」「功能规格书」「输出PRD」
   「帮我写需求」「把需求整理成文档」时，立即使用此技能。
 argument-hint: "[项目目录路径 | --style=风格名]"
-allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm) Bash(python3)
+allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm) Bash(python3) Bash(grep) Agent
 ---
 
 # PRD 生成
@@ -86,6 +86,15 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm
 - **模板文件**是内容规则的唯一来源：章节名、字段名、字段顺序、表格结构，一律以模板为准
 - **本 SKILL.md** 只定义行为规则：何时读模板、用 Mermaid、不降级、版本策略等
 - 本文件中出现的任何字段示例（包括「PRD 8 章结构」里的样例）仅作无模板时的兜底，**不构成对模板内容的约束**；用户修改模板后，示例自动失效，以模板为准
+
+### 步骤3.5：PM 质量机制（强制，与 /ai-pm 全流程同源）
+
+本技能是独立入口，但 PRD 质量机制**与 phase-5 共用一套，不旁路**（单一事实源在 `.claude/skills/ai-pm/phases/phase-5-prd.md` 和 `.claude/agents/pm-agent.md`，此处只接线不复制）：
+
+1. **判断卡前置**：动笔前读 `.claude/skills/ai-pm/references/pm-judgment-card.md`（角色/越界红线/责任分工）
+2. **扎根注入**：按 phase-5 的「🌱 扎根注入」执行——查 `{项目目录}/05-prd/ai-md/_conventions.md`（有→注入骨架+词表+黑名单；无但有历史 PRD→先建约定包；0→1 项目→静默跳过）+ 落 `grounding-input.md`
+3. **章节优先调 pm-agent**：functional_spec / agent_design 类章节按 phase-5 的「🤖 优先调用 pm-agent」模板调用（prompt 含「项目约定」块）；简单章节主对话直写
+4. **双层组织**：按 phase-5「双层组织」分级表定档（复杂全附录 / 中等关键 / 小补丁行内 / 决策稿不强制）
 
 ### 步骤4：按 8 章结构生成 PRD
 

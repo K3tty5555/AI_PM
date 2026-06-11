@@ -4,7 +4,7 @@ description: >-
   需求复杂、需要多角色并行协作时使用（通常由 ai-pm --team 自动调度，也可直接调用）。
   当用户说「多代理模式」「并行执行」「需求很复杂需要团队协作」「--team模式」「多角色协同」时使用此技能。
 argument-hint: "[需求描述] [--mode=serial|parallel|agile] [--roles=pm,architect,designer]"
-allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Agent
+allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(grep) Bash(python3) Agent
 ---
 
 # Agent Team - 多代理协作引擎
@@ -77,6 +77,8 @@ Wave 1 全部完成后，向用户汇报结果摘要。
 
 **Wave 2（依赖 Wave 1 输出）**：
 
+派发 subagent-PRD **之前**（主对话做，确定性，与 phase-5「🌱 扎根注入」同源）：查 `{项目目录}/05-prd/ai-md/_conventions.md`——存在则把骨架 + 词表 + 黑名单作为「项目约定」块拼进下方任务 prompt，并落 `05-prd/_logs/grounding-input.md`；无约定包但有历史 PRD 则先按 phase-5 建包；0→1 项目跳过。
+
 ```
 Agent → subagent-PRD
   系统提示词：「你是 PRD 撰写专家，仅完成任务，不与用户交互」
@@ -84,6 +86,9 @@ Agent → subagent-PRD
     读取：{项目目录}/02-analysis-report.md
     读取：{项目目录}/03-competitor-report.md
     读取：/tmp/kb-insight.md（如存在）
+    动笔前读：.claude/skills/ai-pm/references/pm-judgment-card.md（越界红线 / 责任分工 / §9 守门）
+    项目约定块（如有）：章节名/术语照约定用，发明新词必须显式标理由
+    篇幅与分层：按 phase-5「双层组织」分级定档（小补丁别硬撑附录壳）
     输出：{项目目录}/05-prd/05-PRD-v1.0.md
 ```
 

@@ -45,6 +45,7 @@ ws.title = "问题清单"
 thin = Side(style="thin", color="D0D7DE")
 border = Border(left=thin, right=thin, top=thin, bottom=thin)
 head_fill = PatternFill("solid", fgColor=HEADER_FILL)
+focus_fill = PatternFill("solid", fgColor="FFF3CD")  # issues 里 "focus":true 的行高亮（浅黄）——本轮要研发聚焦的
 head_font = Font(name=CN, size=11, bold=True, color="FFFFFF")
 cell_font = Font(name=CN, size=10, color="1F2328")
 center = Alignment(horizontal="center", vertical="center", wrap_text=True)
@@ -89,6 +90,8 @@ for r, it in enumerate(issues, start=2):
         else:
             cell = ws.cell(r, c, it.get(key, ""))
         cell.font = cell_font; cell.border = border; cell.alignment = align
+        if it.get("focus"):
+            cell.fill = focus_fill  # 本轮聚焦行高亮
     ws.row_dimensions[r].height = rowh
 
 # 说明页：读 notes.md（行首 # 加粗），无则放写法提示

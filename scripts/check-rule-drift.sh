@@ -44,6 +44,27 @@ BAD=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "日期.{0,8}(�
 if [ -n "$BAD" ]; then note_fail "出现点分日期断言（应为连字符）："; printf '%s\n' "$BAD" | sed 's/^/       /'
 else note_ok "未发现点分日期断言"; fi
 
+echo "▶ 检查 6：技术行话对照表两副本一致（单源=判断卡 §9.0ter，内化副本=pm-agent.md）"
+extract_jargon() { awk '/^```jargon-blacklist$/{f=1;next} /^```$/{f=0} f' "$1"; }
+J_CARD=$(extract_jargon .claude/skills/ai-pm/references/pm-judgment-card.md)
+J_AGENT=$(extract_jargon .claude/agents/pm-agent.md)
+if [ -z "$J_CARD" ]; then note_fail "判断卡缺 jargon-blacklist 机器块"
+elif [ -z "$J_AGENT" ]; then note_fail "pm-agent.md 缺 jargon-blacklist 内化副本"
+elif [ "$J_CARD" != "$J_AGENT" ]; then note_fail "行话表两副本内容不一致（diff 判断卡 vs pm-agent）："; diff <(printf '%s\n' "$J_CARD") <(printf '%s\n' "$J_AGENT") | sed 's/^/       /'
+else note_ok "行话表两副本一致（$(printf '%s\n' "$J_CARD" | grep -cv '^#') 行词条）"; fi
+
+echo "▶ 检查 7：决策评审七条必答项——模板为唯一事实源，判断卡 / phase-5 只留指针"
+TPL=templates/prd-styles/default/decision-review-template.md
+if ! grep -q "七条必答项" "$TPL"; then note_fail "模板缺「七条必答项」事实源段"; fi
+for f in .claude/skills/ai-pm/references/pm-judgment-card.md .claude/skills/ai-pm/phases/phase-5-prd.md; do
+  if ! grep -q "七条必答" "$f"; then note_fail "$f 缺「七条必答」指针"; fi
+done
+MISS=0
+for tag in "必答①" "必答②" "必答③" "必答④" "必答⑤" "必答⑥" "必答⑦"; do
+  grep -q "$tag" "$TPL" || { MISS=1; note_fail "模板正文缺 ${tag} 落位锚点"; }
+done
+[ "$MISS" -eq 0 ] && grep -q "七条必答项" "$TPL" && note_ok "七必答：模板事实源 + 正文 ①-⑦ 锚点 + 两处指针齐全"
+
 echo ""
 if [ "$FAIL" -eq 0 ]; then echo "✅ 规则一致性检查全部通过"; exit 0
 else echo "❌ 发现规则漂移，请把上述文件改回统一口径（单一事实源见 .claude/skills/ai-pm/references/pm-judgment-card.md）"; exit 1; fi

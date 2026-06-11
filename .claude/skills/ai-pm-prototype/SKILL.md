@@ -8,7 +8,7 @@ description: >-
   「画个界面」「把PRD做成原型」时，立即使用此技能。
   边界：本技能用于「把已有 PRD/需求做成可评审原型」；脱离 PRD 的纯视觉探索、通用 UI 组件生成或视觉精修，可使用外部 impeccable 增强，但 AI_PM 原型默认以 ai-pm-frontend-design 为本地设计内核。
 argument-hint: "[PRD路径 | --mobile | --web | --visual | --visual-strict]"
-allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node)
+allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 ---
 
 # 原型生成
@@ -172,6 +172,7 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 - 空状态、加载状态、错误状态均需要呈现
 - 还原 PRD 中的核心用户流程（至少覆盖主流程）
 - 视觉设计必须能支撑评审：信息层级清楚、组件一致、页面密度符合场景、业务假数据可信
+- **防 bleed（原型 = 镜像，零解释）**：屏幕只留用户真会看到的字，不写对评审解释产品的注解（溯源括号、"原型示意"、权限 meta caption）——细则见 prototype-agent 核心信念 7
 
 ### 步骤4.5：质量自检（落盘前）
 
@@ -190,6 +191,13 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 - UX 文案：按钮动作明确，错误给恢复路径，空状态给下一步，loading 说明正在做什么
 
 任一维度低于 3 分、总分低于 9 分，或三段式自检出现 stop condition，必须先自改 HTML，再进入截图与完成提示。
+
+### 步骤4.6：防 bleed 审计 + 设计师交接（落盘后强制，与 phase-7 同源）
+
+与 `/ai-pm` 全流程的 phase-7 共用一套机制，此处只接线不复制（细则见 `phases/phase-7-prototype.md` 同名两节）：
+
+1. **可见文案防 bleed 审计（forced-artifact）**：`grep -nE "原型示意|用于说明|可读不可点|标了来自|不进学生端|评审|PRD|规则如下" {项目目录}/06-prototype/*.html`，命中逐条填「可见文案 / 用户真会看到吗 / 是否 PRD meta / 处理动作」四列表，落 `06-prototype/visible-copy-audit.md`；**命中不自动删**（AI 对用户的真话术留，对评审解释的 meta 挪走）
+2. **设计师交接文件**：产 `06-prototype/HANDOFF.md`（页面清单 / 状态清单 / 组件策略 / 视觉约束来源 / 未实现交互 / 假数据边界 / 接手注意点）——**规格只进这里**，不写进 HTML 屏幕、不写回 PRD 功能表格
 
 ### 步骤5：截图与 manifest 生成
 

@@ -190,6 +190,7 @@ Agent(subagent_type=prototype-agent, prompt="
 读取 PRD/摘要、项目记忆、设计规范/代码仓指纹（如有）、视觉锚点包（如有），输出原型蓝图。
 重点包括：页面与主流程、信息层级、状态清单、交互清单、视觉设计方向、生成硬约束。
 视觉设计是原型质量的一部分，不能因为是原型就接受模板套壳或灰白卡片。
+原型 = 镜像：屏幕上只留用户真会看到的字，不写对评审解释产品的注解（防 PRD bleed，PRD 陈述规则、原型表演规则）；生成硬约束里必须包含这条。
 ")
 ```
 
@@ -244,6 +245,20 @@ wc -c {project_dir}/06-prototype/index.html
 
 并更新 `cost.total_estimate`（累加所有已有 phases 的 tokens_estimate）。
 
+## 原型落盘后：设计师交接文件（HANDOFF.md，强制产出）
+
+原型读者 = 用户（预览）+ 设计师（接手做"代码可复用"层 → 前端）。HTML 落盘后产出 `{project_dir}/06-prototype/HANDOFF.md`：
+
+- 页面清单（每页目的）
+- 状态清单（已实现 / 未实现）
+- 组件策略（表格/卡片/对话流等 + 为什么）
+- 视觉约束来源（锚点包 / 设计规范 / 代码仓指纹，供设计师追溯）
+- 未实现交互（占位标注过的）
+- 已知假数据边界（哪些数据是演示假数据，别照搬）
+- 设计师接手注意点
+
+**规格只进 HANDOFF.md**：不写进 HTML 屏幕（= bleed，用户会看到）、不写回 PRD 功能表格（像素/色号/动效毫秒铁律不变）。
+
 ## Phase 7.5: 原型完整性 + 设计质量审计（自动触发）
 
 **前提条件**: Phase 5（PRD）和 Phase 7（原型）均已完成，即 `05-prd/05-PRD-v1.0.md` 和 `06-prototype/index.html` 都存在。
@@ -269,6 +284,7 @@ wc -c {project_dir}/06-prototype/index.html
    - **理由**：研发评审会把"页面跳转"误读为产品要做"页面重建"，但本质是同一对话栏内的工具切换；多份 HTML 还会导致 panel-open 状态丢失、对话上下文消失等次生问题
    - **实施约定**：用 `currentMode` 状态变量 + `switchMode(mode)` 函数；切换时清空当前对话（同组切换工具相当于"新对话"，符合 6.1.0 对话上下文规则）
    - **审计判定**：若发现 `06-prototype-{xxx}/` 多目录且 onclick 含 `window.open`，记为 ⚠️ 警告，建议合并
+7bis. **可见文案防 bleed 审计（forced-artifact，先机械后判断）**：红旗词 grep——`grep -nE "原型示意|用于说明|可读不可点|标了来自|不进学生端|评审|PRD|规则如下" {project_dir}/06-prototype/*.html`；命中逐条填四列表「可见文案 / 用户真会看到吗 / 是否 PRD meta / 处理动作」，落 `06-prototype/visible-copy-audit.md`。**命中不自动删，逐条判**——AI 对用户的真话术/思维链/状态文案留，对评审解释的 meta（溯源括号注解、权限说明 caption）挪 HANDOFF.md 或留 PRD。原则：PRD 陈述规则，原型表演规则（规则做出来本身就是演示，不用注解）。
 8. 按 `prototype-judgment-card.md` 进行 12 分制质量评分：
    - **PRD 覆盖**（0-4）：页面、功能、关键状态是否覆盖
    - **交互体验**（0-4）：核心任务是否能走通，点击/输入/切换是否有反馈
