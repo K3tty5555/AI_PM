@@ -256,7 +256,7 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
 phases.office-hours  = true  → 写完 00-office-hours.md 后（可选）
 phases.requirement   = true  → 写完 01-requirement-draft.md 后
 phases.analysis      = true  → 写完 02-analysis-report.md 后
-phases.competitor    = true  → 写完 03-competitor-report.md 后
+phases.competitor    = true  → 写完 03-competitor-report/V{版本}.md 后
 phases.stories       = true  → 写完 04-user-stories.md 后
 phases.prd           = true  → 写完 05-prd/05-PRD-v1.0.md 后
 phases.analytics     = true  → 写完 09-analytics/analytics-requirement.md 后（可选）

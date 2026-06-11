@@ -1,6 +1,6 @@
 # Phase 5: PRD 生成
 
-**输入**: `01-requirement-draft.md` + `02-analysis-report.md` + `03-competitor-report.md` + `04-user-stories.md` + `_memory/L2-prd-versions.md`（若存在）
+**输入**: `01-requirement-draft.md` + `02-analysis-report.md` + `03-competitor-report/V{版本}.md` + `04-user-stories.md` + `_memory/L2-prd-versions.md`（若存在）
 **输出**: `05-prd/05-PRD-v1.0.md`
 
 ## ⚠️ PM 风格判断卡（强制前置，所有 PRD 生成前必读）
@@ -143,7 +143,7 @@ test -f {project_dir}/01-baseline-delta.md
   9. 落盘 + 摘要 + 成本记录
 
 读取文件：01-requirement-draft.md, 02-analysis-report.md,
-         03-competitor-report.md, 04-user-stories.md
+         03-competitor-report/V{版本}.md, 04-user-stories.md
 写入文件：05-prd/05-PRD-v1.0.md（及摘要，若 ≥20KB）
 
 继续？[Y/n]

@@ -65,7 +65,7 @@ Agent → subagent-PM
 Agent → subagent-Analyst
   系统提示词：「你是竞品分析师，仅完成任务，不与用户交互」
   任务：基于需求「{用户需求}」，完成竞品研究
-  输出：{项目目录}/03-competitor-report.md
+  输出：{项目目录}/03-competitor-report/V{版本}.md
 
 Agent → subagent-KB（可选，知识库有相关内容时启用）
   系统提示词：「你是知识库检索员，仅完成任务，不与用户交互」
@@ -84,7 +84,7 @@ Agent → subagent-PRD
   系统提示词：「你是 PRD 撰写专家，仅完成任务，不与用户交互」
   任务：
     读取：{项目目录}/02-analysis-report.md
-    读取：{项目目录}/03-competitor-report.md
+    读取：{项目目录}/03-competitor-report/V{版本}.md
     读取：/tmp/kb-insight.md（如存在）
     动笔前读：.claude/skills/ai-pm/references/pm-judgment-card.md（越界红线 / 责任分工 / §9 守门）
     项目约定块（如有）：章节名/术语照约定用，发明新词必须显式标理由

@@ -123,7 +123,7 @@ wb = openpyxl.load_workbook(file_path, data_only=True)
 
 ## HTML 仪表盘规范
 
-数据仪表盘为展示型产物，默认使用 **AI 情境定制**：客户端流式生成时自动注入项目自带 `ai-pm-frontend-design`，并在用户本机存在时追加 `impeccable:frontend-design` 作为增强。必须读取本地设计内核的 `references/dashboard-design.md` 和 `references/quality-gate.md`，先判断仪表盘服务的决策类型，再选择图表、信息层级和视觉表达。若项目已加载公司规范（`templates/ui-specs/.active-spec`），则优先使用公司规范。
+数据仪表盘为展示型产物，默认使用 **AI 情境定制**：客户端流式生成时自动注入项目自带 `ai-pm-frontend-design`，并在用户本机存在时追加 `impeccable:frontend-design` 作为增强。必须读取本地设计内核的 `ai-pm-frontend-design/references/dashboard-design.md` 和 `ai-pm-frontend-design/references/quality-gate.md`，先判断仪表盘服务的决策类型，再选择图表、信息层级和视觉表达。若项目已加载公司规范（`templates/ui-specs/.active-spec`），则优先使用公司规范。
 
 **Chart.js 规范**:
 ```javascript

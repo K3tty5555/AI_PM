@@ -1,6 +1,6 @@
 # Phase 4: 用户故事 / Agent 故事 / Agent 工作流
 
-**输入**: `02-analysis-report.md` + `03-competitor-report.md` + `_memory/L1-decisions.md`（读 `product_type`）
+**输入**: `02-analysis-report.md` + `03-competitor-report/V{版本}.md` + `_memory/L1-decisions.md`（读 `product_type`）
 **输出**: `04-user-stories.md`（含三节，按 product_type 决定写多少）
 
 ## ⚠️ PM 风格判断卡前置阅读

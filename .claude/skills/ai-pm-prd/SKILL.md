@@ -13,7 +13,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm
 ## 输入
 
 - `{项目目录}/02-analysis-report.md`（需求分析，必需）
-- `{项目目录}/03-competitor-report.md`（竞品研究，如有）
+- `{项目目录}/03-competitor-report/V{版本}.md`（竞品研究，如有）
 - `{项目目录}/04-user-stories.md`（用户故事，如有）
 - `templates/prd-styles/{风格名}/style-config.json`（写作风格，可选）
 

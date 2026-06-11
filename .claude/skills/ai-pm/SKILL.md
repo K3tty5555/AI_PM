@@ -244,7 +244,7 @@ Phase 1: 需求澄清（交互式访谈，每次只问1-2个问题）
          若用户有现成文档，引导放入 07-references/ 后直接读取，跳过访谈
     ↓  → 生成 01-requirement-draft.md
 Phase 2+3（并行）: 需求分析 × 竞品研究
-    ↓  → 生成 02-analysis-report.md + 03-competitor-report.md
+    ↓  → 生成 02-analysis-report.md + 03-competitor-report/V{版本}.md
 Phase 4: 用户故事 / Agent 故事 / Agent 工作流（按 product_type 分支）
     ↓  → 生成 04-user-stories.md（含三节，agent/hybrid 三件套，traditional 仅用户故事）
     传统产品：用户故事 + INVEST 自检
