@@ -35,7 +35,7 @@ const PRD_PLAN: PlanModeContent = {
   reads: [
     "01-requirement-draft.md",
     "02-analysis-report.md",
-    "03-competitor-report.md",
+    "03-competitor-report/（竞品报告·最新版）",
     "04-user-stories.md",
   ],
   writes: ["05-prd/05-PRD-v1.0.md（≥20KB 自动生成摘要）"],

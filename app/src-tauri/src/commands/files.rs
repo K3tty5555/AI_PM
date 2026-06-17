@@ -70,6 +70,13 @@ pub fn read_project_file(
 
     let file_path = validate_path_within(&file_name, &output_dir)?;
 
+    // 竞品报告迁文件夹版：读"03-competitor-report.md"时解析到 03-competitor-report/ 最新版本（兼容旧扁平文件）
+    let file_path = if file_name == "03-competitor-report.md" {
+        crate::commands::projects::resolve_competitor_report(Path::new(&output_dir)).unwrap_or(file_path)
+    } else {
+        file_path
+    };
+
     match fs::read_to_string(&file_path) {
         Ok(content) if !content.is_empty() => Ok(Some(content)),
         _ => Ok(None),
@@ -180,6 +187,23 @@ pub fn save_project_file(state: State<AppState>, args: SaveFileArgs) -> Result<(
     };
 
     let file_path = validate_path_within(&args.file_name, &output_dir)?;
+
+    // 竞品报告迁文件夹版：保存"03-competitor-report.md"统一路由进文件夹版（绝不写旧扁平）。
+    // 已有实质内容的文件夹版（技能写盘、含 frontmatter，内容已由 stream 持久化）→ 不覆盖、保 frontmatter；
+    // 否则（无 / 空）→ 写入目标，**不吞内容**（修 stdout-only 重生成丢内容）。
+    let file_path = if args.file_name == "03-competitor-report.md" {
+        let target =
+            crate::commands::projects::competitor_report_write_target(Path::new(&output_dir));
+        let already_substantial = fs::read_to_string(&target)
+            .map(|c| c.trim().len() > 100)
+            .unwrap_or(false);
+        if already_substantial {
+            return Ok(());
+        }
+        target
+    } else {
+        file_path
+    };
 
     // Ensure parent directory exists (for nested paths like 05-prd/05-PRD-v1.0.md)
     if let Some(parent) = file_path.parent() {

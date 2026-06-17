@@ -230,7 +230,13 @@ pub async fn brainstorm_chat(
     if let Some((_skill, input_files, _output, _companions)) = phase_config(&args.phase) {
         let mut blocks: Vec<String> = Vec::new();
         for filename in input_files {
-            let path = Path::new(&output_dir).join(filename);
+            // 竞品报告迁文件夹版：解析到 03-competitor-report/ 最新版本（兼容旧扁平文件）
+            let path = if *filename == "03-competitor-report.md" {
+                crate::commands::projects::resolve_competitor_report(Path::new(&output_dir))
+                    .unwrap_or_else(|| Path::new(&output_dir).join(filename))
+            } else {
+                Path::new(&output_dir).join(filename)
+            };
             if let Ok(content) = fs::read_to_string(&path) {
                 let trimmed = content.trim().to_string();
                 if !trimmed.is_empty() {

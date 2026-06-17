@@ -969,13 +969,68 @@ fn phase_output_file(phase: &str) -> Option<&'static str> {
         "office-hours" => Some("00-office-hours.md"),
         "requirement" => Some("01-requirement-draft.md"),
         "analysis" => Some("02-analysis-report.md"),
-        "research" => Some("03-competitor-report.md"),
+        "research" => Some("03-competitor-report"),
         "stories" => Some("04-user-stories.md"),
         "prd" => Some("05-prd"),
         "prototype" => Some("06-prototype"),
         "review" => Some("08-review-report.md"),
         _ => None,
     }
+}
+
+/// 竞品报告路径解析：优先 `03-competitor-report/` 文件夹下最新版本（按修改时间），
+/// 兼容旧扁平文件 `03-competitor-report.md`。读取 / 存在检查统一调用——
+/// 避免客户端写死旧扁平路径、拿不到文件夹版竞品报告（PRD/用户故事缺料、前置检查误判）。
+pub fn resolve_competitor_report(project_dir: &Path) -> Option<PathBuf> {
+    let folder = project_dir.join("03-competitor-report");
+    if folder.is_dir() {
+        let mut versions: Vec<PathBuf> = match fs::read_dir(&folder) {
+            Ok(rd) => rd
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| {
+                    // 只认主报告版本文件 V{版本}.md（V+数字）——排除 battlecard-*.md / README.md / 附录，
+                    // 否则这些文件更新更晚会被误当主报告读走
+                    if !(p.is_file()
+                        && p.extension().and_then(|x| x.to_str()) == Some("md"))
+                    {
+                        return false;
+                    }
+                    p.file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(|name| {
+                            let b = name.as_bytes();
+                            b.first() == Some(&b'V')
+                                && b.get(1).map_or(false, |c| c.is_ascii_digit())
+                        })
+                        .unwrap_or(false)
+                })
+                .collect(),
+            Err(_) => Vec::new(),
+        };
+        if !versions.is_empty() {
+            versions.sort_by_key(|p| fs::metadata(p).and_then(|m| m.modified()).ok());
+            return versions.pop(); // 最新修改时间 = 当前版本
+        }
+    }
+    let flat = project_dir.join("03-competitor-report.md");
+    if flat.is_file() {
+        return Some(flat);
+    }
+    None
+}
+
+/// 竞品报告**写入目标**：已有 folder 版 → 覆盖最新版本；否则 `03-competitor-report/V1.md`。
+/// **绝不写旧扁平文件**——否则新内容会被 resolver 的"folder 优先"遮蔽（读不到）、且制造双源。
+/// stream 兜底 / save_project_file 统一调用，保证竞品报告只落文件夹版。
+pub fn competitor_report_write_target(project_dir: &Path) -> PathBuf {
+    let folder = project_dir.join("03-competitor-report");
+    if let Some(existing) = resolve_competitor_report(project_dir) {
+        if existing.starts_with(&folder) {
+            return existing;
+        }
+    }
+    folder.join("V1.md")
 }
 
 /// T5: 读取 _status.json.agent_errors（agent-team Wave 失败记录）
@@ -1915,7 +1970,7 @@ pub fn check_phase_prerequisites(
             });
 
             // Check competitor report exists
-            let competitor_exists = dir.join("03-competitor-report.md").exists();
+            let competitor_exists = resolve_competitor_report(&dir).is_some();
             items.push(PrerequisiteItem {
                 id: "research".to_string(),
                 label: "竞品研究报告".to_string(),

@@ -691,7 +691,13 @@ fn build_system_prompt(
     let previous_outputs: Vec<(String, String)> = input_files
         .iter()
         .filter_map(|filename| {
-            let path = Path::new(output_dir).join(filename);
+            // 竞品报告迁文件夹版：03-competitor-report.md → 解析到 03-competitor-report/ 最新版本（兼容旧扁平文件）
+            let path = if *filename == "03-competitor-report.md" {
+                crate::commands::projects::resolve_competitor_report(Path::new(output_dir))
+                    .unwrap_or_else(|| Path::new(output_dir).join(filename))
+            } else {
+                Path::new(output_dir).join(filename)
+            };
             fs::read_to_string(&path)
                 .ok()
                 .map(|c| (filename.to_string(), c))
@@ -1020,6 +1026,40 @@ pub async fn start_stream(
                 // Multi-file prototype: manifest-driven — don't write stdout to disk
                 let manifest = fs::read_to_string(&manifest_path).unwrap_or_default();
                 ("06-prototype/manifest.json".to_string(), manifest)
+            } else if args.phase == "research" {
+                // 竞品报告迁文件夹版：03-competitor-report/V{版本}.md（兼容旧扁平文件）
+                let resolved =
+                    crate::commands::projects::resolve_competitor_report(Path::new(&output_dir));
+                let disk = resolved
+                    .as_ref()
+                    .and_then(|p| fs::read_to_string(p).ok())
+                    .unwrap_or_default();
+                let stdout_len = result.full_text.trim().len();
+                if disk.trim().len() > 100 {
+                    let rel = resolved
+                        .as_ref()
+                        .and_then(|p| p.strip_prefix(&output_dir).ok())
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_else(|| output_file.to_string());
+                    (rel, disk)
+                } else if stdout_len > 100 {
+                    // 技能没写盘、内容在 stdout → 兜底写**文件夹版**（不写旧扁平，否则会被 resolver 的 folder 优先遮蔽）
+                    let target = crate::commands::projects::competitor_report_write_target(
+                        Path::new(&output_dir),
+                    );
+                    if let Some(parent) = target.parent() {
+                        let _ = fs::create_dir_all(parent);
+                    }
+                    let _ = fs::write(&target, &result.full_text);
+                    let rel = target
+                        .strip_prefix(&output_dir)
+                        .ok()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_else(|| output_file.to_string());
+                    (rel, result.full_text)
+                } else {
+                    (output_file.to_string(), disk)
+                }
             } else {
                 // Standard single-file logic
                 let file_path = Path::new(&output_dir).join(output_file);

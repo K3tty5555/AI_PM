@@ -1,5 +1,17 @@
 use std::fs;
 use std::path::Path;
+use std::process::Command;
+
+// 私有 skill 防泄漏：跳过 .gitignore 排除的 skill（仅本机、含内网域名/凭证逻辑的 skill），
+// 不打进客户端安装包。git check-ignore 退出码 0 = 被忽略；git 不可用时不误删（正常仓库构建有 git）。
+fn is_git_ignored(path: &Path) -> bool {
+    Command::new("git")
+        .args(["check-ignore", "-q"])
+        .arg(path)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
 
 fn copy_dir(src: &Path, dst: &Path) {
     if !src.exists() {
@@ -9,6 +21,13 @@ fn copy_dir(src: &Path, dst: &Path) {
     for entry in fs::read_dir(src).expect("Failed to read skills dir") {
         let entry = entry.expect("Failed to read dir entry");
         let src_path = entry.path();
+        if is_git_ignored(&src_path) {
+            println!(
+                "cargo:warning=跳过 gitignore 的私有 skill，不打进安装包：{}",
+                src_path.display()
+            );
+            continue;
+        }
         let dst_path = dst.join(entry.file_name());
         if src_path.is_dir() {
             copy_dir(&src_path, &dst_path);

@@ -9,7 +9,7 @@ ERRORS=0
 WARNINGS=0
 
 echo "======================================"
-echo "   教程中心 HTML 验证 (v3.0)"
+echo "   教程中心 HTML 验证 (v5.0 · 锚点滚动架构)"
 echo "======================================"
 echo ""
 
@@ -56,13 +56,11 @@ echo "🔧 原生 JS 检查"
 
 JS_CHECKS=(
     "IIFE封装:(function()"
-    "严格模式:use strict"
-    "switchTab:switchTab"
     "IntersectionObserver:IntersectionObserver"
     "键盘导航:ArrowRight"
-    "触摸支持:touchstart"
     "滚动监听:scroll"
     "transform动画:scaleX"
+    "复制到剪贴板:data-copy"
 )
 
 for check_def in "${JS_CHECKS[@]}"; do
@@ -75,21 +73,22 @@ for check_def in "${JS_CHECKS[@]}"; do
     fi
 done
 
-# 4. Tab 系统检查
+# 4. 导航 & 交互检查（v5 锚点滚动架构）
 echo ""
-echo "📑 Tab 系统检查"
+echo "🧭 导航 & 交互检查"
 
-TAB_CHECKS=(
-    "导航栏:nav-tab"
-    "Tab面板:tab-panel"
-    "进度条:progress-bar"
-    "主题色切换:--accent"
-    "激活状态:.active"
+# 注：v5「终末地 Editorial」已用锚点滚动替代旧 Tab 切换，去掉了进度条/主题色切换/swipe。
+NAV_CHECKS=(
+    "锚点导航:app-nav-link"
+    "ScrollSpy:data-section"
+    "技能分类Tab:tab-trigger"
+    "复制命令:data-copy"
+    "激活状态:active"
 )
 
-for check_def in "${TAB_CHECKS[@]}"; do
+for check_def in "${NAV_CHECKS[@]}"; do
     IFS=':' read -r name pattern <<< "$check_def"
-    if grep -q "$pattern" "$HTML_FILE" 2>/dev/null; then
+    if grep -qF "$pattern" "$HTML_FILE" 2>/dev/null; then
         echo -e "${GREEN}✓ ${name}${NC}"
     else
         echo -e "${RED}❌ ${name} 缺失${NC}"
@@ -97,12 +96,12 @@ for check_def in "${TAB_CHECKS[@]}"; do
     fi
 done
 
-# 检查是否有5个Tab
-TAB_COUNT=$(grep -o 'data-tab="[0-9]"' "$HTML_FILE" 2>/dev/null | sort -u | wc -l || echo "0")
-if [ "$TAB_COUNT" -ge 5 ]; then
-    echo -e "${GREEN}✓ 5个Tab (${TAB_COUNT}个)${NC}"
+# 检查锚点区块数量（hero/quickstart/skills/workflow/reference 等）
+SECTION_COUNT=$(grep -oE '<section [^>]*id=' "$HTML_FILE" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$SECTION_COUNT" -ge 4 ]; then
+    echo -e "${GREEN}✓ 锚点区块 (${SECTION_COUNT}个)${NC}"
 else
-    echo -e "${YELLOW}⚠ Tab数量不足 (${TAB_COUNT}个)${NC}"
+    echo -e "${YELLOW}⚠ 锚点区块偏少 (${SECTION_COUNT}个)${NC}"
     WARNINGS=$((WARNINGS+1))
 fi
 
@@ -111,8 +110,8 @@ echo ""
 echo "✨ CSS 动画检查"
 
 CSS_CHECKS=(
-    "Scroll Reveal:.reveal"
-    "visible类:.visible"
+    "Scroll Reveal(fadeInUp):fadeInUp"
+    "卡片入场:@keyframes"
     "CSS变量::root"
     "过渡动画:transition"
     "transform:transform"
@@ -134,22 +133,23 @@ echo ""
 echo "📊 数据结构检查"
 
 DATA_CHECKS=(
-    "SKILLS_DATA"
-    "SKILL_USAGE"
+    "技能卡片:skill-card"
+    "命令速查行:ref-row"
 )
 
-for check in "${DATA_CHECKS[@]}"; do
-    if grep -q "$check" "$HTML_FILE" 2>/dev/null; then
-        echo -e "${GREEN}✓ ${check}${NC}"
+for check_def in "${DATA_CHECKS[@]}"; do
+    IFS=':' read -r name pattern <<< "$check_def"
+    if grep -qF "$pattern" "$HTML_FILE" 2>/dev/null; then
+        echo -e "${GREEN}✓ ${name}${NC}"
     else
-        echo -e "${YELLOW}⚠ ${check} 可能缺失${NC}"
+        echo -e "${YELLOW}⚠ ${name} 可能缺失${NC}"
         WARNINGS=$((WARNINGS+1))
     fi
 done
 
-# 统计技能数量
-SKILL_COUNT=$(grep -oE 'name\s*:\s*"[^"]+"' "$HTML_FILE" 2>/dev/null | wc -l || echo "0")
-echo -e "${GREEN}✓ 技能数量: ${SKILL_COUNT}${NC}"
+# 统计技能卡片数量（v5 技能卡硬编码在 HTML，无 JS 数据数组）
+SKILL_COUNT=$(grep -c '<div class="skill-card">' "$HTML_FILE" 2>/dev/null || echo "0")
+echo -e "${GREEN}✓ 技能卡片数量: ${SKILL_COUNT}${NC}"
 
 # 7. 无障碍检查
 echo ""

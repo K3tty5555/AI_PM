@@ -31,7 +31,13 @@ trap 'rm -f "$tmp_src" "$tmp_dst"' EXIT
 
 (
   cd "$SRC"
-  find . -type f ! -name '.DS_Store' | sed 's#^\./##' | sort
+  # 只比对 git 追踪的 skill——.gitignore 的私有 skill（仅本机）不进资源副本、也不参与漂移检查
+  # （与 build.rs / sync 脚本同口径，否则私有 skill 会被误报成 MISSING）
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git ls-files | sort
+  else
+    find . -type f ! -name '.DS_Store' | sed 's#^\./##' | sort
+  fi
 ) >"$tmp_src"
 
 (

@@ -411,6 +411,33 @@ fn collect_skill_files(root: &Path) -> Vec<String> {
     files
 }
 
+/// 与 build.rs / sync 脚本 / drift 脚本同口径：漂移检查只比对 git 追踪的 skill，
+/// 排除 .gitignore 的私有 skill（仅本机、不打包）。git 不可用时回退全量遍历。
+/// （此检查只在能定位仓库 .claude/skills 的 dev 环境跑，那里有 git。）
+fn collect_tracked_skill_files(root: &Path) -> Vec<String> {
+    let tracked = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .arg("ls-files")
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|l| l.to_string())
+                .filter(|l| !l.is_empty() && !l.ends_with(".DS_Store"))
+                .collect::<Vec<_>>()
+        });
+    match tracked {
+        Some(mut files) if !files.is_empty() => {
+            files.sort();
+            files
+        }
+        _ => collect_skill_files(root),
+    }
+}
+
 fn summarize_paths(paths: &[String]) -> String {
     let shown: Vec<&str> = paths.iter().take(8).map(String::as_str).collect();
     let mut summary = shown.join("、");
@@ -507,7 +534,8 @@ fn ai_context_diagnostics(app: &AppHandle) -> Vec<DiagnosticItem> {
         }
 
         if let Some(resource_root) = bundled_skills_dir(app) {
-            let source_files = collect_skill_files(&source_root);
+            // source 用 git 追踪口径（排除私有 skill），与 resource（已 git-filter）对齐
+            let source_files = collect_tracked_skill_files(&source_root);
             let resource_files = collect_skill_files(&resource_root);
             let source_only: Vec<String> = source_files
                 .iter()
