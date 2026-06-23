@@ -37,7 +37,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(python3)
 
 **流程**:
 ```
-读取 05-prd/05-PRD-v1.0.md
+读取当前 PRD（由 _status.json.active_prd 指定；首次默认名为 05-PRD-v1.0.md）
     ↓
 提取可量化目标
     ↓

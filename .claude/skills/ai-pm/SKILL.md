@@ -118,7 +118,7 @@ init 是编排层，复用 persona / knowledge，不新增存储格式，不区�
 
 1. 读 `<PRD路径>`，提取标题、推断版本号
 2. **提议项目名 + 版本，展示给用户** → 用户可确认 / 改名 / 合并到已有项目 / 取消（不静默立项）
-3. 确认后建 `output/projects/{名}/` 标准骨架（README + `_memory/` + 按 v2 规范的 01-04/08 文件夹），PRD 落 `05-prd/05-PRD-v{n}.md`，README「当前阶段」标「PRD 完成 / 待原型」
+3. 确认后建 `output/projects/{名}/` 标准骨架（README + `_memory/` + 按 v2 规范的 01-04/08 文件夹），PRD 落 `05-prd/<当前 PRD 文件>`（默认 `05-PRD-v{n}.md`，建议描述名；落盘后写 `_status.json.active_prd`），README「当前阶段」标「PRD 完成 / 待原型」
 4. 从此与普通项目平权：进 `/ai-pm list`、支持 `continue`、可继续走原型/评审/PRD 迭代
 
 **边界（铁律）**：import **只从 05-prd 播种，不倒推 01-04 上游内容**——倒推 = 伪造"这份 PRD 当初基于什么需求/分析写出来"，踩"不脑补"红线。上游文件夹按约定建出但**留空**；用户要补齐再显式跑对应阶段，且产出标「AI 推断 · 待确认」，不作事实。
@@ -143,8 +143,8 @@ import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → �
 ├── 04-user-stories/                     用户故事
 │   └── V1.md
 ├── 05-prd/                              PRD（已是文件夹）
-│   ├── README.md                        PRD 索引（活跃/历史/跨版本关系，由 ai-pm-prd 自动 patch）
-│   └── 05-PRD-v1.0.md
+│   ├── README.md                        PRD 索引（人读·活跃/历史/跨版本，由 ai-pm-prd 自动 patch）
+│   └── <当前 PRD 文件>.md                 默认 05-PRD-v1.0.md / 建议描述名；当前 PRD 权威源 = _status.json.active_prd（resolve_current_prd）
 ├── 06-prototype/                        原型
 │   └── index.html
 ├── 07-references/                       参考资料
@@ -253,7 +253,7 @@ Phase 4: 用户故事 / Agent 故事 / Agent 工作流（按 product_type 分支
 🎯 关键确认节点（PRD 生成前统一确认）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Phase 5: PRD 生成（**先过 PM 风格判断卡** + 应用选定风格 + 设计规范）
-    ↓  → 生成 05-prd/05-PRD-v1.0.md
+    ↓  → 生成 05-prd/<当前 PRD 文件>（默认 05-PRD-v1.0.md，建议描述名；落盘后写 active_prd）
     入口：强制读 references/pm-judgment-card.md
     写作：phase-5-prd.md 内嵌「写作脚手架（填空模板）+ 7 组反例对比库 + 自检三连问」
     落盘前：§9 守门 checklist 自检

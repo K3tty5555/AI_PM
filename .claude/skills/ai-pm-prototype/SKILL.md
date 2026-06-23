@@ -21,7 +21,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 
 ## 输入
 
-- 主要：`{项目目录}/05-prd/05-PRD-v1.0.md`（PRD）
+- 主要：`{项目目录}/05-prd/<当前 PRD 文件>`（由 `_status.json.active_prd` 指定；首次默认 `05-PRD-v1.0.md`）
 - 可选：`templates/ui-specs/{规范名}/`（自定义设计规范）
 - 可选：`{项目目录}/.ai-pm-config.json`（项目配置，含 designSystem 字段）
 - 可选：`{项目目录}/06-prototype-visual/manifest.json`（Codex 生成的视觉锚点包）

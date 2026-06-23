@@ -1,10 +1,15 @@
 # PRD 导出实现指南
 
+> 🔑 **「当前 PRD 文件」约定**：下方命令里的 `05-PRD-v1.0.md` 及派生 `.pdf/.docx/-illustrated.pdf` **指「当前 PRD 文件」变量**（非写死）。取法：`python3 ai-pm/scripts/resolve_current_prd.py resolve {项目目录}` 拿 `active_prd`（权威），导出名 = **同 stem 换扩展名**（`<stem>.pdf` / `<stem>.docx` / `<stem>-illustrated.pdf`）。新项目默认 stem = `05-PRD-v1.0`。
+
 ## 环境变量（三条路径共用）
 
 ```bash
 CHROME=~/Library/Caches/ms-playwright/chromium-1212/chrome-mac-arm64/"Google Chrome for Testing.app"/Contents/MacOS/"Google Chrome for Testing"
 PRD_DIR="{项目目录}/05-prd"
+# 当前 PRD 文件名：**走 resolver**（active_prd→唯一顶层md→prd_versions.ts；解析不出即 exit 1、**不猜默认名**，含文件存在校验），不直接读 active_prd；下方导出命令一律用 $PRD_FILE / $PRD_STEM
+PRD_FILE="$(python3 .claude/skills/ai-pm/scripts/resolve_current_prd.py file "{项目目录}")" || { echo "❌ 无法确定当前 PRD（见上方报错）——请先在 _status.json 设置 active_prd，或确保 05-prd/ 仅一份 PRD" >&2; exit 1; }
+PRD_STEM="${PRD_FILE%.md}"
 PROTO_DIR="{项目目录}/06-prototype"
 CSS_PATH="templates/prd-styles/default/pdf-style.css"
 SKILL_DIR=".claude/skills/ai-pm-prd"
@@ -85,11 +90,11 @@ module.exports = { buildHtml };
 node -e "
 const { buildHtml } = require('./build-pdf-html.js');
 const fs = require('fs');
-const html = buildHtml('{项目目录}/05-prd/05-PRD-v1.0.md', 'templates/prd-styles/default/pdf-style.css', false);
+const html = buildHtml('$PRD_DIR/$PRD_FILE', 'templates/prd-styles/default/pdf-style.css', false);
 fs.writeFileSync('{项目目录}/05-prd/_tmp.html', html);
 "
 "$CHROME" --headless=new --no-sandbox --disable-gpu \
-  --print-to-pdf="{项目目录}/05-prd/05-PRD-v1.0.pdf" \
+  --print-to-pdf="$PRD_DIR/$PRD_STEM.pdf" \
   --print-to-pdf-no-header \
   "file://{项目目录}/05-prd/_tmp.html" 2>/dev/null
 rm "{项目目录}/05-prd/_tmp.html"
@@ -105,7 +110,7 @@ rm "{项目目录}/05-prd/_tmp.html"
 if [ "$ai_illustration_mode" = "true" ]; then
   INPUT="{项目目录}/05-prd/_export_tmp.md"
 else
-  INPUT="{项目目录}/05-prd/05-PRD-v1.0.md"
+  INPUT="$PRD_DIR/$PRD_FILE"
 fi
 
 node -e "
@@ -115,7 +120,7 @@ const html = buildHtml('$INPUT', 'templates/prd-styles/default/pdf-style.css', t
 fs.writeFileSync('{项目目录}/05-prd/_tmp_illustrated.html', html);
 "
 "$CHROME" --headless=new --no-sandbox --disable-gpu \
-  --print-to-pdf="{项目目录}/05-prd/05-PRD-v1.0-illustrated.pdf" \
+  --print-to-pdf="$PRD_DIR/$PRD_STEM-illustrated.pdf" \
   --print-to-pdf-no-header \
   "file://{项目目录}/05-prd/_tmp_illustrated.html" 2>/dev/null
 rm "{项目目录}/05-prd/_tmp_illustrated.html"
@@ -127,8 +132,8 @@ rm "{项目目录}/05-prd/_tmp_illustrated.html"
 
 ```bash
 python3 "$SKILL_DIR/md2docx.py" \
-  "{项目目录}/05-prd/05-PRD-v1.0.md" \
-  "{项目目录}/05-prd/05-PRD-v1.0.docx" \
+  "$PRD_DIR/$PRD_FILE" \
+  "$PRD_DIR/$PRD_STEM.docx" \
   "{项目目录}/06-prototype/screenshots/manifest.json"
 ```
 

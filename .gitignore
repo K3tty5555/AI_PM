@@ -78,6 +78,7 @@ AI_PM_提效分享.html
 .claude/settings.local.json
 # 本地专属 / 项目专属 skill：含内部域名 + 凭证逻辑，只在本机用，不入库不推 GitHub
 .claude/skills/xfchat-wiki/
+.claude/skills/tpd_cli/
 .codex/
 
 # Test reports

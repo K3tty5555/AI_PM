@@ -11,12 +11,12 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(grep)
 
 ## 输入
 
-- 主要：当前项目上下文中已提供 `07-review-report.md`（评审报告）和 `05-prd/05-PRD-v1.0.md`（PRD）
+- 主要：当前项目上下文中已提供评审报告和当前 PRD（`05-prd/<当前 PRD 文件>`，由 `_status.json.active_prd` 指定）
 - 用户消息中指定修改策略
 
 ## 输出
 
-输出完整的修改后 PRD 全文（用于覆盖 `05-prd/05-PRD-v1.0.md`）。
+输出完整的修改后 PRD 全文（用于覆盖当前 PRD）。
 
 ## 修改策略说明
 

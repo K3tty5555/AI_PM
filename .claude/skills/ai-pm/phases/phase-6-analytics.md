@@ -1,6 +1,6 @@
 # Phase 6: 数据埋点（可选）
 
-**输入**: `05-prd/05-PRD-v1.0.md`
+**输入**: `05-prd/<当前 PRD 文件>`（由 `_status.json.active_prd` 指定）
 **输出**: `09-analytics/analytics-requirement.md`
 
 ## 执行方式

@@ -89,7 +89,7 @@ Agent → subagent-PRD
     动笔前读：.claude/skills/ai-pm/references/pm-judgment-card.md（越界红线 / 责任分工 / §9 守门）
     项目约定块（如有）：章节名/术语照约定用，发明新词必须显式标理由
     篇幅与分层：按 phase-5「双层组织」分级定档（小补丁别硬撑附录壳）
-    输出：{项目目录}/05-prd/05-PRD-v1.0.md
+    输出：{项目目录}/05-prd/<当前 PRD 文件>（落盘后写 _status.json.active_prd）
 ```
 
 **Wave 3（依赖 Wave 2 输出，按需启动）**：
@@ -98,7 +98,7 @@ Agent → subagent-PRD
 Agent → subagent-Review
   系统提示词：「你是资深评审专家，仅完成任务，不与用户交互」
   任务：
-    读取：{项目目录}/05-prd/05-PRD-v1.0.md
+    读取：{项目目录}/05-prd/<当前 PRD 文件>（由 _status.json.active_prd 指定）
     执行精简版三角色评审（产品+前端开发+测试）
     输出：{项目目录}/08-review-report-v1.md
 ```

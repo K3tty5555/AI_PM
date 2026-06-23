@@ -282,7 +282,7 @@ search / suggest 跑完后，若**本次结果里**超过 **3 张 state 卡（pi
 2. 读取以下文件（如存在）：
    - `02-analysis-report.md` → 提取用户画像/痛点描述
    - `04-user-stories.md` → 提取典型用户故事场景
-   - `05-prd/05-PRD-v1.0.md` → 提取技术决策/设计原则
+   - 当前 PRD（`05-prd/<当前 PRD 文件>`）→ 提取技术决策/设计原则
    - `08-review-report-v*.md` → 提取评审发现的问题
 3. 生成候选知识点列表：
 ```

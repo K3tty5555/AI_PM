@@ -9,7 +9,7 @@
   "gateMode": "soft",
   "flowMode": "visual-first",
   "sourcePrd": {
-    "path": "05-prd/05-PRD-v1.0.md",
+    "path": "05-prd/{{CURRENT_PRD_FILE}}",
     "summaryPath": "_summaries/prd-summary.md",
     "version": "v1.0"
   },

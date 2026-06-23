@@ -1,7 +1,9 @@
 # Phase 5: PRD 生成
 
 **输入**: `01-requirement-draft.md` + `02-analysis-report.md` + `03-competitor-report/V{版本}.md` + `04-user-stories.md` + `_memory/L2-prd-versions.md`（若存在）
-**输出**: `05-prd/05-PRD-v1.0.md`
+**输出**: `05-prd/<当前 PRD 文件>`（首次新建默认 `05-PRD-v1.0.md`，**建议改描述名** `[YYYYM][域]<标题>-V1.0.md` 经 PM 确认；域候选从历史 PRD 文件名抽高频域、PM 可改/自填；落盘后写 `_status.json.active_prd`=该文件名）
+
+> 🔑 **「当前 PRD 文件」约定（Phase 0 去承重）**：本文档下方出现的 `05-prd/05-PRD-v1.0.md` / `05-PRD-v1.0.md` **一律指「当前 PRD 文件」这个变量**，由 `scripts/resolve_current_prd.py`（`_status.json.active_prd` 权威 → 唯一顶层 md → prd_versions.ts 最新）解析，**不是写死的名字**。迭代项目读/写的都是当前 PRD；README 当前活跃表只人读、机读只认 active_prd。
 
 ## ⚠️ PM 风格判断卡（强制前置，所有 PRD 生成前必读）
 
@@ -144,7 +146,7 @@ test -f {project_dir}/01-baseline-delta.md
 
 读取文件：01-requirement-draft.md, 02-analysis-report.md,
          03-competitor-report/V{版本}.md, 04-user-stories.md
-写入文件：05-prd/05-PRD-v1.0.md（及摘要，若 ≥20KB）
+写入文件：05-prd/<当前 PRD 文件>（首次默认 05-PRD-v1.0.md、建议描述名；落盘后写 active_prd）（及摘要，若 ≥20KB）
 
 继续？[Y/n]
 ```
@@ -295,13 +297,15 @@ grep -E "^product_type:" {project_dir}/_memory/L1-decisions.md 2>/dev/null
 **写完后验证**：grep PRD 文件，不应该残留任何 `<!-- agent-supplement` 字样。
 
 ```bash
-grep -n "agent-supplement" {project_dir}/05-prd/05-PRD-v1.0.md && echo "❌ 残留挂接位标记" || echo "✅ 标记清理干净"
+PRD="{project_dir}/05-prd/$(python3 .claude/skills/ai-pm/scripts/resolve_current_prd.py file {project_dir})"   # 走 resolver 拿当前 PRD（命令块都这么起头）
+grep -n "agent-supplement" "$PRD" && echo "❌ 残留挂接位标记" || echo "✅ 标记清理干净"
 ```
 
 **源注清理（落盘前最后一道，兜写时反射的网）**：pm-agent 写作时的就地引源（「现网X（源：Y『原句』）」）要求定稿前删——落盘前机械扫一遍残留：
 
 ```bash
-grep -nE "源：|『|』|待对齐|本需求新词" {project_dir}/05-prd/05-PRD-v1.0.md
+PRD="{project_dir}/05-prd/$(python3 .claude/skills/ai-pm/scripts/resolve_current_prd.py file {project_dir})"
+grep -nE "源：|『|』|待对齐|本需求新词" "$PRD"
 ```
 
 命中**逐条判断、不自动删**：①内部源注 → 删（信息已核完，过程痕迹不进定稿）②确属正文引用原文的 → 保留 ③「待对齐」「本需求新词」标记只允许出现在待对齐章节/附录 B，散落在功能正文里的挪过去。
@@ -638,7 +642,7 @@ PRD 文件写入后，立即执行以下步骤。
 
 用 Bash 检查 PRD 文件大小：
 ```bash
-wc -c {project_dir}/05-prd/05-PRD-v1.0.md
+wc -c "{project_dir}/05-prd/$(python3 .claude/skills/ai-pm/scripts/resolve_current_prd.py file {project_dir})"
 ```
 
 - 文件 < 20480 字节（20KB）→ 跳过摘要生成
@@ -698,7 +702,7 @@ mkdir -p {project_dir}/_summaries/
 
 ```bash
 # 获取 PRD 文件字节数
-wc -c {project_dir}/05-prd/05-PRD-v1.0.md
+wc -c "{project_dir}/05-prd/$(python3 .claude/skills/ai-pm/scripts/resolve_current_prd.py file {project_dir})"
 ```
 
 将字节数 × 0.25 作为 `tokens_estimate`，写入 `_status.json`：

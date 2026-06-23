@@ -19,7 +19,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 
 ## 输入
 
-- 主要：`{项目目录}/05-prd/05-PRD-v1.0.md`（PRD）
+- 主要：`{项目目录}/05-prd/<当前 PRD 文件>`（由 `_status.json.active_prd` 指定；首次默认 `05-PRD-v1.0.md`）
 - 参考：`{项目目录}/06-prototype/index.html`（原型，如有）
 - 参考：`{项目目录}/02-analysis-report.md`、`04-user-stories.md`
 
@@ -165,7 +165,7 @@ C. {第三项，如有}
 
 ### 步骤5：执行 PRD 修改
 
-**修改原则：不创建新文件，直接在 `05-prd/05-PRD-v1.0.md` 中修改，修订日志追加新记录。**
+**修改原则：不创建新文件，直接在当前 PRD 中修改，修订日志追加新记录。**
 
 ```markdown
 | {日期} | v1.{N} | 评审后修改：修复{N}个问题（{n} Critical + {n} Major） | 全模块 | AI_PM | 基于评审报告v{N} |

@@ -13,11 +13,21 @@ from collections import Counter
 from pathlib import Path
 
 
-def is_current_work(name):
+def is_current_work(name, current_prd=None):
     """当前稿/工作产物不进历史语料——否则本轮草稿的新词会被反向固化成"历史约定"，
-    术语审计失去意义。排除：05-PRD-v* 当前稿命名（含其 pdf/docx 导出）、draft、README。"""
+    术语审计失去意义。排除优先级（Phase 0 去承重后）：
+      ① resolver 解析出的当前 PRD（active_prd 权威）→ 含其同名 pdf/docx 导出
+      ② legacy 默认名 05-PRD-v* / draft / README 作兜底（无 active_prd 的老项目）。"""
     low = name.lower()
-    return name == 'README.md' or low.startswith('05-prd-v') or 'draft' in low
+    if name == 'README.md' or low.startswith('05-prd-v') or 'draft' in low:
+        return True
+    if current_prd:
+        stem = current_prd.rsplit('.', 1)[0]
+        # 只排**精确派生名**（别用 startswith——会误伤同前缀历史文件）
+        derived = {current_prd, stem + '.md', stem + '.pdf', stem + '.docx',
+                   stem + '-illustrated.pdf'}
+        return name in derived
+    return False
 
 
 def heading_lines(path):
@@ -38,12 +48,20 @@ def main():
         print(f'ERROR:目录不存在 {prd_dir}', file=sys.stderr)
         sys.exit(1)
 
+    # 解析当前 PRD（active_prd 权威），排除出历史语料；resolver 不可用则回退 legacy 行为
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from resolve_current_prd import resolve_current_prd
+        current = resolve_current_prd(str(prd_dir.parent)).get('file')
+    except Exception:
+        current = None
+
     ai_md = prd_dir / 'ai-md'
-    pdfs = sorted(p for p in prd_dir.glob('*.pdf') if not is_current_work(p.name))
-    natives = sorted(p for p in prd_dir.glob('*.md') if not is_current_work(p.name))
+    pdfs = sorted(p for p in prd_dir.glob('*.pdf') if not is_current_work(p.name, current))
+    natives = sorted(p for p in prd_dir.glob('*.md') if not is_current_work(p.name, current))
     extracts = sorted(
         p for p in ai_md.glob('*.md')
-        if not p.name.startswith('_') and not is_current_work(p.name)
+        if not p.name.startswith('_') and not is_current_work(p.name, current)
     ) if ai_md.is_dir() else []
     corpus = natives + extracts
 

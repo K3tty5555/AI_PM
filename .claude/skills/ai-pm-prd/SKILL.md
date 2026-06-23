@@ -19,13 +19,15 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm
 
 ## 输出
 
-`{项目目录}/05-prd/05-PRD-v1.0.md`
+`{项目目录}/05-prd/<当前 PRD 文件>`（首次新建默认 `05-PRD-v1.0.md`，建议改描述名 `[YYYYM][域]<标题>-V1.0.md` 经 PM 确认；落盘后写 `_status.json.active_prd`）
+
+> 🔑 **「当前 PRD 文件」约定**：本文档（及 export-guide）下方出现的 `05-PRD-v1.0.md` 及其同名导出 `.pdf/.docx/-illustrated.pdf` **一律指「当前 PRD 文件」变量**，由 `ai-pm/scripts/resolve_current_prd.py`（`_status.json.active_prd` 权威）解析，**非写死名字**。
 
 目录结构：
 ```
 {项目目录}/05-prd/
 ├── README.md
-└── 05-PRD-v1.0.md
+└── <当前 PRD 文件>.md   # 默认 05-PRD-v1.0.md，建议描述名
 ```
 
 ## 执行步骤
@@ -153,7 +155,11 @@ PRD 中包含 Mermaid 代码块时，生成方式取决于执行环境：
 
 ### 步骤 5.5：patch 05-prd/README 索引（强制）
 
-PRD 文件落盘后，**立即** patch `{项目}/05-prd/README.md`：
+PRD 文件落盘后，**立即**做两件：
+
+**① 写 `_status.json.active_prd`**（当前 PRD 权威源）= 刚落盘的 PRD 文件名——后续 skill / 客户端都靠它定位当前 PRD（见 `resolve_current_prd.py`）。
+
+**② patch `{项目}/05-prd/README.md`**（当前活跃表只人读、不被机器解析）：
 
 **新增 PRD 时**：
 - 如果是当前活跃版本的新场景或新版本 → 插入「当前活跃版本」表格
@@ -185,7 +191,7 @@ PRD 文件落盘后，**立即** patch `{项目}/05-prd/README.md`：
 
 #### 6.1 扫描 PRD，提取所有 Mermaid 块
 
-读取 PRD 文件（`{项目目录}/05-prd/05-PRD-v1.0.md`），找到所有 ` ```mermaid ... ``` ` 代码块。
+读取当前 PRD 文件（`{项目目录}/05-prd/<当前 PRD 文件>`，取 `_status.json.active_prd`；默认 `05-PRD-v1.0.md`），找到所有 ` ```mermaid ... ``` ` 代码块。
 
 为每个代码块生成两部分标识：
 - **ID**：`flow1`、`flow2`、… （序号前缀）

@@ -126,7 +126,7 @@ ls "{project_dir}/05-prd/"*.docx 2>/dev/null
   9. 完整性 + 设计质量审计（自动）
   10. 审计报告落盘
 
-读取文件：_summaries/prd-summary.md（或 05-prd/05-PRD-v1.0.md）
+读取文件：_summaries/prd-summary.md（或当前 PRD：05-prd/<当前 PRD 文件>）
 可选读取：06-prototype-visual/manifest.json, 06-prototype-visual/visual-fingerprint.md
 写入文件：06-prototype/index.html, 07-audit-report.md
 
@@ -261,7 +261,7 @@ wc -c {project_dir}/06-prototype/index.html
 
 ## Phase 7.5: 原型完整性 + 设计质量审计（自动触发）
 
-**前提条件**: Phase 5（PRD）和 Phase 7（原型）均已完成，即 `05-prd/05-PRD-v1.0.md` 和 `06-prototype/index.html` 都存在。
+**前提条件**: Phase 5（PRD）和 Phase 7（原型）均已完成，即当前 PRD（`05-prd/<当前 PRD 文件>`）和 `06-prototype/index.html` 都存在。
 
 **跳过条件**: 
 - PRD 未生成（跳阶段场景）→ 跳过审计，提示"无 PRD 可比对"
@@ -270,7 +270,7 @@ wc -c {project_dir}/06-prototype/index.html
 **执行方式**: 技能侧（LLM）执行，不依赖外部工具。优先按 `.claude/agents/prototype-agent.md` 的 Mode B 审计；Agent 工具不可用时主对话按同一规则审计。
 
 **步骤**:
-1. 读取 `05-prd/05-PRD-v1.0.md`，提取所有功能模块和功能点（解析 ## 级标题和功能列表）
+1. 读取当前 PRD，提取所有功能模块和功能点（解析 ## 级标题和功能列表）
 2. 读取 `06-prototype/index.html` 的 HTML 源码
 3. 如果存在 `06-prototype/screenshots/manifest.json`，也读取以获取多页面信息
 4. 逐个功能点检查是否在原型中有对应的页面/视图/交互元素体现
