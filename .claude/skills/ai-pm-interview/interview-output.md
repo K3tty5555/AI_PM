@@ -63,7 +63,7 @@
 **触发条件**：用户输入 `客户满意` 并选择 `导出PRD` / `导出原型` / `全部导出` 时执行。
 
 **合并操作**：
-1. 将 PRD 草案最终版复制到 `05-prd/` 目录，按当前 PRD 命名规则生成文件名，并写入 `_status.json.active_prd`
+1. 将 PRD 草案最终版复制到 `05-prd/` 目录，按当前 PRD 命名规则生成文件名，并写入 `_status.json.active_prd` 与 `checkpoints.prd.doctype`（保留 / 写入 doctype，沿 phase-5 步骤 A.0.1；草案已带文件头 `<!-- doctype: -->` 则一并保留、别丢）
 2. 将原型最终版复制到 `06-prototype/` 目录
 3. 更新项目主原型的侧栏导航（如有新页面）
 4. 在访谈 `00-meta.json` 中标记 `"merged": true`

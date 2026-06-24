@@ -218,6 +218,22 @@ checkpoints.prd.pending_step = "{下一步骤 ID}"
 
 - **完整功能 PRD**——目标是定细节、可研发落地 → 继续步骤 A.1，走 product_type 模板拼装。
 
+> ⚠️ **迭代 / 小补丁也走完整模板，没有 bullet 版路径**：全员评审 PRD（不论 0→1 还是迭代）必有承重骨架 §一 文档概述(修订日志表) / §二 需求分析 / §三 功能清单表 / §六 详细功能设计(每功能一表)；lean 靠"每格 terse + 跳 §四 产品流程/§五 全局说明 + 省可选子节"实现，**不是靠丢骨架塌成 bullet**（详见判断卡 §6 二分）。决策评审型例外，走 4 节模板、不强加 §六。
+
+**步骤 A.0.1：doctype 落机读字段（三源权威 + 冲突规则）⭐ doctype 契约单一事实源**
+
+A.0 判完 doctype（`decision_review` / `full`）后**立即写三处**（比照 A.1 product_type 落字段方式）：
+
+1. `_status.json` 的 `checkpoints.prd.doctype`：**独立稳定枚举键**（`decision_review` / `full`），与可能是长文本的 `pending_step` 并列、互不覆盖 —— **流程 / 恢复权威**（phase-5 resume 认它）。
+2. `_memory/L1-decisions.md` 顶部 `doctype:` 行 —— **upsert·非 append**：最多一行，已存在则替换；读回若发现多行 → 报 warning 并以**首行**为准。**人读 / 跨阶段记忆**。
+3. PRD 文件正文最顶（H1 之上）标记 `<!-- doctype: full -->` / `<!-- doctype: decision_review -->` —— **单文件 lint 权威**（driver 扫单文件直接 grep 它、不依赖项目上下文）。
+
+**三源冲突 / 缺失规则**：文件头 = 单文件 lint 权威 / `_status` = 流程权威 / L1 = 人读。
+- **文件头与 `_status` 冲突** → driver 报 `DOCTYPE_WARNING: conflict`（不静默、不擅改）；phase-5 以 `_status` 为准重写文件头标记。
+- **文件头缺失但 `_status` 可判定**（历史稿常态）→ driver 报 `DOCTYPE_WARNING: missing_header`、提示补回文件头（已以 `_status` 判定，别让单文件 lint 权威静默缺失）。
+
+**本块是 doctype 契约单一事实源**，driver（pm-agent Mode C）/ ai-pm-prd / agent-team 引用此处、不复制逻辑。
+
 **步骤 A.1：产品类型确认（决定模板拼装）**
 
 读取 `_memory/L1-decisions.md` 中的 `product_type` 字段：
@@ -320,6 +336,8 @@ PRD 读者 = 评审的人 + 要据此构建的 AI/研发，默认按「一份文
 | 中等功能（200-300 行档）| 只补关键边界 + 验收，挂正文末 |
 | 单功能补丁（80-150 行档）| 压成几条行内：「构建差异 / 异常边界 / 待对齐」|
 | 决策评审稿 | **不强制双层**，沿用专属 4 节模板（decision-review-template）|
+
+> ⚠️ **双层 ≠ 砍骨架**：双层是把实现细则搬附录、正文留决策层（搬不删），**不是砍 §一/二/三/六 承重骨架**。再小的迭代也保留骨架，靠每格 terse + 跳 §四/§五 瘦身（详见判断卡 §6 二分）。
 
 AI 对齐层写到「开发 + AI 据此能正确建」**即止**——够用、不穷举为美；**运营指标 / 协同细节点到为止 + 标「待 PM / 业务评审拍板」**（点名存在、交人决策；不省略、也不假装穷尽）。
 
