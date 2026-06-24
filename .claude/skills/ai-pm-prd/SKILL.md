@@ -76,11 +76,16 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm
 
 ### 步骤3：读取所有输入文档，整合信息
 
-**⚠️ 强制规则：先检查模板，再动笔**
+**⚠️ 强制规则：先判 doctype 选模板，再读模板动笔**
 
-执行前必须检查 `templates/prd-styles/default/feishu-template.md` 是否存在：
-- **存在时**：先完整读取模板，PRD 的所有章节结构、字段名称、字段顺序必须**严格与模板一致**，不得凭印象自行调整
-- **不存在时**：按本文件「PRD 8 章结构」生成
+**① 先判 doctype（阶段 + 形态），别让 feishu-template 抢先**（指回 phase-5-prd 步骤 A.0/A.0.1，不复制逻辑）：
+- **决策评审型**（拿方向 / go-no-go / 选路线）→ 读 `templates/prd-styles/default/decision-review-template.md` 的 4 节骨架，**不套 feishu、不写详细功能设计**。
+- **全员评审（完整功能）** → 才读 `templates/prd-styles/default/feishu-template.md`（按 product_type 注入 agent-supplement）。
+- **触发词不明确时**：本独立入口**问一次 PM**（决策评审还是全员评审？）；非交互的 ad-hoc 调用**默认 `full`、并在 PRD 文件头注明判断依据**。
+- 判完**接 phase-5 步骤 A.0.1 写 doctype 三处**（`_status` / L1 upsert / 文件头 `<!-- doctype: -->`）。
+
+**② 读到所选模板后**：PRD 的所有章节结构、字段名称、字段顺序必须**严格与所选模板一致**，不得凭印象自行调整。
+- 模板不存在时：按本文件「PRD 8 章结构」兜底（兜底结构 `references/prd-structure.md` 已是完整骨架版、非 bullet）。
 
 > 用户上传模板就是为了让输出严格对齐，任何"我觉得这样更合理"的自行调整都是错的。
 

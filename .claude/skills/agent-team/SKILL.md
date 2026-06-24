@@ -87,8 +87,9 @@ Agent → subagent-PRD
     读取：{项目目录}/03-competitor-report/V{版本}.md
     读取：/tmp/kb-insight.md（如存在）
     动笔前读：.claude/skills/ai-pm/references/pm-judgment-card.md（越界红线 / 责任分工 / §9 守门）
+    选模板 + 守骨架：先判 doctype 选模板（决策评审 → decision-review-template / 全员 → feishu-template+product_type），守 §一/二/三/六 承重骨架、不塌成 bullet（指针·判断卡 §6 二分 + phase-5 步骤 A.0/A.0.1，不复制逻辑）；接 A.0.1 写 doctype 三处
     项目约定块（如有）：章节名/术语照约定用，发明新词必须显式标理由
-    篇幅与分层：按 phase-5「双层组织」分级定档（小补丁别硬撑附录壳）
+    篇幅与分层：按 phase-5「双层组织」分级定档（小补丁别硬撑附录壳、但 §一/二/三/六 骨架不丢）
     输出：{项目目录}/05-prd/<当前 PRD 文件>（落盘后写 _status.json.active_prd）
 ```
 
@@ -111,9 +112,10 @@ Agent → subagent-Review
 |------|------------|
 | `--mode=serial` | Wave 1: PM → Wave 2: PRD（读取PM输出）→ Wave 3: Review |
 | `--mode=parallel`（默认） | Wave 1: PM+Analyst 同时 → Wave 2: PRD → Wave 3: Review |
-| `--mode=agile` | Wave 1: PM+Analyst+KB → Wave 2: PRD（轻量版）→ 快速交付 |
+| `--mode=agile` | Wave 1: PM+Analyst+KB → Wave 2: PRD（轻量版=省竞品/前置·**骨架不省**）→ 快速交付 |
 
 > **serial 模式说明**：Wave 1 仅派发 subagent-PM，Wave 2 的 PRD 不含竞品研究，适用于快速小需求。
+> **agile「轻量版」说明**：轻在**省竞品研究 / 前置调研、多轮快迭代**，**不轻在骨架**——PRD 仍走完整模板（§一/二/三/六 承重骨架必有，详见判断卡 §6 二分）；"轻量版" ≠ bullet 版。
 
 ### 约束
 
