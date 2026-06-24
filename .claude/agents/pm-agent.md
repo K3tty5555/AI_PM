@@ -157,10 +157,10 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 2. 按 checklist 逐项扫，列出不通过项（行号 + 原文 + 修改建议）
 3. 检查越界红线（6 类）+ 缺失项（5 类；**决策评审型另按模板八条必答项扫缺失**，事实源在 decision-review-template 头部注释）+ Agent 4 项专项（agent / hybrid 才查）
 3bis. **承重骨架 + doctype 检测（窄检·只提示不阻断；骨架契约见判断卡 §6 二分 / doctype 契约见 phase-5-prd 步骤 A.0.1）**：
-   - **读 doctype**：① 先 grep PRD 文件头 `<!-- doctype: (full|decision_review) -->`；② 缺标记时，**仅当路径形如 `{project}/05-prd/*.md`** 才读 `{project}/_status.json` 的 `checkpoints.prd.doctype`（`project` = `05-prd` 上一级），否则**不读、只认文件头**（不递归乱找、不扫错项目）；③ 文件头与 `_status` 冲突 → 输出 `DOCTYPE_WARNING: conflict`、不静默跳过。
+   - **读 doctype**：① 先 grep PRD 文件头 `<!-- doctype: (full|decision_review) -->`；② 缺文件头标记时，**仅当路径形如 `{project}/05-prd/*.md`** 才读 `{project}/_status.json` 的 `checkpoints.prd.doctype`（`project` = `05-prd` 上一级），否则**不读、只认文件头**（不递归乱找、不扫错项目）；**靠 `_status` 判出 doctype（文件头缺）→ 输出 `DOCTYPE_WARNING: missing_header`**（已以 _status 判定、提示补回文件头标记，别让单文件 lint 权威静默缺失）；③ 文件头与 `_status` 冲突 → 输出 `DOCTYPE_WARNING: conflict`、不静默跳过。
    - `decision_review` → **跳过骨架检查**，输出 `STRUCTURE_HINT: skipped_decision_review`。
    - **缺标记且 `_status` 也无 doctype（历史 PRD 常态——所有旧稿都走这条默认路）→ 先按内容判、别直接当 full**：文件名含「决策评审」、或正文是 4 节决策骨架（为什么做 / 怎么做 / 需决策的内容 / 风险）且无 §三 功能清单表、无 §六 两栏详设 → 判 `decision_review` 跳过（**防把合规决策评审误报 missing_skeleton**，feedback_mechanical_check_narrow_not_wide 宁漏勿误）；内容像全员评审才落 `full`。
-   - `full`（标记或内容判定）→ 窄检三类骨架是否**各存在任一**：修订/版本类表、功能清单表、详细功能设计两栏表。**只查零歧义信号、不 grep 固定列名 `项目|说明`**（变体不误杀）；**首评基线豁免**（修订日志单行/尚无 不报）。缺 → `STRUCTURE_HINT: missing_skeleton` + 点名缺哪类（**只提示、不退回**，误报归零前不当硬 gate）；齐 → `STRUCTURE_HINT: pass`。
+   - `full`（标记或内容判定）→ 窄检三类骨架是否**各存在任一**：修订/版本类表、功能清单表、详细功能设计两栏表。**只查零歧义信号、不 grep 固定列名 `项目|说明`**（变体不误杀）；**首评基线豁免**（修订日志单行/尚无 不报）。缺 → `STRUCTURE_HINT: missing_skeleton` + 点名缺哪类（**只提示、不退回**，误报归零前不当硬 gate）；齐 → `STRUCTURE_HINT: pass`。⚠️ 这三类机器信号 = §一(修订表) / §三(功能清单表) / §六(详设表)；**§二 需求分析无零歧义表信号、不在机器行覆盖**，靠 §9.2 写作自检 + 人工核——故 `pass` 含义是"三类表信号在"、**不等于四章全验**。
 4. 篇幅 + 防膨胀评估（判断卡 §7）：
    **⓪ 候选术语审计（主检，先于密度）**：项目有约定包（`05-prd/ai-md/_conventions.md`）时机械跑——候选源**限定**：标题、加粗词（`grep -oE '\*\*[^*]+\*\*'`）、「」内动作名、§词典新名词、按钮/状态/流程名（**不拿裸高频词**，中文泛词误报高）；逐个候选在历史语料（`05-prd/*.md` + `05-prd/ai-md/*.md`）grep 命中数，输出表「术语 / 新稿次数 / 历史命中 / 判断」。**历史 0 命中 = 生造红旗、不是自动判错**——已标「本需求新词 / 待对齐」的放行，没标的必修（实证：生造词「跟批」新稿 16 次 vs 历史 0，肉眼 lint 曾放行）。约定包内 ⚠️ 草稿级词不当权威依据。无约定包 → 跳过此步，punch list 标「未做术语审计（无约定包）」。
    **⓪bis 防御性保证密度（次要兜底，排术语审计之下；别靠肉眼——V3.5 通过了 lint 却有 32 处防御性重述）**：`grep -oE "不新增|零改动|维持现状|复用现有|沿用现|无新增|本期不动|不碰" {PRD} | wc -l`，密度 = 命中 ÷ 行数。**密度 < ~15 行/命中 = 防御性膨胀红旗**（盲测校准 5 样本：V3.5=5.7 极端离群、正常 PRD ≥48；阈值软、词典可扩）。红旗后逐条套「逐字双写 → 收成 1 处 + 指针 / 同主题不同层 → 留」。这是 forced-artifact（grep 出频次表）、不是"请检查重述"的肉眼项。
@@ -184,7 +184,7 @@ L{行号}: 「{原文}」
 
 🔧 骨架 / doctype 机器行（fixture smoke 断言用）
 STRUCTURE_HINT: {missing_skeleton | pass | skipped_decision_review}
-{冲突时附} DOCTYPE_WARNING: conflict
+{附} DOCTYPE_WARNING: conflict（头与 _status 冲突）/ missing_header（文件头缺·已以 _status 判）
 
 ⚠️ 概念落地（{N} 处，行号+建议）
 - 粒度/自造词问题：...

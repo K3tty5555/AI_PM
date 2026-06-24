@@ -18,6 +18,11 @@ detect() {
   if [ "$has_log" = 1 ] && [ "$has_list" = 1 ] && [ "$has_det" = 1 ]; then echo "pass"; else echo "missing_skeleton"; fi
 }
 
+# 先确认 3 份 fixture 都在——缺文件会让 detect 静默返回 missing_skeleton、刚好等于 bullet-bad 期望而假过（评审发现）
+for f in bullet-bad.md lean-good.md decision-review-good.md; do
+  [ -f "$DIR/$f" ] || { echo "❌ fixture 缺失: ${DIR}/${f} （无法回归，先恢复 fixture 再跑）"; exit 1; }
+done
+
 for f in bullet-bad.md lean-good.md decision-review-good.md; do
   case "$f" in
     bullet-bad.md)            exp=missing_skeleton ;;

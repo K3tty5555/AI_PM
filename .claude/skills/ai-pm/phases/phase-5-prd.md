@@ -228,7 +228,11 @@ A.0 判完 doctype（`decision_review` / `full`）后**立即写三处**（比�
 2. `_memory/L1-decisions.md` 顶部 `doctype:` 行 —— **upsert·非 append**：最多一行，已存在则替换；读回若发现多行 → 报 warning 并以**首行**为准。**人读 / 跨阶段记忆**。
 3. PRD 文件正文最顶（H1 之上）标记 `<!-- doctype: full -->` / `<!-- doctype: decision_review -->` —— **单文件 lint 权威**（driver 扫单文件直接 grep 它、不依赖项目上下文）。
 
-**三源冲突规则**：文件头 = 单文件 lint 权威 / `_status` = 流程权威 / L1 = 人读。冲突时 driver 报 `DOCTYPE_WARNING: conflict`（不静默、不擅改）；phase-5 以 `_status` 为准重写文件头标记。**本块是 doctype 契约单一事实源**，driver（pm-agent Mode C）/ ai-pm-prd / agent-team 引用此处、不复制逻辑。
+**三源冲突 / 缺失规则**：文件头 = 单文件 lint 权威 / `_status` = 流程权威 / L1 = 人读。
+- **文件头与 `_status` 冲突** → driver 报 `DOCTYPE_WARNING: conflict`（不静默、不擅改）；phase-5 以 `_status` 为准重写文件头标记。
+- **文件头缺失但 `_status` 可判定**（历史稿常态）→ driver 报 `DOCTYPE_WARNING: missing_header`、提示补回文件头（已以 `_status` 判定，别让单文件 lint 权威静默缺失）。
+
+**本块是 doctype 契约单一事实源**，driver（pm-agent Mode C）/ ai-pm-prd / agent-team 引用此处、不复制逻辑。
 
 **步骤 A.1：产品类型确认（决定模板拼装）**
 
