@@ -147,6 +147,8 @@
 
 ## 9.3 自主性等级（A3）
 
+> 📌 本节是 PRD 内填空速查；等级的**详细定义 / 决策树 / 领域默认起点以 `templates/configs/autonomy-levels.md` 为唯一详解源**，两处不一致时以 autonomy-levels.md 为准。
+
 ### 9.3.1 等级定义（中文化）
 
 | 等级 | 描述 | 对应交互 |

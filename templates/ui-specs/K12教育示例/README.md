@@ -14,7 +14,7 @@
 - 合理的留白，提升阅读舒适度
 
 ### 2. 活力与亲和
-- 以青色 (#05C1AE) 为主色调，传递青春活力
+- 以青色 (#14B8A6) 为主色调，传递青春活力
 - 圆润的组件边角 (4px-8px)，营造友好氛围
 - 适度的动效，增强交互反馈
 
@@ -30,24 +30,24 @@
 #### 主色调
 | Token | 色值 | 用途 |
 |-------|------|------|
-| `primary.main` | #05C1AE | 主按钮、链接、强调元素 |
-| `primary.light` | #2ACDB8 | 悬停状态、渐变 |
-| `primary.dark` | #03A499 | 激活状态 |
-| `primary.bg` | #E6FCF8 | 背景高亮、选中状态 |
+| `primary.main` | #14B8A6 | 主按钮、链接、强调元素 |
+| `primary.light` | #2DD4BF | 悬停状态、渐变 |
+| `primary.dark` | #0D9488 | 激活状态 |
+| `primary.bg` | #F0FDFA | 背景高亮、选中状态 |
 
 #### 辅助色
 | Token | 色值 | 用途 |
 |-------|------|------|
-| `secondary.purple` | #8358F6 | 特殊强调、标签 |
-| `secondary.blue` | #33A3EE | 信息提示、链接 |
+| `secondary.purple` | #8B5CF6 | 特殊强调、标签 |
+| `secondary.blue` | #38BDF8 | 信息提示、链接 |
 
 #### 语义色
 | 类型 | 主色 | 背景色 | 用途 |
 |------|------|--------|------|
-| 成功 | #05C86E | #E8FFF0 | 成功提示、完成状态 |
+| 成功 | #22C55E | #F0FDF4 | 成功提示、完成状态 |
 | 警告 | #F9A529 | #FFFAE8 | 警告提示、注意事项 |
 | 错误 | #F45454 | #FFECE8 | 错误提示、删除操作 |
-| 信息 | #33A3EE | #E8FAFF | 信息提示、提示框 |
+| 信息 | #38BDF8 | #EFF6FF | 信息提示、提示框 |
 
 #### 中性色阶
 从白到黑的完整色阶，用于文本、边框、背景等：
@@ -138,9 +138,9 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hira
 #### 类型样式
 
 **主按钮 (Primary)**
-- 背景: #05C1AE
+- 背景: #14B8A6
 - 文字: 白色
-- 悬停: #03A499
+- 悬停: #0D9488
 - 圆角: 4px
 
 **次要按钮 (Secondary)**
@@ -151,8 +151,8 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hira
 
 **文字按钮 (Text)**
 - 背景: 透明
-- 文字: #05C1AE
-- 悬停: 背景 #E6FCF8
+- 文字: #14B8A6
+- 悬停: 背景 #F0FDFA
 
 **危险按钮 (Danger)**
 - 背景: #F45454
@@ -170,7 +170,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hira
 - 边框: 1px solid #D2D5D9
 - 圆角: 4px
 - 背景: 白色
-- 聚焦: 边框 #05C1AE + 阴影
+- 聚焦: 边框 #14B8A6 + 阴影
 - 占位符: #B9BCBF
 - 禁用: 背景 #F5F5F5
 
@@ -187,7 +187,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hira
 - 内边距: 12px 16px
 - 底部边框: 1px solid #E9ECF0
 - 行悬停: 背景 #F5F5F5
-- 行选中: 背景 #E6FCF8
+- 行选中: 背景 #F0FDFA
 
 ### Card 卡片
 - 背景: 白色
@@ -216,7 +216,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hira
 - 阴影: 0 4px 6px rgba(0,0,0,0.07)
 - 项内边距: 8px 12px
 - 项悬停: 背景 #F0F3F7
-- 项激活: 背景 #E6FCF8 + 文字 #05C1AE
+- 项激活: 背景 #F0FDFA + 文字 #14B8A6
 
 ### Checkbox / Radio
 
@@ -226,7 +226,7 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hira
 - **Large**: 18px
 
 #### 颜色
-- 选中: #05C1AE
+- 选中: #14B8A6
 - 未选中: #D2D5D9
 - 禁用: #B9BCBF
 
@@ -238,15 +238,15 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hira
 - **Large**: 48x24px
 
 #### 颜色
-- 开启: #05C1AE
+- 开启: #14B8A6
 - 关闭: #D2D5D9
 
 ### Tag 标签
 
 #### 类型
 - **Default**: 背景 #F0F3F7
-- **Primary**: 背景 #E6FCF8 + 文字 #05C1AE
-- **Success**: 背景 #E8FFF0 + 文字 #05C86E
+- **Primary**: 背景 #F0FDFA + 文字 #14B8A6
+- **Success**: 背景 #F0FDF4 + 文字 #22C55E
 - **Warning**: 背景 #FFFAE8 + 文字 #F9A529
 - **Error**: 背景 #FFECE8 + 文字 #F45454
 
@@ -259,14 +259,14 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hira
 
 #### 颜色
 - 默认: #F45454（红色）
-- 主要: #05C1AE
-- 成功: #05C86E
+- 主要: #14B8A6
+- 成功: #22C55E
 
 ### Link 链接
-- 默认: #05C1AE
-- 悬停: #03A499
-- 激活: #05B2A1
-- 已访问: #8358F6
+- 默认: #14B8A6
+- 悬停: #0D9488
+- 激活: #0F766E
+- 已访问: #8B5CF6
 - 禁用: #B9BCBF
 
 ## 响应式断点
@@ -303,10 +303,10 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hira
 
 ```css
 :root {
-  --edu-primary-main: #05C1AE;
-  --edu-primary-light: #2ACDB8;
-  --edu-primary-dark: #03A499;
-  --edu-primary-bg: #E6FCF8;
+  --edu-primary-main: #14B8A6;
+  --edu-primary-light: #2DD4BF;
+  --edu-primary-dark: #0D9488;
+  --edu-primary-bg: #F0FDFA;
 
   --edu-text-primary: #242526;
   --edu-text-secondary: #414243;

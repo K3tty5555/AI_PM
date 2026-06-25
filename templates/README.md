@@ -65,6 +65,14 @@ templates/
 # 默认风格库已含：feishu/pdf 导出模板、决策评审型模板、3 份行业 sample
 ```
 
+**怎么选模板（doctype 文档分型，先定型再动笔）：**
+- **决策评审**（拿方向 / go-no-go / 几方案选一）→ `prd-styles/default/decision-review-template.md`（4 节骨架）
+- **全员评审 · 普通功能** → `prd-styles/default/feishu-template.md`
+- **全员评审 · Agent/Hybrid** → `feishu-template.md` + `prd-styles/default/agent-supplement.md` 增量包
+- **迭代 / 小补丁** 也走完整 feishu-template，不塌成精简 bullet 版
+
+> 选型机读字段（`doctype`）与完整选型规则见 `.claude/skills/ai-pm/phases/phase-5-prd.md` 步骤 A.0 / A.0.1。
+
 ### 2. UI 规范（多项目共享）
 
 ```bash

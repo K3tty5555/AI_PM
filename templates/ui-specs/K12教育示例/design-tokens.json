@@ -1,7 +1,7 @@
 {
   "name": "K12教育示例",
   "version": "1.0.0",
-  "description": "面向K12在线教育平台的现代化设计系统示例",
+  "description": "面向K12在线教育平台的现代化设计系统示例（色值为通用占位色系，非任何真实品牌色；接入时按产品实际品牌色替换）",
   "metadata": {
     "author": "AI_PM Design System",
     "created": "2026-03-02",
@@ -9,26 +9,26 @@
   },
   "colors": {
     "primary": {
-      "main": "#05C1AE",
-      "light": "#2ACDB8",
-      "lighter": "#2ADCAB",
-      "dark": "#03A499",
-      "darker": "#05B2A1",
-      "bg": "#E6FCF8",
-      "gradient": ["#05C1AE", "#2ACDB8"]
+      "main": "#14B8A6",
+      "light": "#2DD4BF",
+      "lighter": "#5EEAD4",
+      "dark": "#0D9488",
+      "darker": "#0F766E",
+      "bg": "#F0FDFA",
+      "gradient": ["#14B8A6", "#2DD4BF"]
     },
     "secondary": {
-      "purple": "#8358F6",
-      "purpleLight": "#9D64FF",
-      "purpleDark": "#7B61FF",
-      "blue": "#33A3EE",
-      "blueLight": "#55B8F1",
-      "blueDark": "#207EC6"
+      "purple": "#8B5CF6",
+      "purpleLight": "#A78BFA",
+      "purpleDark": "#7C3AED",
+      "blue": "#38BDF8",
+      "blueLight": "#7DD3FC",
+      "blueDark": "#0284C7"
     },
     "semantic": {
-      "success": "#05C86E",
-      "successLight": "#82E9AE",
-      "successBg": "#E8FFF0",
+      "success": "#22C55E",
+      "successLight": "#86EFAC",
+      "successBg": "#F0FDF4",
       "warning": "#F9A529",
       "warningLight": "#FDDF9B",
       "warningBg": "#FFFAE8",
@@ -36,8 +36,8 @@
       "errorLight": "#F67571",
       "errorDark": "#CA3439",
       "errorBg": "#FFECE8",
-      "info": "#33A3EE",
-      "infoBg": "#E8FAFF"
+      "info": "#38BDF8",
+      "infoBg": "#EFF6FF"
     },
     "neutral": {
       "white": "#FFFFFF",
@@ -141,14 +141,14 @@
       },
       "variants": {
         "primary": {
-          "background": "#05C1AE",
+          "background": "#14B8A6",
           "color": "#FFFFFF",
           "border": "none",
           "hover": {
-            "background": "#03A499"
+            "background": "#0D9488"
           },
           "active": {
-            "background": "#05B2A1"
+            "background": "#0F766E"
           },
           "disabled": {
             "background": "#B9BCBF",
@@ -174,13 +174,13 @@
         },
         "text": {
           "background": "transparent",
-          "color": "#05C1AE",
+          "color": "#14B8A6",
           "border": "none",
           "hover": {
-            "background": "#E6FCF8"
+            "background": "#F0FDFA"
           },
           "active": {
-            "background": "#B2F3E3"
+            "background": "#99F6E4"
           },
           "disabled": {
             "color": "#B9BCBF"
@@ -242,7 +242,7 @@
             "borderColor": "#B9BCBF"
           },
           "focus": {
-            "borderColor": "#05C1AE",
+            "borderColor": "#14B8A6",
             "boxShadow": "0 0 0 3px rgba(5, 193, 174, 0.2)"
           },
           "disabled": {
@@ -265,7 +265,7 @@
           },
           "focus": {
             "background": "#FFFFFF",
-            "borderColor": "#05C1AE"
+            "borderColor": "#14B8A6"
           }
         }
       }
@@ -286,7 +286,7 @@
           "background": "#F5F5F5"
         },
         "selected": {
-          "background": "#E6FCF8"
+          "background": "#F0FDFA"
         }
       },
       "border": {
@@ -329,8 +329,8 @@
           "color": "#242526"
         },
         "active": {
-          "background": "#E6FCF8",
-          "color": "#05C1AE"
+          "background": "#F0FDFA",
+          "color": "#14B8A6"
         }
       }
     },
@@ -342,11 +342,11 @@
       },
       "variants": {
         "default": { "background": "#F45454", "color": "#FFFFFF" },
-        "primary": { "background": "#05C1AE", "color": "#FFFFFF" },
-        "success": { "background": "#05C86E", "color": "#FFFFFF" },
+        "primary": { "background": "#14B8A6", "color": "#FFFFFF" },
+        "success": { "background": "#22C55E", "color": "#FFFFFF" },
         "warning": { "background": "#F9A529", "color": "#FFFFFF" },
         "error": { "background": "#F45454", "color": "#FFFFFF" },
-        "info": { "background": "#33A3EE", "color": "#FFFFFF" }
+        "info": { "background": "#38BDF8", "color": "#FFFFFF" }
       }
     },
     "checkbox": {
@@ -356,10 +356,10 @@
         "large": { "width": "18px", "height": "18px" }
       },
       "colors": {
-        "checked": "#05C1AE",
+        "checked": "#14B8A6",
         "unchecked": "#D2D5D9",
         "disabled": "#B9BCBF",
-        "indeterminate": "#05C1AE"
+        "indeterminate": "#14B8A6"
       }
     },
     "radio": {
@@ -369,7 +369,7 @@
         "large": { "width": "18px", "height": "18px" }
       },
       "colors": {
-        "checked": "#05C1AE",
+        "checked": "#14B8A6",
         "unchecked": "#D2D5D9",
         "disabled": "#B9BCBF"
       }
@@ -381,7 +381,7 @@
         "large": { "width": "48px", "height": "24px" }
       },
       "colors": {
-        "on": "#05C1AE",
+        "on": "#14B8A6",
         "off": "#D2D5D9",
         "disabled": "#B9BCBF"
       }
@@ -394,8 +394,8 @@
       },
       "variants": {
         "default": { "background": "#F0F3F7", "color": "#414243", "border": "none" },
-        "primary": { "background": "#E6FCF8", "color": "#05C1AE", "border": "none" },
-        "success": { "background": "#E8FFF0", "color": "#05C86E", "border": "none" },
+        "primary": { "background": "#F0FDFA", "color": "#14B8A6", "border": "none" },
+        "success": { "background": "#F0FDF4", "color": "#22C55E", "border": "none" },
         "warning": { "background": "#FFFAE8", "color": "#F9A529", "border": "none" },
         "error": { "background": "#FFECE8", "color": "#F45454", "border": "none" },
         "outlined": { "background": "transparent", "color": "#414243", "border": "1px solid #D2D5D9" }
@@ -403,11 +403,11 @@
     },
     "link": {
       "colors": {
-        "default": "#05C1AE",
-        "hover": "#03A499",
-        "active": "#05B2A1",
+        "default": "#14B8A6",
+        "hover": "#0D9488",
+        "active": "#0F766E",
         "disabled": "#B9BCBF",
-        "visited": "#8358F6"
+        "visited": "#8B5CF6"
       },
       "variants": {
         "default": { "textDecoration": "none" },

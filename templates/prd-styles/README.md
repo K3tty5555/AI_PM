@@ -14,7 +14,10 @@ prd-styles/                            # PRD 写作风格库
 ├── default/                           # 🏭 系统默认风格（必需）
 │   ├── style-config.json              #    风格配置
 │   ├── pdf-style.css                  #    PDF导出样式
-│   └── feishu-template.md             #    飞书格式模板
+│   ├── feishu-template.md             #    全员评审·功能 PRD 模板（飞书格式）
+│   ├── decision-review-template.md    #    决策评审型 PRD 模板（4 节骨架）
+│   ├── agent-supplement.md            #    Agent/Hybrid PRD 增量包（挂接 feishu-template）
+│   └── sample-{b2b-saas,consumer-app,internal-tool}.md  # 3 份行业样本
 │
 ├── enterprise-standard/               # 🏢 企业标准风格（示例）
 │   ├── style-config.json
@@ -29,6 +32,19 @@ prd-styles/                            # PRD 写作风格库
 │
 └── ...
 ```
+
+---
+
+## 🧭 模板选型（doctype 文档分型，先定型再动笔）
+
+| 场景 | doctype | 用哪个模板 |
+|------|---------|-----------|
+| 拿方向 / go-no-go / 几方案选一（给决策层） | `decision_review` | `default/decision-review-template.md`（4 节骨架） |
+| 落实现 · 普通功能（给研发全员） | `full` | `default/feishu-template.md` |
+| 落实现 · Agent/Hybrid 产品 | `full` | `feishu-template.md` + `default/agent-supplement.md` 增量包 |
+| 迭代 / 小补丁 | `full` | 仍走完整 `feishu-template.md`，不塌成精简 bullet 版 |
+
+> 选型机读字段（`doctype`）写法与完整规则见 `.claude/skills/ai-pm/phases/phase-5-prd.md` 步骤 A.0 / A.0.1。`decision-review-template.md` 头注是「8 条必答项」的唯一事实源。
 
 ---
 
@@ -64,7 +80,7 @@ prd-styles/                            # PRD 写作风格库
 | 对比项 | 写作风格 | UI 规范 |
 |--------|-------------|---------|
 | **关注点** | PRD 写作风格、章节结构、用词习惯 | UI 视觉风格、组件、颜色、字体 |
-| **存储位置** | `templates/writing-styles/` | `templates/ui-specs/` |
+| **存储位置** | `templates/prd-styles/` | `templates/ui-specs/` |
 | **影响内容** | 文字描述、章节结构、表格格式 | 原型视觉、颜色、字体、间距 |
 | **使用时机** | 生成 PRD 文档时 | 生成原型时 |
 

@@ -98,6 +98,14 @@ console.log('hello');
 
 ## PRD 专用模板
 
+> **🧭 模板选型（先定 doctype 再用本模板）**
+>
+> 本模板用于**全员评审 · 功能 PRD**（`doctype=full`，给研发落实现）。
+> - **决策评审型**（拿方向 / go-no-go / 几方案选一，给决策层）→ 改用 `decision-review-template.md`，**不要**用本模板拼功能。
+> - **Agent / Hybrid 产品** → 本模板 + `agent-supplement.md` 增量包（见下）。
+> - **迭代 / 小补丁** → 仍走本完整模板，不塌成精简 bullet 版。
+> - 选型机读字段（`doctype`）与完整规则见 `.claude/skills/ai-pm/phases/phase-5-prd.md` 步骤 A.0 / A.0.1。
+
 > **Agent 增量包挂接说明**
 >
 > 本模板包含 3 个 `<!-- agent-supplement: AX -->` 标记，用于在生成 agent / hybrid 产品 PRD 时注入额外章节。
