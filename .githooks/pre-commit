@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# AI_PM 提交前护栏（路径过滤：只在本次提交动了相关文件时才跑对应检查）。
+# 新增检查往下追加一段同样的「过滤 → 跑」即可。
+# 启用方式（每个 clone 一次性）：git config core.hooksPath .githooks
+set -uo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+
+# 本次已暂存（staged）的文件，含改名（ACMR）
+staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+# ── 检查 1：doctype 骨架检测回归 ──
+# 触发条件：动了 check-prd-skeleton.sh 本身，或动了它的回归 fixture。
+# 注：本检查只验「参考检测脚本 + fixture 标准答案」是否一致；
+#     不验 skill 里 pm-agent 的真实 doctype 判定（那是模型在环的 Mode C，无法做成确定性钩子）。
+if echo "$staged" | grep -qE '^(scripts/check-prd-skeleton\.sh$|tests/fixtures/prd-doctype/)'; then
+  echo "🔎 pre-commit: 改动涉及 doctype 骨架检测，跑 fixture 回归…"
+  if ! bash "$ROOT/scripts/check-prd-skeleton.sh"; then
+    echo ""
+    echo "❌ check-prd-skeleton 回归未过——上面有 fixture 判定不符，先修好再提交。"
+    exit 1
+  fi
+fi
+
+exit 0
