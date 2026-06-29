@@ -487,4 +487,16 @@ grep -rl "{关键词}" output/projects/{当前项目}/
 
 ---
 
+## 十、云文档增强档 emit 规则（仅 output_profile = cloud_doc_enhanced 时；markdown 档绝不 emit）
+
+> 由 phase-5 `_status.json checkpoints.prd.output_profile` 驱动（契约单一事实源在 phase-5-prd.md 步骤 A.0.2）。**全 gate（用户拍 2026-06-29）**：`markdown`（默认）档**绝不 emit 下列任何增强标记**、普通 .md 保持纯净；只有 `cloud_doc_enhanced` 档才 emit，且**该用才用、不是每章强塞**。
+
+- **callout 高亮块**：段落级「本期范围 / 关键约束 / 主要风险摘要」用 `> [!TIP] …`（提示 / 范围）或 `> [!WARNING] …`（风险 / 禁止）。⚠️ **仅段落级、不进表格 cell**（cell 内 callout 不渲染）。
+- **风险红字 `<红>…</红>`**：仅风险词 / 禁止项 / 强提醒。**硬约束**：每章 ≤3 处、只包词 / 短语、不整句整段、同一风险已在 callout 高亮过则不重复染红。`<红>` 可进正文 / 表格 cell，**不进 callout**（callout 子文本不解析 inline、进去成字面）。
+- **表格排版注释** `<!-- table:... -->`（放表前一行，渲染器消费、不进正文）：**仅当某表确实需要才 emit**（普通表不加、走默认启发式 header_row / 字段表 header_column）——大矩阵双表头 `<!-- table:header-row+header-column -->`、固定列宽 `<!-- table:col-width=160,540 -->`、表头跨列合并 `<!-- table:merge=R1C1:R1C2 -->`（坐标**源侧 1-based、闭区间**，渲染器转 API 0-based）。
+
+本块是云文档增强 emit 的**单一权威源**；pm-agent 内化 gated 反射、push / 渲染器消费标记，不复制逻辑。
+
+---
+
 *版本：v0.1 | 配套：feishu-template.md / agent-supplement.md / autonomy-levels.md | 引用方：phase-5-prd.md, phase-1-requirement.md*
