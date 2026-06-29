@@ -21,6 +21,10 @@ TRANSCRIPT=$(echo "$INPUT" | jq -r '.transcript_path // ""')
 # 死循环防护 1：stop_hook_active flag
 [[ "$ACTIVE" == "true" ]] && { echo "{}"; exit 0; }
 
+# PreCompact / SessionEnd 直接放行——知识沉淀只在 Stop 时做，不挡 /compact、不挡会话收尾
+# （2026-06-29 修：原本 PreCompact/SessionEnd 也走到末尾 block——PreCompact 反复挡压缩、SessionEnd 挡会话结束且 block 在 SessionEnd 本就无效）
+[[ "$EVENT" == "PreCompact" || "$EVENT" == "SessionEnd" ]] && { echo "{}"; exit 0; }
+
 # 死循环防护 2：60s 冷却
 START_TS=$(date +%s)
 LAST_TS_FILE="$STATE_DIR/${SESSION}.ts"
