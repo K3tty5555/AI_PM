@@ -67,9 +67,9 @@ PRD 生成在询问「要不要云文档增强」前，**只扫描一个 glob**�
 | `text_color` | 行内字体色 | `<红>词</红>` / `<灰>次要</灰>` |
 | `background_highlight` | 行内黄底高亮（马克笔） | `==核心==` |
 | `table_directives` | 表格排版指令（表头行/列、列宽、合并） | `<!-- table:... -->` |
-| `folded_heading` | 可折叠标题段 | （折叠附录等结构化排版） |
-| `grid_columns` | 多列分栏 | （并排对比等结构化排版） |
-| `file_attachment` | 文件附件块 | `📎 附件：…` |
+| `folded_heading` | 可折叠标题段（折叠其后 section） | `<!-- fold -->` + 下一个标题 |
+| `grid_columns` | 多列分栏 | `<!-- columns:N -->` … `<!-- col -->` … `<!-- /columns -->` |
+| `file_attachment` | 文件附件块 | 真附件源侧语法由渲染器自定义；**不支持时降级为纯文本行** `📎 附件：…`（`📎 附件：…` 是降级文本、非可渲染附件标记，勿误当源侧语法） |
 
 ---
 
