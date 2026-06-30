@@ -236,20 +236,25 @@ A.0 判完 doctype（`decision_review` / `full`）后**立即写三处**（比�
 
 **步骤 A.0.2：输出档 output_profile（云文档增强 gate）⭐ output_profile 契约单一事实源**
 
-判这份 PRD 是否要**写到云文档正本库**（团队云文档系统，决定是否启用云文档增强标记）：
+**先探测云渲染器（WS-R3，决定要不要问）**：扫 `.claude/skills/*/cloud-renderer.json`（**机器入口只此一条**；manifest schema / 能力字段 / 发现机制的契约见 `references/cloud-renderer-contract.md`）。
+- **有满足最低能力的渲染器**（某 manifest `capabilities` 中 `render_and_push` + `callout` + `text_color` 三者全 `true`）→ 才进入下面询问、允许 `cloud_doc_enhanced`。
+- **无 / 只有半残**（最低三件没凑齐）→ **不询问、不展示云增强**，直接 `output_profile = markdown` + 一句「未检测到云渲染器插件，配置后可启用云文档增强」。（无渲染器 = 纯 markdown、零感知；别让没装插件的用户对着用不了的云选项发懵。）
+
+判这份 PRD 是否要**写到云文档正本库**（团队云文档系统，决定是否启用云文档增强标记）——**仅探测到可用渲染器时才问**：
 
 - 询问："这份 PRD 要发到云文档正本库吗？（启用云文档增强：关键摘要出高亮框、语义色标记<风险红 / 次要灰 / 核心黄底>；表格排版优化）[Y/n，默认 n]"
 - **Y → `cloud_doc_enhanced`** / **n 或默认 / 没提 → `markdown`**。
 
-判完**立即写两处**（比照 A.0.1 doctype；**不写 L1**——output_profile 是输出模式开关、非设计决策、无 L1 消费者）：
+判完**立即写**（比照 A.0.1 doctype；**不写 L1**——output_profile 是输出模式开关、非设计决策、无 L1 消费者）：
 
 1. `_status.json` 的 `checkpoints.prd.output_profile`：枚举键（`markdown` / `cloud_doc_enhanced`）—— **gate 权威**（下方注入 pm-agent prompt 时认它；phase-5 resume 也认它）。
 2. PRD 文件头（H1 之上、与 doctype marker 并列）`<!-- output-profile: cloud_doc_enhanced -->`（**仅 enhanced 时写**）—— **standalone push / 渲染器判"增强 vs 普通"权威**：晚决定 push 时读它，无 marker = 普通 .md → push 只普通渲染、**提示"当前 md 无增强标记"而非静默当增强**。
+3. （**仅 enhanced 时**）`_status.json` 的 `checkpoints.prd.cloud_renderer_capabilities`：把探测到的渲染器 manifest 的 `capabilities` 对象**原样写入**——**逐特性 gate 权威**（WS-R3b，接 [[PITFALL-108]]；否则探测只停在此、agent 仍会 emit 对方渲染不了的标记）：注入 pm-agent prompt 后，agent 对增量标记逐个闸——`background_highlight=false` → 禁 emit `==核心==`、`table_directives=false` → 禁表格注释、`folded_heading=false` → 禁折叠、`grid_columns=false` → 禁分栏、`file_attachment=false` → **不 emit 真附件块语法、只留普通链接 / 文本附件行**（与本地 manifest 的 false 对齐）。**"cloud_doc_enhanced 可用" ≠ "全增强可用"**，每个增强各受自己 capability 闸。
 
-**gate 语义（全 gate，用户拍 2026-06-29）**：`cloud_doc_enhanced` → **所有写作路径**（主对话写 §一/§二/风险/概述 + pm-agent 写 §6.x/§9.x）都按判断卡 §十 在该出的位置 emit callout（本期范围 / 关键约束 / 风险摘要）+ **语义色**（`<红>`=风险 / `<灰>`=次要弱化 / `==核心==`=本期 delta 黄底，该用才用）；`markdown` → **绝不 emit 任何增强标记**、普通 .md 纯净。
+**gate 语义（全 gate，用户拍 2026-06-29）**：`cloud_doc_enhanced` → **所有写作路径**（主对话写 §一/§二/风险/概述 + pm-agent 写 §6.x/§9.x）都按判断卡 §十 在该出的位置 emit callout（本期范围 / 关键约束 / 风险摘要）+ **语义色**（`<红>`=风险 / `<灰>`=次要弱化 / `==核心==`=本期 delta 黄底，该用才用），**且 `==核心==` / 表格注释 / 折叠 / 分栏等增量标记各受 `cloud_renderer_capabilities` 对应特性闸（false 不 emit）**；`markdown` → **绝不 emit 任何增强标记**、普通 .md 纯净。
 ⚠️ **callout 目标多在 §一/§二/风险段、常由主对话直接写**（phase-5 说简单章节主对话写）——**主对话写这些段时也要应用 §十**，别以为只有 §6.x pm-agent 管（否则 gate 有了、摘要框不出现）。
 
-**本块是 output_profile 契约单一事实源**；pm-agent / push / 渲染器引用此处、不复制逻辑。（冲突规则 / 晚决定 push 警告留待 WS-6 碰 push 时补；本批先落 gate 核心。）
+**本块是 output_profile 契约单一事实源**；pm-agent / push / 渲染器引用此处、不复制逻辑。**渲染器发现 / manifest schema / 能力字段定义见 `references/cloud-renderer-contract.md`。**（冲突规则 / 晚决定 push 警告留待 WS-6 碰 push 时补；本批先落 gate 核心。）
 
 **步骤 A.1：产品类型确认（决定模板拼装）**
 
@@ -427,6 +432,7 @@ Agent({
 
 要求：
 - **输出档 output_profile：⟨orchestrator 在此替换为 `_status.json checkpoints.prd.output_profile` 的实际值——`markdown` 或 `cloud_doc_enhanced`，缺省 `markdown`⟩**　⚠️ **必须替换成实际值再发 pm-agent**，不能把 `⟨…⟩` / `{…|…}` 这串占位原样传出去（原样传 = gate 静默失效，loaded≠fired）—— 实际值是 `cloud_doc_enhanced` 时 pm-agent 按判断卡 §十 emit callout + 语义色（`<红>`风险 / `<灰>`次要 / `==核心==`黄底，该用才用）；是 `markdown` 时**绝不 emit 任何增强标记**
+- **渲染器能力 cloud_renderer_capabilities：⟨enhanced 时 orchestrator 替换为 `_status.json checkpoints.prd.cloud_renderer_capabilities` 实际对象；markdown 时删除本行⟩**　—— 逐特性 gate（WS-R3b）：`background_highlight=false`→禁 `==核心==`、`table_directives=false`→禁表格注释、`folded_heading=false`→禁折叠、`grid_columns=false`→禁分栏、`file_attachment=false`→不 emit 真附件语法（只留普通链接 / 文本附件行）。⚠️ 同样**必须替换成实际值**、不原样传占位
 - 按 phase-5-prd.md 的「写作脚手架」两栏表格模板填
 - 跑完 自检再返回
 - 不写 prologue / 不写解释，直接给章节内容（markdown 表格）
@@ -446,6 +452,7 @@ Agent({
 2. 重写为 PM 风格（按填空模板，去越界、加影响范围、补复用对照）
 3. 输出格式：先列「问题清单」（≤5 条），再给「重写结果」
 4. **输出档 output_profile：⟨orchestrator 替换为 `_status.json checkpoints.prd.output_profile` 实际值，缺省 `markdown`；⚠️ 必须替换、不原样传占位⟩** —— `cloud_doc_enhanced` 时重写也按判断卡 §十 emit / 保留 callout（本期范围 / 风险摘要）+ 语义色（红 / 灰 / `==核心==`黄底）；`markdown` 时绝不 emit 增强标记（避免云稿走重写路径丢增强）
+5. **渲染器能力 cloud_renderer_capabilities：⟨enhanced 时 orchestrator 替换为 `_status.json checkpoints.prd.cloud_renderer_capabilities` 实际对象；markdown 时删除本行⟩** —— 逐特性 gate（WS-R3b）：对应特性 `false` 则该标记不 emit（`background_highlight`→`==核心==`、`table_directives`→表格注释、`folded_heading`→折叠、`grid_columns`→分栏、`file_attachment`→真附件语法，只留普通链接 / 文本附件行）；⚠️ 必须替换实际值、不原样传占位
 ```
 
 **调用时机**：
