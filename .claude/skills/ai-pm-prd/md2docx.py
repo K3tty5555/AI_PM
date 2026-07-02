@@ -460,20 +460,58 @@ def set_cell_margins(cell, top=80, bottom=80, left=120, right=120):
         tcMar.append(m)
     tcPr.append(tcMar)
 
-def fill_cell(cell, text, is_header=False, screenshot_map=None):
+def _add_cell_desc(cell, desc):
+    """图片下方的描述文字（小号灰色，支持 <br> 换行）。"""
+    desc = re.sub(r'^(?:<br\s*/?>)+', '', desc.strip()).strip()
+    if not desc:
+        return
+    desc_para = cell.add_paragraph()
+    parts = re.split(r'<br\s*/?>', desc)
+    for pi, part in enumerate(parts):
+        desc_run = desc_para.add_run(part.strip())
+        desc_run.font.size = Pt(9)
+        desc_run.font.color.rgb = RGBColor(0x86, 0x86, 0x8b)
+        if pi < len(parts) - 1:
+            desc_run.add_break()
+    desc_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    desc_para.paragraph_format.space_before = Pt(4)
+
+
+def fill_cell(cell, text, is_header=False, screenshot_map=None, base_dir=None):
     """
     填充单元格内容。
-    若 text 包含 [xxx原型]，在单元格内插图（图在上，描述文字在下）。
+    优先识别 markdown 图片 ![label](path)（云文档协议同源写法，path 相对 md 文件目录）；
+    兼容旧 [xxx原型] 占位（查 screenshot_map），两者都插图在上、描述文字在下。
     """
     cell.text = ''
     set_cell_margins(cell)
     para = cell.paragraphs[0]
     para.paragraph_format.space_after = Pt(2)
 
-    # 检测原型占位符
     img_inserted = False
-    if screenshot_map:
-        m = re.search(r'\[(.+?)原型\]', text)
+
+    # markdown 图片语法（新协议，优先于旧占位）
+    if not is_header:
+        m_img = re.search(r'!\[([^\]]*)\]\(([^)]+)\)', text)
+        if m_img:
+            img_path = Path(m_img.group(2))
+            if not img_path.is_absolute() and base_dir:
+                img_path = (Path(base_dir) / img_path).resolve()
+            if img_path.exists():
+                try:
+                    run = para.add_run()
+                    run.add_picture(str(img_path), width=Cm(13))
+                    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    img_inserted = True
+                    _add_cell_desc(cell, text[:m_img.start()] + text[m_img.end():])
+                except Exception as e:
+                    print(f'  ⚠️ 单元格图片插入失败 [{m_img.group(1)}]: {e}')
+            else:
+                print(f'  ⚠️ 单元格图片不存在，按文字渲染: {m_img.group(2)}')
+
+    # 旧原型占位符（(?<!!) 避免把 markdown 图片的 [xxx原型] 片段误当占位）
+    if not img_inserted and screenshot_map:
+        m = re.search(r'(?<!!)\[(.+?)原型\]', text)
         if m:
             label = m.group(1)
             img_path = screenshot_map.get(label)
@@ -484,14 +522,7 @@ def fill_cell(cell, text, is_header=False, screenshot_map=None):
                     para.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     img_inserted = True
                     # 图片下方加描述文字（去掉占位符部分）
-                    desc = re.sub(r'\[.+?原型\]\s*', '', text).strip()
-                    if desc:
-                        desc_para = cell.add_paragraph()
-                        desc_run = desc_para.add_run(desc)
-                        desc_run.font.size = Pt(9)
-                        desc_run.font.color.rgb = RGBColor(0x86, 0x86, 0x8b)
-                        desc_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                        desc_para.paragraph_format.space_before = Pt(4)
+                    _add_cell_desc(cell, re.sub(r'\[.+?原型\]\s*', '', text))
                 except Exception as e:
                     print(f'  ⚠️ 图片插入失败 [{label}]: {e}')
 
@@ -612,7 +643,7 @@ def apply_header_repeat(table):
     tblHeader.set(qn('w:val'), 'true')
     trPr.append(tblHeader)
 
-def add_table(doc, lines, screenshot_map=None):
+def add_table(doc, lines, screenshot_map=None, base_dir=None):
     """解析 Markdown 表格并插入 DOCX，支持单元格内插图"""
     rows = [l for l in lines if not re.match(r'^\|[-| :]+\|$', l)]
     if len(rows) < 2:
@@ -642,7 +673,7 @@ def add_table(doc, lines, screenshot_map=None):
         row.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
         for i, val in enumerate(row_cells):
             if i < len(row.cells):
-                fill_cell(row.cells[i], val, screenshot_map=screenshot_map)
+                fill_cell(row.cells[i], val, screenshot_map=screenshot_map, base_dir=base_dir)
 
     # 智能列宽（基于实际内容） + 表头跨页重复
     apply_col_widths(table, all_rows_cells)
@@ -787,7 +818,7 @@ def convert(prd_path, output_path, manifest_path=None, recipe_config=None):
             while i < len(lines) and lines[i].strip().startswith('|'):
                 table_lines.append(lines[i].strip())
                 i += 1
-            add_table(doc, table_lines, screenshot_map=screenshot_map)
+            add_table(doc, table_lines, screenshot_map=screenshot_map, base_dir=prd_path.parent)
             continue
 
         # 无序列表

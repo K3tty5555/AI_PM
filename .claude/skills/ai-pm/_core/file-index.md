@@ -43,7 +43,7 @@
 
 | 文件 | 内容 |
 |------|------|
-| `ai-pm/doctor.md` | 26 项健康检查 |
+| `ai-pm/doctor.md` | 27 项健康检查 |
 | `ai-pm/illustration.md` | AI 流程图生成 |
 | `ai-pm/release-docs.md` | 上线文档套件命令流程（公告+手册+飞书发布） |
 | `ai-pm/instinct.md` | 自学习系统 |

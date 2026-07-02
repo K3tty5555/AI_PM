@@ -249,9 +249,9 @@ A.0 判完 doctype（`decision_review` / `full`）后**立即写三处**（比�
 
 1. `_status.json` 的 `checkpoints.prd.output_profile`：枚举键（`markdown` / `cloud_doc_enhanced`）—— **gate 权威**（下方注入 pm-agent prompt 时认它；phase-5 resume 也认它）。
 2. PRD 文件头（H1 之上、与 doctype marker 并列）`<!-- output-profile: cloud_doc_enhanced -->`（**仅 enhanced 时写**）—— **standalone push / 渲染器判"增强 vs 普通"权威**：晚决定 push 时读它，无 marker = 普通 .md → push 只普通渲染、**提示"当前 md 无增强标记"而非静默当增强**。
-3. （**仅 enhanced 时**）`_status.json` 的 `checkpoints.prd.cloud_renderer_capabilities`：把探测到的渲染器 manifest 的 `capabilities` 对象**原样写入**——**逐特性 gate 权威**（WS-R3b，接 [[PITFALL-108]]；否则探测只停在此、agent 仍会 emit 对方渲染不了的标记）：注入 pm-agent prompt 后，agent 对增量标记逐个闸——`background_highlight=false` → 禁 emit `==核心==`、`table_directives=false` → 禁表格注释、`folded_heading=false` → 禁折叠、`grid_columns=false` → 禁分栏、`file_attachment=false` → **不 emit 真附件块语法、只留普通链接 / 文本附件行**（与本地 manifest 的 false 对齐）。**"cloud_doc_enhanced 可用" ≠ "全增强可用"**，每个增强各受自己 capability 闸。
+3. （**仅 enhanced 时**）`_status.json` 的 `checkpoints.prd.cloud_renderer_capabilities`：把探测到的渲染器 manifest 的 `capabilities` 对象**原样写入**——**逐特性 gate 权威**（WS-R3b，接 [[PITFALL-108]]；否则探测只停在此、agent 仍会 emit 对方渲染不了的标记）：注入 pm-agent prompt 后，agent 对增量标记逐个闸——`background_highlight=false` → 禁 emit `==核心==`、`table_directives=false` → 禁表格注释、`folded_heading=false` → 禁折叠、`grid_columns=false` → 禁分栏、`table_cell_images=false` → **原型示意不 emit cell 内 `![](path)` 图片、退回文字占位 / 待补原型**、`file_attachment=false` → **不 emit 真附件块语法、只留普通链接 / 文本附件行**（与本地 manifest 的 false 对齐）。**"cloud_doc_enhanced 可用" ≠ "全增强可用"**，每个增强各受自己 capability 闸。
 
-**gate 语义（全 gate，用户拍 2026-06-29）**：`cloud_doc_enhanced` → **所有写作路径**（主对话写 §一/§二/风险/概述 + pm-agent 写 §6.x/§9.x）都按判断卡 §十 在该出的位置 emit callout（本期范围 / 关键约束 / 风险摘要）+ **语义色**（`<红>`=风险 / `<灰>`=次要弱化 / `==核心==`=本期 delta 黄底，该用才用），**且 `==核心==` / 表格注释 / 折叠 / 分栏等增量标记各受 `cloud_renderer_capabilities` 对应特性闸（false 不 emit）**；`markdown` → **绝不 emit 任何增强标记**、普通 .md 纯净。
+**gate 语义（全 gate，用户拍 2026-06-29）**：`cloud_doc_enhanced` → **所有写作路径**（主对话写 §一/§二/风险/概述 + pm-agent 写 §6.x/§9.x）都按判断卡 §十 在该出的位置 emit callout（本期范围 / 关键约束 / 风险摘要）+ **语义色**（`<红>`=风险 / `<灰>`=次要弱化 / `==核心==`=本期 delta 黄底，该用才用），**且 `==核心==` / 表格注释 / 折叠 / 分栏 / 原型示意 cell 内图片等增量标记各受 `cloud_renderer_capabilities` 对应特性闸（false 不 emit）**；`markdown` → **绝不 emit 任何增强标记**、普通 .md 纯净。
 ⚠️ **callout 目标多在 §一/§二/风险段、常由主对话直接写**（phase-5 说简单章节主对话写）——**主对话写这些段时也要应用 §十**，别以为只有 §6.x pm-agent 管（否则 gate 有了、摘要框不出现）。
 
 **本块是 output_profile 契约单一事实源**；pm-agent / push / 渲染器引用此处、不复制逻辑。**渲染器发现 / manifest schema / 能力字段定义见 `references/cloud-renderer-contract.md`。**（冲突规则 / 晚决定 push 警告留待 WS-6 碰 push 时补；本批先落 gate 核心。）
@@ -432,7 +432,7 @@ Agent({
 
 要求：
 - **输出档 output_profile：⟨orchestrator 在此替换为 `_status.json checkpoints.prd.output_profile` 的实际值——`markdown` 或 `cloud_doc_enhanced`，缺省 `markdown`⟩**　⚠️ **必须替换成实际值再发 pm-agent**，不能把 `⟨…⟩` / `{…|…}` 这串占位原样传出去（原样传 = gate 静默失效，loaded≠fired）—— 实际值是 `cloud_doc_enhanced` 时 pm-agent 按判断卡 §十 emit callout + 语义色（`<红>`风险 / `<灰>`次要 / `==核心==`黄底，该用才用）；是 `markdown` 时**绝不 emit 任何增强标记**
-- **渲染器能力 cloud_renderer_capabilities：⟨enhanced 时 orchestrator 替换为 `_status.json checkpoints.prd.cloud_renderer_capabilities` 实际对象；markdown 时删除本行⟩**　—— 逐特性 gate（WS-R3b）：`background_highlight=false`→禁 `==核心==`、`table_directives=false`→禁表格注释、`folded_heading=false`→禁折叠、`grid_columns=false`→禁分栏、`file_attachment=false`→不 emit 真附件语法（只留普通链接 / 文本附件行）。⚠️ 同样**必须替换成实际值**、不原样传占位
+- **渲染器能力 cloud_renderer_capabilities：⟨enhanced 时 orchestrator 替换为 `_status.json checkpoints.prd.cloud_renderer_capabilities` 实际对象；markdown 时删除本行⟩**　—— 逐特性 gate（WS-R3b）：`background_highlight=false`→禁 `==核心==`、`table_directives=false`→禁表格注释、`folded_heading=false`→禁折叠、`grid_columns=false`→禁分栏、`table_cell_images=false`→原型示意不 emit cell 内 `![](path)` 图片、`file_attachment=false`→不 emit 真附件语法（只留普通链接 / 文本附件行）。⚠️ 同样**必须替换成实际值**、不原样传占位
 - 按 phase-5-prd.md 的「写作脚手架」两栏表格模板填
 - 跑完 自检再返回
 - 不写 prologue / 不写解释，直接给章节内容（markdown 表格）
@@ -452,7 +452,7 @@ Agent({
 2. 重写为 PM 风格（按填空模板，去越界、加影响范围、补复用对照）
 3. 输出格式：先列「问题清单」（≤5 条），再给「重写结果」
 4. **输出档 output_profile：⟨orchestrator 替换为 `_status.json checkpoints.prd.output_profile` 实际值，缺省 `markdown`；⚠️ 必须替换、不原样传占位⟩** —— `cloud_doc_enhanced` 时重写也按判断卡 §十 emit / 保留 callout（本期范围 / 风险摘要）+ 语义色（红 / 灰 / `==核心==`黄底）；`markdown` 时绝不 emit 增强标记（避免云稿走重写路径丢增强）
-5. **渲染器能力 cloud_renderer_capabilities：⟨enhanced 时 orchestrator 替换为 `_status.json checkpoints.prd.cloud_renderer_capabilities` 实际对象；markdown 时删除本行⟩** —— 逐特性 gate（WS-R3b）：对应特性 `false` 则该标记不 emit（`background_highlight`→`==核心==`、`table_directives`→表格注释、`folded_heading`→折叠、`grid_columns`→分栏、`file_attachment`→真附件语法，只留普通链接 / 文本附件行）；⚠️ 必须替换实际值、不原样传占位
+5. **渲染器能力 cloud_renderer_capabilities：⟨enhanced 时 orchestrator 替换为 `_status.json checkpoints.prd.cloud_renderer_capabilities` 实际对象；markdown 时删除本行⟩** —— 逐特性 gate（WS-R3b）：对应特性 `false` 则该标记不 emit（`background_highlight`→`==核心==`、`table_directives`→表格注释、`folded_heading`→折叠、`grid_columns`→分栏、`table_cell_images`→原型示意 cell 内 `![](path)` 图片、`file_attachment`→真附件语法，只留普通链接 / 文本附件行）；⚠️ 必须替换实际值、不原样传占位
 ```
 
 **调用时机**：
@@ -478,7 +478,7 @@ Agent({
 |------|------|
 | **用户场景** | {一句话，谁在什么页面遇到什么问题。**不写 UI 细节**} |
 | **功能描述** | {一句话，这个功能解决什么。**不写技术实现**} |
-| **原型示意** | [{原型 label}] {布局简述，10-20 字} |
+| **原型示意** | {四态之一：① 有可用截图且 `table_cell_images=true`：`![{原型 label}]({相对路径})<br>{布局简述，10-20 字}`；② 无界面交互：`无界面交互（原因）`；③ 待补图：`[待补原型：{原型 label}] {布局简述}`；④ 迭代复用：`同V1.1原型图，仅X变化`。旧 `[原型 label] {布局简述}` 仅作历史兼容（本地 DOCX 已支持①的图片语法），不作为新稿默认写法} |
 | **优先级** | P0 / P1 / P2 |
 | **输入/前置条件** | {权限、数据、上游状态} |
 | **需求描述（基本事件流+异常事件流）** | 改动点：<br>① {规则一}<br>② {规则二}<br>③ {规则三}<br>...（**编号分组，单条 ≤ 50 字，全节 ≤ 7 条**）<br>异常并入：{失败时怎么办，每条 1 行}<br>⚠️ **异常描述必须落到页面状态**：每条降级描述须回答「用户在哪个页面 + 看到了什么变化」，禁用「退回 XX 流程」等抽象路由语言 |
@@ -685,6 +685,10 @@ PRD「详细功能设计」中每个核心功能，自动生成 FAB 三行描述
 ```
 
 自检发现的问题，回去改 PRD 主体；改完再次过 checklist 直到全过。
+
+**原型示意源侧机械检查（云文档增强 / 有原型图时强制）**：落盘后、push 云文档前，运行 `python3 .claude/skills/ai-pm/scripts/validate_prd_source_prototype_cells.py <PRD路径> --quiet`。❌ error（表外 `![]()` / 指向语「见下图/同上图」）必须先改源 Markdown：有图写进「原型示意」右侧 cell（`![xxx原型](path)<br>布局描述`），无界面写 `无界面交互（原因）`，待补写 `[待补原型：xxx] 布局描述`；⚠️ warn（旧 `[xxx原型]` 占位·仅云增强档报 / 裸「截图/原型图」歧义）逐条人工确认后可 push、**提示级不阻断**；复用写法（`同V1.1原型图，仅X变化`）合法不报。不要把表外图片 push 到云文档后再靠人工搬。
+
+**push 后登记（云文档正本登记约定·唯一源）**：push 成功后在项目 `_status.json` **顶层 `cloud_docs` map** 登记（key=PRD 文件名）：`{"doc_token": "doxrz…", "url": "…", "pushed_at": "YYYY-MM-DD"}`；post-push 结构校验（xfchat-wiki `scripts/validate_prd_prototype_cells.py`）通过后补 `last_validated`，老格式文档（legacy_cells>0）加 `"legacy_format": true`。历史遗留的顶层 `feishu_doc` / `feishu_prd_doc` 字符串字段：该项目**下次 push 时迁入 cloud_docs 并删除旧字段**（本次不批量回填，历史盘点归 2026-06-29 重渲计划 WS-1）。
 
 **深度扫描（仅评审前体检 / 大改后回归）**：跑 `ai-pm-driver`。注意 driver 已降级为最后一道安全网——如果 PRD 是用 pm-agent 写的，checklist 已自检过，driver 大概率没什么可挑。**不要每次写完都跑 driver**，那是浪费成本。
 

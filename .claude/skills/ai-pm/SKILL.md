@@ -85,7 +85,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm retrospective` | 项目复盘，生成 10-retrospective.md |
 | `/ai-pm instinct [list\|review\|import\|reset]` | 习惯直觉管理（自动学习的偏好） |
 | `/ai-pm driver [PRD路径]` | PM 风格 lint 命令入口（pm-agent 的 thin wrapper，单一事实源在 pm-agent）。仅用于历史 PRD 体检 / 大改后回归 / 评审前体检 |
-| `/ai-pm doctor` | 技能健康检查（26 项一致性扫描） |
+| `/ai-pm doctor` | 技能健康检查（27 项一致性扫描） |
 | `/ai-pm refresh [项目名] [--check]` | 项目状态对账：跨项目查 `_status.json` 滞后 / 索引漂移 / 死链；机械层自动修（状态日期、补登记占位），语义/有损改动只标给 PM，流程见 `refresh.md` |
 | `/ai-pm illustration [输入]` | AI 流程图生成（baoyu-imagine，支持 Mermaid 和自然语言） |
 | `/ai-pm release-docs [PRD路径\|项目名]` | 上线文档套件——基于实际上线功能产「更新公告 + 操作手册」，可发飞书云文档（去版本号），流程见 `release-docs.md` |
@@ -311,7 +311,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `references/baseline-delta-worksheet.md` | **迭代项目基线 delta 工作表 ⭐**——核心 insight：迭代需求 = delta，不是新功能；4 列工作表 + 三类高密度避坑信息 + 强制门禁，phase-1 检测+产出，phase-5 阻断 |
 | `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
 | `references/pm-skills-traceability.md` | pm-skills 对标追踪表（65 skills + 36 commands 的归属、暂缓和不拿理由），用于后续审计或防止重复搬运 |
-| `doctor.md` | 技能健康检查（26 项） |
+| `doctor.md` | 技能健康检查（27 项） |
 | `refresh.md` | 项目状态对账与刷新（_status 滞后 / 索引漂移 / 死链）；数据源 `scripts/ai-sync/check-status-staleness.js` + `check-readme-index-drift.js`，机械层自动修、语义层留白 |
 | `illustration.md` | AI 流程图生成 |
 | `release-docs.md` | 上线文档套件命令流程（公告+手册+飞书发布），内核在 `references/release-docs-frameworks.md` |

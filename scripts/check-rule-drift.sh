@@ -65,6 +65,9 @@ for tag in "必答①" "必答②" "必答③" "必答④" "必答⑤" "必答�
 done
 [ "$MISS" -eq 0 ] && grep -q "八条必答项" "$TPL" && note_ok "八必答：模板事实源 + 正文 ①-⑧ 锚点 + 两处指针齐全"
 
+echo "▶ 检查 8：原型示意判定正则跨副本一致（源侧校验器 / 云侧校验器 / push 计数器；精确比对走 python）"
+if python3 scripts/check-prototype-regex-drift.py | sed 's/^/  /'; then :; else note_fail "原型示意判定正则漂移（详见上方输出；唯一源=2026-07-02 计划附录 A）"; fi
+
 echo ""
 if [ "$FAIL" -eq 0 ]; then echo "✅ 规则一致性检查全部通过"; exit 0
 else echo "❌ 发现规则漂移，请把上述文件改回统一口径（事实源：pm-agent 单源 / 行话表→判断卡 §9.0ter；八条必答→decision-review 模板头部注释）"; exit 1; fi

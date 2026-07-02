@@ -47,6 +47,7 @@ PRD 生成在询问「要不要云文档增强」前，**只扫描一个 glob**�
     "text_color": true,
     "background_highlight": true,        // ▼ 增量能力（各自 gate）
     "table_directives": true,
+    "table_cell_images": true,
     "folded_heading": true,
     "grid_columns": true,
     "file_attachment": true
@@ -67,6 +68,7 @@ PRD 生成在询问「要不要云文档增强」前，**只扫描一个 glob**�
 | `text_color` | 行内字体色 | `<红>词</红>` / `<灰>次要</灰>` |
 | `background_highlight` | 行内黄底高亮（马克笔） | `==核心==` |
 | `table_directives` | 表格排版指令（表头行/列、列宽、合并） | `<!-- table:... -->` |
+| `table_cell_images` | 表格单元格内图片块 | 详细功能设计「原型示意」cell 内 `![原型](path)<br>描述` |
 | `folded_heading` | 可折叠标题段（折叠其后 section） | `<!-- fold -->` + 下一个标题 |
 | `grid_columns` | 多列分栏 | `<!-- columns:N -->` … `<!-- col -->` … `<!-- /columns -->` |
 | `file_attachment` | 文件附件块 | 真附件源侧语法由渲染器自定义；**不支持时降级为纯文本行** `📎 附件：…`（`📎 附件：…` 是降级文本、非可渲染附件标记，勿误当源侧语法） |
@@ -77,9 +79,9 @@ PRD 生成在询问「要不要云文档增强」前，**只扫描一个 glob**�
 
 `render_and_push` + `callout` + `text_color` **三者全为 `true`** 才算「**可用的云渲染器**」。理由：这三件是 `cloud_doc_enhanced` 档最基础的承重能力（推送 + 段落级提示 + 语义调色），缺任一项，云增强体验就半残。
 
-其余五项（`background_highlight` / `table_directives` / `folded_heading` / `grid_columns` / `file_attachment`）是**增量能力**：
+其余六项（`background_highlight` / `table_directives` / `table_cell_images` / `folded_heading` / `grid_columns` / `file_attachment`）是**增量能力**：
 
-- 达标的渲染器**未必全支持**这五项——**「`cloud_doc_enhanced` 可用」≠「全增强可用」**。
+- 达标的渲染器**未必全支持**这些增量能力——**「`cloud_doc_enhanced` 可用」≠「全增强可用」**。
 - PRD 生成对增量能力**逐特性 gate**：对方声明 `false` 的能力，**不 emit 对应标记**（避免 emit 一堆渲染不了的语法、污染输出）。
 
 ---
@@ -95,6 +97,7 @@ PRD 生成在询问「要不要云文档增强」前，**只扫描一个 glob**�
 3. **逐特性 gate**（pm-agent / phase-5 生成时）：
    - `background_highlight=false` → 禁 emit `==核心==`
    - `table_directives=false` → 禁 emit `<!-- table:... -->`
+   - `table_cell_images=false` → 禁在「原型示意」cell 内 emit `![](path)`，退回文字占位 / 待补原型说明
    - `folded_heading=false` → 禁折叠结构
    - `grid_columns=false` → 禁分栏结构
    - `file_attachment=false` → 退化成纯文本附件行

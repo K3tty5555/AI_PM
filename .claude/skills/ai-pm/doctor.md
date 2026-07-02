@@ -6,9 +6,9 @@
 
 ## 功能
 
-扫描所有技能文件，检查 26 项一致性指标，输出健康报告。
+扫描所有技能文件，检查 27 项一致性指标，输出健康报告。
 
-## 检查项（7 类共 26 项）
+## 检查项（8 类共 27 项）
 
 ### 命令路由一致性（3 项）
 
@@ -57,13 +57,17 @@
 25. **反例计数**：对同批 `references/*-frameworks.md`，检查 frontmatter 含 `counter-examples: N` 且 N ≥ 1。缺失或为 0 → ⚠️ 警告（本地化铁律要求每把枪必配 ≥1 组大陆反例）。注：doctor 只机械核对标记数字 ≥1；反例"是否真内嵌、组数对不对得上"由 add/sync 时人工或 pm-agent 核。
 26. **核心文件行业中立**：扫描必须保持行业中立的核心文件（`references/localization-card.md` + `references/pm-judgment-card.md` + `references/prototype-judgment-card.md`），grep 行业专属红线词清单（如「未成年人」「考试公平」「反洗钱」「适当性」「循证」等，清单随行业包扩充）。命中 → ⚠️ 警告（核心被某垂类污染的信号，需人工确认是否该挪进行业包 `pack[行业]`）。**说明**：① 框架文件 `*-frameworks.md` 豁免本项——其反例/示例位合法含行业词；② "框架方法体是否焊死行业红线"属语义判断，doctor 做不了，由本地化卡 5 问 + pm-agent dogfood 把关，doctor 只做核心中立文件的机械兜底。
 
+### 云文档 PRD 源侧协议（1 项）
+
+27. **原型示意 cell 协议**：当项目存在当前 PRD Markdown 时，运行 `python3 .claude/skills/ai-pm/scripts/validate_prd_source_prototype_cells.py <PRD路径> --quiet`，检查「详细功能设计」区的原型示意协议。指向语指向表外（见下图 / 如下图 / 同上图等）、表格外 `![]()` 图片 → ❌ 错误；旧 `[xxx原型]` 占位（**仅云增强档 PRD 报**，本地 DOCX 项目是合法格式不报）、裸「截图/原型图」歧义 → ⚠️ 警告；复用写法（`同V1.1原型图` / 同§6.x / 复用 / 沿用）合法不报。脚本判定逻辑回归用 `--selftest`。云文档 push 后再用 `python3 .claude/skills/xfchat-wiki/scripts/validate_prd_prototype_cells.py --doc-id <doc_id> --quiet` 做 block 结构验收（旧占位在云端计 `legacy_cells`、不算结构失败）。
+
 ## 执行方式
 
 **先跑机械兜底脚本**（零歧义引用的快速门，秒级）：
 ```bash
 python3 scripts/check-skill-ref-exists.py
 ```
-它机械核对所有 skill 文档里"反引号内、`.claude/`或`templates/`开头的全路径引用"是否指向真实文件——覆盖第 6、22 项里最容易"路径归属写错"的那类（如 battlecard 跨 skill 引用、live-probe 全路径）。退出码非 0 即有悬空引用，按其输出定位。脚本刻意只查零歧义全路径（裸 `references/`、glob、项目产物不查，避免误报）；其余 26 项仍按下方逐项人工核。
+它机械核对所有 skill 文档里"反引号内、`.claude/`或`templates/`开头的全路径引用"是否指向真实文件——覆盖第 6、22 项里最容易"路径归属写错"的那类（如 battlecard 跨 skill 引用、live-probe 全路径）。退出码非 0 即有悬空引用，按其输出定位。脚本刻意只查零歧义全路径（裸 `references/`、glob、项目产物不查，避免误报）；其余 27 项仍按下方逐项人工核。
 
 然后逐项检查，使用 Read 工具读取相关文件，用文本匹配做比对。
 
