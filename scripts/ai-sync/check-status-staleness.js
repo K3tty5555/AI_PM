@@ -58,6 +58,8 @@ function newestContentMtime(projectDir) {
         stack.push(full);
       } else {
         if (EXCLUDE_FILES.has(ent.name)) continue;
+        // 备份/临时文件不算内容进展（.bak 曾让 web端考试阅卷 永久误报滞后）
+        if (/\.(bak|tmp|swp)$|~$/.test(ent.name)) continue;
         if (++walked > MAX_WALK) return { newest, newestFile };
         let st;
         try { st = fs.statSync(full); } catch { continue; }

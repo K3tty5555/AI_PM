@@ -33,3 +33,7 @@ echo "—— 健康度判断 ——"
 [[ $TRIGGER -gt 30 ]] && echo "⚠️  触发过多 (>30)，可能打扰心流"
 [[ $LOW_AUTO -gt 50 ]] && echo "⚠️  auto+low 堆积 (>50)，建议跑 review-low 或 cleanup-auto"
 [[ $TRIGGER -gt 0 && $NEW_AUTO -eq 0 ]] && echo "⚠️  hook 触发但无新卡 — 检查 reason 提示词或 AI 行为"
+
+# A0 鲜度欠账（低频提醒位；无欠账不输出）
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+{ command -v python3 >/dev/null 2>&1 && python3 "$SCRIPT_DIR/ai-sync/freshness-summary.py" 2>/dev/null; } || true

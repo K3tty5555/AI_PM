@@ -98,4 +98,9 @@ else
   echo "OK: AI shared context snapshots look fresh"
 fi
 
+# A0 鲜度欠账一行汇总（摘要缺口含空draft / pending积压 / context超龄；无欠账不输出）
+if command -v python3 >/dev/null 2>&1; then
+  python3 "$ROOT/scripts/ai-sync/freshness-summary.py" 2>/dev/null || true
+fi
+
 exit 0

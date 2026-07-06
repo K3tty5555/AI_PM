@@ -112,7 +112,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 
 **`[直接执行]`** — 答案唯一、无业务歧义：
 - 文字矛盾修正（如优先级前后不一致）
-- 现有逻辑的格式补全（如将"与V1/V2一致"扩写为 Given/When/Then 格式）
+- 现有逻辑的格式补全（如将"与V1/V2一致"扩写为中文句式验收标准——**禁用 Given/When/Then 英文格式**，PITFALL-031）
 - 结构性新增（附录扩列、新增章节标题等）
 
 **`[PM确认]`** — 涉及业务规则，PM 才有答案，合理假设不止一种：

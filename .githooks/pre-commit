@@ -21,4 +21,16 @@ if echo "$staged" | grep -qE '^(scripts/check-prd-skeleton\.sh$|tests/fixtures/p
   fi
 fi
 
+# ── 检查 2：skill 引用存在性（B3 gate 接入，2026-07-03）──
+# 触发条件：动了 .claude/skills/ 或 .claude/agents/ 下任何 md（skill 正文引用最易随改动断链）。
+# 检查本体 0.1s 级，零干扰。
+if echo "$staged" | grep -qE '^\.claude/(skills|agents)/.*\.md$'; then
+  echo "🔎 pre-commit: 改动涉及 skill/agent，跑引用存在性检查…"
+  if ! python3 "$ROOT/scripts/check-skill-ref-exists.py"; then
+    echo ""
+    echo "❌ skill 引用存在性未过——有引用指向不存在的文件，先修好再提交。"
+    exit 1
+  fi
+fi
+
 exit 0

@@ -68,6 +68,13 @@ done
 echo "▶ 检查 8：原型示意判定正则跨副本一致（源侧校验器 / 云侧校验器 / push 计数器；精确比对走 python）"
 if python3 scripts/check-prototype-regex-drift.py | sed 's/^/  /'; then :; else note_fail "原型示意判定正则漂移（详见上方输出；唯一源=2026-07-02 计划附录 A）"; fi
 
+echo "▶ 检查 9：填充废话三反模式锚点在位（单源=判断卡 §七闸 0，内化=pm-agent 直觉+⓪quater，引用=driver 7bis）"
+grep -q "三类填充废话同属本闸" .claude/skills/ai-pm/references/pm-judgment-card.md || note_fail "判断卡 §七闸 0 缺三反模式事实源段"
+grep -q "填充废话反射" .claude/agents/pm-agent.md || note_fail "pm-agent 缺「填充废话反射」直觉内化"
+grep -q "⓪quater 填充废话窄检" .claude/agents/pm-agent.md || note_fail "pm-agent Mode C 缺 ⓪quater 窄检程序"
+grep -q "7bis. 填充废话窄检" .claude/skills/ai-pm-driver/SKILL.md || note_fail "driver 缺 7bis 填充废话引用"
+grep -q "三类填充废话同属本闸" .claude/skills/ai-pm/references/pm-judgment-card.md && grep -q "⓪quater 填充废话窄检" .claude/agents/pm-agent.md && grep -q "7bis. 填充废话窄检" .claude/skills/ai-pm-driver/SKILL.md && note_ok "三反模式锚点三处齐全（判断卡/pm-agent/driver）"
+
 echo ""
 if [ "$FAIL" -eq 0 ]; then echo "✅ 规则一致性检查全部通过"; exit 0
 else echo "❌ 发现规则漂移，请把上述文件改回统一口径（事实源：pm-agent 单源 / 行话表→判断卡 §9.0ter；八条必答→decision-review 模板头部注释）"; exit 1; fi
