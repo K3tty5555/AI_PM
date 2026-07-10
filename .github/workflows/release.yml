@@ -1,9 +1,9 @@
 name: Release
 
+# 2026-07-10 桌面端冻结（合并计划波0A#2）：不再随 tag 自动构建分发；
+# 仅保留手动触发（重新分发前必须先过安全门禁，见合并计划条件轨）。
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write

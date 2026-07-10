@@ -12,6 +12,10 @@
   <a href="README.md">English</a> | <a href="README_zh-CN.md">简体中文</a>
 </p>
 
+> [!WARNING]
+> **Desktop app is frozen (2026-07-10).** The Tauri desktop client is no longer maintained or distributed; downloadable builds have been withdrawn and the auto-update channel is closed. Existing installs should be uninstalled (known security issues in historical builds will not be fixed). The actively maintained form of AI_PM is the **Claude Code skills** edition below. Desktop sections in this README are kept for historical reference only.
+
+
 ---
 
 ## What is AI PM?

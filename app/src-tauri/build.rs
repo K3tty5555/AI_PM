@@ -3,14 +3,29 @@ use std::path::Path;
 use std::process::Command;
 
 // 私有 skill 防泄漏：跳过 .gitignore 排除的 skill（仅本机、含内网域名/凭证逻辑的 skill），
-// 不打进客户端安装包。git check-ignore 退出码 0 = 被忽略；git 不可用时不误删（正常仓库构建有 git）。
+// 不打进客户端安装包。git check-ignore 退出码 0 = 被忽略、1 = 未被忽略。
+// 2026-07-10 波0A#4 fail-closed：git 不可用或异常退出时直接终止构建——
+// 绝不把"无法判定私有边界"当成"可复制"。
 fn is_git_ignored(path: &Path) -> bool {
-    Command::new("git")
+    match Command::new("git")
         .args(["check-ignore", "-q"])
         .arg(path)
         .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    {
+        Ok(s) => match s.code() {
+            Some(0) => true,
+            Some(1) => false,
+            _ => panic!(
+                "git check-ignore 异常退出，无法判定私有 skill 边界（fail-closed）：{}",
+                path.display()
+            ),
+        },
+        Err(e) => panic!(
+            "git 不可用，无法判定私有 skill 边界（fail-closed）：{}：{}",
+            path.display(),
+            e
+        ),
+    }
 }
 
 fn copy_dir(src: &Path, dst: &Path) {

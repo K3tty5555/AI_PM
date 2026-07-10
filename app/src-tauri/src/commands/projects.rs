@@ -1001,7 +1001,7 @@ pub fn resolve_competitor_report(project_dir: &Path) -> Option<PathBuf> {
                         .map(|name| {
                             let b = name.as_bytes();
                             b.first() == Some(&b'V')
-                                && b.get(1).map_or(false, |c| c.is_ascii_digit())
+                                && b.get(1).is_some_and(|c| c.is_ascii_digit())
                         })
                         .unwrap_or(false)
                 })

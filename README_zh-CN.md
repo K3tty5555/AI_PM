@@ -12,6 +12,10 @@
   <a href="README.md">English</a> | <a href="README_zh-CN.md">简体中文</a>
 </p>
 
+> [!WARNING]
+> **桌面客户端已冻结（2026-07-10）。** Tauri 桌面端不再维护和分发；可下载构建已撤下、自动更新通道已关闭。已安装的旧版本建议卸载（历史构建存在不再修复的已知安全问题）。AI_PM 的活跃形态是下方的 **Claude Code skills** 版；本 README 中桌面端章节仅作历史参考。
+
+
 ---
 
 ## 这是什么

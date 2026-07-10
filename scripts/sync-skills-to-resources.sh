@@ -31,13 +31,10 @@ if git -C "$SRC" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     cp "$SRC/$f" "$DST/$f"
   done
 else
-  echo "⚠️  git 不可用，回退整目录复制（可能含私有 skill，请人工确认 resources/skills）" >&2
-  if command -v rsync >/dev/null 2>&1; then
-    rsync -a --delete --exclude '.DS_Store' "$SRC"/ "$DST"/
-  else
-    cp -R "$SRC"/. "$DST"/
-    find "$DST" -name '.DS_Store' -delete
-  fi
+  # 2026-07-10 波0A#4：fail-closed——无法用 git 判定私有 skill 边界时拒绝复制，
+  # 绝不回退整目录（防私有 skill 混入客户端资源副本/安装包）。
+  echo "❌ git 不可用，无法判定私有 skill 边界——拒绝同步（fail-closed）。请在 git 仓库内运行。" >&2
+  exit 1
 fi
 
 echo "Synced skills:"
