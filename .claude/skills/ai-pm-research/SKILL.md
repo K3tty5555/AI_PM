@@ -44,7 +44,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(mv) Bash(python3) Bash(
 竞品对比要有用，得先知道「我方现状」和「我方正在拍什么决策」——这两样都在兄弟项目里，不能凭印象。用三道组合找全（单靠 related-scan 会漏语义相关项目）：
 
 1. `python3 scripts/related-scan.py "{项目名/主题}"` —— 名字撞上的（如 考试答题卡 ↔ 考试阅卷/考试扫描）。**若 `/ai-pm` 主控已在开工扫过，直接读其结果、不重复跑。**
-2. 关键词 `rg` + 牵动链卡（`templates/knowledge-base/chains/`）—— 名字没撞但语义相关的（如 竞品分析 ↔ 学情/某模块3.0）。
+2. 关键词 `rg` + 牵动链卡（`templates/knowledge-base/chains/`）—— 名字没撞但语义相关的（如 竞品分析 ↔ 学情/现网学情产品）。
 3. 必要时请用户点名关联项目。
 
 > 三道都空，才能下"无兄弟项目"的结论。命中的项目先 `ls`/读其 PRD，把「我方现状/在途承接」坐实到功能点（别凭印象填对比表的"我们"列）。

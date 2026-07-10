@@ -294,7 +294,7 @@ def _is_visual_anchor_relevant(item, prd_identity):
     """避免一个项目多个 PRD 共用同一 visual manifest 时互相插错图。"""
     section = str(item.get('prdSection', ''))
     identity = str(prd_identity or '')
-    for keyword in ['组卷', '某模块', '搜题', '找题']:
+    for keyword in ['组卷', '联动', '搜题', '找题']:
         if keyword in section and keyword not in identity:
             return False
     return True
