@@ -264,7 +264,27 @@ def main() -> int:
         print(json.dumps(rows, ensure_ascii=False, indent=2))
         return 0
     print(render(rows))
+    print_plan_debts()
     return 0
+
+
+def print_plan_debts() -> None:
+    """G2：计划债机读台账（docs/_plan-debts.json）——「下一步干啥」同时答出计划债。"""
+    f = REPO / "docs" / "_plan-debts.json"
+    if not f.exists():
+        return
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+    except Exception:
+        print("⚠️ _plan-debts.json 不可解析", file=sys.stderr)
+        return
+    debts = d.get("debts") or []
+    if not debts:
+        return
+    icon = {"ai": "🤖可动", "trigger": "⏲扳机", "human": "🙋等你"}
+    print(f"\n📌 计划债（{len(debts)} 条 · 台账截至 {d.get('updated')}）：")
+    for x in debts:
+        print(f"  {icon.get(x.get('type'), '·')} {x.get('text')}")
 
 
 if __name__ == "__main__":

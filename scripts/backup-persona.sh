@@ -78,4 +78,14 @@ shopt -u nullglob
 echo "---"
 echo "完成：新增 $copied / 更新 $updated / 未变 $same"
 [[ $DRY_RUN -eq 1 ]] && echo "（以上为 dry-run 预览，未实际写入）"
+# ── docs/ 本机备份（G1 · 2026-07-12，还 gen-opt v0.4 元悬账）──
+# docs/ 整目录 gitignore（83+ 份计划含内部信息），仓库不保护它——镜像到仓外，防单点。
+DOCS_SRC="$REPO_ROOT/docs"
+DOCS_DST="$HOME/.ai-pm-backups/AI_PM-docs"
+if [ -d "$DOCS_SRC" ]; then
+  mkdir -p "$DOCS_DST"
+  rsync -a "$DOCS_SRC"/ "$DOCS_DST"/ 2>/dev/null || cp -R "$DOCS_SRC"/. "$DOCS_DST"/
+  echo "docs 备份  : $(find "$DOCS_DST" -name '*.md' | wc -l | tr -d ' ') 份 md → $DOCS_DST"
+fi
+
 exit 0
