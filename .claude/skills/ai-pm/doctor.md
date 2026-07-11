@@ -19,8 +19,8 @@
 ### 交叉引用完整性（4 项）
 
 4. **阶段流程引用**: 检查 `phase-workflows.md`（或 SKILL.md 阶段流程部分）中引用的技能名是否都有对应目录
-5. **依赖关系**: 检查 `_core/skill-dependencies.md`（如存在）中的依赖关系是否双向正确
-6. **文件索引**: 检查 `_core/file-index.md`（如存在）中的路径是否全部有效（文件确实存在）
+5. **依赖关系**: （原 `_core/skill-dependencies.md` 手工索引已于 2026-07-12 退役——手工清单必然漂移）直查文件系统：grep 各 SKILL.md 里对其它 skill 的引用，抽验被引用方存在
+6. **文件索引**: （原 `_core/file-index.md` 已退役，不为 doctor 复活手工索引）改跑 `python3 scripts/check-skill-ref-exists.py`——机器扫全部反引号路径引用的存在性，同 pre-commit 口径
 7. **状态字段**: 检查 `_status.json` 规范中定义的 phase key 是否覆盖了阶段流程中的所有阶段
 
 ### 模板引用（3 项）
@@ -95,5 +95,5 @@ python3 scripts/check-skill-ref-exists.py
 ## 注意事项
 
 - 只读取文件，不做任何修改
-- 缺失的可选文件（如 _core/ 下的索引文件）标记为 ⚠️ 警告而非 ❌ 错误
+- 缺失的可选文件标记为 ⚠️ 警告而非 ❌ 错误
 - v0.3.0 仅 CLI 侧，客户端展示后续迭代

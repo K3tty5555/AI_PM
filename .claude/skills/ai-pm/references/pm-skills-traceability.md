@@ -20,8 +20,8 @@
 
 | 源 skill | AI_PM 处理 | 归属 / 证据 | 说明 |
 |---|---|---|---|
-| `brainstorm-ideas-existing` | 已落地 | `.claude/skills/ai-pm-brainstorm/SKILL.md` | 已有 3-5 轮收敛式头脑风暴，不搬 PM/Designer/Engineer 固定角色模板 |
-| `brainstorm-ideas-new` | 已落地 | `.claude/skills/ai-pm-brainstorm/SKILL.md` | 新产品想法同样走轻量对话收敛 |
+| `brainstorm-ideas-existing` | 已落地 | ai-pm-brainstorm（已于 2026-07-12 退役归档——客户端冻结遗物） | 已有 3-5 轮收敛式头脑风暴，不搬 PM/Designer/Engineer 固定角色模板 |
+| `brainstorm-ideas-new` | 已落地 | ai-pm-brainstorm（已于 2026-07-12 退役归档——客户端冻结遗物） | 新产品想法同样走轻量对话收敛 |
 | `brainstorm-experiments-existing` | 精选落地 | `.claude/skills/ai-pm/references/discovery-frameworks.md` | 纳入“先验再开发”的低成本验证纪律 |
 | `brainstorm-experiments-new` | 精选落地 | `.claude/skills/ai-pm/references/discovery-frameworks.md` | 不搬 pretotyping 名词，落成灰度、单点试点、埋点、访谈、历史数据 |
 | `identify-assumptions-existing` | 精选落地 | `.claude/skills/ai-pm-analyze/SKILL.md` | 新场景/新用户行为时强制产出关键假设与验证 |

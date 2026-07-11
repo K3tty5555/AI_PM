@@ -145,7 +145,6 @@ On first launch, configure one AI backend in Settings:
 | `/ai-pm-knowledge` | Product knowledge base |
 | `/pm-gap-research` | Gap-oriented product research |
 | `/multi-perspective-review` | Multi-perspective review mode |
-| `/ai-pm-brainstorm` | Idea brainstorming and convergence |
 | `/tutorial-center-update` | Update the offline tutorial center |
 
 Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/ai-pm-prd`, `/ai-pm-prototype`, `/ai-pm-review`.

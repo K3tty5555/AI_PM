@@ -33,7 +33,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(find) Bash(test) Bash(mkdir) Bash(d
 | `project [议题]` | 项目级沙盘 |
 | `product [议题]` | 产品级沙盘 |
 | `continue` | 继续最近一次沙盘，列最近 3 个议题供用户选 |
-| `list` | 列出 `output/strategy-sandbox/` 下对象和议题 |
+| `list` | 列出 `output/projects/*/09-analytics/strategy/` 与 `output/assets/` 下的战略议题 |
 | `save` | 将当前对话保存为正式 `Vx-YYYY-MM-DD/` |
 | `draft` | 将当前对话保存为 `drafts/YYYY-MM-DD-HHMM/` |
 | `registry` | 查看或维护产品-项目关系表 |
@@ -87,8 +87,8 @@ output/projects/{项目名}/_memory/L1-decisions.md
 产品级默认发现：
 
 ```text
-output/strategy-sandbox/product-registry.md
-output/strategy-sandbox/product-level/{产品名}/README.md
+output/assets/（产品级议题各自成资产目录，不设总注册表）
+output/assets/{产品级议题名}/README.md
 output/projects/*/README.md
 output/projects/*/05-prd/README.md
 ```

@@ -1,11 +1,13 @@
 # 存储与版本规范
 
+> 2026-07-12 重写（合并计划拍板 4）：原 `output/strategy-sandbox/` 违反 CLAUDE.md 目录铁律（projects/assets 之外不新建）且从未真实落盘——实战产出一直在项目 09-analytics。现协议：项目级议题 → `output/projects/{项目名}/09-analytics/strategy/`；产品级/跨项目议题 → `output/assets/{议题名}/`。
+
 战略沙盘产出独立存放，不进入 `output/projects/`。
 
 ## 根目录
 
 ```text
-output/strategy-sandbox/
+output/projects/{项目名}/09-analytics/strategy/（项目级）或 output/assets/{议题名}/（产品级）
 ├── README.md
 ├── product-registry.md
 ├── project-level/
@@ -15,7 +17,7 @@ output/strategy-sandbox/
 ## 项目级目录
 
 ```text
-output/strategy-sandbox/project-level/{项目名}/
+output/projects/{项目名}/09-analytics/strategy/
 ├── README.md
 └── topics/
     └── {议题类型}-{短标题}/
@@ -39,7 +41,7 @@ output/strategy-sandbox/project-level/{项目名}/
 ## 产品级目录
 
 ```text
-output/strategy-sandbox/product-level/{产品名}/
+output/projects/{项目名}/09-analytics/strategy/（项目级）或 output/assets/{议题名}/（产品级）product-level/{产品名}/
 ├── README.md
 └── topics/
     └── {议题类型}-{短标题}/
@@ -56,7 +58,7 @@ output/strategy-sandbox/product-level/{产品名}/
 
 | 文件 | 作用 |
 |---|---|
-| `strategy-sandbox/README.md` | 全部沙盘索引 |
+| （已退役——各项目/资产自带 README，不设全局索引） | — |
 | `product-registry.md` | 产品-项目关系表 |
 | `{对象}/README.md` | 某个项目或产品下的议题索引 |
 | `{议题}/README.md` | 该议题历次推演、观点变化、未关闭问题 |
@@ -112,7 +114,7 @@ delta 记录：
 路径：
 
 ```text
-output/strategy-sandbox/product-registry.md
+output/assets/（产品级议题各自成资产目录，不设总注册表）
 ```
 
 模板：
