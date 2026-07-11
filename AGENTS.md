@@ -88,3 +88,7 @@ scripts/ai-sync/sync-ai-context.sh
 export CLAUDE_MEMORY_DIR="$HOME/.claude/projects/<your-project-slug>/memory"
 export CODEX_MEMORY_OUT="$HOME/.codex/memories/AI_PM.md"
 ```
+
+## 评审意见交换（D3①）
+
+与 Claude 互审/互看时不再让用户人肉转贴：意见写 `.ai-shared/review-exchange/inbox-claude/`（给 Claude）或读 `inbox-codex/`（Claude 给你的），处置登记 `ledger.md`，协议见该目录 README。开工评审类任务先查自己 inbox。

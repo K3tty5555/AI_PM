@@ -57,6 +57,15 @@ pm-agent 的 punch list 直接呈现给用户，不二次加工。
 
 ---
 
+## `--preflight` 模式（评审前一条命令，Stage4-D2 · 收编 Stage3-C2 冷读）
+
+用户说「preflight / 评审前体检 / 上会前过一遍」时，在标准 lint 之外**追加两段**（仍是 thin wrapper——各段各派子代理，本 skill 不自带判断）：
+
+1. **上游对齐 grounding**：对照上游制品（需求原文 `01-requirement-draft/` 最新 V、用户故事、前版 PRD、项目 `_conventions.md`），派子代理列「PRD 与上游不一致 / 无出处」待确认差异清单——治"有没有自己捏造，没和上游对齐"。只列差异不改文。
+2. **冷读（原 Stage3-C2 设计，收编于此）**：派 **general-purpose 零上下文**子代理，prompt 显式「忽略你可能知道的任何项目背景，只读正文」，报"真懵点"清单（读不懂的词 / 断层的逻辑 / 缺前情的引用）；PRD >1500 行时要求用户指定章节。产出单列呈现，不与 lint 混分。
+
+输出 = lint punch list + 上游差异清单 + 冷读懵点清单，三段分列。评审前跑一次，代替口头串场。
+
 ## 为什么是 thin wrapper
 
 判断卡 / 反例库 / 越界规则全部由 pm-agent 内化（`agents/pm-agent.md`）。driver 不重复维护这些规则——避免：

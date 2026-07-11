@@ -60,6 +60,8 @@ AI_PM_提效分享.html
 # AI shared local context copies
 # Keep bridge docs/scripts versioned, but do not upload local memory snapshots,
 # pending memory handoffs, context content, or AI conversation records.
+.ai-shared/review-exchange/*
+!.ai-shared/review-exchange/README.md
 .ai-shared/memory-snapshots/
 .ai-shared/conversations/
 .ai-shared/pending-memory/
