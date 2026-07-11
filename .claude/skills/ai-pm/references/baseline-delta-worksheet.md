@@ -84,7 +84,7 @@
 
 ## 落盘文件名
 
-`{project_dir}/01-baseline-delta.md`（与 `01-requirement-draft.md` 并列）
+`{project_dir}/01-baseline-delta.md`（与 `01-requirement-draft/` 并列）
 
 文件结构：
 

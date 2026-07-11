@@ -13,9 +13,9 @@ allowed-tools: Read Write Edit Bash(mkdir)
 
 基于项目全流程产出物（已在上下文中提供）：
 - 需求草稿（01-requirement-draft.md）
-- 需求分析（02-analysis-report.md）
+- 需求分析（02-analysis-report/ 最新 V）
 - PRD（当前 PRD，`05-prd/<当前 PRD 文件>`）
-- 评审报告（07-review-report.md）
+- 评审报告（08-reviews/ 最新一份）
 
 ## 输出
 

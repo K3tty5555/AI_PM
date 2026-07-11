@@ -409,7 +409,7 @@ graph TD
 
 使用以下命令导出飞书格式：
 ```bash
-/pm-prd --export=feishu
+/ai-pm-prd --export=feishu
 ```
 
 导出的文件为 `{项目名}.feishu.md`，可直接复制到飞书云文档中使用。

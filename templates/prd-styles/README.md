@@ -54,13 +54,13 @@ prd-styles/                            # PRD 写作风格库
 
 ```bash
 # 上传你的 PRD 到任意位置，然后执行
-/ai-pm writing-style analyze /path/to/your-prd.md
+/ai-pm persona /path/to/your-prd.md
 ```
 
 ### 2. 查看已有写作风格
 
 ```bash
-/ai-pm writing-style list
+/ai-pm config style
 ```
 
 ### 3. 使用特定风格生成 PRD

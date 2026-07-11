@@ -12,7 +12,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ## 输入
 
-- 主要：`{项目目录}/02-analysis-report.md`（需求分析）
+- 主要：`{项目目录}/02-analysis-report/`（最新 V，需求分析）
 - 参考：`{项目目录}/03-competitor-report/V{版本}.md`（竞品研究，如有）
 
 ## 输出

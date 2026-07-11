@@ -1,7 +1,7 @@
 # Phase 1: 需求澄清
 
 **输入**: 用户需求描述（口述或已有文档）
-**输出**: `01-requirement-draft.md`
+**输出**: `01-requirement-draft/V{n}.md`（文件夹制，见 SKILL.md 命名约定）
 
 ## 执行方式
 
@@ -37,7 +37,7 @@ grep -E "^product_type:" {project_dir}/_memory/L1-decisions.md 2>/dev/null
 
 ## 有现成文档时
 
-引导放入 `07-references/`，读取后跳过访谈，直接生成 01-requirement-draft.md。
+引导放入 `07-references/`，读取后跳过访谈，直接生成 01-requirement-draft/V{n}.md。
 
 → 详见 `references/user-interaction.md`「有现成文档时的处理」
 
@@ -120,7 +120,7 @@ mitigation 列为空的行汇总到 `01-baseline-delta.md` 末尾的「未覆盖
 
 ## Phase 1 完成后：写入 L0 记忆
 
-`01-requirement-draft.md` 落盘后，立即执行：
+`01-requirement-draft/V{n}.md` 落盘后，立即执行：
 
 1. `mkdir -p {project_dir}/_memory/`
 2. 从 requirement-draft 提取以下内容写入 `_memory/L0-identity.md`：

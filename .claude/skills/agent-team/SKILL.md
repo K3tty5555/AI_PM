@@ -60,7 +60,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(grep) Bash(py
 Agent → subagent-PM
   系统提示词：「你是资深产品经理，仅完成任务，不与用户交互」
   任务：基于需求「{用户需求}」，完成需求分析
-  输出：{项目目录}/02-analysis-report.md
+  输出：{项目目录}/02-analysis-report/V{n}.md（文件夹制）
 
 Agent → subagent-Analyst
   系统提示词：「你是竞品分析师，仅完成任务，不与用户交互」
@@ -83,7 +83,7 @@ Wave 1 全部完成后，向用户汇报结果摘要。
 Agent → subagent-PRD
   系统提示词：「你是 PRD 撰写专家，仅完成任务，不与用户交互」
   任务：
-    读取：{项目目录}/02-analysis-report.md
+    读取：{项目目录}/02-analysis-report/ 最新 V
     读取：{项目目录}/03-competitor-report/V{版本}.md
     读取：/tmp/kb-insight.md（如存在）
     动笔前读：.claude/skills/ai-pm/references/pm-judgment-card.md（越界红线 / 责任分工 / §9 守门）
@@ -148,7 +148,7 @@ Agent → subagent-Review
 
 ```
 Wave 1 完成（1 个 subagent 失败）：
-  ✅ subagent-PM → 02-analysis-report.md
+  ✅ subagent-PM → 02-analysis-report/V{n}.md
   ❌ subagent-Analyst → 竞品数据获取超时（可重试）
 
 继续 Wave 2？或重试失败项？

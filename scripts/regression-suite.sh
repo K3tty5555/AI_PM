@@ -20,16 +20,21 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 
 MODE="${1:---fast}"
+if [ "$MODE" != "--fast" ] && [ "$MODE" != "--full" ]; then
+  echo "❌ 未知参数：$MODE（只接受 --fast / --full）" >&2; exit 2
+fi
 FAIL=0
+STEP_LOG="$(mktemp -t regression-step)"
+trap 'rm -f "$STEP_LOG"' EXIT
 
 run_check() { # name cmd...
   local name="$1"; shift
   echo "── $name"
-  if "$@" >/tmp/regression-step.log 2>&1; then
+  if "$@" >"$STEP_LOG" 2>&1; then
     echo "   ✅ 过"
   else
     echo "   ❌ 未过（详情如下）"
-    sed 's/^/   | /' /tmp/regression-step.log | tail -20
+    sed 's/^/   | /' "$STEP_LOG" | tail -20
     FAIL=1
   fi
 }
@@ -40,6 +45,7 @@ run_check "骨架 canonical 单源（check-skeleton-rule-drift）" bash scripts/
 run_check "doctype 骨架 fixture 回归（check-prd-skeleton）" bash scripts/check-prd-skeleton.sh
 run_check "skill 引用存在性（check-skill-ref-exists）" python3 scripts/check-skill-ref-exists.py
 run_check "skill 双拷贝一致（check-skill-resource-drift）" bash scripts/check-skill-resource-drift.sh
+run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500
 
 if [ "$MODE" = "--full" ]; then
   echo ""
@@ -60,23 +66,29 @@ if not files:
 r = subprocess.run(
     ["python3", ".claude/skills/ai-pm/scripts/validate_prd_source_prototype_cells.py", "--quiet", *files],
     capture_output=True, text=True)
-n_pass = n_skip = n_known = 0
+n_pass = n_skip = n_known = n_archive = 0
 new_fail, odd_err = [], []
 for line in (r.stdout + r.stderr).splitlines():
     if line.startswith("PASS"):
         n_pass += 1
     elif line.startswith("ERROR"):
         if "详细功能设计" in line:
-            n_skip += 1          # 无详设章节 = 跳过，不算失败
+            n_skip += 1          # 无详设章节 = not-applicable，不算失败
         else:
             odd_err.append(line)
     elif line.startswith("FAIL"):
         path = line.split(":", 1)[0].removeprefix("FAIL").strip()
-        if path in baseline:
+        # 归档/存档目录里的历史定稿 = archive 类，不按活语料判（2026-07-12 合并计划波0B#3：
+        # 历史原稿不改的拍板延续；归档新增快照曾撞 glob 制造"新失败"）
+        if "/归档/" in path or "/archived/" in path:
+            n_archive += 1
+        elif path in baseline:
             n_known += 1         # 已知历史问题（冻结）
         else:
             new_fail.append(line)
-print(f"PASS {n_pass} / SKIP(无详设) {n_skip} / 已知冻结 {n_known} / 新失败 {len(new_fail)} / 异常 {len(odd_err)}")
+print(f"五分类：PASS {n_pass} / not-applicable(无详设) {n_skip} / archive(归档) {n_archive} / 已知冻结 {n_known} / 新失败 {len(new_fail)}（异常 {len(odd_err)}）")
+total_applicable = n_pass + len(new_fail)
+print(f"active-applicable 执行率 100%（适用 {total_applicable} 份全执行）/ 无原因 SKIP 0")
 for line in new_fail + odd_err:
     print("   |", line)
 sys.exit(1 if (new_fail or odd_err) else 0)

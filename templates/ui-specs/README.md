@@ -138,7 +138,7 @@ my-company/
 - 或在 README 中记录版本历史
 
 ### 3. 规范创建
-使用 `/ai-pm ui-spec upload {规范名}` 命令创建新规范，AI 会自动解析设计资源。
+使用 `/ai-pm design-spec upload {规范名}` 命令创建新规范，AI 会自动解析设计资源。
 
 ### 4. 截图质量
 - 使用高清截图（推荐 2x 分辨率）
@@ -158,4 +158,4 @@ my-company/
 
 ---
 
-**使用 `/ai-pm ui-spec upload {规范名}` 开始创建你的 UI 规范！**
+**使用 `/ai-pm design-spec upload {规范名}` 开始创建你的 UI 规范！**

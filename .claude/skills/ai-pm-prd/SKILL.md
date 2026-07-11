@@ -12,9 +12,9 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(cat) Bash(node) Bash(rm
 
 ## 输入
 
-- `{项目目录}/02-analysis-report.md`（需求分析，必需）
+- `{项目目录}/02-analysis-report/`（最新 V，需求分析，必需）
 - `{项目目录}/03-competitor-report/V{版本}.md`（竞品研究，如有）
-- `{项目目录}/04-user-stories.md`（用户故事，如有）
+- `{项目目录}/04-user-stories/`（最新 V，用户故事，如有）
 - `templates/prd-styles/{风格名}/style-config.json`（写作风格，可选）
 
 ## 输出
@@ -301,7 +301,7 @@ rm -rf /tmp/mermaid-prompts/
 ## 版本策略
 
 - 首次生成：创建 v1.0，修订日志记录"初稿创建"
-- 评审后修改：**不创建新文件**，在原文档直接修改，修订日志追加新记录（v1.1、v1.2...）
+- 评审后修改：**不创建新文件**，在原文档直接修改；修订日志按判断卡 §八 判断——首评周期全熔 V1.0，定稿后再发才 +V1.x（不自动追加 v1.{N}）
 - 不生成 `.bak` 备份文件，Git 历史已足够
 
 ## 导出格式参考

@@ -254,15 +254,15 @@ grep -l "AI_PM\|ai-pm" ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null
 
 ```
 phases.office-hours  = true  → 写完 00-office-hours.md 后（可选）
-phases.requirement   = true  → 写完 01-requirement-draft.md 后
-phases.analysis      = true  → 写完 02-analysis-report.md 后
+phases.requirement   = true  → 写完 01-requirement-draft/V{n}.md 后
+phases.analysis      = true  → 写完 02-analysis-report/V{n}.md 后
 phases.competitor    = true  → 写完 03-competitor-report/V{版本}.md 后
-phases.stories       = true  → 写完 04-user-stories.md 后
+phases.stories       = true  → 写完 04-user-stories/V{n}.md 后
 phases.prd           = true  → 写完 05-prd/05-PRD-v1.0.md 后
 phases.analytics     = true  → 写完 09-analytics/analytics-requirement.md 后（可选）
 phases.prototype     = true  → 写完 06-prototype/index.html 后
 phases.audit         = true  → 写完 07-audit-report.md 后
-phases.review        = true  → 写完 08-review-report-v1.md 后
+phases.review        = true  → 写完 08-reviews/ 内评审报告后
 phases.retrospective = true  → 写完 10-retrospective.md 后（可选）
 ```
 
@@ -465,7 +465,7 @@ Phase 1-4 全自动执行，仅在 PRD 生成前停一次确认，生成原型�
 
 1. 调用 `python3 .claude/skills/ai-pm/scripts/pdf_to_images.py "{pdf_path}"` 渲染各页为 PNG
 2. 使用 Read 工具逐页读取图像（每次 2 页），完整浏览全部内容
-3. 从文档中提取核心信息，生成 `01-requirement-draft.md`
+3. 从文档中提取核心信息，生成 `01-requirement-draft/V1.md`
 4. 跳过 Phase 1 交互式访谈，直接进入 Phase 2+3
 
 读取后：

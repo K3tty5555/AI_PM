@@ -21,7 +21,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 
 - 主要：`{项目目录}/05-prd/<当前 PRD 文件>`（由 `_status.json.active_prd` 指定；首次默认 `05-PRD-v1.0.md`）
 - 参考：`{项目目录}/06-prototype/index.html`（原型，如有）
-- 参考：`{项目目录}/02-analysis-report.md`、`04-user-stories.md`
+- 参考：`{项目目录}/02-analysis-report/`、`04-user-stories/`（各取最新 V）
 
 ## 输出
 
@@ -165,10 +165,12 @@ C. {第三项，如有}
 
 ### 步骤5：执行 PRD 修改
 
-**修改原则：不创建新文件，直接在当前 PRD 中修改，修订日志追加新记录。**
+**修改原则：不创建新文件，直接在当前 PRD 中修改。修订日志是否 +V1.x 按判断卡 §八判断：首评周期内（含落实评审决议的轮次）全部熔进 V1.0 不单列；只有定稿后再次正式发给研发/评审的修订才 +V1.x。**
 
 ```markdown
-| {日期} | v1.{N} | 评审后修改：修复{N}个问题（{n} Critical + {n} Major） | 全模块 | AI_PM | 基于评审报告v{N} |
+（仅当"定稿后再次正式发出"时才追加一行，例：）
+| {日期} | V1.1 | 评审后修订：修复{N}个问题（{n} Critical + {n} Major） | 全模块 | {作者} | 定稿后按评审报告v{N}修订再发 |
+（首评周期内的修改：不加行，熔进 V1.0 基线。）
 ```
 
 ### 步骤5.5：pm-agent 段落回归扫描

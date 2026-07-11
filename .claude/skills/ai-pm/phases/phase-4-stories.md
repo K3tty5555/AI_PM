@@ -1,7 +1,7 @@
 # Phase 4: 用户故事 / Agent 故事 / Agent 工作流
 
 **输入**: `02-analysis-report.md` + `03-competitor-report/V{版本}.md` + `_memory/L1-decisions.md`（读 `product_type`）
-**输出**: `04-user-stories.md`（含三节，按 product_type 决定写多少）
+**输出**: `04-user-stories/V{n}.md`（含三节，按 product_type 决定写多少）
 
 ## ⚠️ PM 风格判断卡前置阅读
 
@@ -215,7 +215,7 @@ stateDiagram-v2
 
 ## 落盘逻辑
 
-写到 `{project_dir}/04-user-stories.md`，结构：
+写到 `{project_dir}/04-user-stories/V{n}.md`，结构：
 
 ```markdown
 # 用户故事 / Agent 故事 / Agent 工作流
@@ -244,7 +244,7 @@ WF-02 ...
 phase-4 完成后估算 token 消耗写入 `_status.json`：
 
 ```bash
-wc -c {project_dir}/04-user-stories.md
+wc -c {project_dir}/04-user-stories/V*.md
 ```
 
 ```json

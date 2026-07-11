@@ -1,6 +1,6 @@
 # Phase 3: 竞品研究
 
-**输入**: `01-requirement-draft.md`（+ 关联兄弟项目，见下）
+**输入**: `01-requirement-draft/`（最新 V，+ 关联兄弟项目，见下）
 **输出**: `03-competitor-report/V{版本}.md`（文件夹版，非旧扁平文件）
 
 ## 执行方式

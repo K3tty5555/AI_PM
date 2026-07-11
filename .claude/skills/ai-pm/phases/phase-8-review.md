@@ -1,7 +1,7 @@
 # Phase 8: 需求评审
 
 **输入**: `05-prd/` 下最新版本 PRD MD + `06-prototype/index.html`（可选）+ `_memory/L2-prd-versions.md`（若存在）
-**输出**: `08-review-report-v1.md`
+**输出**: `08-reviews/08-review-report-{版本标识}.md`（文件夹制）
 
 ## 参考文档读取（各阶段前置，自动执行）
 
@@ -100,15 +100,15 @@ ls "{project_dir}/05-prd/"*.docx 2>/dev/null
 
 **评分输出**：每项 1-5 分，附整改建议；任一项 ≤ 2 分 = 评审打回。
 
-**评审后修改**：评审打回、或用户要按评审反馈修订 PRD/原型时 → 调用 `ai-pm-review-modify` 技能执行修订（命令行用户同样从这里进入，不必只在客户端改）。
+**评审后修改**：评审打回、或用户要按评审反馈修订 PRD/原型时 → 走 `ai-pm-review` 自含的修改闭环（步骤 4 修改计划 → 4.5 PM 确认 → 5 执行 → 5.5 pm-agent 段落回归扫描）。（原 ai-pm-review-modify 技能已于 2026-07 并回退役——它是缺确认关口与回归扫描的平行实现。）
 
 ## 评审报告命名规则
 
 评审报告按当前 PRD 版本命名，避免覆盖历史版本：
 
 1. 读取 `_memory/L2-prd-versions.md` 最后一个版本条目的版本标识（如 `V1`、`V2`）
-2. 输出文件命名为 `08-review-{版本标识小写}.md`（如 `08-review-v2.md`）
-3. 若无版本索引（`L2-prd-versions.md` 不存在）→ 降级使用 `08-review-report-v1.md`（原有命名，向后兼容）
+2. 输出文件命名为 `08-reviews/08-review-report-{版本标识}.md`（如 `08-reviews/08-review-report-v2.md`）
+3. 若无版本索引（`L2-prd-versions.md` 不存在）→ 降级使用 `08-reviews/08-review-report-v1.md`
 
 ## 续评审 · 逐条过问题（continue 进入 phase 8 时触发）
 
@@ -120,7 +120,7 @@ ls "{project_dir}/05-prd/"*.docx 2>/dev/null
 
 ```bash
 # 找最新评审报告
-ls {project_dir}/08-review-*.md | sort | tail -1
+ls {project_dir}/08-reviews/*.md 2>/dev/null | sort | tail -1   # 扁平遗留兜底：ls {project_dir}/08-review-*.md
 
 # 找当前 PRD
 ls {project_dir}/05-prd/*.md | sort | tail -1

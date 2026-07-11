@@ -71,7 +71,7 @@ mkdir -p {project_dir}/_memory/
 {所属产品线/系统背景}
 ```
 
-**更新时机**：Phase 1（需求澄清）完成后，根据 01-requirement-draft.md 填充/更新。
+**更新时机**：Phase 1（需求澄清）完成后，根据 01-requirement-draft/ 最新 V 填充/更新。
 
 ## L1-decisions.md 格式
 

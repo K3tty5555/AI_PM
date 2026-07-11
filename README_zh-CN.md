@@ -141,7 +141,6 @@ AI PM 会先引导需求澄清，再推进完整产品工作流。
 | `/pm-gap-research` | 差距导向的产品研究 |
 | `/multi-perspective-review` | 多视角评审 |
 | `/ai-pm-brainstorm` | 头脑风暴 / 想法收敛 |
-| `/ai-pm-review-modify` | 基于评审意见定向修改 PRD |
 | `/tutorial-center-update` | 更新离线教程中心 |
 
 核心独立技能：`/ai-pm-analyze`、`/ai-pm-research`、`/ai-pm-story`、`/ai-pm-prd`、`/ai-pm-prototype`、`/ai-pm-review`。

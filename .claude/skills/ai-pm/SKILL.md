@@ -185,7 +185,7 @@ import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → �
 | 类型 | 命名 | 示例 |
 |------|------|------|
 | 单文件 phase | `{NN}-{name}.md` | `00-office-hours.md` / `07-audit-report.md` / `10-retrospective.md` |
-| 多版本 phase | `{NN}-{name}/{Vx}.md` | `01-requirement-draft/V1.md` / `08-reviews/V3-round2.md` |
+| 多版本 phase | `{NN}-{name}/{Vx}.md` | `01-requirement-draft/V1.md` / `08-reviews/08-review-report-v1.md` |
 | 已有文件夹 phase | `{NN}-{name}/...` | `05-prd/` / `06-prototype/` / `07-references/` |
 | 扩展资产目录 | 只能使用注册编号 | `09-analytics/` / `11-illustrations/` / `12-field-research/` / `13-release-docs/` / `14-acceptance/` / `15-pilot/` / `16-agent-skills/` / `17-next-version-prep/` |
 
@@ -245,11 +245,11 @@ Phase 0（可选）: 需求速评（Office Hours）+ 参考资源收集
     ↓  → 生成 00-office-hours.md（跳过则不生成）
 Phase 1: 需求澄清（交互式访谈，每次只问1-2个问题）
          若用户有现成文档，引导放入 07-references/ 后直接读取，跳过访谈
-    ↓  → 生成 01-requirement-draft.md
+    ↓  → 生成 01-requirement-draft/V{n}.md
 Phase 2+3（并行）: 需求分析 × 竞品研究
-    ↓  → 生成 02-analysis-report.md + 03-competitor-report/V{版本}.md
+    ↓  → 生成 02-analysis-report/V{n}.md + 03-competitor-report/V{版本}.md
 Phase 4: 用户故事 / Agent 故事 / Agent 工作流（按 product_type 分支）
-    ↓  → 生成 04-user-stories.md（含三节，agent/hybrid 三件套，traditional 仅用户故事）
+    ↓  → 生成 04-user-stories/V{n}.md（含三节，agent/hybrid 三件套，traditional 仅用户故事）
     传统产品：用户故事 + INVEST 自检
     Agent / 混合：+ Agent 故事（GRFD 自检）+ Agent 工作流（mermaid 状态机）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -267,7 +267,7 @@ Phase 7: 原型生成（Token 消耗提示后确认，先过 prototype-agent 蓝
 Phase 7.5（自动触发）: PRD↔原型完整性 + 交互体验 + 视觉设计审计
     ↓  → 生成 07-audit-report.md
 Phase 8（可选）: 需求评审（六角色并行）
-    ↓  → 生成 08-review-report-v1.md
+    ↓  → 生成 08-reviews/08-review-report-{版本标识}.md
 项目完成: 触发知识沉淀（knowledge sync）
 ```
 
