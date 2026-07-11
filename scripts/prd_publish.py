@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRD 定稿发布一条龙（Stage4-A1 对齐器第一版）。
+"""PRD 定稿发布一条龙（v2 · 合并计划波1：render-manifest 对账 + 标记残留检查 + 清尾 gate）。
 
 一条命令收口：push 云文档 → 读回校验（防丢图/防假落盘）→ cloud_docs 登记。
 用法：
@@ -27,8 +27,9 @@ sys.path.insert(0, str(XFCHAT))
 try:
     from feishu_doc import (  # noqa: E402
         create_doc, push_markdown_to_doc, count_blocks, find_blocks_by_type,
-        count_legacy_prototype_rows,
+        count_legacy_prototype_rows, get_doc_outline, get_doc_raw_text, get_doc_meta,
     )
+    from feishu_other import search_docs, delete_file  # noqa: E402
 except ImportError:
     sys.exit(
         "❌ 本命令依赖本机私有插件 xfchat-wiki（.claude/skills/xfchat-wiki/，gitignore 不随仓分发）。\n"
@@ -54,10 +55,17 @@ def analyze_md(md: str) -> dict:
         if TABLE_SEP_RE.match(ln) and "|" in ln and prev_has_pipe:
             tables += 1
         prev_has_pipe = "|" in ln
+    headings = [ln.strip() for ln in lines if re.match(r"^#{1,3} ", ln)]
     return {
         "images": len(IMG_RE.findall(md)),
         "tables": tables,
         "legacy_rows": count_legacy_prototype_rows(md),
+        # render-manifest（发布时生成预期指纹，读回逐项对账——Codex 答问 1 方案）
+        "headings": len(headings),
+        "callouts": len(re.findall(r"^> \[!(?:TIP|WARNING|NOTE)\]", md, re.M)),
+        "marker_red": md.count("<红>"),
+        "marker_gray": md.count("<灰>"),
+        "marker_core": len(re.findall(r"==[^=\n]+==", md)),
     }
 
 
@@ -70,16 +78,67 @@ def load_status(project: Path) -> tuple[dict, Path]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--md", required=True)
+    ap.add_argument("--md", help="PRD 文件（push 模式必填）")
     ap.add_argument("--project", required=True, help="项目目录（含 _status.json）")
     ap.add_argument("--doc-id")
     ap.add_argument("--image-dir")
     ap.add_argument("--title")
     ap.add_argument("--force", action="store_true", help="跳过云端人改保护")
+    ap.add_argument("--cleanup", action="store_true",
+                    help="清尾 gate：盘点本项目云端旧档/空壳/坏档/同名孤儿，出清单（不自动删）")
+    ap.add_argument("--delete-doc", help="删除指定 doc token（配 --yes 才执行；先跑 --cleanup 看清单）")
+    ap.add_argument("--yes", action="store_true")
     a = ap.parse_args()
 
-    md_path = Path(a.md).resolve()
     project = Path(a.project).resolve()
+
+    if a.delete_doc:
+        bc0 = count_blocks(a.delete_doc)
+        total0 = bc0.get("total")
+        if not a.yes:
+            print(f"预览：将删除云文档 {a.delete_doc[:16]}…（当前 blocks={total0}）——确认请加 --yes")
+            return 0
+        r = delete_file(a.delete_doc, "docx")
+        print(f"删除结果：{json.dumps(r, ensure_ascii=False)[:200]}")
+        back = count_blocks(a.delete_doc)
+        gone = not back.get("total")
+        print("读回验证：" + ("✓ 已不可访问" if gone else f"⛔ 仍可读到 {back.get('total')} 块，删除未生效"))
+        return 0 if gone else 2
+
+    if a.cleanup:
+        status, _ = load_status(project)
+        cloud = status.get("cloud_docs") or {}
+        if not cloud:
+            print("本项目无 cloud_docs 登记，无尾可清")
+            return 0
+        print(f"清尾盘点（{len(cloud)} 条登记）：")
+        seen_tokens = set()
+        for key2, reg2 in cloud.items():
+            tok = reg2.get("doc_token")
+            seen_tokens.add(tok)
+            bc2 = count_blocks(tok)
+            total = bc2.get("total")
+            if not total:
+                print(f"  💀 坏档（读不到任何块）：{key2} → {tok[:16]}…（建议 --delete-doc 或修登记）")
+                continue
+            flag = "🫙 空壳（≤1 块，疑似清空残留）" if total <= 1 else "✓"
+            print(f"  {flag} {key2} blocks={total}")
+            # 同名孤儿：按 PRD 文件名（去 .md）搜，token 不在登记里的
+            title = re.sub(r"\.md$", "", key2)
+            try:
+                hits = ((search_docs(title, count=10) or {}).get("data") or {}).get("docs_entities") or []
+            except Exception:
+                hits = []
+            for h in hits:
+                htok = h.get("docs_token")
+                if htok and htok != tok and htok not in seen_tokens and h.get("title") == title:
+                    print(f"      👻 同名孤儿候选：「{h.get('title')}」 {htok[:16]}…（不在登记，人工确认后 --delete-doc）")
+        print("清单仅供拍板——删除一律显式 --delete-doc <token> --yes，绝不自动删")
+        return 0
+
+    if not a.md:
+        sys.exit("❌ push 模式需要 --md（清尾用 --cleanup）")
+    md_path = Path(a.md).resolve()
     md = md_path.read_text(encoding="utf-8")
     image_dir = a.image_dir or str(md_path.parent)
     key = md_path.name
@@ -138,6 +197,15 @@ def main() -> int:
         problems.append(f"表块数 {cloud_tables} ≠ 源表数 {src['tables']}")
     if res.get("failed_images") or res.get("failed_files"):
         problems.append(f"failed_images/files 非空：{res.get('failed_images')}{res.get('failed_files')}")
+    outline = get_doc_outline(doc_id) or []
+    if src["headings"] and abs(len(outline) - src["headings"]) > 0:
+        problems.append(f"标题块数 {len(outline)} ≠ 源标题数 {src['headings']}（章节丢失/拆并）")
+    raw = (get_doc_raw_text(doc_id) or {}).get("content") or ""
+    residues = [m for m in ("<红>", "</红>", "<灰>", "</灰>", "[!TIP]", "[!WARNING]") if m in raw]
+    if residues:
+        problems.append(f"增强标记字面残留（渲染未生效）：{residues}")
+    if src["marker_core"] and "==" in raw:
+        print("      ⚠️ 云端正文含 '=='——可能是 ==核心== 未渲染，建议目检（不阻断）")
     if problems:
         print("[4/5] ⛔ 读回校验不过：\n      - " + "\n      - ".join(problems))
         return 2
@@ -161,6 +229,8 @@ def main() -> int:
         "blocks": bc.get("total"),
         "images": len(imgs),
         "tables": cloud_tables,
+        "manifest": {"headings": src["headings"], "callouts": src["callouts"],
+                     "red": src["marker_red"], "gray": src["marker_gray"], "core": src["marker_core"]},
     }
     cloud[key] = {k: v for k, v in entry.items() if v is not None}
     status["cloud_docs"] = cloud

@@ -697,6 +697,8 @@ PRD「详细功能设计」中每个核心功能，自动生成 FAB 三行描述
 
 **push 后登记（云文档正本登记约定·唯一源）**：优先用一条龙 `python3 scripts/prd_publish.py --md <PRD.md> --project <项目目录>`（Stage4-A1：push+读回校验[防丢图/表数对账]+cloud_docs 登记+云端人改保护一次完成，任一校验不过退出码 2 禁止视为发布成功）；手工路径时在项目 `_status.json` **顶层 `cloud_docs` map** 登记（key=PRD 文件名）：`{"doc_token": "doxrz…", "url": "…", "pushed_at": "YYYY-MM-DD"}`；post-push 结构校验（xfchat-wiki `scripts/validate_prd_prototype_cells.py`）通过后补 `last_validated`，老格式文档（legacy_cells>0）加 `"legacy_format": true`。历史遗留的顶层 `feishu_doc` / `feishu_prd_doc` 字符串字段：该项目**下次 push 时迁入 cloud_docs 并删除旧字段**（本次不批量回填，历史盘点归 2026-06-29 重渲计划 WS-1）。
 
+**云文档链配套命令（波1 v2，均零内部域名入口）**：云端手改回收/同步回本地 `python3 scripts/prd_pull.py --md <PRD> --project <项目>`（预览默认，--apply 回写；标记层以本地为准永不被覆盖）；发布后清尾 `prd_publish.py --project <项目> --cleanup`（旧档/空壳/孤儿清单，删除一律显式 --delete-doc+--yes）；历史重渲盘点 `prd_rerender_survey.py`。
+
 **定稿收口必做（forced-artifact，Stage3-A4 · 2026-07-12 挂点）**：PRD 定稿（发出/push 正本）时，本轮定稿新拍的术语、口径、推翻项逐条回写项目 `_conventions.md` §6（带日期+来源"定稿 {日期}"）；无新增显式写「{日期} 定稿：本次无」。
 
 **深度扫描（仅评审前体检 / 大改后回归）**：跑 `ai-pm-driver`。注意 driver 已降级为最后一道安全网——如果 PRD 是用 pm-agent 写的，checklist 已自检过，driver 大概率没什么可挑。**不要每次写完都跑 driver**，那是浪费成本。
