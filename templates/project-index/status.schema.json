@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aipm://status.schema.v1",
+  "title": "AI_PM 项目 _status.json v1（合并计划波3 · 最小契约）",
+  "description": "核心字段机读契约。additionalProperties=true：历史自由字段全部保留、读方忽略未知——迁移只增不删。",
+  "type": "object",
+  "required": ["schema_version", "project", "lifecycle", "updated"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "project": { "type": "string", "minLength": 1 },
+    "lifecycle": {
+      "enum": ["active", "paused", "completed", "archived", "reference"],
+      "description": "active=在途；paused=暂停待续；completed=已交付未归档；archived=历史归档（不参与在途报表与当前产物解析）；reference=纯资料库（如历史 PRD 归档）"
+    },
+    "updated": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}" },
+    "phases": { "type": "object", "description": "阶段完成映射，键见 templates/configs/workflow-phases.json" },
+    "last_phase": { "type": "string" },
+    "active_prd": {
+      "type": "string",
+      "pattern": "^[^/]+\\.md$",
+      "description": "当前 PRD 裸文件名（不带 05-prd/ 前缀——resolver 契约）；多版本并存时的唯一机读消歧源"
+    },
+    "next_action": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["human", "ai", "external"] },
+        "text": { "type": "string" },
+        "due": { "type": "string" }
+      },
+      "required": ["text"]
+    },
+    "cloud_docs": {
+      "type": "object",
+      "description": "云文档正本登记（key=PRD 文件名），字段见 phase-5 push 登记约定"
+    }
+  },
+  "additionalProperties": true
+}

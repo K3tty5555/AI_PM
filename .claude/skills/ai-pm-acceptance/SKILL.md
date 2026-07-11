@@ -82,3 +82,5 @@ argument-hint: "[PRD或验收清单路径 | --template=模板名]"
 ## 边界：什么不在 skill 里
 
 **具体产品的 DOM 选择器、驱动代码不进 skill**。skill 只给「先探测后驱动」的 checklist 引导每个产品现摸，摸出来的选择器/驱动脚本是运行时产物、落项目侧 `_runner/`。原因：只有一个产品样本时把它的 DOM 抽成"通用引擎"会焊死、第二个产品就废——等第 2 个产品验收时 diff 两套探测结果，共性才抽进 skill。
+
+> 登录/断线重连/现场恢复的固定流程见 `references/login-session-protocol.md`（A4 公共协议，竞品实探与权限跑批共用）。

@@ -240,6 +240,8 @@ cp templates/project-index/references-readme.template.md {项目}/07-references/
 
 ## 阶段流程
 
+> 阶段 ID/顺序/必选性的**机读单源** = `templates/configs/workflow-phases.json`（改阶段先改它）；`_status.json` 契约 = `templates/project-index/status.schema.json`（校验/迁移：`python3 scripts/status_migrate.py --validate`）。
+
 ```
 Phase 0（可选）: 需求速评（Office Hours）+ 参考资源收集
     ↓  → 生成 00-office-hours.md（跳过则不生成）

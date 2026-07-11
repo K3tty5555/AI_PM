@@ -241,3 +241,19 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(mv) Bash(python3) Bash(
 ## 竞品对标卡（battlecard · 对销售/客户压力场景才触发）
 
 上面是战略报告（偏一次性）。当用户要"给销售用的对标卡""客户拿竞品压价怎么答"，或某竞品成**高频**压力时，读取 `.claude/skills/ai-pm/references/competitive-frameworks.md`（仓库根相对路径，单一事实源——battlecard 方法论只此一份，本 skill 不内嵌副本），对单个竞品出一张随身实战卡：它强在哪/弱在哪（各 1-2 个，求精不求全）+ **一句话能说出口**的差异化话术 + 2-3 条质疑应对。铁律：**诚实，不黑竞品不吹自己，只讲真实差异和适用边界**（否则一线照卡说、客户一戳就穿）。普通竞品研究走上面主流程，不触发本节。
+
+**机读结论层（Stage4-C3 · 2026-07-12）**：battlecard 落盘时头部带机读块，供写 PRD/决策引用竞品资料时自动报年龄、供后续保鲜比对——
+
+```yaml
+# battlecard-meta（机器读这块，别改字段名）
+competitor: {竞品名}
+updated: YYYY-MM-DD          # 每次实探/保鲜后刷新
+sources: [实探/官网/评论/公开稿]
+verdicts:                     # 每条结论一行：结论|口径|核实日期
+  - "{结论一句话} | {判定口径} | YYYY-MM-DD"
+stale_after_days: 60          # 引用时超龄提示（写时报年龄，C3① 锚点）
+```
+
+写 PRD/决策文档引用某 battlecard 时：先读 `updated`，超过 `stale_after_days` 就在引用处标「资料 N 天前，建议增量轮」——写时可用是真锚点，不做定时轮询。
+
+> 登录态实探的起浏览器/等登录/断线重连固定流程见 `.claude/skills/ai-pm-acceptance/references/login-session-protocol.md`（A4 公共协议）。
