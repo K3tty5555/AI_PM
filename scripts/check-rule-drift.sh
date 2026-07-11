@@ -44,7 +44,7 @@ BAD=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "日期.{0,8}(�
 if [ -n "$BAD" ]; then note_fail "出现点分日期断言（应为连字符）："; printf '%s\n' "$BAD" | sed 's/^/       /'
 else note_ok "未发现点分日期断言"; fi
 
-echo "▶ 检查 6：技术行话对照表两副本一致（单源=判断卡 §9.0ter，内化副本=pm-agent.md）"
+echo "▶ 检查 6：技术行话对照表两副本一致（单源=判断卡 §9.3，内化副本=pm-agent.md）"
 extract_jargon() { awk '/^```jargon-blacklist$/{f=1;next} /^```$/{f=0} f' "$1"; }
 J_CARD=$(extract_jargon .claude/skills/ai-pm/references/pm-judgment-card.md)
 J_AGENT=$(extract_jargon .claude/agents/pm-agent.md)
@@ -77,4 +77,4 @@ grep -q "三类填充废话同属本闸" .claude/skills/ai-pm/references/pm-judg
 
 echo ""
 if [ "$FAIL" -eq 0 ]; then echo "✅ 规则一致性检查全部通过"; exit 0
-else echo "❌ 发现规则漂移，请把上述文件改回统一口径（事实源：pm-agent 单源 / 行话表→判断卡 §9.0ter；八条必答→decision-review 模板头部注释）"; exit 1; fi
+else echo "❌ 发现规则漂移，请把上述文件改回统一口径（事实源：pm-agent 单源 / 行话表→判断卡 §9.3；八条必答→decision-review 模板头部注释）"; exit 1; fi

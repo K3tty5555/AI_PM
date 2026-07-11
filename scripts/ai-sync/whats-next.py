@@ -116,8 +116,13 @@ def build(stale: dict) -> list:
     for p in sorted(PROJECTS.iterdir()) if PROJECTS.exists() else []:
         if p.is_dir() and p.name not in seen and (p / "_status.json").exists():
             stale.setdefault(p.name, {})
+    skipped_lifecycle = []
     for name, s in stale.items():
         st = load_status(name)
+        # schema v1 lifecycle 语义落地（review 修复批）：归档/资料库不进在途报表
+        if st.get("lifecycle") in ("archived", "reference"):
+            skipped_lifecycle.append(name)
+            continue
         newest = s.get("newestDate") or st.get("updated")
         quiet = days_ago(newest)
         na = st.get("next_action")
@@ -133,6 +138,7 @@ def build(stale: dict) -> list:
             "next_action": na,
             "dead": s.get("dead") or [],
         })
+    build.skipped_lifecycle = skipped_lifecycle  # 供渲染层报数
     return rows
 
 
@@ -168,8 +174,9 @@ def next_line(r) -> str:
 
 
 def render(rows) -> str:
+    _skipped = getattr(build, "skipped_lifecycle", [])
     rows.sort(key=lambda r: (tier(r), r["quiet_days"] if r["quiet_days"] is not None else 9999))
-    out = [f"📋 在途一览 · {today().isoformat()}（{len(rows)} 个项目）"]
+    out = [f"📋 在途一览 · {today().isoformat()}（{len(rows)} 个项目" + (f"；归档/资料库 {len(_skipped)} 个不列" if _skipped else "") + "）"]
     # 到期/过期待办置顶单列
     due_hits = [r for r in rows if r["next_action"] and r["next_action"].get("due")
                 and (days_ago(r["next_action"]["due"]) or -1) >= 0]
@@ -261,7 +268,16 @@ def main() -> int:
 
     rows = build(load_staleness())
     if a.json:
-        print(json.dumps(rows, ensure_ascii=False, indent=2))
+        debts = []
+        fdebts = REPO / "docs" / "_plan-debts.json"
+        if fdebts.exists():
+            try:
+                debts = json.loads(fdebts.read_text(encoding="utf-8")).get("debts") or []
+            except Exception:
+                pass
+        print(json.dumps({"projects": rows, "plan_debts": debts,
+                          "lifecycle_skipped": getattr(build, "skipped_lifecycle", [])},
+                         ensure_ascii=False, indent=2))
         return 0
     print(render(rows))
     print_plan_debts()

@@ -7,11 +7,11 @@
 ## 根目录
 
 ```text
-output/projects/{项目名}/09-analytics/strategy/（项目级）或 output/assets/{议题名}/（产品级）
-├── README.md
-├── product-registry.md
-├── project-level/
-└── product-level/
+# 项目级议题（挂在具体项目下）
+output/projects/{项目名}/09-analytics/strategy/
+
+# 产品级 / 跨项目议题（独立资产目录）
+output/assets/{议题名}/
 ```
 
 ## 项目级目录
@@ -41,7 +41,7 @@ output/projects/{项目名}/09-analytics/strategy/
 ## 产品级目录
 
 ```text
-output/projects/{项目名}/09-analytics/strategy/（项目级）或 output/assets/{议题名}/（产品级）product-level/{产品名}/
+output/assets/{议题名}/
 ├── README.md
 └── topics/
     └── {议题类型}-{短标题}/
@@ -59,7 +59,7 @@ output/projects/{项目名}/09-analytics/strategy/（项目级）或 output/asse
 | 文件 | 作用 |
 |---|---|
 | （已退役——各项目/资产自带 README，不设全局索引） | — |
-| `product-registry.md` | 产品-项目关系表 |
+| （产品-项目关系写在各议题 README 内，不设全局注册表——2026-07-12 协议重写） | — |
 | `{对象}/README.md` | 某个项目或产品下的议题索引 |
 | `{议题}/README.md` | 该议题历次推演、观点变化、未关闭问题 |
 | `Vx-日期/` | 某一轮正式沙盘产出 |
@@ -132,7 +132,7 @@ output/assets/（产品级议题各自成资产目录，不设总注册表）
 规则：
 
 - 首次做产品级沙盘且无关系表时，自动扫描 `output/projects/*/README.md`，给出候选项目清单。
-- 用户确认哪些项目属于该产品后，写入 `product-registry.md`。
+- 用户确认哪些项目属于该产品后，写进该议题目录的 README（关联项目清单一节）。
 - 后续产品级沙盘优先读取关系表。
 - 关系表只是导航索引，不代表战略判断。
 

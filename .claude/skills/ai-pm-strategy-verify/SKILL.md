@@ -1,7 +1,7 @@
 ---
 name: ai-pm-strategy-verify
 description: 战略求证「侦察兵」——把一个战略判断/方向的证据挖到尽头：强制多假设、扇形研究带证伪、够真实数据、判别刀循环，收口交回「最能改变你想法的反转 + 只有你能拍的岔路」，不替用户下最后判断。当用户说「求证一下」「验证这个判断」「这事到底该不该做/值不值得做」「把证据挖到底」「证伪一下」「帮我反向开拓思路」「深度思考+求证」时使用。边界：ai-pm-strategy（战略沙盘）管发散推演、吐待验证清单就停——本技能是它的后半场，拿清单去够真相；两者可独立使用，不必成对。
-allowed-tools: Read Write Edit Bash(python3) Bash(ls) Bash(grep) Bash(find) Bash(wc) Bash(head) Bash(cat) WebSearch WebFetch Agent
+allowed-tools: Read Write Edit Bash(python3) Bash(ls) Bash(grep) Bash(find) Bash(wc) Bash(head) Bash(cat) WebSearch WebFetch Agent Skill
 ---
 
 # 战略求证（侦察兵版 v0.1）

@@ -31,20 +31,37 @@ except ImportError:
         "   fresh clone 用户无法使用云文档同步——设计如此（云文档域=私有部署）。"
     )
 
-MARKER_RE = re.compile(r"</?红>|</?灰>|==([^=\n]+)==")
-IMG_RE = re.compile(r"!\[[^\]]*\]\([^)]+\)")
-CALLOUT_RE = re.compile(r"^> \[!(?:TIP|WARNING|NOTE)\]\s*", re.M)
-FOLD_RE = re.compile(r"<!--\s*/?fold\s*-->|<!--\s*columns[^>]*-->")
+sys.path.insert(0, str(REPO / "scripts"))
+from _prd_common import (  # noqa: E402
+    IMG_RE, MARKER_RE, CALLOUT_RE, FOLD_RE, LINK_RE, TABLE_SEP_RE,
+)
 
 
 def normalize(text: str) -> str:
-    """内容层归一：剥标记/图片占位/callout 语法/fold 注释/空白，用于双侧比对。"""
+    """内容层归一：剥标记/图占位/callout/fold + **渲染往返噪音**（表格分隔行、链接 URL、
+    代码围栏语言、\| 转义、粗斜删标记）——blocks_to_markdown 是有损渲染，这些差异不是"云端改了"。"""
     t = MARKER_RE.sub(lambda m: m.group(1) or "", text)
     t = IMG_RE.sub("[图片]", t)
     t = CALLOUT_RE.sub("> ", t)
     t = FOLD_RE.sub("", t)
-    lines = [re.sub(r"\s+", " ", ln).strip() for ln in t.split("\n")]
-    return "\n".join(ln for ln in lines if ln)
+    t = LINK_RE.sub(lambda m: m.group(1), t)          # 链接→纯文字（云端渲染丢 URL）
+    t = re.sub(r"^```\w+\s*$", "```", t, flags=re.M)  # 代码围栏语言丢失
+    t = t.replace("\\|", "|")                         # 转义竖线
+    t = re.sub(r"\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|~~([^~\n]+)~~",
+               lambda m: m.group(1) or m.group(2) or m.group(3), t)  # 粗/斜/删标记
+    out = []
+    for ln in t.split("\n"):
+        if TABLE_SEP_RE.match(ln) and "-" in ln:
+            continue                                    # 表格分隔行两侧写法不同，剥掉
+        out.append(re.sub(r"\s+", " ", ln).strip())
+    return "\n".join(ln for ln in out if ln)
+
+
+def fragile(text: str) -> bool:
+    """该章节含有损往返高危成分（标记/图/callout/表格/链接/代码块）→ 永不自动回写。"""
+    return bool(MARKER_RE.search(text) or IMG_RE.search(text) or CALLOUT_RE.search(text)
+                or LINK_RE.search(text) or "```" in text
+                or re.search(r"^\s*\|.+\|", text, re.M))
 
 
 def split_sections(md: str) -> list[tuple[str, str]]:
@@ -100,20 +117,20 @@ def main() -> int:
             continue
         lh, lb = loc[k]
         if normalize(lb) != normalize(cb):
-            if MARKER_RE.search(lb) or IMG_RE.search(lb) or CALLOUT_RE.search(lb):
-                conflicts.append((lh, cb))
+            if fragile(lb):
+                conflicts.append((lh, cb))   # 正本保护：高危成分章节只报不写
             else:
                 changed.append((lh, cb))
     for k, (h, _) in loc.items():
         if k != "_head" and k not in cld:
             local_only.append(h)
 
-    print(f"[2/3] 内容层 diff：可回写 {len(changed)} 节 / 标记冲突需手工 {len(conflicts)} 节"
+    print(f"[2/3] 内容层 diff：可回写 {len(changed)} 节 / 含表格/链接/代码/标记等高危成分、只报不写 {len(conflicts)} 节"
           f" / 云端独有 {len(cloud_only)} / 本地独有 {len(local_only)}")
     for h, _ in changed:
         print(f"      ✏️ 云端改了：{h}")
     for h, _ in conflicts:
-        print(f"      ⚠️ 含标记/图，需手工合并：{h}")
+        print(f"      ⚠️ 高危成分节（正本保护，手工合并）：{h}")
     for h in cloud_only:
         print(f"      ➕ 云端新增章节（本地没有，需手工决定去留）：{h}")
     for h in local_only:

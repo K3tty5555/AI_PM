@@ -67,3 +67,17 @@ scripts/ai-sync/sync-ai-context.sh
 - `.ai-shared/conversations/summaries/` 是可共享摘要层；自动生成的是草稿，需要人工或 AI 复核后再当事实使用。
 - `.ai-shared/memory-snapshots/` 是脱敏副本，不替代 Claude / Codex 各自 memory 主源。
 - 任何长期规则仍先进入 `pending-memory/`，经用户确认后再合并。
+
+## git 追踪矩阵（单源——CLAUDE.md 只留指针到这里；2026-07-12 review 修复批补）
+
+| 子目录/文件 | git 追踪 | 说明 |
+|------------|---------|------|
+| `README.md`、`*/README.md` | ✅ | 目录结构与协议说明 |
+| `review-exchange/README.md` | ✅ | 评审交换协议（内容文件 ❌ 仅本机） |
+| `pending-memory/*.md` | ❌ | Codex→Claude 记忆交接，含项目偏好，仅本机 |
+| `context/open-questions.md` | ❌ | 含内部字段/埋点细节，仅本机 |
+| `context/product-decisions.md` | ❌ | 含产品命名/场景定义，仅本机 |
+| `memory-snapshots/`、`conversations/` | ❌ | 快照与会话记录（含 raw 历史档案），仅本机 |
+| `memory-index.md` / `skill-index.md` / `agent-index.md` | ❌ | 生成索引，仅本机 |
+
+**铁律**：内容文件一律按「仅本机」处理，不得假设会上传 GitHub；新增子目录先在 .gitignore 落规则再写内容。

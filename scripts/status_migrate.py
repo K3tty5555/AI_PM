@@ -22,7 +22,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 PROJECTS = REPO / "output" / "projects"
-LIFE = {"active", "paused", "completed", "archived", "reference"}
+SCHEMA = REPO / "templates" / "project-index" / "status.schema.json"
+# lifecycle 枚举单源=schema 文件（review 修复批：此前手写第二份，双源必漂）
+LIFE = set(json.loads(SCHEMA.read_text(encoding="utf-8"))["properties"]["lifecycle"]["enum"])
 
 
 def infer_lifecycle(name: str, d: dict) -> str:
@@ -51,8 +53,8 @@ def validate(d: dict) -> list[str]:
     if not str(d.get("updated", "")).strip():
         errs.append("缺 updated")
     ap = d.get("active_prd")
-    if ap and "/" in ap:
-        errs.append(f"active_prd 带路径前缀（应为裸文件名）: {ap}")
+    if ap and ap.startswith("05-prd/"):
+        errs.append(f"active_prd 带 05-prd/ 前缀（应为相对 05-prd/ 的路径）: {ap}")
     return errs
 
 
@@ -76,6 +78,12 @@ def main() -> int:
             bad += bool(errs)
             continue
         changes = []
+        if not d.get("project"):
+            d["project"] = name
+            changes.append("＋project(目录名)")
+        if not str(d.get("updated", "")).strip():
+            d["updated"] = datetime.date.today().isoformat()
+            changes.append("＋updated(今日)")
         if d.get("schema_version") != 1:
             d["schema_version"] = 1
             changes.append("＋schema_version=1")

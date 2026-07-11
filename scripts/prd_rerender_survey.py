@@ -12,6 +12,8 @@
 安全线：本工具零写操作；重渲执行按 v2.0 波1 流程「用户勾选 → 分批 → 逐篇读回验证 →
 回填 cloud_docs」另行进行（重渲前必须逐篇 block 结构读 + list_comments 防手改丢失）。
 """
+from __future__ import annotations
+
 import argparse
 import json
 import re
@@ -22,32 +24,27 @@ REPO = Path(__file__).resolve().parent.parent
 XFCHAT = REPO / ".claude" / "skills" / "xfchat-wiki" / "scripts"
 sys.path.insert(0, str(XFCHAT))
 
+sys.path.insert(0, str(REPO / "scripts"))
 try:
-    from feishu_doc import count_blocks  # noqa: E402
+    from feishu_doc import count_blocks, get_doc_raw_text, count_legacy_prototype_rows  # noqa: E402
     from feishu_other import search_docs  # noqa: E402
 except ImportError:
     sys.exit("❌ 依赖本机私有插件 xfchat-wiki（不随仓分发）")
+from _prd_common import find_token_by_title as _find  # noqa: E402
 
 
 def find_token_by_title(title: str) -> str | None:
-    try:
-        hits = ((search_docs(title, count=10) or {}).get("data") or {}).get("docs_entities") or []
-    except Exception:
-        return None
-    for h in hits:
-        if h.get("title") == title:
-            return h.get("docs_token")
-    return None
+    return _find(title, search_docs)
 
 
 def legacy_rows(doc_id: str) -> int | None:
-    """云侧 legacy 原型行数——复用 xfchat 校验器同款口径（读原文粗探）。"""
+    """云侧 legacy 原型行数——真·复用 xfchat 校验器口径 count_legacy_prototype_rows
+    （此前自造粗正则会把「查看原型设计稿」链接/图片 alt 误判成待重渲，review 修复批换掉）。"""
     try:
-        from feishu_doc import get_doc_raw_text
         raw = (get_doc_raw_text(doc_id) or {}).get("content") or ""
         if not raw:
             return None
-        return len(re.findall(r"\[[^\[\]\n]{1,30}原型\]", raw))
+        return count_legacy_prototype_rows(raw)
     except Exception:
         return None
 

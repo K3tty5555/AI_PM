@@ -30,14 +30,19 @@ try:
         count_legacy_prototype_rows, get_doc_outline, get_doc_raw_text, get_doc_meta,
     )
     from feishu_other import search_docs, delete_file  # noqa: E402
-except ImportError:
+except ImportError as _e:
+    if XFCHAT.exists():
+        sys.exit(f"❌ xfchat-wiki 插件在但导入失败（多半是插件版本旧、缺新函数）：{_e}\n"
+                 f"   先更新 {XFCHAT} 所在 nested 仓再重试——这不是'设计如此'，是版本错配。")
     sys.exit(
         "❌ 本命令依赖本机私有插件 xfchat-wiki（.claude/skills/xfchat-wiki/，gitignore 不随仓分发）。\n"
         "   fresh clone 用户无法使用云文档推送——这是设计如此（云文档域=私有部署），不是安装缺陷。"
     )
 
-IMG_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
-TABLE_SEP_RE = re.compile(r"^\s*\|?[\s:-]*-[\s:|-]*$")
+sys.path.insert(0, str(REPO / "scripts"))
+from _prd_common import (  # noqa: E402
+    IMG_RE, TABLE_SEP_RE, code_fence_literals, count_headings_for_push, find_token_by_title,
+)
 
 
 def analyze_md(md: str) -> dict:
@@ -55,13 +60,12 @@ def analyze_md(md: str) -> dict:
         if TABLE_SEP_RE.match(ln) and "|" in ln and prev_has_pipe:
             tables += 1
         prev_has_pipe = "|" in ln
-    headings = [ln.strip() for ln in lines if re.match(r"^#{1,3} ", ln)]
     return {
         "images": len(IMG_RE.findall(md)),
         "tables": tables,
         "legacy_rows": count_legacy_prototype_rows(md),
         # render-manifest（发布时生成预期指纹，读回逐项对账——Codex 答问 1 方案）
-        "headings": len(headings),
+        "headings": count_headings_for_push(md),
         "callouts": len(re.findall(r"^> \[!(?:TIP|WARNING|NOTE)\]", md, re.M)),
         "marker_red": md.count("<红>"),
         "marker_gray": md.count("<灰>"),
@@ -123,16 +127,11 @@ def main() -> int:
                 continue
             flag = "🫙 空壳（≤1 块，疑似清空残留）" if total <= 1 else "✓"
             print(f"  {flag} {key2} blocks={total}")
-            # 同名孤儿：按 PRD 文件名（去 .md）搜，token 不在登记里的
+            # 同名孤儿：按 PRD 文件名（去 .md）精确搜（共享助手 _prd_common）
             title = re.sub(r"\.md$", "", key2)
-            try:
-                hits = ((search_docs(title, count=10) or {}).get("data") or {}).get("docs_entities") or []
-            except Exception:
-                hits = []
-            for h in hits:
-                htok = h.get("docs_token")
-                if htok and htok != tok and htok not in seen_tokens and h.get("title") == title:
-                    print(f"      👻 同名孤儿候选：「{h.get('title')}」 {htok[:16]}…（不在登记，人工确认后 --delete-doc）")
+            orphan = find_token_by_title(title, search_docs)
+            if orphan and orphan != tok and orphan not in seen_tokens:
+                print(f"      👻 同名孤儿候选：「{title}」 {orphan[:16]}…（不在登记，人工确认后 --delete-doc）")
         print("清单仅供拍板——删除一律显式 --delete-doc <token> --yes，绝不自动删")
         return 0
 
@@ -201,7 +200,9 @@ def main() -> int:
     if src["headings"] and abs(len(outline) - src["headings"]) > 0:
         problems.append(f"标题块数 {len(outline)} ≠ 源标题数 {src['headings']}（章节丢失/拆并）")
     raw = (get_doc_raw_text(doc_id) or {}).get("content") or ""
-    residues = [m for m in ("<红>", "</红>", "<灰>", "</灰>", "[!TIP]", "[!WARNING]") if m in raw]
+    lits = ("<红>", "</红>", "<灰>", "</灰>", "[!TIP]", "[!WARNING]")
+    legit = code_fence_literals(md, lits)  # 源代码围栏里本来就有的（讲语法的示例）不算残留
+    residues = [m for m in lits if m in raw and m not in legit]
     if residues:
         problems.append(f"增强标记字面残留（渲染未生效）：{residues}")
     if src["marker_core"] and "==" in raw:

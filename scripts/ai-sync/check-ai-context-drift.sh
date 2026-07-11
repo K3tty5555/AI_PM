@@ -95,7 +95,6 @@ if [[ -d "$SKILLS_DIR" ]]; then
   check_required_client_skills "$SKILLS_DIR" \
     ai-pm \
     ai-pm-analyze \
-    ai-pm-brainstorm \
     ai-pm-data \
     ai-pm-design-spec \
     ai-pm-driver \
@@ -109,7 +108,6 @@ if [[ -d "$SKILLS_DIR" ]]; then
     ai-pm-research \
     ai-pm-retrospective \
     ai-pm-review \
-    ai-pm-review-modify \
     ai-pm-story \
     ai-pm-weekly \
     humanizer-pm

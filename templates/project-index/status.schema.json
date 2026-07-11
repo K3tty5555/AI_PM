@@ -17,8 +17,8 @@
     "last_phase": { "type": "string" },
     "active_prd": {
       "type": "string",
-      "pattern": "^[^/]+\\.md$",
-      "description": "当前 PRD 裸文件名（不带 05-prd/ 前缀——resolver 契约）；多版本并存时的唯一机读消歧源"
+      "pattern": "^(?!05-prd/).+\\.md$",
+      "description": "当前 PRD 相对 05-prd/ 的路径（禁再带 05-prd/ 前缀；允许子目录如 归档/x.md——resolver join 语义）；多版本并存时的唯一机读消歧源"
     },
     "next_action": {
       "type": "object",

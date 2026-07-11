@@ -65,7 +65,6 @@ require_dir "$RESOURCE_SKILLS"
 require_file "$RESOURCE_SKILLS/ai-pm-prd/SKILL.md"
 require_file "$RESOURCE_SKILLS/ai-pm-driver/SKILL.md"
 require_file "$RESOURCE_SKILLS/ai-pm-review/SKILL.md"
-require_file "$RESOURCE_SKILLS/ai-pm-review-modify/SKILL.md"
 require_file "$RESOURCE_SKILLS/humanizer-pm/SKILL.md"
 
 log "Bundle artifact checks"

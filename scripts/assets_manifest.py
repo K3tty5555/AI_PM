@@ -15,7 +15,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 OUT_DIR = REPO / "output"
-SKIP_DIRS = {"node_modules", ".git", "target", "__pycache__"}
+SKIP_DIRS = {"node_modules", ".git", "target", "__pycache__", "dist"}
 
 
 def role_of(p: Path) -> str:
@@ -54,8 +54,14 @@ def main() -> int:
         role_stat[r][0] += 1
         role_stat[r][1] += size
         if size >= 1_000_000:
-            h = hashlib.md5(p.read_bytes()).hexdigest()
-            hashes[(h, size)].append(p)
+            try:
+                m = hashlib.md5()
+                with p.open("rb") as fh:          # 分块流式，防大文件内存峰值
+                    for chunk in iter(lambda: fh.read(1 << 20), b""):
+                        m.update(chunk)
+                hashes[(m.hexdigest(), size)].append(p)
+            except OSError:
+                continue                            # 读失败跳过该文件，不崩整份报告
 
     dup_groups = {k: v for k, v in hashes.items() if len(v) > 1}
     dup_waste = sum(size * (len(v) - 1) for (h, size), v in dup_groups.items())

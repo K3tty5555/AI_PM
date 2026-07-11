@@ -25,7 +25,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 
 ## 输出
 
-`{项目目录}/08-review-report-v{N}.md`（评审报告）→ 更新 PRD
+`{项目目录}/08-reviews/08-review-report-{版本标识}.md`（评审报告，文件夹制）→ 更新 PRD
 
 ## 六大评审角色
 
@@ -104,7 +104,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 
 ### 步骤3：生成评审报告
 
-生成 `08-review-report-v{N}.md`，输出问题汇总和修改建议。
+生成 `08-reviews/08-review-report-{版本标识}.md`（文件夹制，与 phase-8 同契约），输出问题汇总和修改建议。
 
 ### 步骤4：生成修改计划（含分类标注）
 

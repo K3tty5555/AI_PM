@@ -87,11 +87,15 @@ for line in (r.stdout + r.stderr).splitlines():
         else:
             new_fail.append(line)
 print(f"五分类：PASS {n_pass} / not-applicable(无详设) {n_skip} / archive(归档) {n_archive} / 已知冻结 {n_known} / 新失败 {len(new_fail)}（异常 {len(odd_err)}）")
-total_applicable = n_pass + len(new_fail)
-print(f"active-applicable 执行率 100%（适用 {total_applicable} 份全执行）/ 无原因 SKIP 0")
+# 真对账（review 修复批：此前"执行率 100%/无原因 SKIP 0"是打印出来的恒真句，不是测出来的）
+counted = n_pass + n_skip + n_archive + n_known + len(new_fail) + len(odd_err)
+unexplained = len(files) - counted
+print(f"分类对账：{counted}/{len(files)} 份有归类，未解释 {unexplained} 份")
+if unexplained:
+    print(f"   | ⛔ {unexplained} 份语料无判定输出（校验器 glob/输出可能漏检）——这就是要防的假绿")
 for line in new_fail + odd_err:
     print("   |", line)
-sys.exit(1 if (new_fail or odd_err) else 0)
+sys.exit(1 if (new_fail or odd_err or unexplained) else 0)
 PYEOF
   if [ $? -ne 0 ]; then echo "   ❌ 语料层未过"; FAIL=1; else echo "   ✅ 语料层过"; fi
 
