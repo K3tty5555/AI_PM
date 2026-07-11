@@ -44,6 +44,7 @@ README.md                  项目介绍
 | `/ai-pm --team [需求]` | 复杂需求，启用多代理协作 |
 | `/ai-pm priority` | 需求优先级评估（批量处理提报需求） |
 | `/ai-pm strategy` | 战略沙盘（项目级 / 产品级战略推演） |
+| `/ai-pm-strategy-verify` | 战略求证侦察兵（证据挖到尽头，交回反转+岔路；沙盘的后半场） |
 | `/ai-pm weekly` | 生成工作周报 |
 | `/ai-pm interview` | 现场调研/客户访谈模式 |
 | `/ai-pm data [文件]` | 数据洞察分析 |

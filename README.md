@@ -128,6 +128,7 @@ On first launch, configure one AI backend in Settings:
 | `/ai-pm --team [idea]` | Multi-agent workflow for complex requirements |
 | `/ai-pm continue` | Resume the last unfinished project |
 | `/ai-pm strategy` | Strategy sandbox for project-level or product-level strategic thinking |
+| `/ai-pm-strategy-verify` | Strategy verification scout — dig evidence to the end, return reversals + forks (never the final call) |
 | `/ai-pm driver [PRD]` | PM-style quality gate before review |
 | `/ai-pm-prd` | Generate or update PRD |
 | `/ai-pm-data metrics` | Analytics and metric design |
@@ -169,7 +170,7 @@ Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/a
 |-------|-----------|
 | Frontend | React 19, TypeScript 5, Vite 6, TailwindCSS 4, Mermaid 11 |
 | Backend | Tauri 2, Rust, SQLite |
-| AI Skills | 26 Claude Code project skills + 2 sub-agents (pm-agent / prototype-agent) |
+| AI Skills | 27 Claude Code project skills + 2 sub-agents (pm-agent / prototype-agent) |
 | Desktop Resources | 26 bundled app skills + Tool Plaza manifest (5 categories) |
 | Export Scripts | Python 3, Node scripts, Chrome-based PDF rendering |
 | Collaboration Context | `.ai-shared` indexes and `scripts/ai-sync` checks |
@@ -182,7 +183,7 @@ Release builds require the `AI_PM_UPDATER_ENDPOINT` environment variable or repo
 ## Project Structure
 
 ```text
-.claude/skills/                    # 26 Claude Code project skills
+.claude/skills/                    # 27 Claude Code project skills
 .claude/agents/                    # 2 sub-agents: pm-agent (PRD gate) and prototype-agent (prototype audit)
 .ai-shared/                        # Shared memory / skill / agent indexes for Claude and Codex
 scripts/ai-sync/                   # Index generation and context drift checks

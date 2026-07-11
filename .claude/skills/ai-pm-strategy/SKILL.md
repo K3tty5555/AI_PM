@@ -284,3 +284,7 @@ output/projects/*/05-prd/README.md
 - `references/storage.md`：目录结构、版本、草稿、产品-项目关系表
 - `references/output-templates.md`：正式产出物模板
 - `docs/plans/2026-06-01-strategy-sandbox-design.md`：完整设计文档
+
+## 后半场接力（可选）
+
+沙盘推演产出的 `[待验证]` 清单，用户可选交给 `ai-pm-strategy-verify`（战略求证侦察兵）接力——它去够真实数据、切判别刀、证伪到尽头，交回反转+岔路。handoff 只传待验证清单，不传沙盘全文。两技能独立可用，不强制成对。
