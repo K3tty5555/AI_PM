@@ -234,7 +234,7 @@ cp templates/project-index/references-readme.template.md {项目}/07-references/
 
 **跨项目在途一览（A2，按需触发·不开场刷屏）**：当 cwd **不在**具体项目下、或用户问「下一步干啥 / 接哪个 / 还有啥挂着 / 在途」时，跑 `python3 scripts/ai-sync/whats-next.py` —— 输出各项目 在做/挂起/近期活跃/背景 四档分组 + 每个的下一步（项目 `_status.json` 顶层记了 `next_action` 就用它、无则按阶段推断并标「(推断)」），并顺带报状态卡滞后/死链。记一条下一步（含时间扳机待办）：`whats-next.py --set <项目> "<文本>" [--due YYYY-MM-DD] [--kind 待续|等外部|待办|断点]`；做完清除：`--done <项目>`。**下一步应尽量落进各项目 `next_action`**（让"下一步干啥"从推断变权威、时间扳机待办有家），而不是散在对话里。
 
-**优先级**：本 step 高于 `pm-judgment-card §9.0` Resource-first Step 1 的 `ls` 兜底——README 存在时不需要 ls 探索。
+**优先级**：本 step 高于 `pm-judgment-card §9.1` Resource-first Step 1 的 `ls` 兜底——README 存在时不需要 ls 探索。
 
 ---
 
