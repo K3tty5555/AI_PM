@@ -74,7 +74,7 @@
 
 **4.2 创建 prompt 文件**
 
-将 prompt 写入 `/tmp/mermaid-prompts/{编号}-prompt.md`（目录不存在则先 `mkdir -p`）。
+将 prompt 写入 `{project_dir}/_tmp/mermaid-prompts/{编号}-prompt.md`（目录不存在则先 `mkdir -p`；项目内路径防跨项目串文件）。
 
 **4.3 构建 batch.json**
 
@@ -83,7 +83,7 @@
   "tasks": [
     {
       "id": "flow1",
-      "promptFiles": ["/tmp/mermaid-prompts/flow1-prompt.md"],
+      "promptFiles": ["{project_dir}/_tmp/mermaid-prompts/flow1-prompt.md"],
       "image": "{项目目录绝对路径}/11-illustrations/flow1-{slug}.png",
       "ar": "16:9"
     }

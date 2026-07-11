@@ -116,7 +116,8 @@ function checkProject(projectDir, repoRoot) {
   const statusPath = path.join(projectDir, '_status.json');
   if (fs.existsSync(statusPath)) {
     let updated = null;
-    try { updated = (JSON.parse(fs.readFileSync(statusPath, 'utf8')).updated || '').slice(0, 10); } catch {}
+    try { updated = (JSON.parse(fs.readFileSync(statusPath, 'utf8')).updated || '').slice(0, 10); }
+    catch (e) { console.error(`⚠️ ${name}/_status.json 损坏或不可解析（${e.name}），该项目保鲜检查跳过`); }
     if (updated) {
       const { newest, newestFile } = newestContentMtime(projectDir);
       if (newest) {

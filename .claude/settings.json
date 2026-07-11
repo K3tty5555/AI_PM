@@ -35,7 +35,8 @@
             "type": "command",
             "command": "bash -c 'test -f .claude/hooks/memory-backup.sh && bash .claude/hooks/memory-backup.sh || true'"
           }
-        ]
+        ],
+        "matcher": "Write"
       },
       {
         "matcher": "Edit|Write",
@@ -50,28 +51,6 @@
     "Stop": [
       {
         "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'test -f .claude/hooks/knowledge-capture.sh && bash .claude/hooks/knowledge-capture.sh || echo {}'",
-            "timeout": 5000
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'test -f .claude/hooks/knowledge-capture.sh && bash .claude/hooks/knowledge-capture.sh || echo {}'",
-            "timeout": 5000
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
         "hooks": [
           {
             "type": "command",

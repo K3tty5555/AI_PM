@@ -142,4 +142,4 @@
 
 ---
 
-*版本：v0.1 | 配套：agent-supplement.md A3 | 引用方：phase-5-prd.md, phase-1-requirement.md*
+*配套：agent-supplement.md A3 | 引用方：agent-supplement.md §9.3、pm-judgment-card.md 尾注（2026-07-12 校正：phase-5/phase-1 实不引用本文件）*

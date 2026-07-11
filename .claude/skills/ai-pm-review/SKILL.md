@@ -76,12 +76,12 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Agent
 **Subagent 1 — 技术视角（前端开发 + 后端开发 + 测试）**
 - 系统提示：同时扮演前端开发、后端开发、测试三个角色，不与用户交互
 - 任务：结合业务背景读取 PRD 和原型，输出三个角色各自的评审意见
-- 输出至：`/tmp/review_tech.md`
+- 输出至：`{project_dir}/_tmp/review_tech-{项目名}.md`（项目内唯一名，跑前 rm 旧文件——/tmp 通用名跨项目会串稿，PITFALL 同族 pitfall_subagent_tmp_collision）
 
 **Subagent 2 — 产品视角（产品经理 + 设计 + 运营）**
 - 系统提示：同时扮演产品经理、设计、运营三个角色，不与用户交互
 - 任务：结合业务背景读取 PRD 和原型，输出三个角色各自的评审意见
-- 输出至：`/tmp/review_product.md`
+- 输出至：`{project_dir}/_tmp/review_product-{项目名}.md`（同上，项目内唯一名）
 
 **评审纪律（所有角色共用）：**
 - 「业务背景」中已覆盖的历史版本功能，不作为本次缺失问题提出

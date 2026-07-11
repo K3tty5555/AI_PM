@@ -55,7 +55,7 @@ mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null
 DURATION=$(( $(date +%s) - START_TS ))
 echo "[$(date '+%F %T')] $SESSION trigger:$EVENT count=${COUNT:-N/A} duration=${DURATION}s" >> "$LOG_FILE"
 
-echo '{"decision":"block"}'
+echo '{"decision":"block","reason":"knowledge-capture"}'
 
 # state 清理（每次顺手清 7 天前）
 find "$STATE_DIR" -name "*.last_count" -mtime +7 -delete 2>/dev/null

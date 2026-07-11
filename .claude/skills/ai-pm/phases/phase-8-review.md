@@ -5,42 +5,7 @@
 
 ## 参考文档读取（各阶段前置，自动执行）
 
-在执行本阶段任何操作前，扫描 `{project_dir}/05-prd/` 和 `{project_dir}/07-references/` 下的参考文档并载入上下文：
-
-### 1. PDF 文件（视觉读取，保留截图/流程图/原型）
-
-```bash
-ls "{project_dir}/05-prd/"*.pdf "{project_dir}/07-references/"*.pdf 2>/dev/null
-```
-
-对每个 PDF，渲染为 PNG 图像（已渲染则跳过）：
-```bash
-python3 .claude/skills/ai-pm/scripts/pdf_to_images.py "{pdf_path}"
-# 输出 IMAGES:<dir>:<count> 表示渲染完成，CACHED:<dir>:<count> 表示已有缓存
-```
-
-渲染后使用 Read 工具逐页读取 PNG（每次读 2 页），完整浏览全部页面，提取版本摘要追加到 `_memory/L2-prd-versions.md`（不存在则创建）：
-- 版本标识：从文件名提取（如 `V1`、`V2`，无法提取则用文件名前 20 字符）
-- 摘要：≤30 字描述功能范围
-- 关键变化：与上一版相比新增/删除了什么（首版写"初版"）
-
-### 2. DOCX 文件（文本提取，无图片/流程图信息）
-
-```bash
-ls "{project_dir}/05-prd/"*.docx 2>/dev/null
-```
-
-对每个 DOCX，检查是否存在同名 `.md`（仅替换扩展名）：
-- **不存在** → `python3 .claude/skills/ai-pm/scripts/docx_to_md.py "{docx_path}"`
-- **已存在** → 跳过
-
-有新转换 MD 时，读取前 200 行提取摘要，追加到 `_memory/L2-prd-versions.md`（格式同上）。
-
-**优先级**：同一文件同时存在 PDF 和 DOCX，以 PDF 为准（视觉信息更完整）。
-
-若两个目录下均无 PDF/DOCX → 静默跳过，继续正常流程。
-
-**注意**：渲染/转换失败不中断主流程，输出 `SKIP:{文件名}:{原因}` 后继续执行。
+> **单一事实源 = `phase-5-prd.md` 「参考文档读取」节**（2026-07-12 收敛：原三处 40 行副本已漂移过一次——失败语义两个版本）。本阶段照该节执行：PDF 视觉读取→PNG 逐页、DOCX→md 转换、摘要进 `_memory/L2-prd-versions.md`、无文档静默跳过；**失败语义**：渲染/转换失败不中断（输出 `SKIP:{文件名}:{原因}`），参数/环境依赖错误（如缺 pypdf）属阻断（ERROR + exit 1）。
 
 ## 上线前风险预演（pre-mortem · 评审前强制前置）
 

@@ -58,7 +58,9 @@ def load_staleness() -> dict:
             capture_output=True, text=True, timeout=30,
         ).stdout
         rows = json.loads(out)
-    except Exception:
+    except Exception as e:
+        # 2026-07-12：staleness 层失效不再静默（node 缺失/超时会让"最近动于"失真）
+        print(f"⚠️ staleness 层不可用（{type(e).__name__}），本报告的滞后/死链信息缺失", file=sys.stderr)
         rows = []
     result = {}
     for r in rows:

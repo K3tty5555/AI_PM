@@ -70,7 +70,7 @@ Agent → subagent-Analyst
 Agent → subagent-KB（可选，知识库有相关内容时启用）
   系统提示词：「你是知识库检索员，仅完成任务，不与用户交互」
   任务：搜索知识库中与「{需求关键词}」相关的经验
-  输出：/tmp/kb-insight.md
+  输出：{项目目录}/_tmp/kb-insight-{项目名}.md（项目内唯一名，跑前 rm；/tmp 通用名跨项目会串稿）
 ```
 
 Wave 1 全部完成后，向用户汇报结果摘要。
@@ -85,7 +85,7 @@ Agent → subagent-PRD
   任务：
     读取：{项目目录}/02-analysis-report/ 最新 V
     读取：{项目目录}/03-competitor-report/V{版本}.md
-    读取：/tmp/kb-insight.md（如存在）
+    读取：{项目目录}/_tmp/kb-insight-{项目名}.md（如存在）
     动笔前读：.claude/skills/ai-pm/references/pm-judgment-card.md（越界红线 / 责任分工 / §9 守门）
     选模板 + 守骨架：先判 doctype 选模板（决策评审 → decision-review-template / 全员 → feishu-template+product_type），守 §一/二/三/六 承重骨架、不塌成 bullet（指针·判断卡 §6 二分 + phase-5 步骤 A.0/A.0.1，不复制逻辑）；接 A.0.1 写 doctype 三处
     项目约定块（如有）：章节名/术语照约定用，发明新词必须显式标理由

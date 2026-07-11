@@ -33,4 +33,16 @@ if echo "$staged" | grep -qE '^\.claude/(skills|agents)/.*\.md$'; then
   fi
 fi
 
+# ── 检查 3：规则漂移 + 骨架单源（合并计划波0B，2026-07-12）──
+# 触发条件：动了判断卡 / pm-agent / 三大 PRD 模板 / 各校验器——本仓最在意的漂移面。
+if echo "$staged" | grep -qE '(pm-judgment-card\.md|prototype-judgment-card\.md|pm-agent\.md|prototype-agent\.md|templates/prd-styles/default/|check-rule-drift\.sh|check-skeleton-rule-drift\.sh|check-prototype-regex-drift\.py|phase-5-prd\.md)'; then
+  echo "🔎 pre-commit: 改动涉及规则面，跑规则漂移 + 骨架单源检查…"
+  if ! bash "$ROOT/scripts/check-rule-drift.sh"; then
+    echo "❌ 规则漂移检查未过——多副本口径不一致，先对齐再提交。"; exit 1
+  fi
+  if ! bash "$ROOT/scripts/check-skeleton-rule-drift.sh"; then
+    echo "❌ 骨架单源检查未过。"; exit 1
+  fi
+fi
+
 exit 0

@@ -1,5 +1,8 @@
 # Phase 5: PRD 生成
 
+<!-- TOC（供部分读取时导航，勿复制进产出物） -->
+> **目录**：⚠️ PM 风格判断卡（强制前置，所有 PRD 生成前必读） ｜ 参考文档读取（各阶段前置，自动执行） ｜ 迭代项目基线 delta 强制检查（门禁） ｜ 知识库推荐触发（Plan Mode 前执行） ｜ 需求模糊点主动对齐（Plan Mode 前，必须执行） ｜ Plan Mode 前置展示（执行前必须展示） ｜ Checkpoint 子步骤定义 ｜ PRD 生成前确认节点 ｜ 模板拼装逻辑（步骤 B 之后，执行写入前） ｜ 🌱 扎根注入（起草前强制，确定性抽取 → 注入） ｜ 🤖 优先调用 pm-agent（推荐路径） ｜ ⚠️ 写作脚手架（pm-agent 不可用时主对话使用） ｜ ⚠️ 反例对比库（写每段前对照看一遍） ｜ 自检三连问（写完每个章节立即过） ｜ agent_design 子步骤详细执行（仅 agent / hybrid 产品） ｜ FAB 功能描述 ｜ PRD 落盘前：判断卡 checklist 自检（强制） ｜ PRD 落盘后：生成摘要（自动执行） ｜ PRD 摘要 · {项目名} v{版本} ｜ memory_write 步骤：写入 L1 决策记忆 ｜ 输出收尾：patch 05-prd/README 索引（强制步骤）
+
 **输入**: `01-requirement-draft.md` + `02-analysis-report.md` + `03-competitor-report/V{版本}.md` + `04-user-stories.md` + `_memory/L2-prd-versions.md`（若存在）
 **输出**: `05-prd/<当前 PRD 文件>`（首次新建默认 `05-PRD-v1.0.md`，**建议改描述名** `[YYYYM][域]<标题>-V1.0.md` 经 PM 确认；域候选从历史 PRD 文件名抽高频域、PM 可改/自填；落盘后写 `_status.json.active_prd`=该文件名）
 
@@ -21,6 +24,8 @@
 每章节写完都要回过头问自己：**这是 PM 该决策的吗？**
 
 ## 参考文档读取（各阶段前置，自动执行）
+
+> 本节是**单一事实源**——phase-7 / phase-8 的同名节只留指针到这里，改流程只改本节。
 
 在执行本阶段任何操作前，扫描 `{project_dir}/05-prd/` 和 `{project_dir}/07-references/` 下的参考文档并载入上下文：
 

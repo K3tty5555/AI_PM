@@ -1,6 +1,6 @@
 # pm-skills 对标追踪表
 
-> 对标对象：本机 `/Users/xiaowu/workplace/Third_Program/pm-skills` 当前 checkout，8 plugins / 65 skills / 36 commands。  
+> 对标对象：本机 `<your-local-path>/pm-skills` 当前 checkout（真实路径见本机记忆卡 reference_pm_skills_source），8 plugins / 65 skills / 36 commands。  
 > 目标：证明“该吸收的产品判断能力已经吸收，不搬的部分有边界理由，暂缓的部分有触发器”。本表不是复刻清单。
 > 维护位置：作为 AI_PM 技能参考资产随 `.claude/skills/ai-pm/references/` 版本化；`docs/plans` 仅保留路线图入口。
 

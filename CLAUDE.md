@@ -88,7 +88,7 @@ README.md                  项目介绍
 
 原型生成遵循"蓝图前置 + 视觉设计 + 质量审计"链路（完整方法见 `.claude/skills/ai-pm/references/prototype-judgment-card.md`）：
 
-1. **判断卡**（`references/prototype-judgment-card.md`）—— 原型目标、蓝图必答、视觉红线、场景化策略、Agent 原型专项、12 分制审计、防 bleed 两套哲学（§0：原型=镜像零解释）、HANDOFF.md 设计师交接规格、原型示意 cell 四态协议（与 PM 判断卡 §七同源）
+1. **判断卡**（`references/prototype-judgment-card.md`）—— 原型目标、蓝图必答、视觉红线、场景化策略、Agent 原型专项、12 分制审计、防 bleed 两套哲学（§0：原型=镜像零解释）、HANDOFF.md 设计师交接规格（原型示意 cell 四态协议在 **PM 判断卡 §七**，本卡不含）
 2. **prototype-agent**（`agents/prototype-agent.md`）—— 原型设计负责人，负责原型蓝图、视觉方向、生成约束、质量审计。**生成 HTML 前优先调用** `Agent(subagent_type=prototype-agent, prompt=...)`
 3. **Phase 7 脚手架**（`phase-7-prototype.md`）—— 在页面框架搭建前锁定页面/流程/状态/视觉方向；落盘后做 PRD 覆盖 + 交互体验 + 视觉设计审计
 4. **质量门槛**—— 12 分制：PRD 覆盖 / 交互体验 / 视觉设计各 0-4 分；任一维度 < 3 或总分 < 9，必须修完再评审
@@ -202,6 +202,7 @@ Claude ↔ Codex 上下文交换桥接目录，部分子目录受 `.gitignore` �
 
 **自检命令**（开源前 / PR 前 / 推广成跨团队共享前跑一次）：
 ```bash
+bash scripts/regression-suite.sh --fast|--full   # 回归总入口：改判断卡/模板/校验器/agent 后必跑 --full（语料五分类基线）
 bash scripts/check-share-readiness.sh --strict   # 分享就绪自检：内部名/敏感目录/source-project 一次过，退出码可做 gate
 # 兜底手查：
 git ls-files | xargs grep -l "公司名|内部关键词" 2>/dev/null

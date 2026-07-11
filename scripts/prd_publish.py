@@ -24,10 +24,16 @@ REPO = Path(__file__).resolve().parent.parent
 XFCHAT = REPO / ".claude" / "skills" / "xfchat-wiki" / "scripts"
 sys.path.insert(0, str(XFCHAT))
 
-from feishu_doc import (  # noqa: E402
-    create_doc, push_markdown_to_doc, count_blocks, find_blocks_by_type,
-    count_legacy_prototype_rows,
-)
+try:
+    from feishu_doc import (  # noqa: E402
+        create_doc, push_markdown_to_doc, count_blocks, find_blocks_by_type,
+        count_legacy_prototype_rows,
+    )
+except ImportError:
+    sys.exit(
+        "❌ 本命令依赖本机私有插件 xfchat-wiki（.claude/skills/xfchat-wiki/，gitignore 不随仓分发）。\n"
+        "   fresh clone 用户无法使用云文档推送——这是设计如此（云文档域=私有部署），不是安装缺陷。"
+    )
 
 IMG_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 TABLE_SEP_RE = re.compile(r"^\s*\|?[\s:-]*-[\s:|-]*$")
