@@ -20,9 +20,7 @@ prd-styles/                            # PRD 写作风格库
 │   └── sample-{b2b-saas,consumer-app,internal-tool}.md  # 3 份行业样本
 │
 ├── enterprise-standard/               # 🏢 企业标准风格（示例）
-│   ├── style-config.json
-│   └── examples/
-│       └── sample-prd.md
+│   └── style-config.json              # （仅配置；示例 PRD 见 default/ 的三份行业样本）
 │
 ├── [用户风格1]/                       # 👤 用户自定义风格
 │   ├── style-config.json              #    风格配置文件

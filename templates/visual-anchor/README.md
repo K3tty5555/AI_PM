@@ -12,8 +12,6 @@
 | 文件                       | 用途                                                        |
 | ------------------------ | --------------------------------------------------------- |
 | `request.template.json`  | 视觉稿生成请求模板，复制到 `{项目}/06-prototype-visual/request.json` 后填写 |
-
-> **填写占位符**（复制后必须替换，否则消费者会把占位符当真实值）：`{{PROJECT_NAME}}`=项目名、`{{ISO8601}}`=当前时间、**`{{CURRENT_PRD_FILE}}`=当前 PRD 文件名**——由 `python3 .claude/skills/ai-pm/scripts/resolve_current_prd.py file output/projects/{项目名}` 解析写入（即 `_status.json.active_prd`，**不要手填默认名**）。
 | `manifest.template.json` | 视觉稿生成结果模板，由 Codex 生成后写回                                   |
 | `visual-fingerprint.template.md` | 视觉指纹模板，由 Codex 提炼参考图和 PRD 后写回 |
 | `audit.template.md` | 视觉锚点包质量审计模板，由 Codex 写回 |

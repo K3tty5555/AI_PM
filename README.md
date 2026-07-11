@@ -134,6 +134,7 @@ On first launch, configure one AI backend in Settings:
 | `/ai-pm-prototype` | Generate interactive HTML prototype |
 | `/ai-pm-review` | Six-role requirement review |
 | `/ai-pm retrospective` | Project retrospective and knowledge capture |
+| `/ai-pm acceptance [PRD]` | Product acceptance — verify implementation against the PRD in a test environment |
 | `/ai-pm release-docs [PRD\|project]` | Release update notes + user manual from shipped features, publish to Feishu |
 | `/ai-pm-priority` | Requirement priority assessment |
 | `/ai-pm-weekly` | Weekly report generation |
@@ -192,7 +193,7 @@ app/src-tauri/                     # Rust backend
 app/src-tauri/resources/skills/    # 26 bundled desktop skills
 app/src-tauri/resources/plaza-manifest.json
 templates/                         # PRD styles, UI specs, knowledge presets
-docs/                              # Design system and implementation notes
+docs/                              # Local-only planning notes (gitignored — not distributed with the repo)
 output/                            # Per-project output, git-ignored
 AI_PM_教程中心.html                 # Offline interactive tutorial
 ```

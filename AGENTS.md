@@ -10,7 +10,7 @@ Codex 进入本项目后，优先读取以下上下文：
 2. 共享索引：`.ai-shared/memory-index.md`
 3. Claude skills：`.claude/skills/`
 4. Claude agents：`.claude/agents/`
-5. 项目规范：`CLAUDE.md`、`docs/design-system.md`
+5. 项目规范：`CLAUDE.md`、`docs/design-system.md（本机目录，docs/ 整体 gitignore 不随仓分发）`
 
 `.ai-shared/` 是桥接层，不替代 Claude 原始资产。索引过期时，以本机 Claude memory、skills、agents 原始文件为准。
 

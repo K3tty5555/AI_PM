@@ -51,6 +51,7 @@ README.md                  项目介绍
 | `/ai-pm design-spec` | 设计规范（加载公司/团队 UI 规范） |
 | `/ai-pm knowledge` | 知识库管理 |
 | `/ai-pm driver [PRD]` | PM 风格 lint（评审前体检），pm-agent 的命令糖衣 |
+| `/ai-pm acceptance [PRD]` | 产品验收（对照 PRD 在测试环境逐条核实，出提单台账） |
 | `/ai-pm release-docs [PRD\|项目]` | 上线文档套件（更新公告 + 操作手册，可发飞书；去版本号） |
 
 ## PRD 写作专项（PM Agent 4 层体系）
@@ -151,7 +152,7 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 
 ### 客户端设计规范
 
-客户端（Tauri App）有独立设计规范：**`docs/design-system.md`**，所有新页面、新组件必须遵循。核心要点：
+客户端（Tauri App）有独立设计规范：**`docs/design-system.md`**（本机文件，docs/ 整体 gitignore；客户端已冻结，本节仅历史参考）。核心要点：
 - 风格：Bauhaus + Apple HIG，钴蓝（`#1D4ED8`）Accent，纯白背景，8px 圆角
 - 字体：GeistSans 优先，-apple-system 兜底（完整字体栈见 `docs/design-system.md`）；等宽字体仅限代码场景
 - 侧边栏：220px 毛玻璃（`backdrop-blur-xl`），项目内显示 7 阶段列表

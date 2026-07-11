@@ -10,10 +10,8 @@
 ```
 templates/ui-specs/
 ├── README.md                       # 本说明文件
-├── enterprise-sample/              # 示例：企业级设计规范
-│   ├── README.md                   # 规范说明
-│   ├── design-tokens.json          # 设计令牌
-│   └── assets/                     # 设计资源
+├── enterprise-sample/              # 示例：企业级设计规范（仅 README 说明）
+│   └── README.md                   # 规范说明
 └── [你的自定义规范]/               # 用户自定义规范
     ├── README.md
     ├── design-tokens.json
@@ -154,7 +152,7 @@ my-company/
 | 规范名称 | 说明 | 适用场景 |
 |---------|------|---------|
 | `enterprise-sample/` | 企业级B端产品规范示例 | 内部管理系统 |
-| `example-apple/` | Apple风格规范示例 | 消费级产品 |
+| `K12教育示例/` | K12 教育 B 端规范示例 | 教育类产品 |
 
 ---
 

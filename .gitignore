@@ -125,8 +125,6 @@ templates/persona/*
 scripts/.share-denylist
 scripts/.metrics-dict.md
 
-# 本机数据池配置（含内部资产目录名，仅本机；模板 .example 保留追踪）
-scripts/.local-pools.json
 
 # -----------------------------------------------------------------------------
 # Design Source Files (Large & Proprietary)

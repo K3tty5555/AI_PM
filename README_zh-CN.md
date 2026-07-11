@@ -131,6 +131,8 @@ AI PM 会先引导需求澄清，再推进完整产品工作流。
 | `/ai-pm-prototype` | 生成可交互 HTML 原型 |
 | `/ai-pm-review` | 六角色需求评审 |
 | `/ai-pm retrospective` | 项目复盘和知识沉淀 |
+| `/ai-pm strategy` | 战略沙盘——项目级 / 产品级战略推演 |
+| `/ai-pm acceptance [PRD]` | 产品验收——对照 PRD 在测试环境逐条核实实现，出提单台账 |
 | `/ai-pm release-docs [PRD\|项目]` | 上线文档套件——从实际上线功能生成更新公告 + 操作手册，可发飞书 |
 | `/ai-pm-priority` | 需求优先级评估 |
 | `/ai-pm-weekly` | 工作周报生成 |
