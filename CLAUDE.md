@@ -74,7 +74,7 @@ README.md                  项目介绍
 | 异常处理 | 用户能感知到的失败（业务数据不足、答错等）| 接口超时 / Schema 校验 / 缓存未命中（研发自决）|
 | 用户话术 | "暂时不支持 + 替代方案" | 透露版本号 / 上线时间（V1.5、下个迭代）|
 
-**文档分型（先选对模板，再谈结构）**：需求文档按场景分 **决策评审**（选路线·给决策层 → `decision-review-template` 4 节骨架，不分产品形态）/ **全员评审**（落实现·给研发全员）；全员评审再按产品形态拆 **普通功能**（feishu-template）/ **Agent**（feishu-template + agent-supplement 增量包）。选型机读字段（doctype）见 phase-5-prd 步骤 A.0/A.0.1。**强制选模板 + 软约束收窄、非脚本焊死**。
+**文档分型**：决策评审（decision-review-template）/ 全员评审（普通=feishu-template；Agent=+agent-supplement 增量包）——**选型细则与 doctype 机读字段单源 = phase-5-prd 步骤 A.0/A.0.1 + 判断卡 §六**，此处只留一句防线。
 
 **结构（迭代版本）**——⚠️ **迭代 / 小补丁也走完整模板**：§一 文档概述(修订日志表) / §二 需求分析 / §三 功能清单表 / §六 详细功能设计(每功能一表) 是**承重骨架、必有**；小迭代仅可省 §四 产品流程 / §五 全局说明 + 每格 terse，**不塌成 bullet 版**（精简 bullet 版 = 无模板 = 质量不可控、禁用；详见判断卡 §6 二分）。下面四项是**叠加在模板之上的迭代专属约定**、不替代骨架：
 - 影响范围（每个改动列受影响的页面/接口/角色/已存量场景）—— 必表达，但形式随规模：重评审 PRD 独立成章，轻量迭代行内「同步影响：…」即可
@@ -82,7 +82,7 @@ README.md                  项目介绍
 - 复用对照表（§4.x，4 列：复用对象 / 复用方式 / 本期改动点 / 不改动项）—— ⚠️**仅"功能迁移 / 老系统接新引擎"类才写**（如批改 V3 旧版答题卡接新版AI批改）；普通迭代（修 bug / 调参 / 加开关）**不写**，制卡 V1.5–V1.8 即无，用行内「同步影响」代替（见 PITFALL-070）
 - 附录 B「待 X 对齐」（技术字段 / 接口设计 / 算法实现等待对齐项）—— 有待对齐项时才写
 
-**修订日志规则**：V1.0 = 首评基线——首评周期内的全部修改（含 PM-AI 协作打磨、落实评审决议的轮次）熔进 V1.0 不单列；**+V1.x 唯一条件 = 定稿后这份文档又一次正式发给研发/评审的修订**（单一事实源=判断卡 §八）。
+**修订日志规则**：V1.0=首评基线全熔；+V1.x 唯一条件=定稿后再次正式发出（**单源=判断卡 §八**，此处只留一句防线）。
 
 **篇幅指引**（KettyWu范本）：单功能补丁 80-150 行 / 中等场景 200-300 行 / 复杂含 Agent 章节 300-500 行 / 500+ 警戒。
 
@@ -97,20 +97,7 @@ README.md                  项目介绍
 
 ### 视觉锚点包（Codex 生图协作）
 
-当项目需要继承现网截图、历史原型或参考资料的视觉节奏，或用户明确要求高保真/视觉稿级原型时，启用 `{项目目录}/06-prototype-visual/`：
-
-- Claude Code 写出或读取 `request.json`，但不直接调用 Codex 或生图工具。
-- Codex 读取 `request.json`，生成 `visual-fingerprint.md`、`prompts/`、`images/`、`manifest.json`、`audit.md`。
-- `manifest.json status=ready` 时，HTML 原型生成前必须读取视觉指纹和图片清单，并继承布局节奏、组件比例、页面密度、色彩气质和禁忌项。
-- 图片中文字只作为视觉表达，不作为 PRD 字段、研发文案或最终用户话术事实源。
-
-状态检查命令：
-
-```bash
-node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
-```
-
-模板位置：`templates/visual-anchor/`。
+需要继承现网截图/历史原型视觉节奏，或用户要高保真视觉稿级原型时，启用 `{项目目录}/06-prototype-visual/`。**流程/角色分工/状态机单源 = `templates/visual-anchor/README.md`**（Claude 只读写 request.json 不调生图；manifest ready 后 HTML 必须继承视觉指纹；图中文字不作事实源）。状态检查：`node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}`。
 
 **铁律（原型必守）**：
 - 原型不是线框草图，必须可评审、可体验、视觉可信
@@ -181,17 +168,7 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 
 ## .ai-shared 目录规范
 
-Claude ↔ Codex 上下文交换桥接目录，部分子目录受 `.gitignore` 保护。
-
-| 子目录/文件 | git 追踪 | 说明 |
-|------------|---------|------|
-| `README.md`、`*/README.md` | ✅ | 目录结构说明 |
-| `pending-memory/*.md` | ❌ | Codex→Claude 内存交接，含项目偏好，仅本机 |
-| `context/open-questions.md` | ❌ | 含内部字段/埋点细节，仅本机 |
-| `context/product-decisions.md` | ❌ | 含产品命名/场景定义，仅本机 |
-| `memory-snapshots/`、`conversations/` | ❌ | 快照与会话记录，仅本机 |
-
-**铁律**：写入 `.ai-shared/` 的内容文件一律按"仅本机"处理，不得假设会上传 GitHub。
+Claude ↔ Codex 上下文交换桥接目录；**子目录追踪矩阵单源 = `.ai-shared/README.md`**（内容文件一律仅本机、README 入库）。**铁律**：写入 `.ai-shared/` 的内容文件一律按"仅本机"处理，不得假设会上传 GitHub。评审意见交换走 `.ai-shared/review-exchange/`（协议见其 README，D3①）。
 
 ## 版本库隐私规范
 
