@@ -13,7 +13,6 @@
 隐私：不硬编码文档域名——URL 前缀取 AIPM_DOC_HOST 环境变量，或从项目已有 cloud_docs 登记里学。
 """
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -28,7 +27,7 @@ sys.path.insert(0, str(XFCHAT))
 try:
     from feishu_doc import (  # noqa: E402
         create_doc, push_markdown_to_doc, count_blocks, find_blocks_by_type,
-        count_legacy_prototype_rows, get_doc_outline, get_doc_raw_text, get_doc_meta,
+        count_legacy_prototype_rows, get_doc_outline, get_doc_raw_content, DocApiError,
     )
     from feishu_other import search_docs, delete_file  # noqa: E402
 except ImportError as _e:
@@ -42,7 +41,8 @@ except ImportError as _e:
 
 sys.path.insert(0, str(REPO / "scripts"))
 from _prd_common import (  # noqa: E402
-    IMG_RE, TABLE_SEP_RE, code_fence_literals, count_headings_for_push, find_token_by_title,
+    IMG_RE, TABLE_SEP_RE, content_fingerprint, count_headings_for_push,
+    delete_verdict, find_residues, find_token_by_title,
 )
 
 
@@ -107,14 +107,15 @@ def main() -> int:
             print(f"预览：将删除云文档 {a.delete_doc[:16]}…（当前 blocks={total0}）——确认请加 --yes")
             return 0
         r = delete_file(a.delete_doc, "docx")
-        print(f"删除结果：{json.dumps(r, ensure_ascii=False)[:200]}")
+        print(f"删除响应：{json.dumps(r, ensure_ascii=False)[:200]}")
         back = count_blocks(a.delete_doc)
-        if back.get("error"):
-            print(f"读回验证：目标已不可访问（API 返回错误码，与删除结果一致）")
-            return 0
-        gone = not back.get("total")
-        print("读回验证：" + ("✓ 空（0 块）" if gone else f"⛔ 仍可读到 {back.get('total')} 块，删除未生效"))
-        return 0 if gone else 2
+        # fail-closed 判定（二轮复验 §三）：读回报错≠删除成功——权限/限流/网络都长这样
+        verdict, reason = delete_verdict(r, back)
+        icon = {"ok": "✓ 已删除", "unknown": "⚠️ 删除结果未知", "fail": "⛔ 删除失败"}[verdict]
+        print(f"读回验证：{icon} —— {reason}")
+        if verdict == "unknown":
+            print("      不当成功处理；API 恢复后重跑 --delete-doc 或人工到回收站确认")
+        return 0 if verdict == "ok" else 2
 
     if a.cleanup:
         status, _ = load_status(project)
@@ -163,27 +164,35 @@ def main() -> int:
     doc_id = a.doc_id or reg.get("doc_token")
 
     if doc_id:
-        # 人改保护 v2（Codex 复验 P0-2.1）：内容 hash 优先（同块内改字块数不变，只比块数会漏），块数辅助
+        # 人改保护 v3（二轮复验 §二）：hash 与块数**都查**（同块改字块数不变→靠 hash；
+        # 结构改动正文可能不变→靠块数）；raw API 失败 fail-closed，绝不打"通过[hash]"假绿
         cur = count_blocks(doc_id)
         if cur.get("error"):
             print(f"[2/5] ⛔ 云端 API 不可用（{cur['error'][:80]}）——先别推，恢复后重试（失败≠空文档）。")
             return 2
-        cloud_now_hash = None
-        try:
-            raw_now = (get_doc_raw_text(doc_id) or {}).get("content") or ""
-            cloud_now_hash = hashlib.md5(re.sub(r"\s+", "", raw_now).encode()) .hexdigest() if raw_now else None
-        except Exception:
-            pass
-        changed_flag = False
-        if reg.get("content_hash") and cloud_now_hash and cloud_now_hash != reg["content_hash"]:
-            changed_flag = True
-        elif reg.get("blocks") and cur.get("total") != reg["blocks"]:
-            changed_flag = True
-        if changed_flag and not a.force:
-            print(f"[2/5] ⛔ 云端内容与上次发布登记不一致（hash/块数）：疑似有人改。")
-            print("      先 prd_pull 回收人改，或确认无价值改动后 --force 重推。")
-            return 2
-        print(f"[2/5] 目标文档 {doc_id[:16]}…（人改保护：{'跳过 --force' if a.force else '通过[hash]'}）")
+        via, hits = [], []
+        if not a.force:
+            if reg.get("content_hash"):
+                try:
+                    now_hash = content_fingerprint(get_doc_raw_content(doc_id))
+                except DocApiError as e:
+                    print(f"[2/5] ⛔ 云端正文读取失败（{e}）——hash 无法核对，fail closed。"
+                          f"恢复后重试，或确认放弃云端改动后 --force。")
+                    return 2
+                via.append("hash")
+                if now_hash != reg["content_hash"]:
+                    hits.append("正文 hash 与上次发布不一致")
+            if reg.get("blocks"):
+                via.append("块数")
+                if cur.get("total") != reg["blocks"]:
+                    hits.append(f"块数 {cur.get('total')} ≠ 登记 {reg['blocks']}")
+            if hits:
+                print(f"[2/5] ⛔ 云端疑似有人改：{'；'.join(hits)}")
+                print("      先 prd_pull 回收人改，或确认无价值改动后 --force 重推。")
+                return 2
+        via_str = ("跳过 --force" if a.force
+                   else (f"通过[{'+'.join(via)}]" if via else "无登记基线（旧登记缺 hash/块数，本次发布起补）"))
+        print(f"[2/5] 目标文档 {doc_id[:16]}…（人改保护：{via_str}）")
     else:
         title = a.title or re.sub(r"\.md$", "", key)
         r = create_doc(title)
@@ -226,10 +235,13 @@ def main() -> int:
     outline = get_doc_outline(doc_id) or []
     if src["headings"] and abs(len(outline) - src["headings"]) > 0:
         problems.append(f"标题块数 {len(outline)} ≠ 源标题数 {src['headings']}（章节丢失/拆并）")
-    raw = (get_doc_raw_text(doc_id) or {}).get("content") or ""
-    lits = ("<红>", "</红>", "<灰>", "</灰>", "[!TIP]", "[!WARNING]")
-    legit = code_fence_literals(md, lits)  # 源代码围栏里本来就有的（讲语法的示例）不算残留
-    residues = [m for m in lits if m in raw and m not in legit]
+    try:
+        raw = get_doc_raw_content(doc_id)  # 同一份 raw 供残留检查 + hash 登记；失败即发布未验证
+    except DocApiError as e:
+        print(f"[4/5] ⛔ 云端正文读取失败（{e}）——残留检查与 hash 登记无法完成，"
+              f"push 结果未验证，禁止视为发布成功；恢复后重跑本命令。")
+        return 2
+    residues = find_residues(md, raw)
     if residues:
         problems.append(f"增强标记字面残留（渲染未生效）：{residues}")
     if src["marker_core"] and "==" in raw:
@@ -260,13 +272,8 @@ def main() -> int:
         "manifest": {"headings": src["headings"], "callouts": src["callouts"],
                      "red": src["marker_red"], "gray": src["marker_gray"], "core": src["marker_core"]},
     }
-    # 三方合并基线（Codex 复验 P0-2.2）：①云端内容 hash 进登记 ②本地源快照落 _cloud/baseline/
-    try:
-        raw_after = (get_doc_raw_text(doc_id) or {}).get("content") or ""
-        if raw_after:
-            entry["content_hash"] = hashlib.md5(re.sub(r"\s+", "", raw_after).encode()).hexdigest()
-    except Exception:
-        pass
+    # 三方合并基线：①云端正文指纹进登记（[4/5] 已读回的同一份 raw，必有）②本地源快照落 _cloud/baseline/
+    entry["content_hash"] = content_fingerprint(raw)
     bl_dir = project / "_cloud" / "baseline"
     bl_dir.mkdir(parents=True, exist_ok=True)
     (bl_dir / key).write_text(md, encoding="utf-8")

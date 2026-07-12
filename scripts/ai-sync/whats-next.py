@@ -29,6 +29,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent.parent
 PROJECTS = REPO / "output" / "projects"
 STALENESS_JS = REPO / "scripts" / "ai-sync" / "check-status-staleness.js"
+sys.path.insert(0, str(REPO / "scripts"))  # status_migrate 契约校验（--set 写前）
 
 ACTIVE_DAYS = 7          # 最近 N 天动过 = 活跃
 KIND_ICON = {"待续": "▶", "等外部": "⏸", "待办": "○", "断点": "⏯"}
@@ -66,10 +67,13 @@ def load_staleness() -> dict:
     for r in rows:
         iss = r.get("issues", {})
         st = iss.get("stale") or {}
+        # 事实从 observed 读、告警从 issues 读（二轮复验 §六：此前正常项目 newestFile 恒 null，
+        # 阶段推断失明）；老格式（无 observed）回退 issues.stale
+        obs = r.get("observed") or {}
         result[r.get("name")] = {
-            "newestDate": st.get("newestDate"),
-            "newestFile": st.get("newestFile"),
-            "updated": st.get("updated"),
+            "newestDate": obs.get("newestDate") or st.get("newestDate"),
+            "newestFile": obs.get("newestFile") or st.get("newestFile"),
+            "updated": obs.get("updated") or st.get("updated"),
             "dead": iss.get("dead") or [],
         }
     return result
@@ -177,9 +181,12 @@ def render(rows) -> str:
     _skipped = getattr(build, "skipped_lifecycle", [])
     rows.sort(key=lambda r: (tier(r), r["quiet_days"] if r["quiet_days"] is not None else 9999))
     out = [f"📋 在途一览 · {today().isoformat()}（{len(rows)} 个项目" + (f"；归档/资料库 {len(_skipped)} 个不列" if _skipped else "") + "）"]
-    # 到期/过期待办置顶单列
-    due_hits = [r for r in rows if r["next_action"] and r["next_action"].get("due")
-                and (days_ago(r["next_action"]["due"]) or -1) >= 0]
+    # 到期/过期待办置顶单列（二轮复验 8.3：`0 or -1`→-1，今天到期曾进不了置顶区）
+    def _due_reached(r):
+        na = r["next_action"]
+        dd = days_ago(na["due"]) if na and na.get("due") else None
+        return dd is not None and dd >= 0
+    due_hits = [r for r in rows if _due_reached(r)]
     if due_hits:
         out.append("\n⏰ 到点了：")
         for r in due_hits:
@@ -222,12 +229,23 @@ def cmd_set(project, text, due, kind):
     na = {"text": text}
     if kind:
         na["kind"] = kind
+        if kind == "等外部":
+            na["type"] = "external"  # 契约两轴：kind=工作流状态；type=责任主体（仅此项可安全映射，其余不猜）
     if due:
         if not parse_ymd(due):
             print(f"⛔ due 日期格式应为 YYYY-MM-DD：{due}")
             return 1
         na["due"] = due
     st["next_action"] = na
+    # 写前契约校验（二轮复验 5.1：禁止生产器写出校验器不理解的结构）
+    try:
+        from status_migrate import validate as _validate
+        errs = _validate(st)
+        if errs:
+            print("⛔ 契约校验未过，不写入：" + "；".join(errs))
+            return 1
+    except ImportError:
+        print("⚠️ status_migrate 不可用，跳过写前契约校验", file=sys.stderr)
     p.write_text(json.dumps(st, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     back = json.loads(p.read_text(encoding="utf-8")).get("next_action", {})
     ok = back.get("text") == text

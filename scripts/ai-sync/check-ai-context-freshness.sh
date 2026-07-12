@@ -15,6 +15,14 @@ CLAUDE_RAW_DIR="$ROOT/.ai-shared/conversations/raw/claude"
 CODEX_RAW_DIR="$ROOT/.ai-shared/conversations/raw/codex"
 
 stale=0
+STRICT=0
+CHECK_RAW=0
+for arg in "$@"; do
+  case "$arg" in
+    --strict) STRICT=1 ;;      # 有 stale 退出 1（gate/收口用）；默认软放行
+    --check-raw) CHECK_RAW=1 ;; # raw 快照对比（默认冻结为历史档案，波0A#3）
+  esac
+done
 
 newer_than_index() {
   local source_dir="$1"
@@ -64,16 +72,16 @@ if [[ -f "$CODEX_MEMORY_IN_RESOLVED" ]]; then
   fi
 fi
 
-if [[ "${1:-}" == "--check-raw" ]]; then
+if [[ "$CHECK_RAW" -eq 1 ]]; then
   # raw 快照默认冻结为历史档案（波0A#3）——只有显式 --check-raw 才对比原生日志
 check_conversation_dir "$CLAUDE_PROJECT_DIR_RESOLVED" "$CLAUDE_RAW_DIR" "Claude"
 fi
 
-if [[ "${1:-}" == "--check-raw" && -d "$CODEX_HOME_RESOLVED/archived_sessions" ]]; then
+if [[ "$CHECK_RAW" -eq 1 && -d "$CODEX_HOME_RESOLVED/archived_sessions" ]]; then
   check_conversation_dir "$CODEX_HOME_RESOLVED/archived_sessions" "$CODEX_RAW_DIR" "Codex"
 fi
 
-if [[ "${1:-}" == "--check-raw" && -f "$CODEX_HOME_RESOLVED/history.jsonl" ]]; then
+if [[ "$CHECK_RAW" -eq 1 && -f "$CODEX_HOME_RESOLVED/history.jsonl" ]]; then
   if file_newer_or_missing_copy "$CODEX_HOME_RESOLVED/history.jsonl" "$CODEX_RAW_DIR/history.jsonl"; then
     echo "STALE: Codex history snapshot needs refresh"
     stale=1
@@ -106,4 +114,9 @@ if command -v python3 >/dev/null 2>&1; then
   python3 "$ROOT/scripts/ai-sync/freshness-summary.py" 2>/dev/null || true
 fi
 
+# 退出码语义（二轮复验 8.1，两个词别混用）：默认=**软放行** exit 0——session-start
+# 只提醒不阻断，但 exit 0 ≠ 状态 clean；要证明 clean 用 --strict：有 stale 退出 1。
+if [[ "$STRICT" -eq 1 && "$stale" -eq 1 ]]; then
+  exit 1
+fi
 exit 0

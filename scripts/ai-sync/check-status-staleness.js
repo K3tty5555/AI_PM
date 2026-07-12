@@ -111,31 +111,35 @@ function checkDeadLinks(projectDir, repoRoot) {
 function checkProject(projectDir, repoRoot) {
   const name = path.basename(projectDir);
   const issues = { stale: null, dead: [] };
+  // 事实与告警分离（二轮复验 §六）：observed 无条件回报观测值（此前只有滞后项目才带
+  // newestFile，whats-next 对正常项目的阶段推断失明），issues 只放判断出的问题
+  const observed = { updated: null, newestDate: null, newestFile: null, lifecycle: '' };
 
   // ① 状态保鲜
   const statusPath = path.join(projectDir, '_status.json');
   if (fs.existsSync(statusPath)) {
-    let updated = null;
-    let lifecycle = '';
     try {
       const st = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
-      updated = (st.updated || '').slice(0, 10);
-      lifecycle = st.lifecycle || '';
+      observed.updated = (st.updated || '').slice(0, 10) || null;
+      observed.lifecycle = st.lifecycle || '';
     }
     catch (e) { console.error(`⚠️ ${name}/_status.json 损坏或不可解析（${e.name}），该项目保鲜检查跳过`); }
-    if (lifecycle === 'archived' || lifecycle === 'reference') return { name, issues }; // schema v1：归档/资料库不参与保鲜报警（返回零 issues）
-    if (updated) {
-      const { newest, newestFile } = newestContentMtime(projectDir);
-      if (newest) {
-        const newestDate = localDate(newest);
-        if (newestDate > updated) issues.stale = { updated, newestDate, newestFile };
+    if (observed.lifecycle === 'archived' || observed.lifecycle === 'reference') {
+      return { name, observed, issues }; // schema v1：归档/资料库不参与保鲜报警（不走文件遍历）
+    }
+    const { newest, newestFile } = newestContentMtime(projectDir);
+    if (newest) {
+      observed.newestDate = localDate(newest);
+      observed.newestFile = newestFile;
+      if (observed.updated && observed.newestDate > observed.updated) {
+        issues.stale = { updated: observed.updated, newestDate: observed.newestDate, newestFile };
       }
     }
   }
 
   // ② 死链
   issues.dead = checkDeadLinks(projectDir, repoRoot);
-  return { name, issues };
+  return { name, observed, issues };
 }
 
 // ---- main ----

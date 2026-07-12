@@ -26,7 +26,7 @@ sys.path.insert(0, str(XFCHAT))
 
 sys.path.insert(0, str(REPO / "scripts"))
 try:
-    from feishu_doc import count_blocks, get_doc_raw_text, count_legacy_prototype_rows  # noqa: E402
+    from feishu_doc import count_blocks, get_doc_raw_content, count_legacy_prototype_rows, DocApiError  # noqa: E402
     from feishu_other import search_docs  # noqa: E402
 except ImportError:
     sys.exit("❌ 依赖本机私有插件 xfchat-wiki（不随仓分发）")
@@ -39,13 +39,12 @@ def find_token_by_title(title: str) -> str | None:
 
 def legacy_rows(doc_id: str) -> int | None:
     """云侧 legacy 原型行数——真·复用 xfchat 校验器口径 count_legacy_prototype_rows
-    （此前自造粗正则会把「查看原型设计稿」链接/图片 alt 误判成待重渲，review 修复批换掉）。"""
+    （此前自造粗正则会把「查看原型设计稿」链接/图片 alt 误判成待重渲，review 修复批换掉）。
+    正文走唯一入口 get_doc_raw_content（顶层取 content 永远 None 的坑，二轮复验 §二）；
+    API 失败返回 None=「未知」，与 0=「无 legacy」显式区分。"""
     try:
-        raw = (get_doc_raw_text(doc_id) or {}).get("content") or ""
-        if not raw:
-            return None
-        return count_legacy_prototype_rows(raw)
-    except Exception:
+        return count_legacy_prototype_rows(get_doc_raw_content(doc_id))
+    except DocApiError:
         return None
 
 
@@ -78,12 +77,20 @@ def main() -> int:
             legacy = legacy_rows(tok) if tok else None
             alive = None
             if tok:
-                alive = bool((count_blocks(tok) or {}).get("total"))
+                bc = count_blocks(tok) or {}
+                alive = None if bc.get("error") else bool(bc.get("total"))  # API 挂了≠坏档
             rows.append({
                 "project": proj.name, "prd": md.name, "token": tok or "",
                 "token_src": src, "alive": alive, "legacy": legacy,
             })
-            mark = "🔧待重渲" if (legacy or 0) > 0 else ("✓" if alive else ("💀" if tok else "—"))
+            if (legacy or 0) > 0:
+                mark = "🔧待重渲"
+            elif not tok:
+                mark = "—"
+            elif alive is None:
+                mark = "⚠️API不可用"
+            else:
+                mark = "✓" if alive else "💀"
             print(f"  {mark} [{proj.name}] {md.name[:44]} token={src} legacy={legacy}")
 
     cand = [r for r in rows if (r["legacy"] or 0) > 0]

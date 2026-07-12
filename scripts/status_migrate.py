@@ -11,8 +11,11 @@
 - 补 lifecycle（推断：目录名/字段含归档→reference 或 archived；updated 距今 ≤30 天→active；
   其余→paused；推断结果打印出来供人纠正——机器只给初值，语义由人后续校准）；
 - active_prd 带 "05-prd/" 前缀的去前缀（resolver 契约）；
+- next_action.kind=等外部 且无 type → 补 type=external（唯一可安全映射的责任主体，其余不猜）；
 - 不迁 phases/notes 等自由字段。
 """
+from __future__ import annotations
+
 import argparse
 import datetime
 import json
@@ -23,6 +26,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 PROJECTS = REPO / "output" / "projects"
 SCHEMA = REPO / "templates" / "project-index" / "status.schema.json"
+REGISTRY = REPO / "templates" / "configs" / "workflow-phases.json"
 # lifecycle 枚举单源=schema 文件（review 修复批：此前手写第二份，双源必漂）
 LIFE = None  # 延迟到 _SCHEMA 定义后
 
@@ -44,12 +48,38 @@ def infer_lifecycle(name: str, d: dict) -> str:
 
 _SCHEMA = json.loads(SCHEMA.read_text(encoding="utf-8"))
 LIFE = set(_SCHEMA["properties"]["lifecycle"]["enum"])
+try:
+    _REGISTRY = json.loads(REGISTRY.read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    _REGISTRY = {"phases": []}
 
 
-def validate(d: dict) -> list[str]:
-    """schema 驱动的迷你校验（Codex 复验 P1：此前手写检查漏 type/pattern——
-    "updated: not-a-date" 都能过）。覆盖 required / const / enum / type / pattern。"""
+def _check_value(name: str, v, spec: dict, errs: list) -> None:
+    """按 spec 校验单值——覆盖关键字见 validate 文档串；顶层与嵌套共用一份逻辑。"""
     import re as _re
+    if "const" in spec and v != spec["const"]:
+        errs.append(f"{name} 应为 {spec['const']}: {v}")
+    if "enum" in spec and v not in spec["enum"]:
+        errs.append(f"{name} 非法枚举: {v}")
+    ty = spec.get("type")
+    pytypes = {"string": str, "object": dict, "integer": int}
+    if ty in pytypes and not isinstance(v, pytypes[ty]):
+        errs.append(f"{name} 类型应为 {ty}: {type(v).__name__}")
+        return
+    if isinstance(v, str):
+        if "pattern" in spec and not _re.match(spec["pattern"], v):
+            errs.append(f"{name} 不匹配 pattern: {v}")
+        if len(v) < spec.get("minLength", 0):
+            errs.append(f"{name} 短于 minLength={spec['minLength']}")
+
+
+def validate(d: dict, registry: dict | None = None) -> list[str]:
+    """**契约子集校验器**（诚实命名，二轮复验 5.2：不是完整 JSON Schema 执行器）。
+    覆盖关键字：required / const / enum / type / pattern / minLength——含嵌套对象
+    （next_action 的 text/kind/type/due 逐字段过同一套检查）+ 两条领域规则
+    （phases 值必须 bool；lifecycle 与 last_phase 一致性）+ registry 消费
+    （phases 键撞 registry 阶段 id 但该阶段 status_key 不同 = 漂移，二轮复验 5.3）。
+    schema 新增其他关键字（minimum/format/…）需要在 _check_value 补实现——本函数不会自动跟上。"""
     errs = []
     for req in _SCHEMA.get("required", []):
         if req not in d:
@@ -58,29 +88,24 @@ def validate(d: dict) -> list[str]:
         if k not in d:
             continue
         v = d[k]
-        if "const" in spec and v != spec["const"]:
-            errs.append(f"{k} 应为 {spec['const']}: {v}")
-        if "enum" in spec and v not in spec["enum"]:
-            errs.append(f"{k} 非法枚举: {v}")
-        ty = spec.get("type")
-        pytypes = {"string": str, "object": dict, "integer": int}
-        if ty in pytypes and not isinstance(v, pytypes[ty]):
-            errs.append(f"{k} 类型应为 {ty}: {type(v).__name__}")
-            continue
-        if "pattern" in spec and isinstance(v, str) and not _re.match(spec["pattern"], v):
-            errs.append(f"{k} 不匹配 pattern: {v}")
-        # next_action 子结构
-        if k == "next_action" and isinstance(v, dict):
-            if not v.get("text"):
-                errs.append("next_action 缺 text")
-            na_type = v.get("type")
-            na_enum = spec["properties"]["type"]["enum"]
-            if na_type is not None and na_type not in na_enum:
-                errs.append(f"next_action.type 非法: {na_type}")
-    # phases 值类型（registry 首个机器消费者：键自由但值必须 bool——防 "done"/"1" 字串漂移）
+        _check_value(k, v, spec, errs)
+        if isinstance(v, dict) and "properties" in spec:  # 嵌套对象（next_action）逐字段
+            for sub_req in spec.get("required", []):
+                if not v.get(sub_req):
+                    errs.append(f"{k} 缺 {sub_req}")
+            for sk, sspec in spec["properties"].items():
+                if sk in v:
+                    _check_value(f"{k}.{sk}", v[sk], sspec, errs)
+    # phases 值类型：键自由但值必须 bool——防 "done"/"1" 字串漂移
+    reg = registry if registry is not None else _REGISTRY
+    id_to_status_key = {p.get("id"): p.get("status_key") for p in reg.get("phases", [])}
     for pk, pv in (d.get("phases") or {}).items():
         if not isinstance(pv, bool):
             errs.append(f"phases.{pk} 值应为 bool: {pv!r}")
+        # registry 真消费：键写成阶段 id 但 registry 说该阶段的 status_key 是别的 → 漂移
+        # （如写 research 而实况键=competitor；零歧义信号才报，扩展键不管）
+        if pk in id_to_status_key and id_to_status_key[pk] != pk:
+            errs.append(f"phases.{pk} 应写 registry status_key={id_to_status_key[pk]}（阶段 id≠状态键，见 workflow-phases.json）")
     # lifecycle 与 phase 一致性（警告级并入错误——归档阶段不该是在途）
     if d.get("last_phase") == "archived" and d.get("lifecycle") in ("active", "paused"):
         errs.append(f"last_phase=archived 但 lifecycle={d['lifecycle']}（应为 archived/reference）")
@@ -96,7 +121,18 @@ def selftest() -> int:
     assert any("next_action" in e for e in errs), errs
     good = {"schema_version": 1, "project": "x", "lifecycle": "active", "updated": "2026-07-12"}
     assert validate(good) == [], validate(good)
-    print(f"status_migrate selftest ok（非法对象报 {len(errs)} 错，合法对象 0 错）")
+    # next_action 两轴契约（二轮复验 5.1）：生产形态（kind）合法；非法 kind/坏 due 报错
+    ok_na = dict(good, next_action={"text": "等研发评审", "kind": "等外部", "type": "external"})
+    assert validate(ok_na) == [], validate(ok_na)
+    bad_na = dict(good, next_action={"text": "", "kind": "瞎写", "due": "7月13日"})
+    errs2 = validate(bad_na)
+    assert any("kind" in e for e in errs2) and any("due" in e for e in errs2) and any("text" in e for e in errs2), errs2
+    # registry 真消费（二轮复验 5.3）：同一数据，registry 变 → 校验结果变
+    reg = {"phases": [{"id": "research", "status_key": "competitor"}]}
+    drift = dict(good, phases={"research": True})
+    assert any("competitor" in e for e in validate(drift, registry=reg)), "registry 漂移未检出"
+    assert validate(drift, registry={"phases": []}) == [], "registry 清空后不应再报——证明结果真由 registry 驱动"
+    print(f"status_migrate selftest ok（契约子集校验：非法 {len(errs)}+{len(errs2)} 错、registry 消费双向验证）")
     return 0
 
 
@@ -139,6 +175,10 @@ def main() -> int:
         if ap_val and ap_val.startswith("05-prd/"):
             d["active_prd"] = ap_val.removeprefix("05-prd/")
             changes.append("active_prd 去前缀")
+        na = d.get("next_action")
+        if isinstance(na, dict) and na.get("kind") == "等外部" and not na.get("type"):
+            na["type"] = "external"
+            changes.append("next_action 补 type=external（等外部唯一可安全映射）")
         if not changes:
             print(f"  ✓ {name}（已合规）")
             continue

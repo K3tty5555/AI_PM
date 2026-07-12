@@ -22,10 +22,12 @@
     },
     "next_action": {
       "type": "object",
+      "description": "两轴并存（二轮复验 5.1：schema 与生产器曾语义分裂）：type=责任主体（human/ai/external，拿不准不猜可缺省），kind=工作流状态（whats-next --set 写入）；等外部 可安全映射 type=external",
       "properties": {
         "type": { "enum": ["human", "ai", "external"] },
-        "text": { "type": "string" },
-        "due": { "type": "string" }
+        "kind": { "enum": ["待续", "等外部", "待办", "断点"] },
+        "text": { "type": "string", "minLength": 1 },
+        "due": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
       },
       "required": ["text"]
     },
