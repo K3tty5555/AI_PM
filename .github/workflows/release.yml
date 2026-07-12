@@ -62,7 +62,7 @@ jobs:
           projectPath: app
           tagName: ${{ github.ref_name }}
           releaseName: AI PM ${{ github.ref_name }}
-          releaseBody: '请查看 CHANGELOG 了解此版本变更。'
+          releaseBody: '请见提交历史（本仓无 CHANGELOG 文件） 了解此版本变更。'
           releaseDraft: false
           prerelease: false
           args: --target universal-apple-darwin
@@ -134,7 +134,7 @@ jobs:
           projectPath: app
           tagName: ${{ github.ref_name }}
           releaseName: AI PM ${{ github.ref_name }}
-          releaseBody: '请查看 CHANGELOG 了解此版本变更。'
+          releaseBody: '请见提交历史（本仓无 CHANGELOG 文件） 了解此版本变更。'
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true

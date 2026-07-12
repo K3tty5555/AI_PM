@@ -1,17 +1,79 @@
 {
-  "$comment": "AI_PM 阶段 registry v1（合并计划波3 · 最小契约三件之三）。阶段 ID/顺序/必选性的单一机读源；ai-pm SKILL 的阶段流程、_status.phases 键、进度展示都以此为准——改阶段先改这里。",
+  "$comment": "AI_PM 阶段 registry v1（合并计划波3 · 最小契约三件之三）。阶段 ID/顺序/必选性的单一机读源；ai-pm SKILL 的阶段流程、_status.phases 键、进度展示都以此为准——改阶段先改这里。（2026-07-12 复验修正：status_key 以 15 项目实况为准——competitor/office-hours；此前拍脑袋写的 research/office_hours 与生产数据不符）",
   "schema_version": 1,
   "phases": [
-    { "id": "office-hours",  "order": 0, "name": "速评",        "optional": true,  "status_key": "office_hours" },
-    { "id": "requirement",   "order": 1, "name": "需求澄清",     "optional": false, "status_key": "requirement" },
-    { "id": "analysis",      "order": 2, "name": "需求分析",     "optional": false, "status_key": "analysis" },
-    { "id": "research",      "order": 3, "name": "竞品研究",     "optional": true,  "status_key": "research" },
-    { "id": "stories",       "order": 4, "name": "用户故事",     "optional": true,  "status_key": "stories" },
-    { "id": "prd",           "order": 5, "name": "PRD",         "optional": false, "status_key": "prd" },
-    { "id": "analytics",     "order": 6, "name": "埋点/数据",    "optional": true,  "status_key": "analytics" },
-    { "id": "prototype",     "order": 7, "name": "原型",        "optional": true,  "status_key": "prototype" },
-    { "id": "review",        "order": 8, "name": "评审",        "optional": true,  "status_key": "review" },
-    { "id": "retrospective", "order": 9, "name": "复盘",        "optional": true,  "status_key": "retrospective" }
+    {
+      "id": "office-hours",
+      "order": 0,
+      "name": "速评",
+      "optional": true,
+      "status_key": "office-hours"
+    },
+    {
+      "id": "requirement",
+      "order": 1,
+      "name": "需求澄清",
+      "optional": false,
+      "status_key": "requirement"
+    },
+    {
+      "id": "analysis",
+      "order": 2,
+      "name": "需求分析",
+      "optional": false,
+      "status_key": "analysis"
+    },
+    {
+      "id": "research",
+      "order": 3,
+      "name": "竞品研究",
+      "optional": true,
+      "status_key": "competitor",
+      "alias_note": "历史键名=competitor（15/15 项目实况），registry 尊重实况不强迁"
+    },
+    {
+      "id": "stories",
+      "order": 4,
+      "name": "用户故事",
+      "optional": true,
+      "status_key": "stories"
+    },
+    {
+      "id": "prd",
+      "order": 5,
+      "name": "PRD",
+      "optional": false,
+      "status_key": "prd"
+    },
+    {
+      "id": "analytics",
+      "order": 6,
+      "name": "埋点/数据",
+      "optional": true,
+      "status_key": "analytics"
+    },
+    {
+      "id": "prototype",
+      "order": 7,
+      "name": "原型",
+      "optional": true,
+      "status_key": "prototype"
+    },
+    {
+      "id": "review",
+      "order": 8,
+      "name": "评审",
+      "optional": true,
+      "status_key": "review"
+    },
+    {
+      "id": "retrospective",
+      "order": 9,
+      "name": "复盘",
+      "optional": true,
+      "status_key": "retrospective"
+    }
   ],
-  "skip_rules": "optional=true 的阶段可跳；跳过语义=phases 里无该键或 false，不需要显式 skipped 值"
+  "skip_rules": "optional=true 的阶段可跳；跳过语义=phases 里无该键或 false，不需要显式 skipped 值",
+  "extension_keys_note": "业务扩展阶段键（audit/pilot/next_version_prep 等）允许存在，不在核心序列内、校验不报错"
 }

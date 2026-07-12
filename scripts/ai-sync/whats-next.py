@@ -54,7 +54,7 @@ def load_staleness() -> dict:
     """返回 {项目名: {newestDate, newestFile, updated, dead[]}}。"""
     try:
         out = subprocess.run(
-            ["node", str(STALENESS_JS), str(PROJECTS), "--json"],
+            ["node", str(STALENESS_JS), str(PROJECTS), "--json", "--all"],
             capture_output=True, text=True, timeout=30,
         ).stdout
         rows = json.loads(out)

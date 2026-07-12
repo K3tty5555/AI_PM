@@ -24,7 +24,7 @@ REPO = Path(__file__).resolve().parent.parent
 PROJECTS = REPO / "output" / "projects"
 SCHEMA = REPO / "templates" / "project-index" / "status.schema.json"
 # lifecycle 枚举单源=schema 文件（review 修复批：此前手写第二份，双源必漂）
-LIFE = set(json.loads(SCHEMA.read_text(encoding="utf-8"))["properties"]["lifecycle"]["enum"])
+LIFE = None  # 延迟到 _SCHEMA 定义后
 
 
 def infer_lifecycle(name: str, d: dict) -> str:
@@ -32,7 +32,7 @@ def infer_lifecycle(name: str, d: dict) -> str:
     # 不算数（实测会把"V1.1已上线归档"的活跃项目误判成 archived）
     if "归档" in name or "存档" in name:
         return "reference"
-    if d.get("phase") == "archived":
+    if d.get("phase") == "archived" or d.get("last_phase") == "archived":
         return "archived"
     upd = str(d.get("updated", ""))[:10]
     try:
@@ -42,27 +42,72 @@ def infer_lifecycle(name: str, d: dict) -> str:
         return "paused"
 
 
+_SCHEMA = json.loads(SCHEMA.read_text(encoding="utf-8"))
+LIFE = set(_SCHEMA["properties"]["lifecycle"]["enum"])
+
+
 def validate(d: dict) -> list[str]:
+    """schema 驱动的迷你校验（Codex 复验 P1：此前手写检查漏 type/pattern——
+    "updated: not-a-date" 都能过）。覆盖 required / const / enum / type / pattern。"""
+    import re as _re
     errs = []
-    if d.get("schema_version") != 1:
-        errs.append("缺 schema_version=1")
-    if not d.get("project"):
-        errs.append("缺 project")
-    if d.get("lifecycle") not in LIFE:
-        errs.append(f"lifecycle 非法: {d.get('lifecycle')}")
-    if not str(d.get("updated", "")).strip():
-        errs.append("缺 updated")
-    ap = d.get("active_prd")
-    if ap and ap.startswith("05-prd/"):
-        errs.append(f"active_prd 带 05-prd/ 前缀（应为相对 05-prd/ 的路径）: {ap}")
+    for req in _SCHEMA.get("required", []):
+        if req not in d:
+            errs.append(f"缺必填 {req}")
+    for k, spec in _SCHEMA.get("properties", {}).items():
+        if k not in d:
+            continue
+        v = d[k]
+        if "const" in spec and v != spec["const"]:
+            errs.append(f"{k} 应为 {spec['const']}: {v}")
+        if "enum" in spec and v not in spec["enum"]:
+            errs.append(f"{k} 非法枚举: {v}")
+        ty = spec.get("type")
+        pytypes = {"string": str, "object": dict, "integer": int}
+        if ty in pytypes and not isinstance(v, pytypes[ty]):
+            errs.append(f"{k} 类型应为 {ty}: {type(v).__name__}")
+            continue
+        if "pattern" in spec and isinstance(v, str) and not _re.match(spec["pattern"], v):
+            errs.append(f"{k} 不匹配 pattern: {v}")
+        # next_action 子结构
+        if k == "next_action" and isinstance(v, dict):
+            if not v.get("text"):
+                errs.append("next_action 缺 text")
+            na_type = v.get("type")
+            na_enum = spec["properties"]["type"]["enum"]
+            if na_type is not None and na_type not in na_enum:
+                errs.append(f"next_action.type 非法: {na_type}")
+    # phases 值类型（registry 首个机器消费者：键自由但值必须 bool——防 "done"/"1" 字串漂移）
+    for pk, pv in (d.get("phases") or {}).items():
+        if not isinstance(pv, bool):
+            errs.append(f"phases.{pk} 值应为 bool: {pv!r}")
+    # lifecycle 与 phase 一致性（警告级并入错误——归档阶段不该是在途）
+    if d.get("last_phase") == "archived" and d.get("lifecycle") in ("active", "paused"):
+        errs.append(f"last_phase=archived 但 lifecycle={d['lifecycle']}（应为 archived/reference）")
     return errs
+
+
+def selftest() -> int:
+    bad = {"schema_version": 1, "project": "x", "lifecycle": "active",
+           "updated": "not-a-date", "active_prd": "not-markdown.txt", "next_action": "wrong-type"}
+    errs = validate(bad)
+    assert any("updated" in e for e in errs), errs
+    assert any("active_prd" in e for e in errs), errs
+    assert any("next_action" in e for e in errs), errs
+    good = {"schema_version": 1, "project": "x", "lifecycle": "active", "updated": "2026-07-12"}
+    assert validate(good) == [], validate(good)
+    print(f"status_migrate selftest ok（非法对象报 {len(errs)} 错，合法对象 0 错）")
+    return 0
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--validate", action="store_true")
+    ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
+    if a.selftest:
+        return selftest()
 
     files = sorted(PROJECTS.glob("*/_status.json"))
     if not files:

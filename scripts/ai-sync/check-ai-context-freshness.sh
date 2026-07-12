@@ -64,13 +64,16 @@ if [[ -f "$CODEX_MEMORY_IN_RESOLVED" ]]; then
   fi
 fi
 
+if [[ "${1:-}" == "--check-raw" ]]; then
+  # raw 快照默认冻结为历史档案（波0A#3）——只有显式 --check-raw 才对比原生日志
 check_conversation_dir "$CLAUDE_PROJECT_DIR_RESOLVED" "$CLAUDE_RAW_DIR" "Claude"
+fi
 
-if [[ -d "$CODEX_HOME_RESOLVED/archived_sessions" ]]; then
+if [[ "${1:-}" == "--check-raw" && -d "$CODEX_HOME_RESOLVED/archived_sessions" ]]; then
   check_conversation_dir "$CODEX_HOME_RESOLVED/archived_sessions" "$CODEX_RAW_DIR" "Codex"
 fi
 
-if [[ -f "$CODEX_HOME_RESOLVED/history.jsonl" ]]; then
+if [[ "${1:-}" == "--check-raw" && -f "$CODEX_HOME_RESOLVED/history.jsonl" ]]; then
   if file_newer_or_missing_copy "$CODEX_HOME_RESOLVED/history.jsonl" "$CODEX_RAW_DIR/history.jsonl"; then
     echo "STALE: Codex history snapshot needs refresh"
     stale=1

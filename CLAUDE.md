@@ -202,7 +202,7 @@ git ls-files | cat   # 检查文件名本身是否含公司名
 5. **不做退役判断**：hook 路径**只做 dedup-key 去重、不判断"取代旧卡"**（退役会软隐藏卡片，不能在无人监督时发生）；真退役留给有意识的 add/sync 与 review-stale
 6. **有内容** → 调 `/ai-pm-knowledge add`；**无内容** → 直接 stop（hook 二次触发自动放行）
 7. **超时约束**：30 秒内完成所有 add，否则跳过本次沉淀
-8. **端到端留痕**：处置完（无论 written/merged/skipped）向 `.claude/logs/knowledge-capture-events.log` 追加一行 `日期|triggered|written:<卡名>` 或 `…|merged:<卡名>` 或 `…|skipped:<原因>`——证明闭环走完，可观测不靠自述
+8. **端到端留痕（JSONL）**：处置完向 `.claude/logs/knowledge-capture-events.jsonl` 追加一行 JSON：`{"ts":"YYYY-MM-DD HH:MM","session":"<会话id前8位>","outcome":"written|merged|skipped","artifacts":["卡名",…],"reason":null或跳过原因}`——机器可统计漏闭环率，不靠自述
 
 ## 禁止事项
 

@@ -13,6 +13,7 @@
 隐私：不硬编码文档域名——URL 前缀取 AIPM_DOC_HOST 环境变量，或从项目已有 cloud_docs 登记里学。
 """
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -98,6 +99,9 @@ def main() -> int:
 
     if a.delete_doc:
         bc0 = count_blocks(a.delete_doc)
+        if bc0.get("error"):
+            print(f"⛔ API 不可用（{bc0['error'][:80]}）——无法确认目标状态，中止删除。")
+            return 2
         total0 = bc0.get("total")
         if not a.yes:
             print(f"预览：将删除云文档 {a.delete_doc[:16]}…（当前 blocks={total0}）——确认请加 --yes")
@@ -105,8 +109,11 @@ def main() -> int:
         r = delete_file(a.delete_doc, "docx")
         print(f"删除结果：{json.dumps(r, ensure_ascii=False)[:200]}")
         back = count_blocks(a.delete_doc)
+        if back.get("error"):
+            print(f"读回验证：目标已不可访问（API 返回错误码，与删除结果一致）")
+            return 0
         gone = not back.get("total")
-        print("读回验证：" + ("✓ 已不可访问" if gone else f"⛔ 仍可读到 {back.get('total')} 块，删除未生效"))
+        print("读回验证：" + ("✓ 空（0 块）" if gone else f"⛔ 仍可读到 {back.get('total')} 块，删除未生效"))
         return 0 if gone else 2
 
     if a.cleanup:
@@ -121,9 +128,12 @@ def main() -> int:
             tok = reg2.get("doc_token")
             seen_tokens.add(tok)
             bc2 = count_blocks(tok)
+            if bc2.get("error"):
+                print(f"  ⚠️ API 不可用（{key2}）：{bc2['error'][:60]}——非坏档判定，恢复后重盘")
+                continue
             total = bc2.get("total")
             if not total:
-                print(f"  💀 坏档（读不到任何块）：{key2} → {tok[:16]}…（建议 --delete-doc 或修登记）")
+                print(f"  💀 坏档/空档（0 块）：{key2} → {tok[:16]}…（建议 --delete-doc 或修登记）")
                 continue
             flag = "🫙 空壳（≤1 块，疑似清空残留）" if total <= 1 else "✓"
             print(f"  {flag} {key2} blocks={total}")
@@ -153,13 +163,27 @@ def main() -> int:
     doc_id = a.doc_id or reg.get("doc_token")
 
     if doc_id:
-        # 人改保护：登记过块数则比对当前云端块数
+        # 人改保护 v2（Codex 复验 P0-2.1）：内容 hash 优先（同块内改字块数不变，只比块数会漏），块数辅助
         cur = count_blocks(doc_id)
-        if reg.get("blocks") and cur.get("total") != reg["blocks"] and not a.force:
-            print(f"[2/5] ⛔ 云端块数 {cur.get('total')} ≠ 上次登记 {reg['blocks']}：疑似有人改。")
-            print("      先做人改回收（diff 云端→本地），或确认无价值改动后 --force 重推。")
+        if cur.get("error"):
+            print(f"[2/5] ⛔ 云端 API 不可用（{cur['error'][:80]}）——先别推，恢复后重试（失败≠空文档）。")
             return 2
-        print(f"[2/5] 目标文档 {doc_id[:16]}…（人改保护：{'跳过 --force' if a.force else '通过'}）")
+        cloud_now_hash = None
+        try:
+            raw_now = (get_doc_raw_text(doc_id) or {}).get("content") or ""
+            cloud_now_hash = hashlib.md5(re.sub(r"\s+", "", raw_now).encode()) .hexdigest() if raw_now else None
+        except Exception:
+            pass
+        changed_flag = False
+        if reg.get("content_hash") and cloud_now_hash and cloud_now_hash != reg["content_hash"]:
+            changed_flag = True
+        elif reg.get("blocks") and cur.get("total") != reg["blocks"]:
+            changed_flag = True
+        if changed_flag and not a.force:
+            print(f"[2/5] ⛔ 云端内容与上次发布登记不一致（hash/块数）：疑似有人改。")
+            print("      先 prd_pull 回收人改，或确认无价值改动后 --force 重推。")
+            return 2
+        print(f"[2/5] 目标文档 {doc_id[:16]}…（人改保护：{'跳过 --force' if a.force else '通过[hash]'}）")
     else:
         title = a.title or re.sub(r"\.md$", "", key)
         r = create_doc(title)
@@ -183,6 +207,9 @@ def main() -> int:
 
     # 读回实测（不信回显）
     bc = count_blocks(doc_id)
+    if bc.get("error"):
+        print(f"[4/5] ⛔ 读回失败（API：{bc['error'][:80]}）——push 结果未验证，禁止视为发布成功。")
+        return 2
     imgs = find_blocks_by_type(doc_id, 27)
     empty_imgs = [b for b in imgs if not (b.get("image") or {}).get("token")]
     by_type = {str(k): v for k, v in (bc.get("by_type") or {}).items()}
@@ -233,6 +260,16 @@ def main() -> int:
         "manifest": {"headings": src["headings"], "callouts": src["callouts"],
                      "red": src["marker_red"], "gray": src["marker_gray"], "core": src["marker_core"]},
     }
+    # 三方合并基线（Codex 复验 P0-2.2）：①云端内容 hash 进登记 ②本地源快照落 _cloud/baseline/
+    try:
+        raw_after = (get_doc_raw_text(doc_id) or {}).get("content") or ""
+        if raw_after:
+            entry["content_hash"] = hashlib.md5(re.sub(r"\s+", "", raw_after).encode()).hexdigest()
+    except Exception:
+        pass
+    bl_dir = project / "_cloud" / "baseline"
+    bl_dir.mkdir(parents=True, exist_ok=True)
+    (bl_dir / key).write_text(md, encoding="utf-8")
     cloud[key] = {k: v for k, v in entry.items() if v is not None}
     status["cloud_docs"] = cloud
     status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

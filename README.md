@@ -13,7 +13,7 @@
 </p>
 
 > [!WARNING]
-> **Desktop app is frozen (2026-07-10).** The Tauri desktop client is no longer maintained or distributed; downloadable builds have been withdrawn and the auto-update channel is closed. Existing installs should be uninstalled (known security issues in historical builds will not be fixed). The actively maintained form of AI_PM is the **Claude Code skills** edition below. Desktop sections in this README are kept for historical reference only.
+> **Desktop app is frozen (2026-07-10).** The Tauri desktop client is no longer maintained; the auto-update channel is closed and the release pipeline is disabled. **Historical installers remain on GitHub Releases but contain known security issues that will not be fixed — do not download or install them.** Existing installs should be uninstalled. The actively maintained form of AI_PM is the **Claude Code skills** edition below. Desktop sections in this README are kept for historical reference only.
 
 
 ---
@@ -106,18 +106,9 @@ AI PM will guide requirement clarification first, then move through the product 
 
 HTML prototypes and dashboards use the bundled `ai-pm-frontend-design` skill by default. External Claude Code plugins such as `impeccable` are optional enhancements, not runtime requirements.
 
-### Option 2: Desktop App
+### Option 2: Desktop App (⛔ frozen — do not install)
 
-Download from your release channel:
-
-- macOS: `AI.PM_x.x.x_universal.dmg`
-- Windows: `AI.PM_x.x.x_x64-setup.exe`
-
-On first launch, configure one AI backend in Settings:
-
-- **Anthropic API** — enter your API key
-- **OpenAI-compatible endpoint** — enter Base URL + key
-- **Claude CLI** — reuse your locally logged-in Claude Code
+The desktop app is discontinued. **Do not download historical installers** (known unfixed security issues; see the warning at the top). This section is kept for historical reference only — the active form is Option 1 (Claude Code skills).
 
 ## Claude Code Commands
 
@@ -169,7 +160,7 @@ Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/a
 |-------|-----------|
 | Frontend | React 19, TypeScript 5, Vite 6, TailwindCSS 4, Mermaid 11 |
 | Backend | Tauri 2, Rust, SQLite |
-| AI Skills | 27 Claude Code project skills + 2 sub-agents (pm-agent / prototype-agent) |
+| AI Skills | 26 Claude Code project skills + 2 sub-agents (pm-agent / prototype-agent) |
 | Desktop Resources | 26 bundled app skills + Tool Plaza manifest (5 categories) |
 | Export Scripts | Python 3, Node scripts, Chrome-based PDF rendering |
 | Collaboration Context | `.ai-shared` indexes and `scripts/ai-sync` checks |
@@ -182,7 +173,7 @@ Release builds require the `AI_PM_UPDATER_ENDPOINT` environment variable or repo
 ## Project Structure
 
 ```text
-.claude/skills/                    # 27 Claude Code project skills
+.claude/skills/                    # 26 Claude Code project skills
 .claude/agents/                    # 2 sub-agents: pm-agent (PRD gate) and prototype-agent (prototype audit)
 .ai-shared/                        # Shared memory / skill / agent indexes for Claude and Codex
 scripts/ai-sync/                   # Index generation and context drift checks

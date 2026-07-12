@@ -141,6 +141,7 @@ function checkProject(projectDir, repoRoot) {
 // ---- main ----
 const projectsDir = process.argv[2];
 const asJson = process.argv.includes('--json');
+const allMode = process.argv.includes('--all'); // 复验 3.2：正常项目也返回（whats-next 的 newestFile 来源）
 if (!projectsDir || projectsDir === '-h' || projectsDir === '--help') { usage(); process.exit(projectsDir ? 0 : 1); }
 if (!fs.existsSync(projectsDir) || !fs.statSync(projectsDir).isDirectory()) {
   console.log('STATUS: skip'); console.log('MESSAGE: projects 目录不存在，跳过'); process.exit(1);
@@ -153,9 +154,14 @@ const projects = fs.readdirSync(projectsDir, { withFileTypes: true })
   .filter(e => e.isDirectory() && !e.name.startsWith('.') && !e.name.startsWith('_'))
   .map(e => path.join(projectsDir, e.name));
 
-const results = projects.map(p => checkProject(p, repoRoot)).filter(r => r.issues.stale || r.issues.dead.length);
+const allResults = projects.map(p => checkProject(p, repoRoot));
+const results = allMode ? allResults : allResults.filter(r => r.issues.stale || r.issues.dead.length);
 
-if (asJson) { console.log(JSON.stringify(results, null, 2)); process.exit(results.length ? 3 : 0); }
+if (asJson) {
+  const bad = results.filter(r => r.issues.stale || r.issues.dead.length).length;
+  console.log(JSON.stringify(results, null, 2));
+  process.exit(bad ? 3 : 0);
+}
 
 if (results.length === 0) {
   console.log('STATUS: clean');

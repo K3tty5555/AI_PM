@@ -13,7 +13,7 @@
 </p>
 
 > [!WARNING]
-> **桌面客户端已冻结（2026-07-10）。** Tauri 桌面端不再维护和分发；可下载构建已撤下、自动更新通道已关闭。已安装的旧版本建议卸载（历史构建存在不再修复的已知安全问题）。AI_PM 的活跃形态是下方的 **Claude Code skills** 版；本 README 中桌面端章节仅作历史参考。
+> **桌面客户端已冻结（2026-07-10）。** Tauri 桌面端不再维护；自动更新通道已关闭、发布流水线已停。**历史安装包仍留在 GitHub Releases 上但存在不再修复的已知安全问题——请勿下载安装**，已安装的建议卸载。AI_PM 的活跃形态是下方的 **Claude Code skills** 版；本 README 中桌面端章节仅作历史参考。
 
 
 ---
@@ -104,18 +104,9 @@ claude
 
 AI PM 会先引导需求澄清，再推进完整产品工作流。
 
-### 方式二：桌面客户端
+### 方式二：桌面客户端（⛔ 已冻结，勿新装）
 
-从你的发布渠道下载安装包：
-
-- macOS：`AI.PM_x.x.x_universal.dmg`
-- Windows：`AI.PM_x.x.x_x64-setup.exe`
-
-首次启动后在设置页配置一个 AI 后端：
-
-- **Anthropic API**：填写 API Key
-- **OpenAI 兼容接口**：填写 Base URL + Key
-- **Claude CLI**：复用本机已登录的 Claude Code
+桌面端已停止维护——**不要下载历史安装包**（存在不再修复的已知安全问题，见顶部警告）。本节仅作历史参考；活跃形态是方式一（Claude Code skills）。
 
 ## Claude Code 命令速查
 
@@ -167,8 +158,8 @@ AI PM 会先引导需求澄清，再推进完整产品工作流。
 |----|------|
 | 前端 | React 19、TypeScript 5、Vite 6、TailwindCSS 4、Mermaid 11 |
 | 后端 | Tauri 2、Rust、SQLite |
-| AI 技能 | 27 个 Claude Code 项目技能 + 2 个 sub-agent（pm-agent / prototype-agent）|
-| 客户端资源 | 27 个 bundled app skills + 功能广场 manifest（5 大分类）|
+| AI 技能 | 26 个 Claude Code 项目技能 + 2 个 sub-agent（pm-agent / prototype-agent）|
+| 客户端资源 | 26 个 bundled app skills + 功能广场 manifest（5 大分类）|
 | 导出脚本 | Python 3、Node 脚本、Chrome PDF 渲染 |
 | AI 协作上下文 | `.ai-shared` 索引和 `scripts/ai-sync` 检查脚本 |
 | CI/CD | GitHub Actions、macOS 通用二进制、Windows x64 |
@@ -180,7 +171,7 @@ AI PM 会先引导需求澄清，再推进完整产品工作流。
 ## 项目结构
 
 ```text
-.claude/skills/                    # 27 个 Claude Code 项目技能
+.claude/skills/                    # 26 个 Claude Code 项目技能
 .claude/agents/                    # 2 个 sub-agent：pm-agent（PRD 守门）、prototype-agent（原型审计）
 .ai-shared/                        # Claude / Codex 共享 memory、skill、agent 索引
 scripts/ai-sync/                   # 索引生成和上下文漂移检查
@@ -188,7 +179,7 @@ app/src/                           # React 前端
 app/src/pages/project/             # 10 个项目阶段页面
 app/src/pages/tools/plaza/         # 功能广场页面
 app/src-tauri/                     # Rust 后端
-app/src-tauri/resources/skills/    # 27 个桌面端 bundled skills
+app/src-tauri/resources/skills/    # 26 个桌面端 bundled skills
 app/src-tauri/resources/plaza-manifest.json
 templates/                         # PRD 风格、UI 规范、知识库、预设配置
 docs/                              # 设计规范、实施记录
