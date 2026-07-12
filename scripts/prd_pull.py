@@ -39,7 +39,8 @@ def normalize(text: str) -> str:
     t = MARKER_RE.sub(lambda m: m.group(1) or "", text)
     t = IMG_RE.sub("[图片]", t)
     t = CALLOUT_RE.sub("> ", t)
-    t = FOLD_RE.sub("", t)
+    t = re.sub(r"<!--.*?-->", "", t, flags=re.S)      # HTML 注释=本地渲染控制层（doctype/fold/
+    # columns…），云端本来就不渲染——不算"云端删了"（四轮复验 3.4-5；FOLD_RE 被此条包含）
     t = LINK_RE.sub(lambda m: m.group(1), t)          # 链接→纯文字（云端渲染丢 URL）
     t = re.sub(r"^```\w+\s*$", "```", t, flags=re.M)  # 代码围栏语言丢失
     t = t.replace("\\|", "|")                         # 转义竖线
@@ -55,9 +56,10 @@ def normalize(text: str) -> str:
 
 
 def fragile(text: str) -> bool:
-    """该章节含有损往返高危成分（标记/图/callout/表格/链接/代码块）→ 永不自动回写。"""
+    """该章节含有损往返高危成分（标记/图/callout/表格/链接/代码块/HTML 注释）→ 永不自动回写。
+    HTML 注释=渲染控制/机读元数据，云端渲染必丢——自动回写会把本地 doctype/fold 层抹掉。"""
     return bool(MARKER_RE.search(text) or IMG_RE.search(text) or CALLOUT_RE.search(text)
-                or LINK_RE.search(text) or "```" in text
+                or LINK_RE.search(text) or "```" in text or "<!--" in text
                 or re.search(r"^\s*\|.+\|", text, re.M))
 
 
@@ -68,19 +70,22 @@ def head_key(h: str) -> str:
 def keyed_records(md: str) -> list[dict]:
     """有序章节记录：{key, head, body, body_start, body_end}（行号 span，回写按位置切片）。
     key=父级标题链/自身标题的复合键；同链同名追加 #2。代码围栏内的 # 不当标题。
-    **首行 H1 = 文档标题元数据**（三轮复验 §五）：publish 剥掉它由文档名承担，云端渲染再生成
-    `# <云文档标题>`——两者文本不稳定，进父链会让整棵章节树错位（本地标题/A ≠ 文件名标题/A，
-    全部沦为独有节、云改无法回收）。映射到固定键 _doc_title 且不入 stack；
-    非首行的正文 H1 仍按普通标题处理。"""
+    **首行 H1 = 文档标题元数据 + 前言统一 _intro**（三/四轮复验 §五/§三）：
+    - publish 剥首行 H1 由文档名承担、云端渲染再生成 `# <云文档标题>`——标题文本不稳定，
+      不进正文父链、也不参与比较；
+    - 首个结构标题之前的导语正文（无论本侧有没有首行 H1）一律挂固定键 `_intro` 参与比较
+      ——此前"跳过 _head + 单侧忽略 _doc_title"把 32/129 份无 H1 正本的前言变成盲区，
+      本地 746 字前言 vs 云端 410 字前言可以静默漏报；
+    - 回写只动 _intro 的 body span，本地首行 H1/注释元数据行不被云标题覆盖。"""
     lines = md.split("\n")
-    recs, stack, seen = [], [], set()
+    recs, stack, seen = [], [], {"_intro"}
 
     def close(rec, end):
         rec["body_end"] = end
         rec["body"] = "\n".join(lines[rec["body_start"]:end])
         recs.append(rec)
 
-    cur = {"key": "_head", "head": None, "body_start": 0}
+    cur = {"key": "_intro", "head": None, "body_start": 0}
     in_code = False
     for i, ln in enumerate(lines):
         if ln.strip().startswith("```"):
@@ -91,11 +96,11 @@ def keyed_records(md: str) -> list[dict]:
         m = re.match(r"^(#{1,6}) ", ln)
         if not m:
             continue
-        close(cur, i)
         if i == 0 and ln.startswith("# "):
-            seen.add("_doc_title")
-            cur = {"key": "_doc_title", "head": ln.strip(), "body_start": 1}
+            # 首行 H1：不关闭空的初始记录（避免 _intro 撞键），标题行归元数据、导语从下一行起
+            cur = {"key": "_intro", "head": ln.strip(), "body_start": 1}
             continue
+        close(cur, i)
         level = len(m.group(1))
         name = head_key(ln)
         while stack and stack[-1][0] >= level:
@@ -113,7 +118,7 @@ def keyed_records(md: str) -> list[dict]:
 
 
 def keyed_sections(md: str) -> dict:
-    return {r["key"]: (r["head"] or "_head", r["body"]) for r in keyed_records(md)}
+    return {r["key"]: (r["head"] or "(前言)", r["body"]) for r in keyed_records(md)}
 
 
 def plan_merge(base_md, local_md: str, cloud_md: str) -> dict:
@@ -122,11 +127,8 @@ def plan_merge(base_md, local_md: str, cloud_md: str) -> dict:
     bas = keyed_sections(base_md) if base_md is not None else None
     plan = {"changed": [], "conflicts": [], "local_newer": [], "cloud_only": [], "local_only": []}
     for k, (h, cb) in cld.items():
-        if k == "_head":
-            continue
-        if k not in loc:
-            if k != "_doc_title":  # 单侧才有标题 H1=表示法差异（本地无首行 H1 等），不算云端独有
-                plan["cloud_only"].append((k, h))
+        if k not in loc:  # _intro 两侧必有（可空），不会落到这里
+            plan["cloud_only"].append((k, h))
             continue
         lh, lb = loc[k]
         n_l, n_c = normalize(lb), normalize(cb)
@@ -151,7 +153,7 @@ def plan_merge(base_md, local_md: str, cloud_md: str) -> dict:
         else:
             plan["changed"].append((k, lh, cb))
     for k, (h, _) in loc.items():
-        if k not in ("_head", "_doc_title") and k not in cld:
+        if k not in cld:
             plan["local_only"].append((k, h))
     return plan
 
@@ -181,6 +183,46 @@ def apply_merge_plan(local_md: str, changed: list) -> tuple[str, int, list]:
     return "\n".join(lines), len(items), failed
 
 
+class CloudReadRace(RuntimeError):
+    """云端读取窗口内内容发生变化（四轮复验 §五）——本次读取全部作废，禁落盘，重试。"""
+
+
+def read_cloud_snapshot(doc_id, blocks_to_markdown, count_blocks, get_doc_raw_content,
+                        get_doc_meta=None):
+    """一致性括号读：markdown/blocks/raw 分多次读取本身无版本保证——协作者在窗口内编辑会
+    拼出「回收 A 版内容 + 登记 B 版 hash」，下次 push 无提示覆盖 B 版人改。
+    括号=revision 前后双读（get_doc_meta 可用时；本部署曾间歇 400，不可用自动退化）
+    + raw 指纹/块数前后双读兜底。任一不一致抛 CloudReadRace。
+    返回 (cloud_md, raw, blocks_total, revision_id|None)。"""
+    def _rev():
+        if get_doc_meta is None:
+            return None
+        try:
+            r = get_doc_meta(doc_id)
+            if isinstance(r, dict) and r.get("code") == 0:
+                return ((r.get("data") or {}).get("document") or {}).get("revision_id")
+        except Exception:
+            pass
+        return None
+
+    rev1 = _rev()
+    raw1 = get_doc_raw_content(doc_id)
+    bc1 = count_blocks(doc_id)
+    if bc1.get("error"):
+        raise CloudReadRace(f"blocks 读取失败（{str(bc1['error'])[:60]}）——一致性不可判定")
+    cloud_md = blocks_to_markdown(doc_id)
+    raw2 = get_doc_raw_content(doc_id)
+    bc2 = count_blocks(doc_id)
+    if bc2.get("error"):
+        raise CloudReadRace(f"blocks 复读失败（{str(bc2['error'])[:60]}）——一致性不可判定")
+    rev2 = _rev()
+    if ((rev1 is not None and rev2 is not None and rev1 != rev2)
+            or content_fingerprint(raw1) != content_fingerprint(raw2)
+            or bc1.get("total") != bc2.get("total")):
+        raise CloudReadRace("读取窗口内云端发生编辑（revision/raw 指纹/块数前后不一致）——请重试")
+    return cloud_md, raw2, bc2.get("total"), rev2
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--md")
@@ -196,7 +238,9 @@ def main() -> int:
 
     # 插件延迟导入：--selftest 离线可跑（fresh clone 回归不因缺插件红）
     try:
-        from feishu_doc import blocks_to_markdown, count_blocks, get_doc_raw_content, DocApiError  # noqa: E402
+        from feishu_doc import (  # noqa: E402
+            blocks_to_markdown, count_blocks, get_doc_raw_content, get_doc_meta,
+        )
     except ImportError:
         sys.exit(
             "❌ 本命令依赖本机私有插件 xfchat-wiki（gitignore 不随仓分发）。\n"
@@ -214,10 +258,25 @@ def main() -> int:
         sys.exit(f"❌ 未找到 {key} 的 cloud_docs 登记，也未指定 --doc-id")
 
     print(f"[1/3] 拉取云端 {doc_id[:16]}… → markdown")
-    try:
-        cloud_md = blocks_to_markdown(doc_id)
-    except Exception as e:
-        sys.exit(f"❌ 云端 API 不可用（{e}）——失败≠云端为空，恢复后重试")
+    snap_raw = snap_blocks = snap_rev = None
+    if a.apply:
+        # --apply 走一致性括号读（四轮复验 §五）：markdown/hash/blocks 必须来自同一版本，
+        # 否则可能回收 A 版内容却登记 B 版 hash——下次 push 无提示覆盖 B 版人改
+        try:
+            cloud_md, snap_raw_text, snap_blocks, snap_rev = read_cloud_snapshot(
+                doc_id, blocks_to_markdown, count_blocks, get_doc_raw_content, get_doc_meta)
+            snap_raw = content_fingerprint(snap_raw_text)
+        except CloudReadRace as e:
+            print(f"❌ {e}（本地未动）")
+            return 2
+        except Exception as e:
+            print(f"❌ 云端 API 不可用（{e}）——失败≠云端为空，本地未动，恢复后重试")
+            return 2
+    else:
+        try:
+            cloud_md = blocks_to_markdown(doc_id)
+        except Exception as e:
+            sys.exit(f"❌ 云端 API 不可用（{e}）——失败≠云端为空，恢复后重试")
     if not cloud_md or len(cloud_md) < 20:
         sys.exit("❌ 云端渲染结果为空/过短，中止（先核 doc token 与权限）")
 
@@ -249,22 +308,10 @@ def main() -> int:
         print("[3/3] 预览模式结束（--apply 执行回写；冲突/高危节永远不自动回写）")
         return 0
 
-    # 远端事实前置（三轮复验 §3.3）：登记/基线要用的 blocks+raw 在动本地**之前**取齐；
-    # 任一失败=本地/status/baseline 全不动，退出 2。此前 raw 失败发生在本地已回写之后，
-    # 曾"摘旧 hash+推进基线+退出 0"——主动卸下人改保护还报成功，比留旧 hash 假警报危险得多。
+    # 远端事实前置（三轮 §3.3 + 四轮 §五）：登记/基线要用的 hash/blocks 来自 [1/3] 的
+    # 一致性括号快照——与回写内容同版本；任何远端读取失败都发生在动本地之前。
     would_recover = not conflicts and not plan["cloud_only"] and not plan["local_only"]
-    new_blocks = new_hash = None
-    if would_recover and reg:
-        cur = count_blocks(doc_id)
-        if cur.get("error"):
-            print(f"[3/3] ⛔ 远端 blocks 读取失败（{cur['error'][:80]}）——本地未动，恢复后重试")
-            return 2
-        try:
-            new_hash = content_fingerprint(get_doc_raw_content(doc_id))
-        except DocApiError as e:
-            print(f"[3/3] ⛔ 远端正文读取失败（{e}）——同步登记无法完成，本地未动，恢复后重试")
-            return 2
-        new_blocks = cur.get("total")
+    new_blocks, new_hash = snap_blocks, snap_raw
 
     applied = 0
     if not changed:
@@ -292,10 +339,13 @@ def main() -> int:
         return 0
     if reg:
         reg["blocks"] = new_blocks
-        reg["content_hash"] = new_hash        # 前置读取保证非 None——失败在动本地前已退出
+        reg["content_hash"] = new_hash        # 括号快照保证非 None——失败在动本地前已退出
+        if snap_rev is not None:
+            reg["revision_id"] = snap_rev     # 审计/诊断字段（四轮 §5.3）
         status["cloud_docs"][key] = reg
         status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"      cloud_docs 登记已刷新：blocks={reg['blocks']}，hash 已刷新")
+        print(f"      cloud_docs 登记已刷新：blocks={reg['blocks']}，hash 已刷新"
+              + (f"，revision={snap_rev}" if snap_rev is not None else ""))
     if plan["local_newer"]:
         print(f"      🛡 本地有 {len(plan['local_newer'])} 节比基线新（未推云端）——基线不推进"
               f"（推进会让下一轮把旧云端拉回来盖掉新本地），push 定稿后由 publish 重建基线")
@@ -346,7 +396,7 @@ def selftest() -> int:
     assert "A-cloud" in new_md and "B-local" in new_md and "A-local" not in new_md, new_md
     # 7) 同链同名标题 → #2 后缀不互覆
     ks = keyed_sections("## A\nx\n## A\ny\n")
-    assert len([k for k in ks if k != "_head"]) == 2, list(ks)
+    assert len([k for k in ks if k != "_intro"]) == 2, list(ks)
     # 8) fragile 节（云端改了表格）→ 冲突不自动写
     md8 = "# T\n\n## 表\n\n|a|b|\n|---|---|\n|1|2|\n"
     p = plan_merge(md8, md8, md8.replace("|1|2|", "|1|9|"))
@@ -360,7 +410,7 @@ def selftest() -> int:
     assert cats(p) == {**zero, "local_newer": 1}, cats(p)
     # 11) 代码围栏里的 "# 注释" 不当标题切节（防把 fragile 节切出可写子节）
     md11 = "## 代码\n```bash\n# 注释\n```\n"
-    assert [k for k in keyed_sections(md11) if k != "_head"] == ["/代码"], list(keyed_sections(md11))
+    assert [k for k in keyed_sections(md11) if k != "_intro"] == ["/代码"], list(keyed_sections(md11))
     # 12) 首行 H1=文档标题元数据（三轮复验 §五反例）：本地 H1≠云标题时 H2 仍匹配、回写保本地 H1
     l12 = "# 本地标题\n\n## A\n\n旧内容\n"
     c12 = "# 文件名标题\n\n## A\n\n云端修改\n"
@@ -371,22 +421,40 @@ def selftest() -> int:
     # 13) 本地无首行 H1、云端有文档标题 H1 → 标题不算云端独有
     p = plan_merge("## A\n\n旧\n", "## A\n\n旧\n", "# 文件名标题\n\n## A\n\n旧\n")
     assert cats(p) == zero, cats(p)
-    # 14/15) 真调 main() 的临时文件测试（三轮复验 §3.4）：远端读取失败=本地/status/baseline 全不动
+    # 14) 无 H1 前言盲区（四轮复验 §三反例）：本地无 H1 导语 vs 云端标题 H1+被改导语 → 必须报告
+    l14 = "前言旧\n\n## A\n\nx\n"
+    c14 = "# 云标题\n\n前言新\n\n## A\n\nx\n"
+    p = plan_merge(l14, l14, c14)
+    assert cats(p) == {**zero, "changed": 1} and p["changed"][0][0] == "_intro", (cats(p), p["changed"])
+    new14, ap14, _ = apply_merge_plan(l14, p["changed"])
+    assert ap14 == 1 and new14.startswith("前言新") and "# 云标题" not in new14, new14
+    # 15) 脱敏 V4 形态 fixture（注释+callout+表格+无 H1）：前言被人改 → fragile 冲突（不可静默漏报）
+    l15 = ("<!-- doctype: 全员评审 -->\n\n> [!TIP] 云端为正本\n\n"
+           "|范围|说明|\n|---|---|\n|A|B|\n\n## 一、概述\n\n正文\n")
+    c15 = ("# 文件名标题\n\n> 云端为正本（被人改了）\n\n"
+           "|范围|说明改|\n|---|---|\n|A|B|\n\n## 一、概述\n\n正文\n")
+    p = plan_merge(l15, l15, c15)
+    assert len(p["conflicts"]) == 1 and p["conflicts"][0][0] == "_intro", cats(p)
+    # 16) 仅 HTML 注释差异（本地渲染控制层，云端本来不渲染）→ 不算云端改动
+    p = plan_merge(l15, l15, l15.replace("<!-- doctype: 全员评审 -->\n\n", ""))
+    assert cats(p) == zero, cats(p)
+    # 17+) 真调 main() 的临时文件测试（三轮 §3.4 + 四轮 §五）：远端失败/读取竞态=全不动
     _selftest_main_flow()
-    print("prd_pull selftest: 16/16 ok（纯三方算法+复合键回写+H1 元数据+main 级远端失败事务）")
+    print("prd_pull selftest: 19/19 ok（三方算法+_intro 前言+一致性括号+main 级事务）")
     return 0
 
 
 def _selftest_main_flow() -> None:
     """mock 插件真跑 main --apply：①raw 失败→退出 2 且本地/status/baseline 原样（此前
-    曾摘 hash+推基线+退 0）②远端齐备→回写+登记 hash/blocks+基线推进。"""
+    曾摘 hash+推基线+退 0）②读取窗口内云端被编辑（raw 前后不一致）→CloudReadRace 全不动
+    ③远端齐备→回写+登记 hash/blocks/revision+基线推进。"""
     import tempfile
     import types
 
     BASE = "# T\n\n## A\n\n旧A\n\n## B\n\n旧B\n"
     CLOUD = BASE.replace("旧A", "云A")
 
-    def run_case(raw_fail):
+    def run_case(raw_fail=False, race=False):
         fake = types.ModuleType("feishu_doc")
 
         class _Err(RuntimeError):
@@ -395,9 +463,18 @@ def _selftest_main_flow() -> None:
         fake.DocApiError = _Err
         fake.blocks_to_markdown = lambda d: CLOUD
         fake.count_blocks = lambda d: {"total": 5, "by_type": {}}
-        fake.get_doc_raw_content = (
-            (lambda d, lang=0: (_ for _ in ()).throw(_Err("raw down"))) if raw_fail
-            else (lambda d, lang=0: "云端正文"))
+        fake.get_doc_meta = lambda d: {"code": 0, "data": {"document": {"revision_id": 7}}}
+        if raw_fail:
+            fake.get_doc_raw_content = lambda d, lang=0: (_ for _ in ()).throw(_Err("raw down"))
+        elif race:
+            calls = {"n": 0}
+
+            def _racy(d, lang=0):
+                calls["n"] += 1
+                return f"版本{calls['n']}"   # 每次读都不同=窗口内被编辑
+            fake.get_doc_raw_content = _racy
+        else:
+            fake.get_doc_raw_content = lambda d, lang=0: "云端正文"
         old_mod = sys.modules.get("feishu_doc")
         sys.modules["feishu_doc"] = fake
         try:
@@ -429,10 +506,15 @@ def _selftest_main_flow() -> None:
     reg = st_a["cloud_docs"]["x.md"]
     assert rc == 2 and local_a == BASE and base_a == BASE, (rc, "raw 失败必须动不了本地/基线")
     assert reg["content_hash"] == "old" and reg["blocks"] == 1, ("raw 失败不得改登记", reg)
-    rc, local_a, st_a, base_a = run_case(raw_fail=False)
+    rc, local_a, st_a, base_a = run_case(race=True)
+    reg = st_a["cloud_docs"]["x.md"]
+    assert rc == 2 and local_a == BASE and base_a == BASE, (rc, "读取竞态必须动不了本地/基线")
+    assert reg["content_hash"] == "old" and reg["blocks"] == 1, ("读取竞态不得改登记", reg)
+    rc, local_a, st_a, base_a = run_case()
     reg = st_a["cloud_docs"]["x.md"]
     assert rc == 0 and "云A" in local_a and "旧B" in local_a, (rc, local_a)
     assert reg["blocks"] == 5 and reg["content_hash"] == content_fingerprint("云端正文"), reg
+    assert reg["revision_id"] == 7, ("revision 审计字段未登记", reg)
     assert base_a == local_a, "零冲突零 local_newer 应推进基线"
 
 

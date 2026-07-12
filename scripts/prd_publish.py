@@ -25,22 +25,27 @@ XFCHAT = REPO / ".claude" / "skills" / "xfchat-wiki" / "scripts"
 sys.path.insert(0, str(XFCHAT))
 
 _PLUGIN_ERR = None
-try:
-    from feishu_doc import (  # noqa: E402
-        create_doc, push_markdown_to_doc, count_blocks, find_blocks_by_type,
-        count_legacy_prototype_rows, get_doc_outline, get_doc_raw_content,
-        blocks_to_markdown, DocApiError,
-    )
-    from feishu_other import search_docs, delete_file  # noqa: E402
-except ImportError as _e:  # 拒绝延迟到 main——--selftest 注入假件离线可跑（三轮复验 §2.5）
-    _PLUGIN_ERR = _e
+if os.environ.get("AIPM_DISABLE_PRIVATE_PLUGIN"):
+    # fresh-clone 模拟开关（四轮复验 §六验收）：无插件环境 selftest 必须过、普通命令明确报缺
+    _PLUGIN_ERR = ImportError("private plugin disabled via AIPM_DISABLE_PRIVATE_PLUGIN=1")
+else:
+    try:
+        from feishu_doc import (  # noqa: E402
+            create_doc, push_markdown_to_doc, count_blocks, find_blocks_by_type,
+            count_legacy_prototype_rows, get_doc_outline, get_doc_raw_content,
+            blocks_to_markdown, get_doc_meta, DocApiError,
+        )
+        from feishu_other import search_docs, delete_file  # noqa: E402
+    except ImportError as _e:  # 拒绝延迟到 main——--selftest 注入假件离线可跑（三轮复验 §2.5）
+        _PLUGIN_ERR = _e
 
 sys.path.insert(0, str(REPO / "scripts"))
 from _prd_common import (  # noqa: E402
     IMG_RE, TABLE_SEP_RE, content_fingerprint, count_headings_for_push,
     delete_verdict, find_residues, find_token_by_title,
 )
-from prd_pull import plan_merge  # noqa: E402  # 采纳流程复用同一套三方归一口径
+# 采纳流程复用 pull 的三方归一口径 + 一致性括号 + fragile 判定（单源）
+from prd_pull import plan_merge, keyed_sections, fragile, read_cloud_snapshot, CloudReadRace  # noqa: E402
 
 
 def analyze_md(md: str) -> dict:
@@ -93,11 +98,17 @@ def main() -> int:
     ap.add_argument("--adopt-current-cloud", action="store_true", dest="adopt",
                     help="安全采纳云端现状为保护基线：内容层零差异才补 hash/blocks/baseline"
                          "（存量登记武装用；有差异只出预览不写）")
+    ap.add_argument("--accept-lossy-adopt", action="store_true", dest="accept_lossy",
+                    help="人工确认有损章节（链接URL/图片身份/表结构）与云端一致后放行 adopt"
+                         "（登记落审计字段；默认这些节机器不可确认、阻断）")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
     if a.selftest:
         return selftest()
     if _PLUGIN_ERR is not None:
+        if os.environ.get("AIPM_DISABLE_PRIVATE_PLUGIN"):
+            sys.exit("❌ AIPM_DISABLE_PRIVATE_PLUGIN=1 已禁用私有插件（fresh-clone 模拟）"
+                     "——跑真实命令请去掉该环境变量。")
         if XFCHAT.exists():
             sys.exit(f"❌ xfchat-wiki 插件在但导入失败（多半是插件版本旧、缺新函数）：{_PLUGIN_ERR}\n"
                      f"   先更新 {XFCHAT} 所在 nested 仓再重试——这不是'设计如此'，是版本错配。")
@@ -177,17 +188,18 @@ def main() -> int:
     doc_id = a.doc_id or reg.get("doc_token")
 
     if a.adopt:
-        # 存量登记武装（三轮复验 §2.4）：云端事实读全齐 → 内容层零差异才补基线；有差异只出预览
+        # 存量登记武装（三轮 §2.4 + 四轮 §四/§五）：一致性括号读全齐 → 内容层零差异
+        # → 有损章节可确认，三关都过才补基线；任一不过只出预览
         if not doc_id:
             sys.exit("❌ --adopt-current-cloud 需要已有登记 doc_token 或 --doc-id")
         try:
-            cloud_md = blocks_to_markdown(doc_id)
-            bc0 = count_blocks(doc_id)
-            if bc0.get("error"):
-                raise DocApiError(bc0.get("error_code"), bc0["error"])
-            raw0 = get_doc_raw_content(doc_id)
-        except DocApiError as e:
-            print(f"⛔ 云端读取失败（{e}）——采纳需要云端事实齐备（markdown/blocks/raw 三者），恢复后重试。")
+            cloud_md, raw0, blocks0, rev0 = read_cloud_snapshot(
+                doc_id, blocks_to_markdown, count_blocks, get_doc_raw_content, get_doc_meta)
+        except CloudReadRace as e:
+            print(f"⛔ {e}")
+            return 2
+        except Exception as e:
+            print(f"⛔ 云端读取失败（{e}）——采纳需要云端事实齐备（markdown/blocks/raw），恢复后重试。")
             return 2
         plan = plan_merge(None, md, cloud_md)
         open_items = ([(h, why) for _k, h, why in plan["conflicts"]]
@@ -199,9 +211,26 @@ def main() -> int:
                 print(f"   - {h}（{why}）")
             print("   先 prd_pull 预览人工合并到零差异；或确认放弃云端改动后直接 --force push。")
             return 2
+        # 有损盲区（四轮复验 §四）：normalize 抹掉链接 URL/图片身份/表结构/围栏语言——
+        # 归一化相等证明不了这些内容一致，匹配节任一侧 fragile=机器不可确认，默认阻断
+        loc_s, cld_s = keyed_sections(md), keyed_sections(cloud_md)
+        lossy = [loc_s[k][0] for k in loc_s
+                 if k in cld_s and (fragile(loc_s[k][1]) or fragile(cld_s[k][1]))]
+        if lossy and not a.accept_lossy:
+            print(f"⛔ {len(lossy)} 个章节含有损内容——归一化相等证明不了链接 URL/图片身份/"
+                  f"表结构一致，机器无法确认：")
+            for h in lossy[:20]:
+                print(f"   - {h}")
+            print("   人工比对云端确认一致后，加 --accept-lossy-adopt 重跑（登记留审计字段）。")
+            return 2
         now0 = datetime.now().strftime("%Y-%m-%d %H:%M")
-        reg.update({"doc_token": doc_id, "blocks": bc0.get("total"),
+        reg.update({"doc_token": doc_id, "blocks": blocks0,
                     "content_hash": content_fingerprint(raw0), "adopted_at": now0})
+        if rev0 is not None:
+            reg["revision_id"] = rev0
+        if lossy:
+            reg["adopt_lossy"] = {"accepted_at": now0, "sections": lossy[:50],
+                                  "unverified": "链接URL/图片身份/表结构/围栏语言/格式层"}
         bl_dir0 = project / "_cloud" / "baseline"
         bl_dir0.mkdir(parents=True, exist_ok=True)
         (bl_dir0 / key).write_text(md, encoding="utf-8")
@@ -355,8 +384,11 @@ def selftest() -> int:
 
     g = globals()
     keys = ("count_blocks", "push_markdown_to_doc", "get_doc_raw_content",
-            "DocApiError", "count_legacy_prototype_rows", "blocks_to_markdown")
+            "DocApiError", "count_legacy_prototype_rows", "blocks_to_markdown", "get_doc_meta")
     saved = {k: g[k] for k in keys if k in g}
+    missing = [k for k in keys if k not in g]      # fresh clone 下这些全局本不存在，事后要删干净
+    saved_err = g.get("_PLUGIN_ERR")
+    g["_PLUGIN_ERR"] = None                        # selftest 递归 main 不得被插件门拦（四轮 §六）
 
     def _run(reg, force=False):
         with tempfile.TemporaryDirectory() as td:
@@ -383,6 +415,7 @@ def selftest() -> int:
         push_markdown_to_doc=lambda *a_, **k_: (_ for _ in ()).throw(_PushReached()),
         DocApiError=_FakeApiErr,
         count_legacy_prototype_rows=lambda md_: 0,
+        get_doc_meta=lambda d: {"code": 0, "data": {"document": {"revision_id": 3}}},
     )
     try:
         ok_hash = content_fingerprint("内容")
@@ -399,19 +432,20 @@ def selftest() -> int:
         rc, reached = _run({"content_hash": "deadbeef", "blocks": 7})   # f) 基线完整但云端有人改 → 阻断
         assert rc == 2 and not reached, (rc, reached)
         # g/h) --adopt-current-cloud：零差异才补基线（云标题≠本地 H1 不算差异），有差异只预览
-        def _adopt(cloud_md):
+        def _adopt(cloud_md, local="# 测试\n\n## A\n\n内容\n", lossy_flag=False, raw="内容"):
             g["blocks_to_markdown"] = lambda d: cloud_md
+            g["get_doc_raw_content"] = lambda d, lang=0: raw
             with tempfile.TemporaryDirectory() as td:
                 proj = Path(td) / "proj"
                 proj.mkdir()
                 mdp = Path(td) / "测试.md"
-                mdp.write_text("# 测试\n\n## A\n\n内容\n", encoding="utf-8")
+                mdp.write_text(local, encoding="utf-8")
                 (proj / "_status.json").write_text(json.dumps(
                     {"cloud_docs": {"测试.md": {"doc_token": "doc1"}}}, ensure_ascii=False),
                     encoding="utf-8")
                 argv0 = sys.argv
-                sys.argv = ["prd_publish", "--md", str(mdp), "--project", str(proj),
-                            "--adopt-current-cloud"]
+                sys.argv = (["prd_publish", "--md", str(mdp), "--project", str(proj),
+                             "--adopt-current-cloud"] + (["--accept-lossy-adopt"] if lossy_flag else []))
                 try:
                     rc_ = main()
                 finally:
@@ -420,11 +454,28 @@ def selftest() -> int:
                 return rc_, back, (proj / "_cloud" / "baseline" / "测试.md").exists()
         rc, back, has_base = _adopt("# 云文档标题\n\n## A\n\n内容\n")
         assert rc == 0 and back.get("content_hash") and back.get("blocks") == 7 and has_base, back
+        assert back.get("revision_id") == 3, ("adopt 应登记 revision 审计字段", back)
         rc, back, has_base = _adopt("# 云文档标题\n\n## A\n\n云端被人改了\n")
         assert rc == 2 and not back.get("content_hash") and not has_base, back
+        # i/j/k) 有损盲区（四轮 §四）：同文字异 URL / 同占位异图——归一化相等≠一致，默认阻断；
+        #        显式 --accept-lossy-adopt 才放行并落审计字段
+        rc, back, has_base = _adopt("# 云\n\n## A\n\n官网\n",
+                                    local="# 测试\n\n## A\n\n[官网](https://local.example)\n")
+        assert rc == 2 and not back.get("content_hash") and not has_base, ("链接节应默认阻断", back)
+        rc, back, has_base = _adopt("# 云\n\n## A\n\n[图片]\n",
+                                    local="# 测试\n\n## A\n\n![](img.png)\n")
+        assert rc == 2 and not back.get("content_hash"), ("图片节应默认阻断", back)
+        rc, back, has_base = _adopt("# 云\n\n## A\n\n官网\n",
+                                    local="# 测试\n\n## A\n\n[官网](https://local.example)\n",
+                                    lossy_flag=True)
+        assert rc == 0 and back.get("content_hash") and back.get("adopt_lossy", {}).get("sections"), \
+            ("显式接受有损后应放行并留审计", back)
     finally:
         g.update(saved)
-    print("prd_publish selftest: 8/8 ok（存量缺基线阻断矩阵 + push 未被调用 + adopt 零差异闸）")
+        for k in missing:
+            g.pop(k, None)                         # 别把 fake 留成真全局（fresh clone 环境污染）
+        g["_PLUGIN_ERR"] = saved_err
+    print("prd_publish selftest: 11/11 ok（守门矩阵+push 未调用+adopt 零差异/有损闸/审计）")
     return 0
 
 
