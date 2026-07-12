@@ -20,9 +20,11 @@ if [[ ! -d "$SRC" ]]; then
 fi
 
 if [[ ! -d "$DST" ]]; then
-  echo "MISSING: Tauri skill resource directory: $DST"
-  echo "Run: scripts/sync-skills-to-resources.sh"
-  exit 1
+  # resources/skills 是构建期生成副本（app/src-tauri/build.rs 从 .claude/skills 生成、gitignore
+  # 不随仓分发）——fresh clone 未构建时不存在是正确分发形态，无副本即无漂移（五轮复验 §3.4）。
+  # 本机开发场景误删也无风险：下次构建会重生成。
+  echo "N/A: resources/skills 未生成（build-time generated，fresh clone/未构建），无副本可比对"
+  exit 0
 fi
 
 tmp_src="$(mktemp)"

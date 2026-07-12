@@ -195,6 +195,8 @@ def main() -> int:
         try:
             cloud_md, raw0, blocks0, rev0 = read_cloud_snapshot(
                 doc_id, blocks_to_markdown, count_blocks, get_doc_raw_content, get_doc_meta)
+            if rev0 is None:
+                print("⚠️ revision 不可用——一致性降级为内容层双读（图片身份/格式层未覆盖）")
         except CloudReadRace as e:
             print(f"⛔ {e}")
             return 2

@@ -49,9 +49,16 @@ run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默�
 run_check "云文档 pull 离线自测（纯三方算法+复合键回写端到端）" python3 scripts/prd_pull.py --selftest
 run_check "云文档共享层自测（指纹/删除判定/残留检查）" python3 scripts/_prd_common.py
 run_check "云文档 publish 守门自测（存量缺基线阻断+adopt 零差异/有损闸）" python3 scripts/prd_publish.py --selftest
-run_check "publish 守门自测·无插件模拟（fresh clone，四轮复验 §六）" env AIPM_DISABLE_PRIVATE_PLUGIN=1 python3 scripts/prd_publish.py --selftest
+run_check "publish 守门自测·私有插件禁用模拟（只测插件缺失，非完整分发环境）" env AIPM_DISABLE_PRIVATE_PLUGIN=1 python3 scripts/prd_publish.py --selftest
 run_check "状态契约子集校验自测（status_migrate --selftest）" python3 scripts/status_migrate.py --selftest
-run_check "状态契约现状全绿（status_migrate --validate，真实生产数据）" python3 scripts/status_migrate.py --validate
+# 生产数据校验只在私有 output 存在时跑（五轮复验 §3.4）：output/ gitignore 不随仓分发，
+# fresh clone 无生产数据是正确形态、不是契约失败；validate 本体保持"无数据即红"防真实工作区假绿
+if compgen -G "output/projects/*/_status.json" > /dev/null; then
+  run_check "状态契约现状全绿（status_migrate --validate，真实生产数据）" python3 scripts/status_migrate.py --validate
+else
+  echo "── 状态契约现状全绿（status_migrate --validate）"
+  echo "   ➖ N/A：private output 未分发（fresh clone 无生产数据；契约逻辑已由 --selftest 覆盖）"
+fi
 run_check "staleness observed 遥测自测（正常项目事实非空）" bash scripts/ai-sync/staleness-selftest.sh
 
 if [ "$MODE" = "--full" ]; then
@@ -108,6 +115,7 @@ PYEOF
 
   echo ""
   run_check "分享就绪（check-share-readiness --strict）" bash scripts/check-share-readiness.sh --strict
+  run_check "fresh-clone 分发验收（tracked-only --fast，五轮复验 §3.5）" bash scripts/check-fresh-clone.sh
 fi
 
 echo ""

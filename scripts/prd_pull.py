@@ -191,9 +191,12 @@ def read_cloud_snapshot(doc_id, blocks_to_markdown, count_blocks, get_doc_raw_co
                         get_doc_meta=None):
     """一致性括号读：markdown/blocks/raw 分多次读取本身无版本保证——协作者在窗口内编辑会
     拼出「回收 A 版内容 + 登记 B 版 hash」，下次 push 无提示覆盖 B 版人改。
-    括号=revision 前后双读（get_doc_meta 可用时；本部署曾间歇 400，不可用自动退化）
-    + raw 指纹/块数前后双读兜底。任一不一致抛 CloudReadRace。
-    返回 (cloud_md, raw, blocks_total, revision_id|None)。"""
+    括号=revision 前后双读（get_doc_meta 可用时；本部署曾间歇 400，不可用自动降级）
+    + raw 指纹/块数前后双读兜底；**降级模式再补 markdown 双读**。任一不一致抛 CloudReadRace。
+    返回 (cloud_md, raw, blocks_total, revision_id|None)；revision=None 即降级模式——
+    只保证**内容层**一致性（raw 文本/块数/渲染 markdown），⚠️不覆盖图片身份、同字数的
+    block 类型/格式层变化（五轮复验 §五：措辞不得强于实现）。真同版本快照要等底层
+    list_doc_blocks 接 document_revision_id。"""
     def _rev():
         if get_doc_meta is None:
             return None
@@ -220,6 +223,11 @@ def read_cloud_snapshot(doc_id, blocks_to_markdown, count_blocks, get_doc_raw_co
             or content_fingerprint(raw1) != content_fingerprint(raw2)
             or bc1.get("total") != bc2.get("total")):
         raise CloudReadRace("读取窗口内云端发生编辑（revision/raw 指纹/块数前后不一致）——请重试")
+    if rev1 is None or rev2 is None:
+        # 降级模式：没有 revision 证据，markdown 也双读补一层（仍只是内容层一致性）
+        if blocks_to_markdown(doc_id) != cloud_md:
+            raise CloudReadRace("读取窗口内云端发生编辑（降级模式 markdown 前后不一致）——请重试")
+        return cloud_md, raw2, bc2.get("total"), None
     return cloud_md, raw2, bc2.get("total"), rev2
 
 
@@ -266,6 +274,8 @@ def main() -> int:
             cloud_md, snap_raw_text, snap_blocks, snap_rev = read_cloud_snapshot(
                 doc_id, blocks_to_markdown, count_blocks, get_doc_raw_content, get_doc_meta)
             snap_raw = content_fingerprint(snap_raw_text)
+            if snap_rev is None:
+                print("      ⚠️ revision 不可用——一致性括号降级为内容层双读（图片身份/格式层未覆盖）")
         except CloudReadRace as e:
             print(f"❌ {e}（本地未动）")
             return 2
@@ -438,9 +448,41 @@ def selftest() -> int:
     # 16) 仅 HTML 注释差异（本地渲染控制层，云端本来不渲染）→ 不算云端改动
     p = plan_merge(l15, l15, l15.replace("<!-- doctype: 全员评审 -->\n\n", ""))
     assert cats(p) == zero, cats(p)
-    # 17+) 真调 main() 的临时文件测试（三轮 §3.4 + 四轮 §五）：远端失败/读取竞态=全不动
+    # 17-19) 真调 main() 的临时文件测试（三轮 §3.4 + 四轮 §五）：远端失败/读取竞态=全不动
     _selftest_main_flow()
-    print("prd_pull selftest: 19/19 ok（三方算法+_intro 前言+一致性括号+main 级事务）")
+    # 20-23) read_cloud_snapshot 分支纯函数测试（五轮复验 §四：此前 revision 恒 7 没测到比较分支）
+    def _snap(metas, raws, mds=("MD",)):
+        idx = {"m": 0, "r": 0, "d": 0}
+
+        def _next(seq, k):
+            v = seq[min(idx[k], len(seq) - 1)]
+            idx[k] += 1
+            return v
+        return read_cloud_snapshot(
+            "x",
+            lambda d: _next(mds, "d"),
+            lambda d: {"total": 3, "by_type": {}},
+            lambda d, lang=0: _next(raws, "r"),
+            lambda d: _next(metas, "m"))
+
+    def _ok_meta(rev):
+        return {"code": 0, "data": {"document": {"revision_id": rev}}}
+
+    def _must_race(fn, why):
+        try:
+            fn()
+            raise AssertionError(why)
+        except CloudReadRace:
+            pass
+    _must_race(lambda: _snap([_ok_meta(7), _ok_meta(8)], ["同"]),
+               "revision 7→8（raw/blocks 稳定）必须判竞态")
+    _must_race(lambda: _snap([{"code": 99}], ["v1", "v2"]),
+               "meta 双失败 + raw 变化必须被 fallback 拦下")
+    md_, _raw_, blocks_, rev_ = _snap([{"code": 99}], ["同"])
+    assert rev_ is None and md_ == "MD" and blocks_ == 3, "meta 双失败+全稳定=降级成功且 revision=None"
+    _must_race(lambda: _snap([{"code": 99}], ["同"], mds=("MD1", "MD2")),
+               "降级模式 markdown 前后不一致必须判竞态")
+    print("prd_pull selftest: 23/23 ok（三方算法+_intro 前言+一致性括号[含 revision/降级分支]+main 级事务）")
     return 0
 
 
