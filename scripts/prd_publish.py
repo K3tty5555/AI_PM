@@ -24,26 +24,23 @@ REPO = Path(__file__).resolve().parent.parent
 XFCHAT = REPO / ".claude" / "skills" / "xfchat-wiki" / "scripts"
 sys.path.insert(0, str(XFCHAT))
 
+_PLUGIN_ERR = None
 try:
     from feishu_doc import (  # noqa: E402
         create_doc, push_markdown_to_doc, count_blocks, find_blocks_by_type,
-        count_legacy_prototype_rows, get_doc_outline, get_doc_raw_content, DocApiError,
+        count_legacy_prototype_rows, get_doc_outline, get_doc_raw_content,
+        blocks_to_markdown, DocApiError,
     )
     from feishu_other import search_docs, delete_file  # noqa: E402
-except ImportError as _e:
-    if XFCHAT.exists():
-        sys.exit(f"❌ xfchat-wiki 插件在但导入失败（多半是插件版本旧、缺新函数）：{_e}\n"
-                 f"   先更新 {XFCHAT} 所在 nested 仓再重试——这不是'设计如此'，是版本错配。")
-    sys.exit(
-        "❌ 本命令依赖本机私有插件 xfchat-wiki（.claude/skills/xfchat-wiki/，gitignore 不随仓分发）。\n"
-        "   fresh clone 用户无法使用云文档推送——这是设计如此（云文档域=私有部署），不是安装缺陷。"
-    )
+except ImportError as _e:  # 拒绝延迟到 main——--selftest 注入假件离线可跑（三轮复验 §2.5）
+    _PLUGIN_ERR = _e
 
 sys.path.insert(0, str(REPO / "scripts"))
 from _prd_common import (  # noqa: E402
     IMG_RE, TABLE_SEP_RE, content_fingerprint, count_headings_for_push,
     delete_verdict, find_residues, find_token_by_title,
 )
+from prd_pull import plan_merge  # noqa: E402  # 采纳流程复用同一套三方归一口径
 
 
 def analyze_md(md: str) -> dict:
@@ -84,7 +81,7 @@ def load_status(project: Path) -> tuple[dict, Path]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--md", help="PRD 文件（push 模式必填）")
-    ap.add_argument("--project", required=True, help="项目目录（含 _status.json）")
+    ap.add_argument("--project", help="项目目录（含 _status.json）——除 --selftest 外必填")
     ap.add_argument("--doc-id")
     ap.add_argument("--image-dir")
     ap.add_argument("--title")
@@ -93,7 +90,23 @@ def main() -> int:
                     help="清尾 gate：盘点本项目云端旧档/空壳/坏档/同名孤儿，出清单（不自动删）")
     ap.add_argument("--delete-doc", help="删除指定 doc token（配 --yes 才执行；先跑 --cleanup 看清单）")
     ap.add_argument("--yes", action="store_true")
+    ap.add_argument("--adopt-current-cloud", action="store_true", dest="adopt",
+                    help="安全采纳云端现状为保护基线：内容层零差异才补 hash/blocks/baseline"
+                         "（存量登记武装用；有差异只出预览不写）")
+    ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
+    if a.selftest:
+        return selftest()
+    if _PLUGIN_ERR is not None:
+        if XFCHAT.exists():
+            sys.exit(f"❌ xfchat-wiki 插件在但导入失败（多半是插件版本旧、缺新函数）：{_PLUGIN_ERR}\n"
+                     f"   先更新 {XFCHAT} 所在 nested 仓再重试——这不是'设计如此'，是版本错配。")
+        sys.exit(
+            "❌ 本命令依赖本机私有插件 xfchat-wiki（.claude/skills/xfchat-wiki/，gitignore 不随仓分发）。\n"
+            "   fresh clone 用户无法使用云文档推送——这是设计如此（云文档域=私有部署），不是安装缺陷。"
+        )
+    if not a.project:
+        sys.exit("❌ 需要 --project（或 --selftest）")
 
     project = Path(a.project).resolve()
 
@@ -163,35 +176,74 @@ def main() -> int:
     reg = cloud.get(key) or {}
     doc_id = a.doc_id or reg.get("doc_token")
 
+    if a.adopt:
+        # 存量登记武装（三轮复验 §2.4）：云端事实读全齐 → 内容层零差异才补基线；有差异只出预览
+        if not doc_id:
+            sys.exit("❌ --adopt-current-cloud 需要已有登记 doc_token 或 --doc-id")
+        try:
+            cloud_md = blocks_to_markdown(doc_id)
+            bc0 = count_blocks(doc_id)
+            if bc0.get("error"):
+                raise DocApiError(bc0.get("error_code"), bc0["error"])
+            raw0 = get_doc_raw_content(doc_id)
+        except DocApiError as e:
+            print(f"⛔ 云端读取失败（{e}）——采纳需要云端事实齐备（markdown/blocks/raw 三者），恢复后重试。")
+            return 2
+        plan = plan_merge(None, md, cloud_md)
+        open_items = ([(h, why) for _k, h, why in plan["conflicts"]]
+                      + [(h, "云端独有") for _k, h in plan["cloud_only"]]
+                      + [(h, "本地独有") for _k, h in plan["local_only"]])
+        if open_items:
+            print(f"⛔ 本地与云端内容层有 {len(open_items)} 处差异——不能盲采纳为基线：")
+            for h, why in open_items[:20]:
+                print(f"   - {h}（{why}）")
+            print("   先 prd_pull 预览人工合并到零差异；或确认放弃云端改动后直接 --force push。")
+            return 2
+        now0 = datetime.now().strftime("%Y-%m-%d %H:%M")
+        reg.update({"doc_token": doc_id, "blocks": bc0.get("total"),
+                    "content_hash": content_fingerprint(raw0), "adopted_at": now0})
+        bl_dir0 = project / "_cloud" / "baseline"
+        bl_dir0.mkdir(parents=True, exist_ok=True)
+        (bl_dir0 / key).write_text(md, encoding="utf-8")
+        cloud[key] = reg
+        status["cloud_docs"] = cloud
+        status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        back0 = json.loads(status_path.read_text(encoding="utf-8"))
+        ok0 = bool(back0.get("cloud_docs", {}).get(key, {}).get("content_hash"))
+        print("✅ 已采纳云端现状为保护基线（内容层零差异）：hash+blocks+baseline 补齐" if ok0
+              else "⛔ 登记读回失败")
+        return 0 if ok0 else 2
+
     if doc_id:
-        # 人改保护 v3（二轮复验 §二）：hash 与块数**都查**（同块改字块数不变→靠 hash；
-        # 结构改动正文可能不变→靠块数）；raw API 失败 fail-closed，绝不打"通过[hash]"假绿
+        # 人改保护 v4（三轮复验 §二）：登记缺 hash **或**缺 blocks = 无完整基线——push 是
+        # 覆盖式（clear_first 先清空云端），缺基线时无法证明云端没有人改，默认阻断。
+        # "第一次覆盖后补保护"不是迁移方案：第一次覆盖正是最需要保护的一次。
+        if not a.force and (not reg.get("content_hash") or not reg.get("blocks")):
+            print("[2/5] ⛔ 旧登记缺完整保护基线（hash/blocks 不全）——禁止覆盖式 push。")
+            print("      安全路径：--adopt-current-cloud 先采纳云端现状补齐基线；"
+                  "确认放弃云端改动才 --force（=显式放弃保护）。")
+            return 2
         cur = count_blocks(doc_id)
         if cur.get("error"):
             print(f"[2/5] ⛔ 云端 API 不可用（{cur['error'][:80]}）——先别推，恢复后重试（失败≠空文档）。")
             return 2
-        via, hits = [], []
         if not a.force:
-            if reg.get("content_hash"):
-                try:
-                    now_hash = content_fingerprint(get_doc_raw_content(doc_id))
-                except DocApiError as e:
-                    print(f"[2/5] ⛔ 云端正文读取失败（{e}）——hash 无法核对，fail closed。"
-                          f"恢复后重试，或确认放弃云端改动后 --force。")
-                    return 2
-                via.append("hash")
-                if now_hash != reg["content_hash"]:
-                    hits.append("正文 hash 与上次发布不一致")
-            if reg.get("blocks"):
-                via.append("块数")
-                if cur.get("total") != reg["blocks"]:
-                    hits.append(f"块数 {cur.get('total')} ≠ 登记 {reg['blocks']}")
+            hits = []
+            try:
+                now_hash = content_fingerprint(get_doc_raw_content(doc_id))
+            except DocApiError as e:
+                print(f"[2/5] ⛔ 云端正文读取失败（{e}）——hash 无法核对，fail closed。"
+                      f"恢复后重试，或确认放弃云端改动后 --force。")
+                return 2
+            if now_hash != reg["content_hash"]:
+                hits.append("正文 hash 与上次发布不一致")
+            if cur.get("total") != reg["blocks"]:
+                hits.append(f"块数 {cur.get('total')} ≠ 登记 {reg['blocks']}")
             if hits:
                 print(f"[2/5] ⛔ 云端疑似有人改：{'；'.join(hits)}")
                 print("      先 prd_pull 回收人改，或确认无价值改动后 --force 重推。")
                 return 2
-        via_str = ("跳过 --force" if a.force
-                   else (f"通过[{'+'.join(via)}]" if via else "无登记基线（旧登记缺 hash/块数，本次发布起补）"))
+        via_str = "跳过 --force（用户显式放弃人改保护）" if a.force else "通过[hash+块数]"
         print(f"[2/5] 目标文档 {doc_id[:16]}…（人改保护：{via_str}）")
     else:
         title = a.title or re.sub(r"\.md$", "", key)
@@ -287,6 +339,92 @@ def main() -> int:
         return 2
     print(f"\n✅ 发布完成：{entry.get('url') or doc_id}")
     print("   （目标文档若开了「标题自动序号」，源 md 手打序号会叠——见 xfchat-wiki 序号约定）")
+    return 0
+
+
+def selftest() -> int:
+    """离线自测（进 --fast；三轮复验 §2.5 矩阵）：存量登记缺保护基线必须默认阻断，
+    且用 sentinel 断言破坏性 push **没有被调用**——不是只看退出码。"""
+    import tempfile
+
+    class _PushReached(Exception):
+        pass
+
+    class _FakeApiErr(RuntimeError):
+        pass
+
+    g = globals()
+    keys = ("count_blocks", "push_markdown_to_doc", "get_doc_raw_content",
+            "DocApiError", "count_legacy_prototype_rows", "blocks_to_markdown")
+    saved = {k: g[k] for k in keys if k in g}
+
+    def _run(reg, force=False):
+        with tempfile.TemporaryDirectory() as td:
+            proj = Path(td) / "proj"
+            proj.mkdir()
+            mdp = Path(td) / "测试.md"
+            mdp.write_text("# 测试\n\n## A\n\n内容\n", encoding="utf-8")
+            (proj / "_status.json").write_text(json.dumps(
+                {"cloud_docs": {"测试.md": dict(reg, doc_token="doc1")}}, ensure_ascii=False),
+                encoding="utf-8")
+            argv0 = sys.argv
+            sys.argv = (["prd_publish", "--md", str(mdp), "--project", str(proj)]
+                        + (["--force"] if force else []))
+            try:
+                return main(), False
+            except _PushReached:
+                return None, True
+            finally:
+                sys.argv = argv0
+
+    g.update(
+        count_blocks=lambda d: {"total": 7, "by_type": {}},
+        get_doc_raw_content=lambda d, lang=0: "内容",
+        push_markdown_to_doc=lambda *a_, **k_: (_ for _ in ()).throw(_PushReached()),
+        DocApiError=_FakeApiErr,
+        count_legacy_prototype_rows=lambda md_: 0,
+    )
+    try:
+        ok_hash = content_fingerprint("内容")
+        rc, reached = _run({"content_hash": ok_hash, "blocks": 7})      # a) 基线完整且云端一致 → 放行
+        assert reached, "完整基线且一致应放行到 push"
+        rc, reached = _run({})                                          # b) hash+blocks 双缺 → 阻断
+        assert rc == 2 and not reached, (rc, reached)
+        rc, reached = _run({"blocks": 7})                               # c) 只有 blocks → 阻断（护不住同块改字）
+        assert rc == 2 and not reached, (rc, reached)
+        rc, reached = _run({"content_hash": ok_hash})                   # d) 只有 hash → 阻断（不做隐式降级）
+        assert rc == 2 and not reached, (rc, reached)
+        rc, reached = _run({}, force=True)                              # e) 双缺 + --force → 放行（显式放弃保护）
+        assert reached, "--force 应放行"
+        rc, reached = _run({"content_hash": "deadbeef", "blocks": 7})   # f) 基线完整但云端有人改 → 阻断
+        assert rc == 2 and not reached, (rc, reached)
+        # g/h) --adopt-current-cloud：零差异才补基线（云标题≠本地 H1 不算差异），有差异只预览
+        def _adopt(cloud_md):
+            g["blocks_to_markdown"] = lambda d: cloud_md
+            with tempfile.TemporaryDirectory() as td:
+                proj = Path(td) / "proj"
+                proj.mkdir()
+                mdp = Path(td) / "测试.md"
+                mdp.write_text("# 测试\n\n## A\n\n内容\n", encoding="utf-8")
+                (proj / "_status.json").write_text(json.dumps(
+                    {"cloud_docs": {"测试.md": {"doc_token": "doc1"}}}, ensure_ascii=False),
+                    encoding="utf-8")
+                argv0 = sys.argv
+                sys.argv = ["prd_publish", "--md", str(mdp), "--project", str(proj),
+                            "--adopt-current-cloud"]
+                try:
+                    rc_ = main()
+                finally:
+                    sys.argv = argv0
+                back = json.loads((proj / "_status.json").read_text(encoding="utf-8"))["cloud_docs"]["测试.md"]
+                return rc_, back, (proj / "_cloud" / "baseline" / "测试.md").exists()
+        rc, back, has_base = _adopt("# 云文档标题\n\n## A\n\n内容\n")
+        assert rc == 0 and back.get("content_hash") and back.get("blocks") == 7 and has_base, back
+        rc, back, has_base = _adopt("# 云文档标题\n\n## A\n\n云端被人改了\n")
+        assert rc == 2 and not back.get("content_hash") and not has_base, back
+    finally:
+        g.update(saved)
+    print("prd_publish selftest: 8/8 ok（存量缺基线阻断矩阵 + push 未被调用 + adopt 零差异闸）")
     return 0
 
 

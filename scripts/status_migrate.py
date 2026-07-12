@@ -97,9 +97,11 @@ def validate(d: dict, registry: dict | None = None) -> list[str]:
                 if sk in v:
                     _check_value(f"{k}.{sk}", v[sk], sspec, errs)
     # phases 值类型：键自由但值必须 bool——防 "done"/"1" 字串漂移
+    # phases 本身非 dict（"oops"/3/[]）时类型错误已由 _check_value 报过，领域规则跳过不崩（三轮复验 6.1）
     reg = registry if registry is not None else _REGISTRY
     id_to_status_key = {p.get("id"): p.get("status_key") for p in reg.get("phases", [])}
-    for pk, pv in (d.get("phases") or {}).items():
+    ph = d.get("phases")
+    for pk, pv in (ph.items() if isinstance(ph, dict) else ()):
         if not isinstance(pv, bool):
             errs.append(f"phases.{pk} 值应为 bool: {pv!r}")
         # registry 真消费：键写成阶段 id 但 registry 说该阶段的 status_key 是别的 → 漂移
@@ -132,6 +134,10 @@ def selftest() -> int:
     drift = dict(good, phases={"research": True})
     assert any("competitor" in e for e in validate(drift, registry=reg)), "registry 漂移未检出"
     assert validate(drift, registry={"phases": []}) == [], "registry 清空后不应再报——证明结果真由 registry 驱动"
+    # phases 非 dict 只报类型错、不崩（三轮复验 6.1：曾 AttributeError）
+    for bad_ph in ("oops", 3, []):
+        errs3 = validate(dict(good, phases=bad_ph))
+        assert any("phases" in e and "类型" in e for e in errs3), (bad_ph, errs3)
     print(f"status_migrate selftest ok（契约子集校验：非法 {len(errs)}+{len(errs2)} 错、registry 消费双向验证）")
     return 0
 

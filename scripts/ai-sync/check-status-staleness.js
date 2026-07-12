@@ -19,7 +19,10 @@ const fs = require('fs');
 const path = require('path');
 
 // 算「最新内容文件」时排除的元数据/构建产物（这些变了不代表业务进展）
-const EXCLUDE_DIRS = new Set(['_memory', '_summaries', '_logs', 'node_modules', 'dist', '.git']);
+// _cloud=云同步基线快照、_snapshots/_feishu-archive/归档/archived=历史存档——同步状态与
+// 归档动作都不是业务进展，混入会把 newestFile 指到非业务文件（三轮复验 6.3）
+const EXCLUDE_DIRS = new Set(['_memory', '_summaries', '_logs', 'node_modules', 'dist', '.git',
+  '_cloud', '_snapshots', '_feishu-archive', '归档', 'archived']);
 const EXCLUDE_FILES = new Set(['_status.json', 'README.md']);
 const MAX_WALK = 60000; // 兜底，防超大目录卡死
 
@@ -159,7 +162,9 @@ const projects = fs.readdirSync(projectsDir, { withFileTypes: true })
   .map(e => path.join(projectsDir, e.name));
 
 const allResults = projects.map(p => checkProject(p, repoRoot));
-const results = allMode ? allResults : allResults.filter(r => r.issues.stale || r.issues.dead.length);
+// --all 只对 JSON 消费方有意义（observed 遥测）；文本模式若不过滤会把 16 个零问题项目
+// 打成一份空漂移报告（三轮复验 6.4）——文本输出永远只列真 issues
+const results = (allMode && asJson) ? allResults : allResults.filter(r => r.issues.stale || r.issues.dead.length);
 
 if (asJson) {
   const bad = results.filter(r => r.issues.stale || r.issues.dead.length).length;

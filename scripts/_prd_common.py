@@ -54,7 +54,11 @@ def content_fingerprint(text: str) -> str:
 # 读回判"文档已不存在"的白名单：宁窄勿宽——只认零歧义信号，猜错误码比留空危险。
 # 实测到本部署真实 not-found 码后再往 codes 里补（补时注明实测日期）。
 _NOT_FOUND_CODES: set = set()
-_NOT_FOUND_MSG_RE = re.compile(r"not.?(exist|found)|deleted|已删除|不存在", re.I)
+# 文案兜底必须**带明确对象**（三轮复验 §四：裸 `not found` 会把 application/app/
+# credential/route not found 等鉴权/路由错误判成"文档已删除"）。\bfile\b 词边界防 profile 误中。
+_NOT_FOUND_MSG_RE = re.compile(
+    r"\b(?:document|docx|file)\b[^.;，。]*?\b(?:not\s+found|(?:does\s+not|doesn't)\s+exist|deleted)\b"
+    r"|文档不存在|文件不存在|文档已(?:被)?删除|文件已(?:被)?删除", re.I)
 
 
 def delete_verdict(delete_resp: dict, readback: dict) -> tuple[str, str]:
@@ -110,11 +114,18 @@ def _selftest() -> int:
     assert content_fingerprint("ab") != content_fingerprint("a b"), "空白全删会把真人改洗没"
     assert content_fingerprint("abc") != content_fingerprint("abd")
     # delete_verdict 四象限（Codex 二轮复验 3.3 矩阵）
-    assert delete_verdict({"code": 0}, {"total": None, "error": "code=99 msg=not found", "error_code": 99})[0] == "ok"
+    assert delete_verdict({"code": 0}, {"total": None, "error": "document not found", "error_code": 99})[0] == "ok"
     assert delete_verdict({"code": 0}, {"total": None, "error": "permission denied", "error_code": 403})[0] == "unknown"
     assert delete_verdict({"code": 0}, {"total": 12, "by_type": {}})[0] == "fail"
     assert delete_verdict({"code": 1061002, "msg": "x"}, {})[0] == "fail"
     assert delete_verdict({"code": 0}, {"total": 0, "by_type": {}})[0] == "unknown", "0 块=空文档≠已删除"
+    # not-found 文案必须带对象（三轮复验 §4.4 四负例固定——防正则再次放宽）
+    for bad_msg in ("application not found", "app not found", "credential deleted", "route not found"):
+        assert delete_verdict({"code": 0}, {"total": None, "error": bad_msg, "error_code": 1})[0] == "unknown", bad_msg
+    for ok_msg in ("document not found", "docx does not exist", "file has been deleted",
+                   "文档不存在", "文件已删除"):
+        assert delete_verdict({"code": 0}, {"total": None, "error": ok_msg, "error_code": 1})[0] == "ok", ok_msg
+    assert delete_verdict({"code": 0}, {"total": None, "error": "profile not found", "error_code": 1})[0] == "unknown"
     # find_residues：真残留抓到、围栏示例豁免
     assert find_residues("正文", "云端<红>x</红>") == ["<红>", "</红>"]
     assert find_residues("```\n<红>示例\n```", "云端<红>示例") == []
@@ -129,7 +140,8 @@ def _selftest() -> int:
         try:
             _fd.get_doc_raw_text = lambda d, lang=0: {"code": 0, "data": {"content": "正文"}}
             assert _fd.get_doc_raw_content("x") == "正文"
-            for bad in ({"code": 99992402, "msg": "boom"}, {"code": 0, "data": {}}, None):
+            for bad in ({"code": 99992402, "msg": "boom"}, {"code": 0, "data": {}},
+                        {"code": 0, "data": "not-an-object"}, None):
                 _fd.get_doc_raw_text = lambda d, lang=0, _b=bad: _b
                 try:
                     _fd.get_doc_raw_content("x")
