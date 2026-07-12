@@ -31,7 +31,13 @@ run_check() { # name cmd...
   local name="$1"; shift
   echo "── $name"
   if "$@" >"$STEP_LOG" 2>&1; then
-    echo "   ✅ 过"
+    # N/A 约定（六轮复验 §三）：检查器输出行首 "N/A:" = 该检查在本环境无对象（如构建期
+    # 生成副本未构建）——runner 必须原样透出 ➖，不得吞成 "✅ 过"（没比较过≠比较通过）
+    if grep -q '^N/A:' "$STEP_LOG"; then
+      grep '^N/A:' "$STEP_LOG" | sed 's/^/   ➖ /'
+    else
+      echo "   ✅ 过"
+    fi
   else
     echo "   ❌ 未过（详情如下）"
     sed 's/^/   | /' "$STEP_LOG" | tail -20
