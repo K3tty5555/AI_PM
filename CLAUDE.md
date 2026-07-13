@@ -191,18 +191,20 @@ git ls-files | cat   # 检查文件名本身是否含公司名
 
 ## 知识沉淀 Hook（§知识沉淀Hook）
 
-收到 stop hook 触发词 `knowledge-capture` 时，**静默执行**以下步骤，不打字到聊天窗，不询问用户：
+> **静默护栏（第一原则，压在所有知识库治理之上）**：任何自动/治理动作都不得打断或刷屏用户正在进行的操作。耗时执行（复核分诊、批量核实）只在用户**显式调用**知识命令时发生；自动路径必须**静默、亚秒级、零额外输出**。⛔ 严禁出现"对话进行中突然长时间跑沉淀、把对话刷上去"。完整原则见 `ai-pm-knowledge/SKILL.md` §运行原则。
 
-> **静默护栏（第一原则，压在所有知识库治理之上）**：任何自动/治理动作都不得打断或刷屏用户正在进行的操作。耗时执行（复核分诊、批量核实）只在用户**显式调用**知识命令时发生；自动路径（本 hook 沉淀、写入时退役）必须**静默、亚秒级、零额外输出**。⛔ 严禁出现"对话进行中突然长时间跑沉淀、把对话刷上去"。完整原则见 `ai-pm-knowledge/SKILL.md` §运行原则。
+**排队/消费两段式（2026-07-13 改，用户拍板）**：此前 stop hook 用 `decision:block` 把主对话拽回前台跑沉淀，工具调用刷进对话流、打断体验——已改为：
 
-1. **判断是否有值得沉淀的内容**：必须同时具备「问题场景 + 解决方案」结构，缺任一段不沉淀
-2. **跨次去重**：调 add 前先 grep 现有卡片标题/前 200 字，相似度高 → 追加验证数据而非新建
-3. **source-project 双重校验**：cwd 路径 + 对话提及项目名，不一致或拿不准 → 标 `unknown`
-4. **卡片标记**：`confidence=low, auto-generated=true, source-session=<session_id>, last-verified=created`
-5. **不做退役判断**：hook 路径**只做 dedup-key 去重、不判断"取代旧卡"**（退役会软隐藏卡片，不能在无人监督时发生）；真退役留给有意识的 add/sync 与 review-stale
-6. **有内容** → 调 `/ai-pm-knowledge add`；**无内容** → 直接 stop（hook 二次触发自动放行）
-7. **超时约束**：30 秒内完成所有 add，否则跳过本次沉淀
-8. **端到端留痕（JSONL）**：处置完向 `.claude/logs/knowledge-capture-events.jsonl` 追加一行 JSON：`{"ts":"YYYY-MM-DD HH:MM","session":"<会话id前8位>","outcome":"written|merged|skipped","artifacts":["卡名",…],"reason":null或跳过原因}`——机器可统计漏闭环率，不靠自述；文件权限保持 0600，一次追加写完整一行（防并发会话交叉写坏）
+- **排队（hook 侧，全自动静默）**：`knowledge-capture.sh` 节流通过后只向 `.claude/logs/knowledge-pending.jsonl` 追加一行候选区间（session/transcript/消息水位），随即放行，前台零痕迹。
+- **消费（Claude 侧，只在显式时机）**：用户显式跑 `/ai-pm-knowledge sync` 或 `add` 时，**先读 pending 队列**，逐条按 transcript+水位区间读增量对话做沉淀，处理完把已消费行从队列清掉。沉淀判断标准不变：
+  1. 必须同时具备「问题场景 + 解决方案」结构，缺任一段不沉淀；
+  2. 跨次去重：先 grep 现有卡片标题/前 200 字，相似度高 → 追加验证数据而非新建；
+  3. source-project 双重校验：transcript cwd + 对话提及项目名，不一致或拿不准 → 标 `unknown`；
+  4. 卡片标记：`confidence=low, auto-generated=true, source-session=<session_id>, last-verified=created`；
+  5. **不做退役判断**：批量消费路径只做 dedup-key 去重、不判断"取代旧卡"（退役会软隐藏卡片，不能在批处理中发生）；真退役留给有意识的 add/sync 与 review-stale；
+  6. 端到端留痕（JSONL）：每条处置完向 `.claude/logs/knowledge-capture-events.jsonl` 追加一行 `{"ts","session","outcome":"written|merged|skipped","artifacts":[…],"reason"}`——机器可统计漏闭环率；文件保持 0600，一次追加写完整一行。
+
+会话中干活时的**就地沉淀**（修完坑顺手 append 卡片）不受此协议限制、继续鼓励——hook 队列只是兜底网。备选方案（嫌沉淀密度低时可切换）：hook 后台拉 headless `claude -p` 自动沉淀，见 hook 内注释。
 
 ## 禁止事项
 
