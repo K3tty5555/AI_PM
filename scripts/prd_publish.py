@@ -41,7 +41,7 @@ else:
 
 sys.path.insert(0, str(REPO / "scripts"))
 from _prd_common import (  # noqa: E402
-    IMG_RE, TABLE_SEP_RE, content_fingerprint, count_headings_for_push,
+    CALLOUT_RE, IMG_RE, TABLE_SEP_RE, content_fingerprint, count_headings_for_push,
     delete_verdict, find_residues, find_token_by_title,
 )
 # 采纳流程复用 pull 的三方归一口径 + 一致性括号 + fragile 判定（单源）
@@ -69,7 +69,7 @@ def analyze_md(md: str) -> dict:
         "legacy_rows": count_legacy_prototype_rows(md),
         # render-manifest（发布时生成预期指纹，读回逐项对账——Codex 答问 1 方案）
         "headings": count_headings_for_push(md),
-        "callouts": len(re.findall(r"^> \[!(?:TIP|WARNING|NOTE)\]", md, re.M)),
+        "callouts": len(CALLOUT_RE.findall(md)),  # 单源=_prd_common（类型枚举曾漏 INFO）
         "marker_red": md.count("<红>"),
         "marker_gray": md.count("<灰>"),
         "marker_core": len(re.findall(r"==[^=\n]+==", md)),

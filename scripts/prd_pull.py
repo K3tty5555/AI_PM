@@ -46,13 +46,24 @@ def normalize(text: str) -> str:
     t = t.replace("\\|", "|")                         # 转义竖线
     t = re.sub(r"\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|~~([^~\n]+)~~",
                lambda m: m.group(1) or m.group(2) or m.group(3), t)  # 粗/斜/删标记
+    # 以下五族为 V4 真机首用实测的往返噪音（2026-07-13）：push 把 ①②/<br> 段转原生列表、
+    # 读回丢编号；斜杠/加号旁空白被渲染层揉动；图文在 cell 内的先后=排版不是内容
+    t = re.sub(r"[^\S\n]*([/+])[^\S\n]*", r"\1", t)     # 斜杠/加号旁空白（"A / B"≡"A/B"）
+    t = re.sub(r"^- ", "", t, flags=re.M)               # 行首列表符（段落↔列表=格式层）
+    t = re.sub(r"<br>[^\S\n]+", "<br>", t)              # <br> 后缩进空白（渲染层裁行首空白，含全角）
     out = []
     for ln in t.split("\n"):
         if TABLE_SEP_RE.match(ln) and "-" in ln:
             continue                                    # 表格分隔行两侧写法不同，剥掉
         ln = re.sub(r"\s*\|\s*", "|", ln)              # 表格数据行管道符旁空白归一
-        out.append(re.sub(r"\s+", " ", ln).strip())
-    return "\n".join(ln for ln in out if ln)
+        ln = re.sub(r"\s+", " ", ln).strip()
+        ln = re.sub(r"(^|<br>|\|) ?[①-⑳] ?", r"\1", ln)  # 圆圈编号（须在管道/空白归一后跑）
+        n_img = ln.count("[图片]")
+        if n_img:                                       # cell 内图文顺序=排版：图占位归拢行尾
+            ln = ln.replace("<br>[图片]", "").replace("[图片]<br>", "").replace("[图片]", "")
+            ln += "[图片]" * n_img
+        out.append(ln)
+    return "\n".join(ln for ln in out if ln and ln != ">")   # 裸 ">"（callout 标记行残迹）不算内容
 
 
 def fragile(text: str) -> bool:
@@ -373,6 +384,14 @@ def selftest() -> int:
     b = "| x | y |\n| --- | --- |\n文字\n```\n1\n```\n粗"
     assert normalize(a) == normalize(b), "噪音归一失败"
     assert fragile("|a|b|") and fragile("[x](y)") and fragile("```") and not fragile("纯文本")
+    # 0b) V4 真机首用实测的往返噪音五族（2026-07-13 真实失败最小修复）：
+    assert normalize("> [!INFO]\n> 版本：x\n") == normalize("> 版本：x\n"), "callout 标记行吞换行/留残迹"
+    assert normalize("|① A<br>② B|") == normalize("|A<br>B|"), "圆圈编号=原生列表往返噪音"
+    assert normalize("A / B+ C") == normalize("A/B +C"), "斜杠加号旁空白"
+    assert normalize("- x\n") == normalize("x\n"), "行首列表符=格式层"
+    assert normalize("|[图片]<br>说明|") == normalize("|说明<br>[图片]|"), "cell 图文顺序=排版"
+    assert normalize("|a<br>　缩进b|") == normalize("|a<br>缩进b|"), "<br> 后缩进空白=渲染层裁剪"
+    assert normalize("改了A") != normalize("改了B"), "归一化不得吞真实文字差异"
 
     BASE = "# T\n\n## A\n\n旧A\n\n## B\n\n旧B\n"
 

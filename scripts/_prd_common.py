@@ -10,7 +10,9 @@ import re
 
 IMG_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 MARKER_RE = re.compile(r"</?红>|</?灰>|==([^=\n]+)==")
-CALLOUT_RE = re.compile(r"^> \[!(?:TIP|WARNING|NOTE)\]\s*", re.M)
+# callout：类型放开为 \w+（V4 真实正本用了 [!INFO]，旧枚举漏掉→假冲突）；
+# 尾部用 [^\S\n]* 不吞换行（\s* 会把标记行和下一行拼成 "> >"，V4 首用实锤的真 bug）
+CALLOUT_RE = re.compile(r"^> \[!\w+\][^\S\n]*", re.M)
 FOLD_RE = re.compile(r"<!--\s*/?fold\s*-->|<!--\s*columns[^>]*-->")
 LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 TABLE_SEP_RE = re.compile(r"^\s*\|?[\s:-]*-[\s:|-]*\|?\s*$")
@@ -99,7 +101,7 @@ def count_headings_for_push(md: str) -> int:
     return n
 
 
-RESIDUE_LITERALS = ("<红>", "</红>", "<灰>", "</灰>", "[!TIP]", "[!WARNING]")
+RESIDUE_LITERALS = ("<红>", "</红>", "<灰>", "</灰>", "[!TIP]", "[!WARNING]", "[!INFO]")
 
 
 def find_residues(md_src: str, raw: str, lits: tuple[str, ...] = RESIDUE_LITERALS) -> list[str]:
