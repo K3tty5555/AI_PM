@@ -36,7 +36,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep)
 
 1. **静默护栏**：任何自动 / 治理动作都不得打断或刷屏用户正在进行的操作。耗时的执行（复核分诊、批量核实）**只在用户显式调用知识命令时**发生；自动路径（stop-hook 排队、写入时退役）必须**静默、亚秒级、零额外输出**——做不到就不做。
    - ⛔ 反面教材：对话进行中突然长时间跑沉淀、把对话刷上去——这是抢用户话筒，禁止（2026-07-13 前的 stop-hook block 模式即此病，已改排队制）。
-   - **pending 队列消费**：`sync` / `add` 开工前先读 `.claude/logs/knowledge-pending.jsonl`（stop hook 静默排队的候选区间），逐条按 transcript+消息水位读增量对话做沉淀（判断标准与 auto 模式一致），处理完把已消费行清出队列——协议单源 = CLAUDE.md §知识沉淀Hook。
+   - **pending 队列消费**：`sync` / `add` 开工前先读 `~/.ai-pm/knowledge/pending.jsonl`（stop hook 静默排队的候选区间），逐条按 transcript+消息水位读增量对话做沉淀（判断标准与 auto 模式一致），处理完把已消费行清出队列——协议单源 = CLAUDE.md §知识沉淀Hook。
 2. **退役自动、保鲜随手**：知识过期不该是用户专门做的事，而是两件本就发生的事的副产品——写新知识时顺手让旧的退役（见 add/sync）、显式核实过源时顺手刷 `last-verified`。用户专门去"复核一批卡"应是**极少触发的安全网**，不是例行苦差。
 3. **signal 可信 > 堆机制**：`last-verified` 只代表"确认仍成立"，**绝不能因为被检索 / 展示就刷新**（那会让陈旧卡冒充新鲜，污染整个系统赖以存在的信号）。只有 AI 真的对着当前代码 / PRD / 文件核实过，才允许刷。
 
