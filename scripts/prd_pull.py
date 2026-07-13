@@ -51,6 +51,7 @@ def normalize(text: str) -> str:
     t = re.sub(r"[^\S\n]*([/+])[^\S\n]*", r"\1", t)     # 斜杠/加号旁空白（"A / B"≡"A/B"）
     t = re.sub(r"^- ", "", t, flags=re.M)               # 行首列表符（段落↔列表=格式层）
     t = re.sub(r"<br>[^\S\n]+", "<br>", t)              # <br> 后缩进空白（渲染层裁行首空白，含全角）
+    t = re.sub(r"`([^`\n]+)`", r"\1", t)                # 行内代码反引号（第七族：云端渲染必丢，V1.3 实测）
     out = []
     for ln in t.split("\n"):
         if TABLE_SEP_RE.match(ln) and "-" in ln:
@@ -63,7 +64,12 @@ def normalize(text: str) -> str:
             ln = ln.replace("<br>[图片]", "").replace("[图片]<br>", "").replace("[图片]", "")
             ln += "[图片]" * n_img
         out.append(ln)
-    return "\n".join(ln for ln in out if ln and ln != ">")   # 裸 ">"（callout 标记行残迹）不算内容
+    t = "\n".join(ln for ln in out if ln and ln != ">")     # 裸 ">"（callout 标记行残迹）不算内容
+    # 第八族（V1.3 实测）：换行位置=渲染最抖的东西（云端把连续段落/列表折成 cell 内一行、
+    # 本地曾按行拆开）——节内终极折叠成单行再比。行序/增删内容仍可见，只丢"断行在哪"这一格式层。
+    t = re.sub(r"\s+", " ", t).strip()
+    t = re.sub(r" ?[①-⑳] ?", " ", t)                    # 折叠后再剥一次圆圈号（不在行首的也归一）
+    return re.sub(r"\s+", " ", t).strip()
 
 
 def fragile(text: str) -> bool:
@@ -391,7 +397,10 @@ def selftest() -> int:
     assert normalize("- x\n") == normalize("x\n"), "行首列表符=格式层"
     assert normalize("|[图片]<br>说明|") == normalize("|说明<br>[图片]|"), "cell 图文顺序=排版"
     assert normalize("|a<br>　缩进b|") == normalize("|a<br>缩进b|"), "<br> 后缩进空白=渲染层裁剪"
+    assert normalize("标签 `智学题库` 在前") == normalize("标签 智学题库 在前"), "行内代码反引号=渲染必丢"
+    assert normalize("规则：\n① 甲\n② 乙\n") == normalize("规则： ① 甲 ② 乙\n"), "行折叠+任意位圆圈号"
     assert normalize("改了A") != normalize("改了B"), "归一化不得吞真实文字差异"
+    assert normalize("甲\n乙") != normalize("乙\n甲"), "折叠不得吞行序/内容差异"
 
     BASE = "# T\n\n## A\n\n旧A\n\n## B\n\n旧B\n"
 
