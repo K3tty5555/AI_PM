@@ -25,7 +25,9 @@ mkdir -p "$DST"
 # 只同步 git 追踪的 skill——.gitignore 的私有 skill（仅本机、含内网域名/凭证逻辑）不进客户端资源副本。
 # 与 build.rs 的 git check-ignore 同口径，避免 release build 把私有 skill 打进安装包。
 if git -C "$SRC" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  ( cd "$SRC" && git ls-files ) | while IFS= read -r f; do
+  # -z 空字节分隔：默认 core.quotepath=true 会把非 ASCII 文件名输出成带引号的转义串，
+  # 明文管道喂 cp 会在中文文件名上炸（2026-07-14 首个中文名 skill 文件实测）。
+  ( cd "$SRC" && git ls-files -z ) | while IFS= read -r -d '' f; do
     [ -z "$f" ] && continue
     mkdir -p "$DST/$(dirname "$f")"
     cp "$SRC/$f" "$DST/$f"

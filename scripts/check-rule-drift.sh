@@ -17,7 +17,7 @@ note_fail() { FAIL=1; printf '  ❌ %s\n' "$1"; }
 note_ok()   { printf '  ✅ %s\n' "$1"; }
 
 # 只扫 git 追踪的规则相关文件
-FILES=$(git ls-files | grep -E '^(CLAUDE\.md|\.claude/|templates/prd-styles/|templates/README|app/src-tauri/src/commands/)' | grep -E '\.(md|rs)$')
+FILES=$(git -c core.quotepath=off ls-files | grep -E '^(CLAUDE\.md|\.claude/|templates/prd-styles/|templates/README|app/src-tauri/src/commands/)' | grep -E '\.(md|rs)$')
 
 echo "▶ 检查 1：PRD 守门自检 / PM 直觉不得写死项数"
 BAD=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "([0-9]+|[一二三四五六七八九十]+) ?项 ?(自检|checklist)|([0-9]+|[一二三四五六七八九十]+) ?条 ?PM ?直觉" 2>/dev/null)
@@ -35,7 +35,7 @@ if [ -n "$BAD" ]; then note_fail "复用对照表又被写成迭代版必备（�
 else note_ok "复用对照表口径未回退"; fi
 
 echo "▶ 检查 4：pm-agent 单一事实源——不应再出现第二份 pm-agent.md 副本"
-COPIES=$(git ls-files | grep -E 'pm-agent\.md$' | grep -v '^\.claude/agents/pm-agent\.md$')
+COPIES=$(git -c core.quotepath=off ls-files | grep -E 'pm-agent\.md$' | grep -v '^\.claude/agents/pm-agent\.md$')
 if [ -n "$COPIES" ]; then note_fail "除 agents/pm-agent.md 外出现额外副本（应只有一份）："; printf '%s\n' "$COPIES" | sed 's/^/       /'
 else note_ok "pm-agent.md 仅一份（agents/）"; fi
 

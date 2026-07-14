@@ -36,7 +36,9 @@ trap 'rm -f "$tmp_src" "$tmp_dst"' EXIT
   # 只比对 git 追踪的 skill——.gitignore 的私有 skill（仅本机）不进资源副本、也不参与漂移检查
   # （与 build.rs / sync 脚本同口径，否则私有 skill 会被误报成 MISSING）
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    git ls-files | sort
+    # quotepath=off：默认会把非 ASCII 文件名转成带引号转义串，与 find 侧原始 UTF-8 对不上→假漂移
+    # （2026-07-14 首个中文名 skill 文件实测；同族修复=sync 脚本改 ls-files -z）
+    git -c core.quotepath=off ls-files | sort
   else
     find . -type f ! -name '.DS_Store' | sed 's#^\./##' | sort
   fi

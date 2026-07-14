@@ -68,7 +68,7 @@ echo "── 1b. 扫描追踪文件名里的内部名 ──"
 if [ -z "$DENYLIST" ]; then
   echo "⚠️ 无内部名清单，跳过文件名扫描。"
 else
-  path_hits=$(git ls-files | grep -E "$DENYLIST" | sort -u)
+  path_hits=$(git -c core.quotepath=off ls-files | grep -E "$DENYLIST" | sort -u)  # quotepath=off:转义串会让中文denylist匹配不上=漏检
   if [ -n "$path_hits" ]; then
     echo "❌ 以下追踪文件路径含内部名，分享前必须改成通用占位："
     echo "$path_hits" | sed 's/^/   /'
@@ -82,7 +82,7 @@ fi
 echo ""
 echo "── 2. 敏感目录是否被误追踪 ──"
 # 知识库卡片本体（PITFALL/INSIGHT/PATTERN/PLAYBOOK/DECISION）+ 个人 persona 语料
-leak2=$(git ls-files \
+leak2=$(git -c core.quotepath=off ls-files \
   'templates/knowledge-base/**/*.md' \
   'templates/persona/*' \
   | grep -viE 'README|\.gitkeep' 2>/dev/null)
