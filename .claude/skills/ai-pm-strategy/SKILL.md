@@ -23,6 +23,10 @@ allowed-tools: Read Write Edit Bash(ls) Bash(find) Bash(test) Bash(mkdir) Bash(d
 | 自动发现资料位置，用户确认后读取内容 | 未经确认自动读取长 PRD / 原型 / 评审报告 |
 | 输出思考资产 | 假装知道组织、资源、预算、商业压力等隐性事实 |
 
+> 例外（智囊团质询模式）：用户要求对一份**成稿决策评审**做对抗质询时，不走下方沙盘推演工作流，
+> 改按 `references/advisor-interrogation-card.md` 协议执行；其结论经用户接受后落点在稿内（PRD 修改），
+> 不受"不进入 PRD 链路"边界约束。这是本 skill 唯一的边界例外。
+
 ## 命令路由
 
 参数提示：`[project|product|continue|list|save|draft|registry] [议题] [--type=project|product] [--object=名称] [--topic=议题]`
@@ -283,8 +287,9 @@ output/projects/*/05-prd/README.md
 - `references/fact-boundary.md`：事实标签、高不确定维度、反幻觉协议
 - `references/storage.md`：目录结构、版本、草稿、产品-项目关系表
 - `references/output-templates.md`：正式产出物模板
+- `references/advisor-interrogation-card.md`：智囊团质询模式协议——对成稿决策评审跑质询/对抗收敛时**必读**
 - `docs/plans/2026-06-01-strategy-sandbox-design.md`：完整设计文档
 
 ## 后半场接力（可选）
 
-沙盘推演产出的 `[待验证]` 清单，用户可选交给 `ai-pm-strategy-verify`（战略求证侦察兵）接力——它去够真实数据、切判别刀、证伪到尽头，交回反转+岔路。handoff 只传待验证清单，不传沙盘全文。两技能独立可用，不强制成对。
+沙盘推演产出的 `[待验证]` 清单，用户可选交给 `ai-pm-strategy-verify`（战略求证侦察兵）接力——它去够真实数据、切判别刀、证伪到尽头，交回反转+岔路。handoff 只传待验证清单，不传沙盘全文。两技能独立可用，不强制成对。质询模式产出的 `[待验证]` 清单同样可交 ai-pm-strategy-verify 接力（会话内摘出、只传清单）。
