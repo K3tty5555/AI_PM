@@ -7,7 +7,7 @@ description: >-
   与 `ai-pm-review`（六角色评审会）和 `multi-perspective-review`（多视角技术审查）的区别：driver 是 PM 个人风格 lint，5 分钟出结论。
   当用户说「PM 守门」「审视 PRD」「PRD 挑刺」「PRD 越界检查」「driver 一下」「PRD 自审」「评审前体检」「历史 PRD 回归」时，使用此 skill。
 argument-hint: "[PRD 文件路径，默认读项目最新 05-prd/ 下的 .md]"
-allowed-tools: Read Bash(wc) Bash(ls) Glob Agent
+allowed-tools: Read Bash(wc) Bash(ls) Bash(python3 scripts/check-prd-word-count.py:*) Glob Agent
 ---
 
 ## 执行流程（30 行 thin wrapper）
@@ -17,7 +17,19 @@ allowed-tools: Read Bash(wc) Bash(ls) Glob Agent
 用户提供路径 → 直接用。
 没提供路径 → 自动找项目最新 PRD：用 **Glob 工具**匹配 `output/projects/*/05-prd/*.md`（结果按修改时间排序，取前 3 个；不用 `ls -t | head`——head 不在 allowed-tools，且 ls -t 对中文文件名有坑）。
 
-找到多个时列出让用户选；找到 0 个时提示用户提供路径。
+找到多个时列出让用户选；找到 0 个时提示用户提供路径。**排除**：文件名含「对齐清单」的侧文档不算 PRD 候选。
+
+**存量判定（字数档位的语义前提）**：目标路径 == 项目 `_status.json` 顶层 `active_prd` → 当前稿（字数档位构成必修）；其他文件（含手动传入的旧稿 / 存档）→ **存量仅参考**——字数行照报但标「存量仅参考、不构成必修」（存量 PRD 不回填），不猜"更新的文件就是当前稿"。
+
+### Step 1.5: 字数机械检（driver 主对话执行，结果注入 pm-agent）
+
+1. 跑 `python3 scripts/check-prd-word-count.py "<PRD绝对路径>"`（**路径必须带引号**——本仓文件名含空格 / 方括号 / 中文）。档位永远由脚本唯一计算，driver 与 pm-agent 都不自行数字数。
+2. 按机器行 `BAND` 分流（非零退出码是预期档位信号，读 BAND 不读语气）：
+   - `ok / justify / hard_stop` → 机器行原样注入 Step 2 prompt；
+   - `skipped_decision_review` → 字数检查结束（决策评审型不设线）；
+   - `unknown_doctype` → 先让 pm-agent 按 Mode C 3bis 判型：full → 加 `--doctype full` 重跑；decision_review → 加 `--doctype decision_review` 重跑；仍判不出 → punch list 标「字数未测」，不进入档位结论；
+   - `invalid_markdown` / `ERROR`（exit 4）→ punch list 标「字数未测（源文件问题：未闭合代码围栏 / 编码 / 非 md）」，先修文件再跑。
+3. **安全带探测（判断卡 §7.1 安全带②的接线）**：从 PRD 正文解析「全量版存档」引用路径（修订日志 / 页脚中的 `ai-md/…全量版存档…` 相对路径；安全带①要求存档时留此引用）——**恰好一条** → 解析为绝对路径注入 Step 2 prompt（触发 pm-agent ④bis 规则丢失复查）；零条 / 多条 / 路径失效 → 只报警不自选，**不用 Glob+mtime 猜配**。
 
 ### Step 2: 调用 pm-agent 做 lint
 
@@ -31,6 +43,9 @@ Agent({
 任务：审视下列 PRD 文件，按 pm-judgment-card §9 守门自检 + 6 越界红线扫描，输出 punch list。
 
 PRD 文件路径：{prd_file_path}
+字数机器行（Step 1.5 产出，原样粘贴；未跑成则写「未测」）：{word_count_machine_lines}
+存量标注：{当前稿 / 存量仅参考}
+全量版存档路径（可选，注入即触发 ④bis 安全带复查；调用方同时列明刻意删除项）：{archive_path_or_none}
 
 要求：
 1. 读 PRD 全文（用 Read 工具，记录行号）
@@ -40,7 +55,7 @@ PRD 文件路径：{prd_file_path}
 4bis. 承重骨架 + doctype 检测：按 pm-agent Mode C 步骤 3bis——读 doctype 标记（`decision_review` 跳过 / `full` 三类零歧义信号窄检：§一修订表 / §三功能清单表 / §六详设表；**§二 需求分析不在机器行、靠写作自检+人工核，`pass` ≠ 四章全验**），**只提示不阻断**，吐机器行 `STRUCTURE_HINT: {missing_skeleton|pass|skipped_decision_review}`、附 `DOCTYPE_WARNING: conflict`（头与 _status 冲突）或 `DOCTYPE_WARNING: missing_header`（文件头缺·以 _status 判）（逻辑单一事实源在 pm-agent，driver 只点名、不复制）
 5. 检查概念落地（术语保真）：①引用的现网概念粒度有没有凭印象写错（全局 vs 题级 / 同步 vs 异步 / 单选 vs 多选 / 按校 vs 按场次）；②自造词 / 解释性比喻有没有当现网既定事实——该标「本需求新词 / 待对齐」的没标。新机制 PRD（无现成章节兜底）尤其重点查；③**5b 行话黑名单机械检（程序在 pm-agent Mode C ⓪ter·词表单一事实源在判断卡 §9.3，此处不重列）**：grep 出候选（带上下文）按判别法裁决，输出分"确认行话（必修）/ 引文命中（仅提示，引文一字不改）/ 待人判"三档
 6. Agent / hybrid 产品额外查 4 项（行为契约带理由 / Few-shot 标 [算法补完] / 评测用接受度信号 / 失败兜底用户感知 only）
-7. 篇幅 + 防膨胀评估（按 pm-agent Mode C Step 4，程序在那边·此处不重列）：**先跑「候选术语审计」（主检：限定候选源 vs 历史语料 grep，0 命中且未标「本需求新词/待对齐」= 生造红旗；无约定包则标注跳过）**，再机械跑「防御性保证密度」grep（次要兜底，肉眼漏过 V3.5，密度 <~15 行/命中 = 红旗），再查双写 / §4↔§6 重表 / 档位 500+ 警戒
+7. 篇幅 + 防膨胀评估（按 pm-agent Mode C Step 4，程序在那边·此处不重列）：**先跑「候选术语审计」（主检：限定候选源 vs 历史语料 grep，0 命中且未标「本需求新词/待对齐」= 生造红旗；无约定包则标注跳过）**，再机械跑「防御性保证密度」grep（次要兜底，肉眼漏过 V3.5，密度 <~15 行/命中 = 红旗），再查双写 / §4↔§6 重表 / **字数档位按注入的机器行判**（Mode C Step 4①：justify 缺超因注释=必修、hard_stop=必修；未注入=标「字数未测」、禁 wc 兜底；存量稿档位标「存量仅参考」）
 7bis. 填充废话窄检（程序在 pm-agent Mode C ⓪quater·三反模式单一事实源在判断卡 §七闸 0，此处不重列）：零歧义短语（下表是/如下表/以下为…是/原 附录/原 §）grep 出候选逐条人判；升华句式与 stale 交叉引用号不进机械检、归通读
 8. 输出格式：先 ❌ 越界（必修，行号+建议），再 ⚠️ 缺失（建议补·含承重骨架缺失提示），随后 🔧 骨架/doctype 机器行独立组（`STRUCTURE_HINT`/`DOCTYPE_WARNING`，与 pm-agent Mode C 输出模板同构），再 ⚠️ 概念落地（行号+建议；含 5b 行话三档：确认行话/引文命中/待人判），再 ⚠️ 生造词（术语审计表：术语/新稿次数/历史命中/判断），再 ⚠️ 防御性膨胀（密度 + 逐条收敛建议；含「话题词重述待人工核」），再 ⚠️ 填充废话（三反模式：零歧义候选行号清单 + 升华/残留通读所见），再 ✅ 通过项，最后 🎯 总评（是否可进评审）
 

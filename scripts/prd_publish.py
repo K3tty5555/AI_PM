@@ -286,9 +286,18 @@ def main() -> int:
         print(f"[2/5] 新建文档 {doc_id}")
 
     body = md
-    first = body.split("\n", 1)[0]
-    if first.startswith("# "):
-        body = body.split("\n", 1)[1].lstrip("\n")  # 标题由文档名承担，避免重复 H1
+    # 剥掉正文顶端的 H1（云文档标题由文件名承担，避免重复）——需先跳过 doctype 注释头 + 空行，
+    # 否则「<!-- doctype -->\n\n# 标题」这类头会让旧逻辑砍掉注释、把 H1 漏留进云端（2026-07-15 修）。
+    _lines = body.split("\n")
+    _i = 0
+    while _i < len(_lines) and (_lines[_i].strip() == "" or (
+            _lines[_i].strip().startswith("<!--") and _lines[_i].strip().endswith("-->"))):
+        _i += 1
+    if _i < len(_lines) and _lines[_i].startswith("# "):
+        del _lines[_i]
+        if _i < len(_lines) and _lines[_i].strip() == "":
+            del _lines[_i]  # 顺带吃掉 H1 后紧跟的空行，别留空段
+        body = "\n".join(_lines)
 
     res = push_markdown_to_doc(doc_id, body, image_dir=image_dir, clear_first=True)
     if res.get("error"):

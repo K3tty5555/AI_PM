@@ -75,6 +75,65 @@ grep -q "⓪quater 填充废话窄检" .claude/agents/pm-agent.md || note_fail "
 grep -q "7bis. 填充废话窄检" .claude/skills/ai-pm-driver/SKILL.md || note_fail "driver 缺 7bis 填充废话引用"
 grep -q "三类填充废话同属本闸" .claude/skills/ai-pm/references/pm-judgment-card.md && grep -q "⓪quater 填充废话窄检" .claude/agents/pm-agent.md && grep -q "7bis. 填充废话窄检" .claude/skills/ai-pm-driver/SKILL.md && note_ok "三反模式锚点三处齐全（判断卡/pm-agent/driver）"
 
+echo "▶ 检查 10：PRD 字数三档（单源=判断卡 §7.1，口径实现=check-prd-word-count.py；2026-07-15 落地）"
+# 10a 负向：追踪规则文件不得残留旧行数豁免语（600-800 不算超类）
+WC_RULE_FILES=".claude/skills/ai-pm/references/pm-judgment-card.md .claude/agents/pm-agent.md .claude/skills/ai-pm-driver/SKILL.md .claude/skills/ai-pm/phases/phase-5-prd.md templates/prd-styles/default/feishu-template.md templates/prd-styles/default/agent-supplement.md CLAUDE.md"
+for f in $WC_RULE_FILES; do
+  if grep -E "600-800 不算超|总数到 600-800" "$f" | grep -v "已废\|取代\|墓碑" | grep -q .; then note_fail "$f 残留旧行数豁免语（600-800 不算超）"; fi
+done
+# 10b 三档表达精确校验（python 精确匹配）：
+# ⚠️ 待检查行的识别**只用纯语义锚点、彻底不看数字**——绝不能用"阈值对不对"当"要不要查"的门槛，
+#    否则数字改坏那行就不再匹配→被排除→逃检（Codex 2026-07-15 复验实证：达标行 10000→12000 假绿）。
+# 锚点=达标/说理区/超硬线/字数三档/三档约束/over-budget/超因（专属三档，随阈值改动不变）；
+# 命中锚点的行提取全部 万-token 与 4 位数值 token，白名单 万:{1,1.5} 数:{10000,10001,15000,15001}，
+# 出现集合外数值=篡改红；文件级软/硬线必达。评测语境的"达标"行不含万/4位数、选中无害（不假红不假绿）。
+WC_MISS=0
+if ! python3 - <<'PY'
+import re, sys
+FILES = [
+    '.claude/skills/ai-pm/references/pm-judgment-card.md',
+    '.claude/agents/pm-agent.md',
+    '.claude/skills/ai-pm/phases/phase-5-prd.md',
+    'templates/prd-styles/default/feishu-template.md',
+    'templates/prd-styles/default/agent-supplement.md',
+    'CLAUDE.md',
+]
+WAN = re.compile(r'([0-9]+(?:\.[0-9]+)?)\s*万')
+NUM = re.compile(r'\d{1,3}(?:,\d{3})+|\d{4,}')
+ROW_ANCHOR = re.compile(r'说理区|超硬线|字数三档|三档约束|over-budget|超因|达标')  # 纯语义、不含数字
+ALLOWED_WAN, ALLOWED_NUM = {'1', '1.5'}, {10000, 10001, 15000, 15001}
+def norm_wan(t): return t.rstrip('0').rstrip('.') if '.' in t else t
+fails = []
+for f in FILES:
+    text = open(f, encoding='utf-8').read()
+    sig_wan, sig_num, has_soft, has_hard = set(), set(), False, False
+    for raw in text.split('\n'):
+        if not ROW_ANCHOR.search(raw):     # 只用语义锚点选行——不看数字
+            continue
+        line = re.sub(r'\d{4}-\d{2}-\d{2}', '', raw)             # 剔日期
+        wans = {norm_wan(t) for t in WAN.findall(line)}
+        nums = {int(t.replace(',', '')) for t in NUM.findall(line)}
+        sig_wan |= wans; sig_num |= nums
+        has_soft |= ('1' in wans) or bool(nums & {10000, 10001})
+        has_hard |= ('1.5' in wans) or bool(nums & {15000, 15001})
+    bad = sorted(t for t in sig_wan if t not in ALLOWED_WAN) + \
+          sorted(str(n) for n in sig_num if n not in ALLOWED_NUM)
+    if bad:
+        fails.append('%s 三档锚点行含集合外数值: %s（白名单 万:1/1.5 数:10000/10001/15000/15001）' % (f, ','.join(bad)))
+    if not has_soft:
+        fails.append('%s 缺字数软线（1 万/10000）三档锚点' % f)
+    if not has_hard:
+        fails.append('%s 缺字数硬线（1.5 万/15000）三档锚点' % f)
+for m in fails:
+    print('  ❌ ' + m)
+sys.exit(1 if fails else 0)
+PY
+then WC_MISS=1; FAIL=1; fi
+if ! (grep -q "check-prd-word-count.py" .claude/skills/ai-pm-driver/SKILL.md && grep -q "BAND" .claude/skills/ai-pm-driver/SKILL.md); then WC_MISS=1; note_fail "driver 缺字数机械检引用（脚本名/BAND）"; fi
+# 10c 脚本 selftest 在位且通过（口径回归）
+if python3 scripts/check-prd-word-count.py --selftest >/dev/null 2>&1; then :; else note_fail "check-prd-word-count.py --selftest 失败（口径/阈值/机器行契约漂移）"; fi
+[ "$WC_MISS" -eq 0 ] && python3 scripts/check-prd-word-count.py --selftest >/dev/null 2>&1 && note_ok "字数三档：无豁免语残留 + 七点位硬线锚点齐 + 脚本 selftest 过"
+
 echo ""
 if [ "$FAIL" -eq 0 ]; then echo "✅ 规则一致性检查全部通过"; exit 0
 else echo "❌ 发现规则漂移，请把上述文件改回统一口径（事实源：pm-agent 单源 / 行话表→判断卡 §9.3；八条必答→decision-review 模板头部注释）"; exit 1; fi

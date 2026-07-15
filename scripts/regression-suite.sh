@@ -46,9 +46,10 @@ run_check() { # name cmd...
 }
 
 echo "▶▶ skill 层（--fast）"
-run_check "规则一致性（check-rule-drift，9 项）" bash scripts/check-rule-drift.sh
+run_check "规则一致性（check-rule-drift，10 项）" bash scripts/check-rule-drift.sh
 run_check "骨架 canonical 单源（check-skeleton-rule-drift）" bash scripts/check-skeleton-rule-drift.sh
 run_check "doctype 骨架 fixture 回归（check-prd-skeleton）" bash scripts/check-prd-skeleton.sh
+run_check "PRD 字数三档口径自测（check-prd-word-count --selftest）" python3 scripts/check-prd-word-count.py --selftest
 run_check "skill 引用存在性（check-skill-ref-exists）" python3 scripts/check-skill-ref-exists.py
 run_check "skill 双拷贝一致（check-skill-resource-drift）" bash scripts/check-skill-resource-drift.sh
 run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500

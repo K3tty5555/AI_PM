@@ -9,6 +9,7 @@ fail=0
 
 detect() {
   f="$1"
+  # ⚠️ doctype 正则与 scripts/check-prd-word-count.py 的 DOCTYPE_RE 逐字符一致，改一处必同步另一处
   dt="$(grep -oE '<!-- doctype: (full|decision_review) -->' "$f" 2>/dev/null | head -1 | grep -oE 'full|decision_review')"
   if [ "$dt" = "decision_review" ]; then echo "skipped_decision_review"; return; fi
   # full / 缺标记：窄检三类骨架（零歧义信号，不认列名）

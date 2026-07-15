@@ -76,9 +76,10 @@ elif pgrep -f "claude -p 后台知识沉淀" >/dev/null 2>&1; then
   # 残留行由下一次触发的消费者顺带清（prompt 里有"顺带处理残留"）
   echo "[$(date '+%F %T')] $SESSION queued only (consumer already running) range=${LAST_COUNT:-0}-${COUNT:-0}" >> "$LOG_FILE"
 else
-  KC_PROMPT="后台知识沉淀作业（无人值守，AIPM_KC_CHILD）：读 ${HOME}/.ai-pm/knowledge/pending.jsonl，处理 session 为 ${SESSION} 的行——按行内 transcript 路径读该会话从 from_count 到 to_count 的增量对话，严格按 CLAUDE.md §知识沉淀Hook 的判断标准执行沉淀（问题场景+解决方案缺一不沉淀；先 grep 去重、相似即追加不新建；不做退役；卡片带 auto-generated 标记；处置结果按协议追加到 ${HOME}/.ai-pm/knowledge/capture-events.jsonl 一行）。顺带处理队列里其他残留行（若有）。全部处理完把已消费行从 pending 队列删掉。你没有汇报对象，完成即退出。"
+  KC_PROMPT="后台知识沉淀作业（无人值守，AIPM_KC_CHILD）：读 ${HOME}/.ai-pm/knowledge/pending.jsonl，处理 session 为 ${SESSION} 的行——按行内 transcript 路径读该会话从 from_count 到 to_count 的增量对话，严格按 CLAUDE.md §知识沉淀Hook 的判断标准执行沉淀（问题场景+解决方案缺一不沉淀；先 grep 去重、相似即追加不新建；不做退役；卡片带 auto-generated 标记；处置结果按协议追加到 ${HOME}/.ai-pm/knowledge/capture-events.jsonl 一行）。顺带处理队列里其他残留行（若有）。全部处理完把已消费行从 pending 队列删掉。卫生纪律：读 transcript 直接用 Read 分段读，不写解析脚本；确需中间文件一律放 ${HOME}/.ai-pm/knowledge/work/ 并在退出前删掉；严禁在项目目录（项目根 / tmp/ / output/ 等任何位置）创建文件——项目内你只允许动知识库卡片本身。你没有汇报对象，完成即退出。"
   # 注意：无头会话要加载全套 CLAUDE.md+memory 再读 transcript 增量，跑 5-10 分钟属正常——
   # 判"卡死"前先看产物侧（memory/卡片 mtime）有没有进展，别只看进程没退出（07-13 误杀实证）
+  mkdir -p "${HOME}/.ai-pm/knowledge/work"   # 消费者的中间文件专用区（07-15：治 .tmp_* 落项目根）
   ( nohup env AIPM_KC_CHILD=1 claude -p "$KC_PROMPT" \
       --model sonnet --max-turns 40 \
       --allowedTools "Read,Grep,Glob,Write,Edit,Bash(printf *),Bash(chmod *),Bash(grep *)" \
