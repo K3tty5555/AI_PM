@@ -84,8 +84,18 @@ def delete_verdict(delete_resp: dict, readback: dict) -> tuple[str, str]:
 
 
 def count_headings_for_push(md: str) -> int:
-    """与 push 行为一致的源侧标题计数：1-6 级、跳过代码围栏内的 #、剥掉将被文档名承担的首行 H1。"""
+    """与 push 行为一致的源侧标题计数：1-6 级、跳过代码围栏内的 #、剥掉将被文档名承担的首行 H1。
+    H1 前可能有 doctype 注释头 + 空行（decision_review / cloud_doc_enhanced 稿一律带），
+    须先跳过它们再认首行 H1——与 prd_publish push 侧剥 H1 口径保持一致（否则每篇带 doctype 头的
+    稿都会因源计数多算 1 个 H1 而假报"章节丢失"，2026-07-17 补齐）。"""
     lines = md.split("\n")
+    # 定位"正文首行"：跳过顶端空行 + 单行 HTML 注释头（doctype），与 push 剥 H1 前的跳过逻辑一致
+    first_content = 0
+    while first_content < len(lines) and (
+            lines[first_content].strip() == "" or (
+                lines[first_content].strip().startswith("<!--")
+                and lines[first_content].strip().endswith("-->"))):
+        first_content += 1
     n = 0
     in_code = False
     for i, ln in enumerate(lines):
@@ -95,7 +105,7 @@ def count_headings_for_push(md: str) -> int:
         if in_code:
             continue
         if re.match(r"^#{1,6} ", ln):
-            if i == 0 and ln.startswith("# "):
+            if i == first_content and ln.startswith("# "):
                 continue  # push 前被剥、由文档名承担
             n += 1
     return n
