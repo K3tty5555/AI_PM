@@ -162,7 +162,7 @@ PRD 中包含 Mermaid 代码块时，生成方式取决于执行环境：
 
 PRD 文件落盘后，**立即**做两件：
 
-**① 写 `_status.json.active_prd`**（当前 PRD 权威源）= 刚落盘的 PRD 文件名——后续 skill / 客户端都靠它定位当前 PRD（见 `resolve_current_prd.py`）。
+**① 写 `_status.json.active_prd`**（当前 PRD 权威源）= 刚落盘的 PRD 文件名——后续 skill 都靠它定位当前 PRD（见 `resolve_current_prd.py`）。
 
 **② patch `{项目}/05-prd/README.md`**（当前活跃表只人读、不被机器解析）：
 

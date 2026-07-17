@@ -10,7 +10,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SIG='结构骨架（强制·迭代也不许少）'   # §6 二分 canonical 全文签名句（只此一份）
 EXPECTED="$ROOT/.claude/skills/ai-pm/references/pm-judgment-card.md"
 
-# 只查源树（.claude + 根 CLAUDE.md），排除 app/src-tauri/resources 同步拷贝
+# 只查源树（.claude + 根 CLAUDE.md）
 hits="$(grep -rl --include='*.md' "$SIG" "$ROOT/.claude" "$ROOT/CLAUDE.md" 2>/dev/null || true)"
 n="$(printf '%s\n' "$hits" | grep -c . || true)"
 

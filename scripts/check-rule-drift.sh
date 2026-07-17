@@ -17,7 +17,7 @@ note_fail() { FAIL=1; printf '  ❌ %s\n' "$1"; }
 note_ok()   { printf '  ✅ %s\n' "$1"; }
 
 # 只扫 git 追踪的规则相关文件
-FILES=$(git -c core.quotepath=off ls-files | grep -E '^(CLAUDE\.md|\.claude/|templates/prd-styles/|templates/README|app/src-tauri/src/commands/)' | grep -E '\.(md|rs)$')
+FILES=$(git -c core.quotepath=off ls-files | grep -E '^(CLAUDE\.md|\.claude/|templates/prd-styles/|templates/README)' | grep -E '\.md$')
 
 echo "▶ 检查 1：PRD 守门自检 / PM 直觉不得写死项数"
 BAD=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "([0-9]+|[一二三四五六七八九十]+) ?项 ?(自检|checklist)|([0-9]+|[一二三四五六七八九十]+) ?条 ?PM ?直觉" 2>/dev/null)

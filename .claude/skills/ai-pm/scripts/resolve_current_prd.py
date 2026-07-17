@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """resolve_current_prd —— AI_PM「当前 PRD」唯一解析器（Phase 0·段一 Python 实现）。
 
-极简规则（与将来 Rust 实现 B0 对拍一致，简到两边不可能漂移）：
+极简规则（单一机读权威源，简到不可能漂移）：
   1. _status.json.active_prd 存在 **且文件真存在** → 用它（唯一机读权威源）
   2. 否则 05-prd/ 下**唯一**顶层 PRD md（排除 README/_*.md，不递归子目录）→ 用它（how=single，提示可归一）
   3. 否则按 _status.json.prd_versions[].ts 取最新且文件存在
-  4. 仍歧义 → ambiguous（返回候选）：客户端优雅报错（非交互）/ CLI 可请 PM 确认
+  4. 仍歧义 → ambiguous（返回候选）：非交互场景优雅报错 / CLI 可请 PM 确认
 README「当前活跃表」**不参与机读**（只人读）。
 
 用法：

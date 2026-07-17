@@ -20,10 +20,9 @@ fi
 
 fail() { echo "⛔ fresh-clone 验收未过：$1"; exit 1; }
 
-# 环境形态断言：分发形态下这三者必须缺席（在则说明克隆混入了本机私产，验收无效）
+# 环境形态断言：分发形态下这两者必须缺席（在则说明克隆混入了本机私产，验收无效）
 [[ ! -e "$TMP/clone/.claude/skills/xfchat-wiki" ]] || fail "克隆内出现私有插件（应不随仓分发）"
 [[ ! -e "$TMP/clone/output" ]] || fail "克隆内出现 output/（应不随仓分发）"
-[[ ! -e "$TMP/clone/app/src-tauri/resources/skills" ]] || fail "克隆内出现生成副本（应为构建期产物）"
 
 echo "（tracked-only 克隆 → regression --fast）"
 if ! (cd "$TMP/clone" && bash scripts/regression-suite.sh --fast) > "$TMP/out.log" 2>&1; then
@@ -33,12 +32,8 @@ if ! (cd "$TMP/clone" && bash scripts/regression-suite.sh --fast) > "$TMP/out.lo
 fi
 
 # 分类断言（六轮 §3.4：把"无伪 PASS"从文字要求变成机械验收）
-grep -q "N/A: resources/skills 未生成" "$TMP/out.log" \
-  || fail "缺生成副本未见 N/A 输出（可能被吞成 PASS）"
 grep -q "N/A：private output 未分发" "$TMP/out.log" \
   || fail "缺私有生产数据未见 N/A 输出（可能被吞成 PASS）"
-awk '/skill 双拷贝一致/{getline; print; exit}' "$TMP/out.log" | grep -q "➖" \
-  || fail "skill 双拷贝一致步骤在无副本环境下未显示 ➖ N/A（展示层假绿）"
 
 tail -1 "$TMP/out.log"
-echo "fresh-clone 分发验收 ok（--fast 全绿 + 两处缺失诚实 N/A + 无伪 PASS）"
+echo "fresh-clone 分发验收 ok（--fast 全绿 + 私有 output 缺失诚实 N/A）"

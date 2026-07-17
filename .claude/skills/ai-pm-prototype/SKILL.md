@@ -128,7 +128,7 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 加载 `templates/ui-specs/{规范名}/design-tokens.json`，将其中颜色、字体、间距、圆角 Token 映射为 CSS variables 写入 `<style>` 标签。
 
 **② AI 情境定制**
-客户端流式生成时会自动注入项目自带 `ai-pm-frontend-design`，并在用户本机存在时追加 `impeccable:frontend-design` 作为增强。执行本地设计内核的 Context Gathering：先识别目标产品、用户角色、设备形态、设计来源和状态清单，再决定视觉方向。
+生成原型时自动注入项目自带 `ai-pm-frontend-design`，并在用户本机存在时追加 `impeccable:frontend-design` 作为增强。执行本地设计内核的 Context Gathering：先识别目标产品、用户角色、设备形态、设计来源和状态清单，再决定视觉方向。
 
 若项目根 `.impeccable.md` 描述的是 AI_PM 桌面客户端，只能提取通用质量要求，不得把其品牌色、字体、圆角、导航结构套给另一个业务原型。不得退回 `ui-ux-pro-max` 或通用 AI 审美。
 

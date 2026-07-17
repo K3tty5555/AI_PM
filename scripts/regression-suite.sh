@@ -51,7 +51,6 @@ run_check "骨架 canonical 单源（check-skeleton-rule-drift）" bash scripts/
 run_check "doctype 骨架 fixture 回归（check-prd-skeleton）" bash scripts/check-prd-skeleton.sh
 run_check "PRD 字数三档口径自测（check-prd-word-count --selftest）" python3 scripts/check-prd-word-count.py --selftest
 run_check "skill 引用存在性（check-skill-ref-exists）" python3 scripts/check-skill-ref-exists.py
-run_check "skill 双拷贝一致（check-skill-resource-drift）" bash scripts/check-skill-resource-drift.sh
 run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500
 run_check "云文档 pull 离线自测（纯三方算法+复合键回写端到端）" python3 scripts/prd_pull.py --selftest
 run_check "云文档共享层自测（指纹/删除判定/残留检查）" python3 scripts/_prd_common.py

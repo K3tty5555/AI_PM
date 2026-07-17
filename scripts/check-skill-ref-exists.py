@@ -4,10 +4,6 @@
 Skill 引用存在性检查：扫 .claude/skills 下所有 .md 正文里"反引号包起来的文件路径引用"
 是否指向真实存在的文件，揪出悬空引用（如 battlecard 路径归属错那种）。
 
-与 check-skill-resource-drift.sh 区别：
-  drift 脚本 = 比对 .claude/skills 与 app resource 副本是否一致（不查引用）
-  本脚本     = 查引用目标存不存在（不比对副本）
-
 为什么用 python 不用 bash：精确匹配需要"路径不从中间截断 + 排除项目产物路径"，
 bash grep 部分匹配会把 `07-references/README.md`、`ai-pm-prd/references/x.md` 截成
 `references/...` 误报（踩过，见 pitfall_bash_utf8_var_mangle 同族坑），python re 干净。

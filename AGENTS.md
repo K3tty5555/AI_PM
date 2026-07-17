@@ -10,7 +10,7 @@ Codex 进入本项目后，优先读取以下上下文：
 2. 共享索引：`.ai-shared/memory-index.md`
 3. Claude skills：`.claude/skills/`
 4. Claude agents：`.claude/agents/`
-5. 项目规范：`CLAUDE.md`、`docs/design-system.md（本机目录，docs/ 整体 gitignore 不随仓分发）`
+5. 项目规范：`CLAUDE.md`
 
 `.ai-shared/` 是桥接层，不替代 Claude 原始资产。索引过期时，以本机 Claude memory、skills、agents 原始文件为准。
 
@@ -50,7 +50,6 @@ scripts/ai-sync/check-ai-context-freshness.sh
 - 用户允许运行 Playwright 后，优先复用本机缓存 `/Users/xiaowu/Library/Caches/ms-playwright`；若 MCP 报浏览器缺失，先查该缓存和 `mcp-chrome-for-testing-*`，不要直接触发下载。
 - 操作前先查已有工具，PRD 导出优先复用 `md2docx.py`。
 - AI 给老师或最终用户的话术不能透露版本号、上线时间、下个迭代。
-- 客户端 UI 遵循 `docs/design-system.md`，不要回到终末地/终端风格。
 - 写 PRD 时遵循KettyWu PM 风格与 `.claude/skills/ai-pm/references/pm-judgment-card.md`。
 - `.claude/skills/` 下的 Markdown 修改由主会话直接做，不派给并行子 Agent。
 - 并行工作前检查文件冲突，同文件串行处理。

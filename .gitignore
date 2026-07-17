@@ -55,7 +55,6 @@ AI_PM_提效分享.html
 # Documentation directory (含真实业务背景、对接人、试点学校等私有信息)
 # 包括 plans/ 和顶层设计文档；后续在 docs/ 下新增的文件也会自动 ignore
 /docs/
-/app/docs/plans/
 
 # AI shared local context copies
 # Keep bridge docs/scripts versioned, but do not upload local memory snapshots,
@@ -152,14 +151,8 @@ scripts/.metrics-dict.md
 # Node.js
 node_modules/
 package-lock.json
-!app/package-lock.json
 yarn.lock
 .pnpm-store/
-
-# Tauri app
-app/node_modules/
-app/dist/
-app/src-tauri/target/
 
 # Python
 __pycache__/

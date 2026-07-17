@@ -96,4 +96,4 @@ python3 scripts/check-skill-ref-exists.py
 
 - 只读取文件，不做任何修改
 - 缺失的可选文件标记为 ⚠️ 警告而非 ❌ 错误
-- v0.3.0 仅 CLI 侧，客户端展示后续迭代
+- doctor 输出为纯文本报告（CLI 侧）

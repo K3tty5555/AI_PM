@@ -138,25 +138,11 @@ README.md                  项目介绍
 
 > 注：本节提到的 `impeccable`、`skill-creator`、`self-improving` 等是**外部插件/技能**，随 Claude Code 插件市场或本机环境提供，**不随本仓库分发**。clone 本仓后若未安装对应插件，AI_PM 仍使用项目自带 `ai-pm-frontend-design` 生成 HTML 原型/仪表盘；外部插件仅作为增强能力。
 
-### 客户端设计规范
+### HTML 原型 / 数据仪表盘设计 → AI_PM 本地设计内核 + `impeccable` 增强
 
-客户端（Tauri App）有独立设计规范：**`docs/design-system.md`**（本机文件，docs/ 整体 gitignore；客户端已冻结，本节仅历史参考）。核心要点：
-- 风格：Bauhaus + Apple HIG，钴蓝（`#1D4ED8`）Accent，纯白背景，8px 圆角
-- 字体：GeistSans 优先，-apple-system 兜底（完整字体栈见 `docs/design-system.md`）；等宽字体仅限代码场景
-- 侧边栏：220px 毛玻璃（`backdrop-blur-xl`），项目内显示 7 阶段列表
-- 微交互：按钮按压 `scale(0.97)`，导航项 hover 背景过渡，阶段切换 fadeInUp
-- ❌ 禁止：`uppercase tracking-[2px]`、`font-terminal` 用于 UI 元素、终末地风格
-
-### 新页面开发 → AI_PM 本地设计内核 + `impeccable` 增强
-
-- **客户端页面**（`app/src/pages/` 或 `app/src/components/`）：优先使用外部 `impeccable` 做视觉初稿；不可用时严格遵循 `docs/design-system.md` 和项目根 `.impeccable.md`。
-- **AI 生成的 HTML 原型**：沿用三档选择机制（首次询问用户偏好并记住），**不受 `docs/design-system.md` 约束**。
-
-### UI/UX 审查与迭代 → `ai-pm-frontend-design` + `impeccable`
-
-- **客户端页面审查**：优先使用 `impeccable` 的审查命令：`/audit`（无障碍/性能/响应式）、`/critique`（UX 层级）、`/polish`（上线前精修）。
-- **客户端页面迭代**：复杂交互/流程重设计优先使用 `impeccable` 套件，参考基准为 `docs/design-system.md`。
-- **HTML 原型 / 数据仪表盘**：AI_PM 客户端流式生成时自动注入项目自带 `ai-pm-frontend-design`；用户本机存在 `impeccable:frontend-design` 时追加为增强。以用户选定的原型设计规范为准，不套用客户端规范。
+- **设计规范三档**：沿用三档选择机制（首次询问用户偏好并记住，见「强制规范」节），生成时以用户选定的原型设计规范为准。
+- 生成 HTML 原型 / 数据仪表盘时自动注入项目自带 `ai-pm-frontend-design`；用户本机存在 `impeccable:frontend-design` 时追加为增强。
+- UI/UX 审查与精修可选用外部 `impeccable`：`/audit`（无障碍/性能/响应式）、`/critique`（UX 层级）、`/polish`（上线前精修）。
 
 ### 新技能开发 → `skill-creator` 技能
 

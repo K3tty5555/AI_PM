@@ -1,6 +1,3 @@
-<p align="center">
-  <img src="app/src-tauri/icons/128x128@2x.png" width="96" alt="AI PM">
-</p>
 <h1 align="center">AI PM</h1>
 <p align="center">
   AI-powered product manager toolkit — from idea clarification to PRD, analytics design, prototype, review, and retrospective.
@@ -12,24 +9,14 @@
   <a href="README.md">English</a> | <a href="README_zh-CN.md">简体中文</a>
 </p>
 
-> [!WARNING]
-> **Desktop app is frozen (2026-07-10).** The Tauri desktop client is no longer maintained; the auto-update channel is closed and the release pipeline is disabled. **Historical installers remain on GitHub Releases but contain known security issues that will not be fixed — do not download or install them.** Existing installs should be uninstalled. The actively maintained form of AI_PM is the **Claude Code skills** edition below. Desktop sections in this README are kept for historical reference only.
-
+> [!NOTE]
+> **The Tauri desktop client was retired on 2026-07-17 and its source removed from this repo.** Historical installers remain on GitHub Releases only and are unmaintained. The actively maintained form of AI_PM is the **Claude Code skills** edition described below.
 
 ---
 
 ## What is AI PM?
 
-AI PM is an AI product manager suite. Start with a rough idea, and it can help you clarify requirements, analyze users and competitors, write user stories, generate a PRD, design analytics, build an HTML prototype, run a six-role review, and summarize learnings.
-
-The project currently has two complementary surfaces:
-
-| | Claude Code Edition | Desktop App |
-|---|---|---|
-| Form | Claude Code skills + PM agent | Standalone desktop app for macOS / Windows |
-| Interface | CLI conversation | Visual GUI |
-| Prerequisite | [Claude Code](https://claude.ai/code) subscription | API key, OpenAI-compatible endpoint, or local Claude CLI |
-| Strength | Native toolchain, searchable memory, scripts, sub-agents | Project dashboard, phase pages, PRD editing, Tool Plaza, exports |
+AI PM is an AI product manager suite. Start with a rough idea, and it can help you clarify requirements, analyze users and competitors, write user stories, generate a PRD, design analytics, build an HTML prototype, run a six-role review, and summarize learnings. It runs as a set of Claude Code skills plus a PM sub-agent.
 
 ## Current Capabilities
 
@@ -42,14 +29,11 @@ Office Hours → Requirement → Analysis → Research → Stories → PRD → A
 - 9 core project phases, plus optional Office Hours before formal writing
 - Each phase saves independently and can be resumed
 - PM agent / driver workflow for PRD quality checks before review
-- Claude Code skills and the desktop app share the same product process vocabulary
 
 ### PRD and Review
 
 - **Markdown-first PRD** as the canonical source
-- **Version management** with PRD version list and diff viewer in the app
-- **PRD score panel** for dimension-based quality checks
-- **PRD assistant** for targeted edits and pending diff review
+- **Version management** with per-phase folders and version indexes
 - **AI illustration** generation and embedding into PRD content
 - **Six-role review** from product, design, frontend, backend, QA, and operations perspectives
 
@@ -71,24 +55,10 @@ PM methods borrowed from established practice and **re-grounded for China-mainla
 | PRD export | PDF, DOCX, share page, and supporting export scripts |
 | Product tools | Priority assessment, weekly report, on-site interview, data insight |
 | Knowledge tools | Product persona, design spec, product knowledge base |
-| Tool Plaza | Image, document, content, video/audio, translation, compression, and social publishing tools |
 | Prototype | HTML prototype generation, device preview, motion intensity, multi-file mode |
 | Collaboration | Claude-first project memory with Codex-readable shared indexes |
 
-### Desktop App Highlights
-
-- Project dashboard with search, filters, favorites, and progress status
-- 10 project pages: Office Hours, Requirement, Analysis, Research, Stories, PRD, Analytics, Prototype, Review, Retrospective
-- StoryBoard drag-and-drop editing for user stories
-- PRD table of contents, Mermaid rendering, scoring, version diff, assistant panel, and AI illustration dialog
-- Prototype device simulation for mobile, tablet, laptop, and desktop
-- Tool Plaza backed by bundled local skills and a manifest
-- Three AI backend modes: Anthropic API, OpenAI-compatible endpoint, Claude CLI
-- Dark mode, keyboard shortcuts, native menu, and update check
-
 ## Quick Start
-
-### Option 1: Claude Code Edition
 
 ```bash
 git clone <repository-url>
@@ -105,10 +75,6 @@ Then run:
 AI PM will guide requirement clarification first, then move through the product workflow.
 
 HTML prototypes and dashboards use the bundled `ai-pm-frontend-design` skill by default. External Claude Code plugins such as `impeccable` are optional enhancements, not runtime requirements.
-
-### Option 2: Desktop App (⛔ frozen — do not install)
-
-The desktop app is discontinued. **Do not download historical installers** (known unfixed security issues; see the warning at the top). This section is kept for historical reference only — the active form is Option 1 (Claude Code skills).
 
 ## Claude Code Commands
 
@@ -140,49 +106,21 @@ The desktop app is discontinued. **Do not download historical installers** (know
 
 Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/ai-pm-prd`, `/ai-pm-prototype`, `/ai-pm-review`.
 
-## Feature Comparison
-
-| Capability | Claude Code Edition | Desktop App |
-|-----------|:---:|:---:|
-| Web search and script execution | Native | Via Claude CLI mode / local commands |
-| PM agent and sub-agent workflow | Native | Uses bundled skills and phase orchestration |
-| Project dashboard | - | Yes |
-| Phase-by-phase visual workflow | - | Yes |
-| PRD score / diff / assistant | CLI files | Yes |
-| Tool Plaza | Skills / scripts | Yes |
-| Drag-and-drop story editing | - | Yes |
-| Device simulation preview | - | Yes |
-| Offline tutorial | HTML file | HTML file |
-
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19, TypeScript 5, Vite 6, TailwindCSS 4, Mermaid 11 |
-| Backend | Tauri 2, Rust, SQLite |
-| AI Skills | 26 Claude Code project skills + 2 sub-agents (pm-agent / prototype-agent) |
-| Desktop Resources | 26 bundled app skills + Tool Plaza manifest (5 categories) |
+| AI Skills | Claude Code project skills + 2 sub-agents (pm-agent / prototype-agent) |
 | Export Scripts | Python 3, Node scripts, Chrome-based PDF rendering |
 | Collaboration Context | `.ai-shared` indexes and `scripts/ai-sync` checks |
-| CI/CD | GitHub Actions, macOS universal binary, Windows x64 |
-
-## Release Configuration
-
-Release builds require the `AI_PM_UPDATER_ENDPOINT` environment variable or repository secret. It must point to the deployed HTTPS `latest.json` manifest used by the desktop updater.
 
 ## Project Structure
 
 ```text
-.claude/skills/                    # 26 Claude Code project skills
+.claude/skills/                    # Claude Code project skills
 .claude/agents/                    # 2 sub-agents: pm-agent (PRD gate) and prototype-agent (prototype audit)
 .ai-shared/                        # Shared memory / skill / agent indexes for Claude and Codex
 scripts/ai-sync/                   # Index generation and context drift checks
-app/src/                           # React frontend
-app/src/pages/project/             # 10 project phase pages
-app/src/pages/tools/plaza/         # Tool Plaza pages
-app/src-tauri/                     # Rust backend
-app/src-tauri/resources/skills/    # 26 bundled desktop skills
-app/src-tauri/resources/plaza-manifest.json
 templates/                         # PRD styles, UI specs, knowledge presets
 docs/                              # Local-only planning notes (gitignored — not distributed with the repo)
 output/                            # Per-project output, git-ignored
@@ -191,7 +129,7 @@ AI_PM_教程中心.html                 # Offline interactive tutorial
 
 ## Tutorial
 
-Open `AI_PM_教程中心.html` in your browser. It works offline and covers both the Claude Code edition and the desktop app.
+Open `AI_PM_教程中心.html` in your browser. It works offline and covers the Claude Code edition.
 
 ## License
 
