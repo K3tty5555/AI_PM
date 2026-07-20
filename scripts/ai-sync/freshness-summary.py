@@ -28,6 +28,8 @@ CONTEXT_FILES = [
 SUMMARY_GAP_ALERT = 5      # 摘要缺口 > 5 条才报
 PENDING_AGE_ALERT = 14     # pending 最老 > 14 天才报（>0 份即计数）
 CONTEXT_AGE_ALERT = 14     # context 超 14 天未更才报
+DEBTS_AGE_ALERT = 7        # 计划债台账 updated 超 7 天提醒对账（2026-07-17 收尾对账计划 T2）
+DEBTS = ROOT / "docs" / "_plan-debts.json"
 
 
 def summary_gap() -> tuple[int, str]:
@@ -122,6 +124,21 @@ def memory_status() -> tuple[int, int]:
     return n, worst
 
 
+def debts_age() -> tuple[int, int]:
+    """计划债台账年龄：updated 字段距今天数。「清一条删一条」靠人记不住（07-17 实证：
+    扳机已响 4 天未销账），这里只报年龄提醒对账、不判单条扳机（机读化太重）。
+    返回 (天数, 债条数)；台账缺失/解析失败静默跳过。"""
+    import datetime
+    if not DEBTS.exists():
+        return -1, 0
+    try:
+        data = json.loads(DEBTS.read_text(encoding="utf-8"))
+        age = (datetime.date.today() - datetime.date.fromisoformat(data.get("updated", ""))).days
+        return age, len(data.get("debts", []))
+    except Exception:
+        return -1, 0
+
+
 def main() -> None:
     parts = []
     gap, idx_date = summary_gap()
@@ -138,6 +155,9 @@ def main() -> None:
     n_stale, age_stale = memory_status()
     if n_stale > 0:
         parts.append(f"状态卡超龄 {n_stale}（最老 {age_stale} 天）")
+    d_age, d_n = debts_age()
+    if d_age > DEBTS_AGE_ALERT:
+        parts.append(f"计划债台账 {d_age} 天未对账（{d_n} 条，docs/_plan-debts.json）")
     if parts:
         tail = f"（索引截至 {idx_date}）" if idx_date else ""
         sys.stdout.buffer.write(

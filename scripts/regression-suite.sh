@@ -50,6 +50,13 @@ run_check "规则一致性（check-rule-drift，10 项）" bash scripts/check-ru
 run_check "骨架 canonical 单源（check-skeleton-rule-drift）" bash scripts/check-skeleton-rule-drift.sh
 run_check "doctype 骨架 fixture 回归（check-prd-skeleton）" bash scripts/check-prd-skeleton.sh
 run_check "PRD 字数三档口径自测（check-prd-word-count --selftest）" python3 scripts/check-prd-word-count.py --selftest
+# 判断卡自身篇幅预算（2026-07-17 T5 拍板轻量版）：硬线 600 行，超线先合并/收编旧规则再新增（单源=判断卡头部预算注）
+run_check "判断卡篇幅预算（≤600 行，防只加不减膨胀）" bash -c '
+  n=$(wc -l < .claude/skills/ai-pm/references/pm-judgment-card.md)
+  if [ "$n" -gt 600 ]; then echo "判断卡 $n 行 > 600 预算线：先合并/收编旧规则再新增（判断卡头部预算注）"; exit 1; fi
+  echo "判断卡 $n/600 行"'
+run_check "知识沉淀队列+摘要自测（id/ack竞态/分片）" python3 scripts/kc-digest.py --selftest
+run_check "知识沉淀 hook 单飞自测（双 Stop 只起一消费者）" python3 scripts/kc-hook-selftest.py
 run_check "skill 引用存在性（check-skill-ref-exists）" python3 scripts/check-skill-ref-exists.py
 run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500
 run_check "云文档 pull 离线自测（纯三方算法+复合键回写端到端）" python3 scripts/prd_pull.py --selftest

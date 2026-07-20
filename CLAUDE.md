@@ -181,15 +181,15 @@ git ls-files | cat   # 检查文件名本身是否含公司名
 
 **排队 + 后台无头消费（2026-07-13 定稿，两次用户拍板）**：此前 stop hook 用 `decision:block` 把主对话拽回前台跑沉淀，工具调用刷进对话流、打断体验；改排队制后又发现用户从不显式跑知识命令、纯排队=渠道关死（自动化别甩锅给用户）。终稿三层：
 
-- **排队（hook 侧，静默亚秒）**：`knowledge-capture.sh` 节流通过后向 `~/.ai-pm/knowledge/pending.jsonl` 追加一行候选区间（session/transcript/消息水位），随即放行主对话，前台零痕迹。
-- **消费（后台无头会话，自动）**：hook 随即 `nohup claude -p`（带 `AIPM_KC_CHILD=1` 防递归、`--model sonnet`、窄 allowedTools）在后台读队列+transcript 增量执行沉淀并清队列——主对话零感知，用户零动作。卫生纪律（2026-07-15，治 `.tmp_*` 落项目根实锤）：消费者的中间文件只落 `~/.ai-pm/knowledge/work/` 且退出前自删，严禁在项目目录创建文件。
+- **排队（hook 侧，静默亚秒）**：`knowledge-capture.sh` 节流通过后调 `scripts/kc-digest.py --enqueue`，在 `pending.jsonl.lock` 下向 `~/.ai-pm/knowledge/pending.jsonl` 追加候选区间（稳定 `queue_id` + session/transcript/消息水位）；同区间重试幂等，随即放行主对话。
+- **消费（后台无头会话，自动）**：hook 在摘要前用原子 `consumer.lock/` 拿单飞权（覆盖 digest→Claude→退出）；`kc-digest.py` 先根据 capture-events 中的 `queue_id` ack 在与 enqueue 共用的锁下压缩已消费行、给旧行补 id，再把增量对话按消息边界分成若干 `__part-N-of-M.md`（每片≤60KB，只留用户/助手正文）。`nohup claude -p`（`AIPM_KC_CHILD=1`、sonnet、`--max-turns 80`）必须读完该行所有 part；每处理完一行就向 capture-events **只追加 ack**（含 `queue_id/session/from_count/to_count/outcome/artifacts/reason`，文件 0600），不直接 Edit/Write pending。下次触发再确定性压缩和清孤儿分片，因此并发 enqueue 不会被旧快照吞掉。卫生纪律：消费者不写解析脚本、不留探针文件，项目内只动知识库卡片。
 - **兜底（显式时机）**：claude CLI 不可用或后台失败时候选留在队列；用户显式跑 `/ai-pm-knowledge sync|add` 时先清残余队列。沉淀判断标准（三层通用）：
   1. 必须同时具备「问题场景 + 解决方案」结构，缺任一段不沉淀；
   2. 跨次去重：先 grep 现有卡片标题/前 200 字，相似度高 → 追加验证数据而非新建；
   3. source-project 双重校验：transcript cwd + 对话提及项目名，不一致或拿不准 → 标 `unknown`；
   4. 卡片标记：`confidence=low, auto-generated=true, source-session=<session_id>, last-verified=created`；
   5. **不做退役判断**：批量消费路径只做 dedup-key 去重、不判断"取代旧卡"（退役会软隐藏卡片，不能在批处理中发生）；真退役留给有意识的 add/sync 与 review-stale；
-  6. 端到端留痕（JSONL）：每条处置完向 `~/.ai-pm/knowledge/capture-events.jsonl` 追加一行 `{"ts","session","outcome":"written|merged|skipped","artifacts":[…],"reason"}`——机器可统计漏闭环率；文件保持 0600，一次追加写完整一行。
+  6. 端到端留痕（JSONL）：每条处置完向 `~/.ai-pm/knowledge/capture-events.jsonl` 追加一行 `{"ts","queue_id","session","from_count","to_count","outcome":"written|merged|skipped","artifacts":[…],"reason"}`——`queue_id` 是压缩 ack，其余字段供统计/审计；文件保持 0600，一次只追加完整一行。
 
 会话中干活时的**就地沉淀**（修完坑顺手 append 卡片）不受此协议限制、继续鼓励——hook 链路只是兜底网。成本口径：后台消费每次触发≈一个 sonnet 小会话，频率被 60s 冷却+30 消息间隔压住。
 
