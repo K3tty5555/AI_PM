@@ -70,6 +70,9 @@ AI_PM_提效分享.html
 .ai-shared/memory-index.md
 .ai-shared/agent-index.md
 .ai-shared/skill-index.md
+# avatars/ 群聊头像（图片内容仅本机，只放行 README.md）
+.ai-shared/avatars/*
+!.ai-shared/avatars/README.md
 
 # Playwright
 .playwright/
