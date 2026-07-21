@@ -23,6 +23,7 @@ CONTEXT_FILES = [
     ROOT / ".ai-shared" / "context" / "open-questions.md",
     ROOT / ".ai-shared" / "context" / "product-decisions.md",
 ]
+MEMORY_DIR = Path.home() / ".claude" / "projects" / str(ROOT).replace("/", "-").replace("_", "-") / "memory"
 
 # 阈值（主计划 A0/A1/A2/A3 拍定）
 SUMMARY_GAP_ALERT = 5      # 摘要缺口 > 5 条才报
@@ -69,15 +70,39 @@ def pending_backlog() -> tuple[int, int]:
     return len(files), int((time.time() - oldest) / 86400)
 
 
+def _index_latest_activity() -> float:
+    """conversation index 中最新会话活动的 epoch，不用索引文件自身 mtime。"""
+    import datetime
+
+    if not INDEX.exists():
+        return 0.0
+    latest = 0.0
+    for line in INDEX.open(encoding="utf-8", errors="ignore"):
+        try:
+            row = json.loads(line)
+            value = row.get("last_ts") or row.get("first_ts") or ""
+            if isinstance(value, (int, float)):
+                stamp = float(value)
+            else:
+                stamp = datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+            latest = max(latest, stamp)
+        except Exception:
+            continue
+    return latest
+
+
 def context_age() -> int:
-    """context 三文件的最大滞后天数：mtime vs max(index 最新活动, raw 最新 mtime)。"""
-    baseline = 0.0
-    if INDEX.exists():
-        baseline = INDEX.stat().st_mtime
-    raw = CONV / "raw"
-    if raw.is_dir():
-        for p in raw.rglob("*.jsonl"):
-            baseline = max(baseline, p.stat().st_mtime)
+    """context 三文件相对最新会话活动的最大滞后天数。
+
+    索引/raw 都是本地快照，同步时可被重建/重拷；它们的 mtime 不等于会话活动时间。
+    只在索引内没有可解析时间时，才回退 raw mtime。
+    """
+    baseline = _index_latest_activity()
+    if baseline <= 0:
+        raw = CONV / "raw"
+        if raw.is_dir():
+            for p in raw.rglob("*.jsonl"):
+                baseline = max(baseline, p.stat().st_mtime)
     worst = 0
     for f in CONTEXT_FILES:
         if not f.exists():
@@ -90,13 +115,13 @@ def context_age() -> int:
 def memory_status() -> tuple[int, int]:
     """滚动状态卡（project_* 且名含 status/roadmap/current）超龄计数（A7 · K1 段1）。
     卡龄优先用卡内机读字段 `last-verified: YYYY-MM-DD`（比 mtime 准——mtime 会被 backup 刷），
-    无则退回 mtime。排除 feedback_/pitfall_/reference_（铁律/踩坑不滚动）。
+    无则退回 mtime；带 `superseded-by` 的冻结卡不计入活跃状态卡鲜度。
+    排除 feedback_/pitfall_/reference_（铁律/踩坑不滚动）。
     「两活卡口径打架」的语义冲突对不机器算（需人工判，A7 处置人工拍）。
     memory 在仓外 ~/.claude/projects/<slug>/memory；派生不到则静默跳过（跨机不报错）。"""
     import re
     import datetime
-    slug = str(ROOT).replace("/", "-").replace("_", "-")
-    mem = Path.home() / ".claude" / "projects" / slug / "memory"
+    mem = MEMORY_DIR
     if not mem.is_dir():
         return 0, 0
     n, worst = 0, 0
@@ -108,6 +133,8 @@ def memory_status() -> tuple[int, int]:
         try:
             txt = f.read_text(encoding="utf-8", errors="ignore")
         except Exception:
+            continue
+        if re.search(r"^superseded-by:\s*\S+", txt, re.M):
             continue
         m = re.search(r"^last-verified:\s*(\d{4}-\d{2}-\d{2})", txt, re.M)
         age = None
@@ -139,6 +166,66 @@ def debts_age() -> tuple[int, int]:
         return -1, 0
 
 
+def selftest() -> int:
+    """索引文件刚重建时，context 年龄仍应按索引内最新会话活动计算。"""
+    import datetime
+    import tempfile
+
+    global INDEX, CONV, CONTEXT_FILES, MEMORY_DIR
+    saved = INDEX, CONV, CONTEXT_FILES, MEMORY_DIR
+    try:
+        with tempfile.TemporaryDirectory(prefix="aipm-freshness-selftest-") as raw:
+            root = Path(raw)
+            conv = root / "conversations"
+            raw_dir = conv / "raw" / "claude"
+            context = root / "context"
+            raw_dir.mkdir(parents=True)
+            context.mkdir()
+            index = conv / "index.jsonl"
+            index.write_text(json.dumps({"last_ts": "2026-07-10T12:00:00+00:00"}) + "\n",
+                             encoding="utf-8")
+            raw_file = raw_dir / "old-session.jsonl"
+            raw_file.write_text("{}\n", encoding="utf-8")
+            files = [context / name for name in (
+                "project-current-state.md", "open-questions.md", "product-decisions.md"
+            )]
+            for f in files:
+                f.write_text("snapshot\n", encoding="utf-8")
+
+            def epoch(day: int) -> float:
+                return datetime.datetime(2026, 7, day, 12, tzinfo=datetime.timezone.utc).timestamp()
+
+            # 模拟 7/20 同步：索引和 raw 副本 mtime 都被刷新，但会话实际只到 7/10；
+            # context 7/3 相对真实活动只落后 7 天，不应被算成 17 天。
+            os.utime(index, (epoch(20), epoch(20)))
+            os.utime(raw_file, (epoch(20), epoch(20)))
+            for f in files:
+                os.utime(f, (epoch(3), epoch(3)))
+            INDEX, CONV, CONTEXT_FILES = index, conv, files
+            got = context_age()
+            assert got == 7, f"context age 应按 last_ts 算 7 天，实际 {got} 天"
+
+            memory = root / "memory"
+            memory.mkdir()
+            old_day = datetime.date.today() - datetime.timedelta(days=20)
+            (memory / "project_active_status.md").write_text(
+                f"---\nlast-verified: {old_day.isoformat()}\n---\n", encoding="utf-8"
+            )
+            (memory / "project_frozen_roadmap.md").write_text(
+                f"---\nlast-verified: {old_day.isoformat()}\nsuperseded-by: project_active_status\n---\n",
+                encoding="utf-8",
+            )
+            MEMORY_DIR = memory
+            count, age = memory_status()
+            assert count == 1 and age == 20, (
+                f"冻结卡不应计入超龄，预期 1 张/20 天，实际 {count} 张/{age} 天"
+            )
+    finally:
+        INDEX, CONV, CONTEXT_FILES, MEMORY_DIR = saved
+    print("freshness-summary selftest: OK")
+    return 0
+
+
 def main() -> None:
     parts = []
     gap, idx_date = summary_gap()
@@ -167,4 +254,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     os.environ.setdefault("PYTHONUTF8", "1")
+    if "--selftest" in sys.argv[1:]:
+        raise SystemExit(selftest())
     main()

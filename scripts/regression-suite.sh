@@ -73,6 +73,7 @@ else
   echo "   ➖ N/A：private output 未分发（fresh clone 无生产数据；契约逻辑已由 --selftest 覆盖）"
 fi
 run_check "staleness observed 遥测自测（正常项目事实非空）" bash scripts/ai-sync/staleness-selftest.sh
+run_check "AI context 鲜度口径自测（按会话活动时间，不按索引 mtime）" python3 scripts/ai-sync/freshness-summary.py --selftest
 
 if [ "$MODE" = "--full" ]; then
   echo ""
