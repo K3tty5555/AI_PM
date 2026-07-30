@@ -160,4 +160,4 @@ upstream-from: V2.md
 | `17-next-version-prep/` | 下版本准备 | VNext 草稿、范围预研、版本差异准备 |
 | `_logs/` | 运行日志 / 临时调试日志 | 原 `logs/` 迁入此路径 |
 
-`output/` 顶层只允许放容器目录：`projects/`、`_archive/`、`_prd-corpus/`、`strategy-sandbox/`、`weekly/`、`priority/` 等。一次性分享资产、临时演示工程不放顶层，归档到 `output/_archive/`。
+`output/` 顶层容器的唯一完整注册表见 `.claude/skills/ai-pm/references/output-containers.md`。本模板只描述项目内部目录，不自行维护顶层白名单；新增顶层容器必须先登记。

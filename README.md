@@ -85,6 +85,8 @@ HTML prototypes and dashboards use the bundled `ai-pm-frontend-design` skill by 
 | `/ai-pm --team [idea]` | Multi-agent workflow for complex requirements |
 | `/ai-pm continue` | Resume the last unfinished project |
 | `/ai-pm strategy` | Strategy sandbox for project-level or product-level strategic thinking |
+| `/ai-pm sharing [topic or source path]` | Write a standalone experience-sharing article; not a PRD, retrospective, or training handout |
+| `/ai-pm-sharing` | Direct entry to the same experience-sharing article skill |
 | `/ai-pm-strategy-verify` | Strategy verification scout — dig evidence to the end, return reversals + forks (never the final call) |
 | `/ai-pm driver [PRD]` | PM-style quality gate before review |
 | `/ai-pm-prd` | Generate or update PRD |
@@ -104,7 +106,7 @@ HTML prototypes and dashboards use the bundled `ai-pm-frontend-design` skill by 
 | `/multi-perspective-review` | Multi-perspective review mode |
 | `/tutorial-center-update` | Update the offline tutorial center |
 
-Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/ai-pm-prd`, `/ai-pm-prototype`, `/ai-pm-review`.
+Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/ai-pm-prd`, `/ai-pm-prototype`, `/ai-pm-review`, `/ai-pm-sharing`.
 
 ## Tech Stack
 
@@ -123,9 +125,12 @@ Core standalone skills: `/ai-pm-analyze`, `/ai-pm-research`, `/ai-pm-story`, `/a
 scripts/ai-sync/                   # Index generation and context drift checks
 templates/                         # PRD styles, UI specs, knowledge presets
 docs/                              # Local-only planning notes (gitignored — not distributed with the repo)
-output/                            # Per-project output, git-ignored
+output/                            # Local output, git-ignored
+output/sharing/articles/           # Standalone experience-sharing articles
 AI_PM_教程中心.html                 # Offline interactive tutorial
 ```
+
+The single registry for top-level output containers is `.claude/skills/ai-pm/references/output-containers.md`.
 
 ## Tutorial
 

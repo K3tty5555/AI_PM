@@ -77,6 +77,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm priority` | 需求优先级评估（MoSCoW / RICE） |
 | `/ai-pm strategy` | 战略沙盘：项目级 / 产品级多项目战略推演，重对话、轻文档，不进入 PRD / 原型 / 评审链路 |
 | `/ai-pm weekly` | 生成工作周报 |
+| `/ai-pm sharing [主题或素材路径]` | 经验分享文章：把实践、方法或心得整理成可独立阅读的长文；调用 `ai-pm-sharing` |
 | `/ai-pm interview` | 现场调研模式（面对面访谈） |
 | `/ai-pm data [文件]` | 数据洞察，从 CSV/Excel/JSON 中发现需求 |
 | `/ai-pm persona` | 产品分身管理（用户画像维护） |
@@ -95,6 +96,16 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm config ui` | UI 设计规范管理 |
 | `/ai-pm config acceptance` | 验收台账模板管理（默认 9 列，可自设，用法同 config style）|
 | `/ai-pm [URL]` | 分析参考网页（Playwright MCP 抓取） |
+
+### `sharing` 命令分派
+
+当首个参数为 `sharing`：
+
+1. 不解析当前项目，不读取 `_status.json`，不进入 `/ai-pm list`。
+2. 使用 `Skill(ai-pm-sharing)`，将 `sharing` 后的原始参数完整传入。
+3. 直接返回子 Skill 的文章状态和输出路径。
+
+不要在主控中复制经验文章的写作流程；写作、私有素材边界和发布检查都由 `ai-pm-sharing` 负责。
 
 ---
 
@@ -127,7 +138,9 @@ import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → �
 
 ---
 
-## 项目目录结构
+## 输出容器与项目目录结构
+
+`output/` 顶层容器的唯一注册表见 `.claude/skills/ai-pm/references/output-containers.md`。新增容器前必须先登记；不要根据历史示例自行扩展。
 
 ```
 {projects_dir}/{项目名}/                   ← projects_dir 由 ~/.ai-pm-config 决定
@@ -315,6 +328,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `references/symptom-index.md` | 常见场景速查 + Anti-Pattern |
 | `references/baseline-delta-worksheet.md` | **迭代项目基线 delta 工作表 ⭐**——核心 insight：迭代需求 = delta，不是新功能；4 列工作表 + 三类高密度避坑信息 + 强制门禁，phase-1 检测+产出，phase-5 阻断 |
 | `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
+| `.claude/skills/ai-pm/references/output-containers.md` | `output/` 顶层容器唯一注册表 |
 | `references/pm-skills-traceability.md` | pm-skills 对标追踪表（65 skills + 36 commands 的归属、暂缓和不拿理由），用于后续审计或防止重复搬运 |
 | `doctor.md` | 技能健康检查（27 项） |
 | `refresh.md` | 项目状态对账与刷新（_status 滞后 / 索引漂移 / 死链）；数据源 `scripts/ai-sync/check-status-staleness.js` + `check-readme-index-drift.js`，机械层自动修、语义层留白 |

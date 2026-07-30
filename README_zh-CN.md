@@ -85,6 +85,8 @@ HTML 原型和仪表盘默认使用项目自带的 `ai-pm-frontend-design` 技�
 | `/ai-pm --team [需求]` | 复杂需求的多 Agent 协作 |
 | `/ai-pm continue` | 恢复上次未完成项目 |
 | `/ai-pm driver [PRD]` | 评审前 PM 风格质量守门 |
+| `/ai-pm sharing [主题或素材路径]` | 写可独立阅读的经验分享文章，不是 PRD、复盘或培训讲义 |
+| `/ai-pm-sharing` | 同一经验分享文章 Skill 的独立入口 |
 | `/ai-pm-prd` | 生成或更新 PRD |
 | `/ai-pm-data metrics` | 埋点和指标设计 |
 | `/ai-pm-prototype` | 生成可交互 HTML 原型 |
@@ -104,7 +106,7 @@ HTML 原型和仪表盘默认使用项目自带的 `ai-pm-frontend-design` 技�
 | `/multi-perspective-review` | 多视角评审 |
 | `/tutorial-center-update` | 更新离线教程中心 |
 
-核心独立技能：`/ai-pm-analyze`、`/ai-pm-research`、`/ai-pm-story`、`/ai-pm-prd`、`/ai-pm-prototype`、`/ai-pm-review`。
+核心独立技能：`/ai-pm-analyze`、`/ai-pm-research`、`/ai-pm-story`、`/ai-pm-prd`、`/ai-pm-prototype`、`/ai-pm-review`、`/ai-pm-sharing`。
 
 ## 技术栈
 
@@ -123,9 +125,12 @@ HTML 原型和仪表盘默认使用项目自带的 `ai-pm-frontend-design` 技�
 scripts/ai-sync/                   # 索引生成和上下文漂移检查
 templates/                         # PRD 风格、UI 规范、知识库、预设配置
 docs/                              # 本机规划文档（gitignore，不随仓分发）
-output/                            # 项目输出，不纳入版本库
+output/                            # 本机产出，不纳入版本库
+output/sharing/articles/           # 可独立阅读的经验分享文章
 AI_PM_教程中心.html                 # 离线交互式教程
 ```
+
+`output/` 顶层容器的唯一注册表是 `.claude/skills/ai-pm/references/output-containers.md`。
 
 ## 使用教程
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "经验分享文章"
+  short_description: "把项目实践、方法心得和踩坑经验整理成可独立阅读的分享文章"
+  default_prompt: "使用 $ai-pm-sharing 把我的实践素材整理成一篇可独立阅读的经验分享文章。"

@@ -58,6 +58,9 @@ run_check "判断卡篇幅预算（≤600 行，防只加不减膨胀）" bash -
 run_check "知识沉淀队列+摘要自测（id/ack竞态/分片）" python3 scripts/kc-digest.py --selftest
 run_check "知识沉淀 hook 单飞自测（双 Stop 只起一消费者）" python3 scripts/kc-hook-selftest.py
 run_check "skill 引用存在性（check-skill-ref-exists）" python3 scripts/check-skill-ref-exists.py
+run_check "经验分享文章工具自测" python3 -m unittest tests.test_ai_pm_sharing_tools
+run_check "经验分享文章契约自测" python3 -m unittest tests.test_ai_pm_sharing_contract
+run_check "output 容器注册单源自测" python3 scripts/check-output-container-registry.py
 run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500
 run_check "云文档 pull 离线自测（纯三方算法+复合键回写端到端）" python3 scripts/prd_pull.py --selftest
 run_check "云文档共享层自测（指纹/删除判定/残留检查）" python3 scripts/_prd_common.py
@@ -129,7 +132,15 @@ PYEOF
 
   echo ""
   run_check "分享就绪（check-share-readiness --strict）" bash scripts/check-share-readiness.sh --strict
-  run_check "fresh-clone 分发验收（tracked-only --fast，五轮复验 §3.5）" bash scripts/check-fresh-clone.sh
+  run_check "fresh-clone 分发验收（显式叠加本任务文件后跑 --fast）" \
+    bash scripts/check-fresh-clone.sh \
+      --include-untracked .claude/skills/ai-pm-sharing \
+      --include-untracked .claude/skills/ai-pm/references/output-containers.md \
+      --include-untracked templates/sharing \
+      --include-untracked tests/fixtures/sharing \
+      --include-untracked tests/test_ai_pm_sharing_tools.py \
+      --include-untracked tests/test_ai_pm_sharing_contract.py \
+      --include-untracked scripts/check-output-container-registry.py
 fi
 
 echo ""

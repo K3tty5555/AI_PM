@@ -32,7 +32,7 @@
 ### 输出规范（3 项）
 
 11. **输出文件名**: 检查各阶段定义的输出文件名是否与阶段流程描述一致
-12. **输出路径**: 检查所有输出是否都在 `{projects_dir}/{项目名}/` 下
+12. **输出路径**: 运行 `python3 scripts/check-output-container-registry.py`；项目阶段产物仍必须位于 `{projects_dir}/{项目名}/`，独立工具产物按 `.claude/skills/ai-pm/references/output-containers.md` 检查
 13. **_status.json 覆盖度**: 检查 _status.json 的 phases 对象是否包含所有阶段的 key
 
 ### 版本与元数据（2 项）
@@ -66,6 +66,7 @@
 **先跑机械兜底脚本**（零歧义引用的快速门，秒级）：
 ```bash
 python3 scripts/check-skill-ref-exists.py
+python3 scripts/check-output-container-registry.py
 ```
 它机械核对所有 skill 文档里"反引号内、`.claude/`或`templates/`开头的全路径引用"是否指向真实文件——覆盖第 6、22 项里最容易"路径归属写错"的那类（如 battlecard 跨 skill 引用、live-probe 全路径）。退出码非 0 即有悬空引用，按其输出定位。脚本刻意只查零歧义全路径（裸 `references/`、glob、项目产物不查，避免误报）；其余 27 项仍按下方逐项人工核。
 

@@ -29,7 +29,7 @@ cd AI_PM
 ├── agents/                自定义 sub-agent（含 pm-agent KettyWu 灵魂）
 └── skills/                技能集合（ai-pm 主控 / ai-pm-prd / ai-pm-driver / ...）
 .ai-shared/                Claude ↔ Codex 协作桥接（见下方 .ai-shared 规范）
-output/                    项目输出（projects/ 项目 + assets/ 产品级长期资产，不纳入版本库）
+output/                    本机产出（项目、长期资产、独立分享等；顶层注册表见下文）
 templates/                 模板库（PRD 风格、设计规范等，仅含通用示例）
 AI_PM_教程中心.html          可视化使用指南，直接用浏览器打开
 CLAUDE.md                  本文件
@@ -46,6 +46,7 @@ README.md                  项目介绍
 | `/ai-pm strategy` | 战略沙盘（项目级 / 产品级战略推演） |
 | `/ai-pm-strategy-verify` | 战略求证侦察兵（证据挖到尽头，交回反转+岔路；沙盘的后半场） |
 | `/ai-pm weekly` | 生成工作周报 |
+| `/ai-pm sharing [主题或素材路径]` | 生成可独立阅读的经验分享文章 |
 | `/ai-pm interview` | 现场调研/客户访谈模式 |
 | `/ai-pm data [文件]` | 数据洞察分析 |
 | `/ai-pm persona` | 产品分身（学习你的写作风格） |
@@ -121,7 +122,7 @@ README.md                  项目介绍
 - **查业务数据（metric）/ 写 PRD 涉及业务实体前，先读本机事实字典 `scripts/.metrics-dict.md`**（口径/实体/权限线/能力边界，Stage4-B1）：命中直接用；未覆盖明确说「口径未覆盖」，先小探测再问用户，不硬拼；踩到新坑当场往字典补一行（入库模板 `scripts/.metrics-dict.example.md`，真实字典 gitignore 仅本机）
 - **grep / 搜记忆或语料里的业务实体前，先 `python3 scripts/entity-expand.py "<词>" --grep` 把词扩成所有叫法再搜**（Stage4-B2 同物异名归一，字典表三）：治「同一功能/权限项有多个称呼」这类同一物不同叫法的漏检；扩不出就查原词（不报错）；发现新异名往字典表三补一行
 - Chart.js `indexAxis:'y'` 必须在 `options` 顶层，不能放在 `scales` 里
-- 所有项目文件输出到 `output/projects/{项目名}/`；产品级长期资产（如全量需求池这类无项目流程、无完成态的活台账）放 `output/assets/{资产名}/`；不在这两处以外新建子目录
+- 项目阶段产物放 `output/projects/{项目名}/`，产品级长期资产放 `output/assets/{资产名}/`，独立经验文章放 `output/sharing/articles/`。`output/` 顶层容器的唯一完整注册表见 `.claude/skills/ai-pm/references/output-containers.md`；新增容器必须先登记
 - 交互文案须经 humanizer-pm 处理，避免 AI 味
 
 ### Playwright MCP 使用规范
