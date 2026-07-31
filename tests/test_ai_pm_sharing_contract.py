@@ -9,6 +9,10 @@ TEMPLATE = REPO / "templates/sharing/experience-article.md"
 SOURCE_PATTERNS = (
     REPO / ".claude/skills/ai-pm-sharing/references/source-patterns.md"
 )
+ARTICLE_VOICE = (
+    REPO / ".claude/skills/ai-pm-sharing/references/article-voice.md"
+)
+SKILL_SCENARIOS = REPO / "tests/fixtures/sharing/skill-scenarios.md"
 OPENAI_YAML = REPO / ".claude/skills/ai-pm-sharing/agents/openai.yaml"
 REGISTRY = REPO / ".claude/skills/ai-pm/references/output-containers.md"
 REGISTRY_SCRIPT = REPO / "scripts/check-output-container-registry.py"
@@ -73,6 +77,32 @@ class SharingContractTests(unittest.TestCase):
         self.assertIn("局部段落", text)
         self.assertIn("不要改动引用、数字、代码、表格", text)
         self.assertIn("校准后重新运行", text)
+
+    def test_skill_defaults_to_product_circle_article_voice(self):
+        text = SKILL.read_text(encoding="utf-8")
+        self.assertTrue(ARTICLE_VOICE.is_file())
+        self.assertIn(
+            ".claude/skills/ai-pm-sharing/references/article-voice.md",
+            text,
+        )
+        self.assertIn("产品圈经验长文", text)
+        voice = ARTICLE_VOICE.read_text(encoding="utf-8")
+        for phrase in (
+            "网感不是网络梗",
+            "具体矛盾",
+            "标题要有判断",
+            "短句",
+            "强行金句",
+        ):
+            self.assertIn(phrase, voice)
+
+    def test_template_and_scenarios_cover_internet_native_voice(self):
+        template = TEMPLATE.read_text(encoding="utf-8")
+        scenarios = SKILL_SCENARIOS.read_text(encoding="utf-8")
+        self.assertIn("具体矛盾", template)
+        self.assertIn("标题带判断", template)
+        self.assertIn("产品圈经验长文", scenarios)
+        self.assertIn("不堆网络梗", scenarios)
 
     def test_template_does_not_use_prd_skeleton(self):
         text = TEMPLATE.read_text(encoding="utf-8")
