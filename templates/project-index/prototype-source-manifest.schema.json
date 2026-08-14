@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aipm://prototype-source-manifest.schema.v1",
+  "title": "AI_PM 原型 source/target manifest v1",
+  "type": "object",
+  "required": ["schema_version", "project", "generated_at", "devices"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "project": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string", "minLength": 10},
+    "devices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["device", "evidence_status", "source_evidence", "current_state", "target_changes", "unchanged"],
+        "properties": {
+          "device": {"enum": ["web", "mobile"]},
+          "evidence_status": {"enum": ["verified", "missing", "not-applicable"]},
+          "source_evidence": {"type": "array"},
+          "current_state": {"type": "array"},
+          "target_changes": {"type": "array"},
+          "unchanged": {"type": "array"}
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,6 +1,6 @@
 # 项目 README 索引模板
 
-每个 `output/projects/{项目名}/` 下应有 3 份 README，由 ai-pm / ai-pm-prd / ai-pm-prototype skill 自动维护：
+每个 `output/projects/{项目名}/` 下应有 3 份 README，并以 `_status.json` 的 `baseline` 与 `artifacts` 字段登记基线和跨产物事实源：
 
 | 模板 | 落地路径 | 维护者 / 触发时机 |
 |------|---------|------------------|
@@ -16,6 +16,16 @@
 2. 复制 `prd-readme.template.md` 到 `{项目}/05-prd/README.md`，PRD 表格初始为空
 3. 复制 `references-readme.template.md` 到 `{项目}/07-references/README.md`，参考资料表格初始为空
 4. 后续由对应 skill 在生成 PRD / 加 references 时自动 patch
+
+## 基线与产物登记
+
+- `01-baseline-manifest.json`：零到一、迭代、导入项目统一使用的机读基线。迭代/导入项目有事实主张时必须附来源；高风险主张无来源直接阻断。
+- `_status.json.baseline`：指向当前基线清单，不复制清单内容。
+- `_status.json.artifacts[]`：登记 PRD、原型、评审、指标等产物的路径、所有权和版本或哈希，是 reconcile 的扫描边界。
+- `06-prototype/source-target-manifest.json`：迭代原型分别登记 Web 与 Mobile 的来源、目标和 `verified / missing / not-applicable` 证据状态。
+- `09-analytics/impact-record.json`：上线影响记录，绑定发布锚点、基线、观察值、证据与最终判断。
+
+初始化只允许先预览：`python3 scripts/aipm_contracts.py bootstrap --project {项目路径} --type {zero-to-one|iteration|import}`。只有用户明确确认后才追加 `--apply`，且脚本不会覆盖已存在文件。
 
 ## 防编造约束
 
@@ -37,6 +47,7 @@
 │   ├── V1.md
 │   ├── V2.md
 │   └── V3.md
+├── 01-baseline-manifest.json            ← 当前迭代/导入事实基线
 ├── 02-analysis-report/
 │   ├── V1.md
 │   └── V2.md
@@ -46,6 +57,7 @@
 │   └── V1.md
 ├── 05-prd/              ← 已是文件夹（不变）
 ├── 06-prototype/        ← 已是文件夹（不变）
+│   └── source-target-manifest.json       ← Web/Mobile 来源与目标证据
 ├── 07-references/       ← 已是文件夹（不变）
 ├── 08-reviews/          ← 同 phase 多次评审都放这里
 │   ├── README.md        ← 评审历史索引（可选）
@@ -54,6 +66,7 @@
 │   ├── V3-round2.md
 │   └── V3-v1.3.md
 ├── 09-analytics/        ← 数据分析与指标产物
+│   └── impact-record.json                ← 上线影响记录（按需）
 ├── 10-retrospective.md  ← 项目复盘（单文件）
 └── 11+ 注册扩展目录      ← 见下方「10+ 扩展目录注册表」
 ```

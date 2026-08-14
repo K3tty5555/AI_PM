@@ -15,7 +15,10 @@
       "Bash(ls:*)",
       "WebSearch",
       "Skill(ai-pm)",
-      "Skill(ai-pm-sharing)"
+      "Skill(ai-pm-sharing)",
+      "Skill(ai-pm-reconcile)",
+      "Skill(ai-pm-impact)",
+      "Skill(ai-pm-retrospective)"
     ]
   },
   "hooks": {

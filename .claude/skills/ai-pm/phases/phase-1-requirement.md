@@ -66,7 +66,7 @@ grep -E "V[0-9]|迭代|历史版本|老版本|上一版|V[0-9]\.[0-9]" {project_
 
 ### 迭代项目分支：基线 delta 工作表
 
-**强制交付物**：`{project_dir}/01-baseline-delta.md`
+**强制交付物**：`{project_dir}/01-baseline-delta.md` + `{project_dir}/01-baseline-manifest.json`
 
 方法论参考 `.claude/skills/ai-pm/references/baseline-delta-worksheet.md`，必读。
 
@@ -117,6 +117,29 @@ grep -E "V[0-9]|迭代|历史版本|老版本|上一版|V[0-9]\.[0-9]" {project_
 mitigation 列为空的行汇总到 `01-baseline-delta.md` 末尾的「未覆盖坑清单」章节，作为 Phase 5 写 PRD 时的重点关注项。
 
 **填表过程 = 找坑过程。** 没填完整不能进 Phase 5。
+
+#### 步骤 5：写入机读 baseline manifest
+
+先用零写 bootstrap 发现候选来源和产物：
+
+```bash
+python3 scripts/aipm_contracts.py bootstrap --project "{project_dir}" --type iteration
+```
+
+用户确认候选范围后才可追加 `--apply`。随后由主对话基于已读材料补齐 `01-baseline-manifest.json` 的 claims：
+
+- 当前事实 / 目标 / 已拍决策 / 假设分开登记，不把假设写成事实。
+- 高风险 claim 必须关联 confirmed source；中风险无来源只能警告；低风险留痕。
+- 被删除或改口径的 claim 写稳定 `claim_id` 和可扫描 aliases。
+- `_status.json.artifacts[].dependencies` 关联 claim ID；无法判断时留空并明确 coverage gap，不猜。
+
+完成后运行：
+
+```bash
+python3 scripts/aipm_contracts.py project --project "{project_dir}"
+```
+
+契约 error 未清零不能进入 Phase 5；warning 逐条展示给用户，高风险未决问题仍阻断。
 
 ## Phase 1 完成后：写入 L0 记忆
 

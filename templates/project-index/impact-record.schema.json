@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aipm://impact-record.schema.v1",
+  "title": "AI_PM 交付效果回收记录 v1",
+  "type": "object",
+  "required": ["schema_version", "project", "objective", "release_anchor", "metrics", "qualitative_evidence", "conclusion", "fact_updates"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "project": {"type": "string", "minLength": 1},
+    "objective": {
+      "type": "object",
+      "required": ["statement"],
+      "properties": {"statement": {"type": "string", "minLength": 1}, "source_ids": {"type": "array"}}
+    },
+    "release_anchor": {
+      "type": "object",
+      "properties": {
+        "released_at": {"type": "string"},
+        "evidence": {"type": "string"}
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["metric_id", "name", "kind", "definition", "version", "baseline", "observations"],
+        "properties": {
+          "metric_id": {"type": "string"},
+          "name": {"type": "string"},
+          "kind": {"enum": ["rate", "count", "duration", "score"]},
+          "definition": {"type": "string"},
+          "numerator": {"type": "string"},
+          "denominator": {"type": "string"},
+          "version": {"type": "string"},
+          "baseline": {"type": ["object", "null"]},
+          "observations": {"type": "array"}
+        }
+      }
+    },
+    "qualitative_evidence": {"type": "array"},
+    "conclusion": {
+      "type": "object",
+      "required": ["decision", "rationale", "evidence_ids"],
+      "properties": {
+        "decision": {"enum": ["pending", "continue", "adjust", "stop", "observe"]},
+        "rationale": {"type": "string"},
+        "evidence_ids": {"type": "array"}
+      }
+    },
+    "fact_updates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target", "statement", "evidence_ids"],
+        "properties": {
+          "target": {"enum": ["baseline", "memory"]},
+          "statement": {"type": "string", "minLength": 1},
+          "evidence_ids": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

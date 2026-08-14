@@ -948,7 +948,7 @@ footer {
         <div class="step-card">
           <span class="step-num">03</span>
           <div class="step-title">输入需求</div>
-          <p class="step-desc">用 /ai-pm 命令描述你的想法。AI 会先确认方向，然后自动推进到 PRD 和原型。</p>
+          <p class="step-desc">用 /ai-pm 描述任务，或直接选择探索研究、决策分析、PRD、原型、评审验收、运营复盘六种模式。</p>
           <div class="code-line">
             <span class="code-prompt">/</span>
             <span>ai-pm "帮年轻人记账的小程序"</span>
@@ -961,7 +961,7 @@ footer {
   <section id="skills" class="section">
     <div class="section-eyebrow">SKILLS</div>
     <h2>技能列表</h2>
-    <p class="section-desc">精选 25 个常用技能，覆盖完整产品流程、扩展工具与配置管理。完整命令清单见下方"命令速查"。</p>
+    <p class="section-desc">精选 27 个常用技能，覆盖完整产品流程、扩展工具与配置管理。完整命令清单见下方"命令速查"。</p>
 
     <div class="tabs" role="tablist" aria-label="技能分类">
       <button class="tab-trigger active" data-tab="core" role="tab" id="tab-skills-trigger-core" aria-controls="tab-skills-core" aria-selected="true">主流程</button>
@@ -977,7 +977,7 @@ footer {
             <span class="badge badge-primary">核心</span>
           </div>
           <div class="skill-name">AI PRODUCT MANAGER</div>
-          <p class="skill-desc">不知道从哪里开始就从这里开始。告诉 AI 你想做什么，它会一步步引导你把需求、竞品、PRD、原型都跑完。中途可以随时暂停，下次接着来。</p>
+          <p class="skill-desc">统一工作台入口。可直接选择探索研究、决策分析、PRD、原型、评审验收、运营复盘，也可让 AI 按意图路由；模式只决定这次做什么，不改项目阶段。</p>
           <div class="skill-example">/ai-pm "帮年轻人记账的小程序"</div>
         </div>
         <div class="skill-card">
@@ -1165,6 +1165,24 @@ footer {
           <p class="skill-desc">围绕 PDF 生成、检查和交付的辅助技能。适合把 PRD、报告或分享稿整理成可交付文件。</p>
           <div class="skill-example">/pdf-skill "把这份 PRD 导出为 PDF"</div>
         </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm reconcile</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">ARTIFACT RECONCILIATION</div>
+          <p class="skill-desc">范围变化后做跨产物只读对账，标出已对齐、已过时、冲突、待决策和覆盖缺口。默认不改 PRD、原型或项目状态。</p>
+          <div class="skill-example">/ai-pm reconcile "检查本轮范围变化"</div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-card-top">
+            <span class="skill-cmd">/ai-pm impact</span>
+            <span class="badge badge-outline">扩展</span>
+          </div>
+          <div class="skill-name">POST-RELEASE IMPACT</div>
+          <p class="skill-desc">把上线目标、基线、观察值和证据绑定起来，支持继续观察、继续、调整、停止四类结论；证据不足时不会给最终判断。</p>
+          <div class="skill-example">/ai-pm impact "记录上线后影响"</div>
+        </div>
       </div>
     </div>
 
@@ -1213,7 +1231,7 @@ footer {
   <section id="workflow" class="section">
     <div class="section-eyebrow">WORKFLOW</div>
     <h2>工作流程</h2>
-    <p class="section-desc">9 个阶段，每个阶段独立保存，可恢复可跳过。点击节点查看阶段详情。</p>
+    <p class="section-desc">9 个阶段负责项目生命周期与断点恢复；六种模式负责当前任务入口，两者互不替代。点击节点查看阶段详情。</p>
 
     <div class="workflow-timeline">
       <div class="tl-node" tabindex="0" role="button" aria-expanded="false" aria-controls="tl-detail-01">
@@ -1331,6 +1349,36 @@ footer {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </span>
         </div>
+        <div class="ref-row" data-copy="/ai-pm explore" tabindex="0" role="button" aria-label="复制命令 /ai-pm explore">
+          <span class="ref-cmd">/ai-pm explore</span>
+          <span class="ref-desc">探索研究</span>
+          <span class="ref-ok" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm decide" tabindex="0" role="button" aria-label="复制命令 /ai-pm decide">
+          <span class="ref-cmd">/ai-pm decide</span>
+          <span class="ref-desc">决策分析</span>
+          <span class="ref-ok" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm prd" tabindex="0" role="button" aria-label="复制命令 /ai-pm prd">
+          <span class="ref-cmd">/ai-pm prd</span>
+          <span class="ref-desc">PRD</span>
+          <span class="ref-ok" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm prototype" tabindex="0" role="button" aria-label="复制命令 /ai-pm prototype">
+          <span class="ref-cmd">/ai-pm prototype</span>
+          <span class="ref-desc">原型</span>
+          <span class="ref-ok" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm review" tabindex="0" role="button" aria-label="复制命令 /ai-pm review">
+          <span class="ref-cmd">/ai-pm review</span>
+          <span class="ref-desc">评审验收</span>
+          <span class="ref-ok" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm operate" tabindex="0" role="button" aria-label="复制命令 /ai-pm operate">
+          <span class="ref-cmd">/ai-pm operate</span>
+          <span class="ref-desc">运营复盘</span>
+          <span class="ref-ok" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </div>
         <div class="ref-row" data-copy="/ai-pm office-hours" tabindex="0" role="button" aria-label="复制命令 /ai-pm office-hours">
           <span class="ref-cmd">/ai-pm office-hours</span>
           <span class="ref-desc">需求速评 / 先聊聊</span>
@@ -1400,6 +1448,21 @@ footer {
           <span class="ref-ok" aria-hidden="true">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm reconcile" tabindex="0" role="button" aria-label="复制命令 /ai-pm reconcile">
+          <span class="ref-cmd">/ai-pm reconcile</span>
+          <span class="ref-desc">跨产物只读对账</span>
+          <span class="ref-ok" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm impact" tabindex="0" role="button" aria-label="复制命令 /ai-pm impact">
+          <span class="ref-cmd">/ai-pm impact</span>
+          <span class="ref-desc">上线后影响闭环</span>
+          <span class="ref-ok" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </div>
+        <div class="ref-row" data-copy="/ai-pm retrospective --system" tabindex="0" role="button" aria-label="复制命令 /ai-pm retrospective --system">
+          <span class="ref-cmd">/ai-pm retrospective --system</span>
+          <span class="ref-desc">AI_PM 系统复盘</span>
+          <span class="ref-ok" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
         </div>
       </div>
       <div>
@@ -1588,7 +1651,7 @@ footer {
 
 <footer>
   <span>© 2026 AI PM v0.5.2</span>
-  <span>仓库共 29 个项目技能 + 2 个 sub-agent（本页收录 25 个常用技能卡）· 最后更新 2026-07-30</span>
+  <span>公共仓库 29 个项目技能 + 2 个可选私有适配器 + 2 个 sub-agent（本页收录 27 个常用技能卡）· 最后更新 2026-08-14</span>
 </footer>
 <div class="drawer-overlay" id="drawer-overlay"></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="导航菜单">

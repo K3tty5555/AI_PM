@@ -23,6 +23,8 @@ import os
 import sys
 from pathlib import Path
 
+from aipm_core import validate_status_artifacts
+
 REPO = Path(__file__).resolve().parent.parent
 PROJECTS = REPO / "output" / "projects"
 SCHEMA = REPO / "templates" / "project-index" / "status.schema.json"
@@ -62,7 +64,7 @@ def _check_value(name: str, v, spec: dict, errs: list) -> None:
     if "enum" in spec and v not in spec["enum"]:
         errs.append(f"{name} 非法枚举: {v}")
     ty = spec.get("type")
-    pytypes = {"string": str, "object": dict, "integer": int}
+    pytypes = {"string": str, "object": dict, "array": list, "integer": int, "boolean": bool}
     if ty in pytypes and not isinstance(v, pytypes[ty]):
         errs.append(f"{name} 类型应为 {ty}: {type(v).__name__}")
         return
@@ -111,6 +113,8 @@ def validate(d: dict, registry: dict | None = None) -> list[str]:
     # lifecycle 与 phase 一致性（警告级并入错误——归档阶段不该是在途）
     if d.get("last_phase") == "archived" and d.get("lifecycle") in ("active", "paused"):
         errs.append(f"last_phase=archived 但 lifecycle={d['lifecycle']}（应为 archived/reference）")
+    artifact_errors, _ = validate_status_artifacts(d)
+    errs.extend(artifact_errors)
     return errs
 
 
@@ -138,6 +142,20 @@ def selftest() -> int:
     for bad_ph in ("oops", 3, []):
         errs3 = validate(dict(good, phases=bad_ph))
         assert any("phases" in e and "类型" in e for e in errs3), (bad_ph, errs3)
+    # 下一版本产物注册契约：非法 authority / 越界 ID 必须被现有 status validator 消费。
+    bad_artifact = dict(good, artifacts=[{
+        "artifact_id": "Bad ID",
+        "type": "prd",
+        "path_or_remote_id": "05-prd/current.md",
+        "authoritative_source": "somewhere",
+        "producer_capability": "prd",
+        "dependencies": [],
+        "owner": "shared",
+        "status": "current",
+    }])
+    artifact_errs = validate(bad_artifact)
+    assert any("artifact_id" in e for e in artifact_errs), artifact_errs
+    assert any("authoritative_source" in e for e in artifact_errs), artifact_errs
     print(f"status_migrate selftest ok（契约子集校验：非法 {len(errs)}+{len(errs2)} 错、registry 消费双向验证）")
     return 0
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI PM 效果回收"
+  short_description: "用发布锚点、指标基线和定性证据判断产品交付后的真实效果"
+  default_prompt: "使用 $ai-pm-impact 回收这个项目交付后的效果并给出下一步判断。"

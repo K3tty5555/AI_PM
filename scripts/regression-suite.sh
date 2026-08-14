@@ -67,6 +67,13 @@ run_check "云文档共享层自测（指纹/删除判定/残留检查）" pytho
 run_check "云文档 publish 守门自测（存量缺基线阻断+adopt 零差异/有损闸）" python3 scripts/prd_publish.py --selftest
 run_check "publish 守门自测·私有插件禁用模拟（只测插件缺失，非完整分发环境）" env AIPM_DISABLE_PRIVATE_PLUGIN=1 python3 scripts/prd_publish.py --selftest
 run_check "状态契约子集校验自测（status_migrate --selftest）" python3 scripts/status_migrate.py --selftest
+run_check "六模式 capability 注册表（mode 不造第二套 phase）" python3 scripts/aipm_contracts.py capabilities
+run_check "下一版本 PRD / bootstrap 契约自测" python3 scripts/aipm_contracts.py selftest
+run_check "跨产物只读对账自测（残留/阴性/本地编辑）" python3 scripts/aipm_reconcile.py --selftest
+run_check "上线影响证据门禁自测" python3 scripts/aipm_impact.py selftest
+run_check "对话索引时间覆盖自测" python3 scripts/ai-sync/conversation-coverage.py --selftest
+run_check "AI_PM 系统复盘边界自测" python3 scripts/aipm_system_retrospective.py --selftest
+run_check "下一版本固定回归 + 阴性 + 冷测" python3 -m unittest tests.test_aipm_nextgen_contracts
 # 生产数据校验只在私有 output 存在时跑（五轮复验 §3.4）：output/ gitignore 不随仓分发，
 # fresh clone 无生产数据是正确形态、不是契约失败；validate 本体保持"无数据即红"防真实工作区假绿
 if compgen -G "output/projects/*/_status.json" > /dev/null; then
@@ -140,7 +147,21 @@ PYEOF
       --include-untracked tests/fixtures/sharing \
       --include-untracked tests/test_ai_pm_sharing_tools.py \
       --include-untracked tests/test_ai_pm_sharing_contract.py \
-      --include-untracked scripts/check-output-container-registry.py
+      --include-untracked scripts/check-output-container-registry.py \
+      --include-untracked .claude/skills/ai-pm-impact \
+      --include-untracked .claude/skills/ai-pm-reconcile \
+      --include-untracked templates/configs/capability-registry.json \
+      --include-untracked templates/project-index/baseline-manifest.schema.json \
+      --include-untracked templates/project-index/prototype-source-manifest.schema.json \
+      --include-untracked templates/project-index/impact-record.schema.json \
+      --include-untracked scripts/aipm_core.py \
+      --include-untracked scripts/aipm_contracts.py \
+      --include-untracked scripts/aipm_reconcile.py \
+      --include-untracked scripts/aipm_impact.py \
+      --include-untracked scripts/aipm_system_retrospective.py \
+      --include-untracked scripts/ai-sync/conversation-coverage.py \
+      --include-untracked tests/fixtures/nextgen \
+      --include-untracked tests/test_aipm_nextgen_contracts.py
 fi
 
 echo ""

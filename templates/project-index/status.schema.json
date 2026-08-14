@@ -20,6 +20,49 @@
       "pattern": "^(?!05-prd/).+\\.md$",
       "description": "当前 PRD 相对 05-prd/ 的路径（禁再带 05-prd/ 前缀；允许子目录如 归档/x.md——resolver join 语义）；多版本并存时的唯一机读消歧源"
     },
+    "baseline": {
+      "type": "object",
+      "description": "事实基线指针；正文与人工可读 delta 仍在项目文件，status 只登记机读 manifest 及最近验证水位",
+      "properties": {
+        "manifest": {"type": "string", "const": "01-baseline-manifest.json"},
+        "verified_at": {"type": "string", "minLength": 10},
+        "content_hash": {"type": "string"}
+      },
+      "required": ["manifest"]
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "项目产物与依赖的最小注册表；mode 不入表，producer_capability 记录生产者。列全影响只承诺本数组覆盖范围，未登记内容必须报告 coverage gap。",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "type", "path_or_remote_id", "authoritative_source", "version_or_hash", "producer_capability", "dependencies", "owner", "status", "last_verified_at"],
+        "properties": {
+          "artifact_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+          "type": {"enum": ["baseline", "decision", "prd", "prototype", "review", "acceptance", "metric", "release-doc", "cloud-doc", "memory", "other"]},
+          "path_or_remote_id": {"type": "string", "minLength": 1},
+          "authoritative_source": {"enum": ["local-primary", "cloud-primary", "mixed", "external-reference"]},
+          "version_or_hash": {"type": "string"},
+          "producer_capability": {"type": "string", "minLength": 1},
+          "dependencies": {"type": "array", "items": {"type": "string"}},
+          "owner": {"enum": ["ai", "human", "shared", "external"]},
+          "status": {"enum": ["current", "stale", "archived", "missing"]},
+          "last_verified_at": {"type": "string"},
+          "ownership_rules": {
+            "type": "array",
+            "description": "mixed 产物的候选区域归属；现有云文档适配器仍是整篇级，规则存在不等于已支持块级 apply",
+            "items": {
+              "type": "object",
+              "required": ["selector", "owner", "conflict_policy"],
+              "properties": {
+                "selector": {"type": "string"},
+                "owner": {"enum": ["ai", "human", "shared"]},
+                "conflict_policy": {"enum": ["block", "prefer-local", "prefer-cloud", "manual"]}
+              }
+            }
+          }
+        }
+      }
+    },
     "next_action": {
       "type": "object",
       "description": "两轴并存（二轮复验 5.1：schema 与生产器曾语义分裂）：type=责任主体（human/ai/external，拿不准不猜可缺省），kind=工作流状态（whats-next --set 写入）；等外部 可安全映射 type=external",

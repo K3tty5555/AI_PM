@@ -9,6 +9,19 @@
 
 ## Phase 7: 原型生成
 
+### 当前产品 source/target gate（迭代项目强制）
+
+生成蓝图前按 `ai-pm-prototype` 的「步骤1.8」创建 `06-prototype/source-target-manifest.json`，并运行：
+
+```bash
+python3 scripts/aipm_contracts.py prototype --project "{project_dir}"
+```
+
+- Web/Mobile 分别取证，分别写 current/target/unchanged。
+- 证据缺失可做显式假设稿，但不得宣称还原现状或完成端别适配，且不能通过正式评审 gate。
+- 0→1 项目写 `not-applicable`，不强造旧产品基线。
+- 原型审计必须核对被删除 claim 是否仍出现在入口、文案、状态和交互里；评审前运行 `/ai-pm reconcile`。
+
 ### --codebase 参数处理（原型生成前执行）
 
 触发时机：用户执行 `/ai-pm prototype --codebase={路径}` 或当前阶段检测到 `--codebase` 参数时。

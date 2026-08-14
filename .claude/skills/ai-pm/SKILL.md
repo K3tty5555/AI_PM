@@ -1,10 +1,7 @@
 ---
 name: ai-pm
 description: >-
-  当需要从零开始走完完整产品立项流程（需求→分析→竞品→用户故事→PRD→原型→评审）时使用。
-  支持多项目管理和断点续传，复杂需求可启用多代理协作。
-  当用户说「我有个产品想法」「帮我做个产品」「从零开始做需求」「全流程出PRD」
-  「做一个App/小程序/系统」「产品立项」「继续上次的项目」「切换项目」时，立即使用此技能。
+  AI 产品经理工作台主控。把用户任务路由到探索研究、决策分析、PRD、原型、评审验收、运营复盘六种工作模式，并复用现有 phase/status 支持多项目和断点续传。当用户说「我有个产品想法」「继续上次项目」「切换项目」「分析这个需求」「帮我决策」「写/改 PRD」「做原型」「评审/验收」「看上线效果/做复盘」或使用 `/ai-pm` 任一命令时使用。PRD 是独立一级模式；mode 只表示本次任务意图，不替代项目 phase，不写入 last_phase。
 argument-hint: "[需求描述 | 命令]"
 allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(test) Bash(python3) Bash(grep) Bash(find) Bash(head) Bash(wc) Bash(cp) Bash(node) Agent
 ---
@@ -38,6 +35,23 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 ---
 
 ## 命令路由表
+
+### 六种工作模式（用户门面）
+
+> 机读单源：`templates/configs/capability-registry.json`。mode 只做意图路由；现有 phase、checkpoint 和 `_status.json.last_phase` 继续是项目生命周期唯一状态源。
+
+| 模式 | 命令 | 路由规则 |
+|------|------|---------|
+| 探索研究 | `/ai-pm explore [任务]` | 按目标路由 analyze / research / interview / data / gap-research |
+| 决策分析 | `/ai-pm decide [任务]` | 按目标路由 priority / strategy / strategy-verify |
+| PRD | `/ai-pm prd [需求或路径]` | 直接进入 PRD，不再藏在全流程或“定义”概念下 |
+| 原型 | `/ai-pm prototype [PRD或项目]` | 进入 prototype，迭代项目先过 source/target gate |
+| 评审验收 | `/ai-pm review [对象]` | PRD/原型质量用 review，真实实现用 acceptance；有歧义只问一次 |
+| 运营复盘 | `/ai-pm operate [任务]` | 按目标路由 impact / retrospective / weekly / knowledge / sharing |
+
+自然语言不要求先选模式，按“用户最终想拿到什么”路由：要证据→探索；要拍板→决策；要需求文档→PRD；要界面→原型；要找问题→评审验收；要看结果→运营复盘。明确说“写 PRD / 改 PRD”时必须直接进入 PRD。
+
+路由器只可自动执行无副作用的读取、状态解析和 preview。涉及创建/改写产物时，继续遵守对应 skill 的确认节点。一个会话可跨模式，但 mode 不写入项目状态；产物只记录 `producer_capability` 和 dependencies。
 
 ### 主流程命令
 
@@ -80,13 +94,16 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm sharing [主题或素材路径]` | 经验分享文章：把实践、方法或心得整理成可独立阅读的长文；调用 `ai-pm-sharing` |
 | `/ai-pm interview` | 现场调研模式（面对面访谈） |
 | `/ai-pm data [文件]` | 数据洞察，从 CSV/Excel/JSON 中发现需求 |
+| `/ai-pm reconcile` | 范围/口径变化后的跨产物只读一致性预览；调用 `ai-pm-reconcile` |
+| `/ai-pm impact` | 发布后效果回收；调用 `ai-pm-impact`，允许“证据不足/继续观察” |
 | `/ai-pm persona` | 产品分身管理（用户画像维护） |
 | `/ai-pm design-spec` | 设计规范管理（上传/切换 UI 规范） |
 | `/ai-pm knowledge` | 知识库管理（add/search/list/sync/suggest） |
 | `/ai-pm retrospective` | 项目复盘，生成 10-retrospective.md |
+| `/ai-pm retrospective --system --from=日期 --to=日期` | AI_PM 工作区系统复盘；只读脱敏会话摘要/索引，不推进项目 phase |
 | `/ai-pm instinct [list\|review\|import\|reset]` | 习惯直觉管理（自动学习的偏好） |
 | `/ai-pm driver [PRD路径]` | PM 风格 lint 命令入口（pm-agent 的 thin wrapper，单一事实源在 pm-agent）。仅用于历史 PRD 体检 / 大改后回归 / 评审前体检 |
-| `/ai-pm doctor` | 技能健康检查（27 项一致性扫描） |
+| `/ai-pm doctor` | 技能健康检查（31 项一致性扫描） |
 | `/ai-pm refresh [项目名] [--check]` | 项目状态对账：跨项目查 `_status.json` 滞后 / 索引漂移 / 死链；机械层自动修（状态日期、补登记占位），语义/有损改动只标给 PM，流程见 `refresh.md` |
 | `/ai-pm illustration [输入]` | AI 流程图生成（baoyu-imagine，支持 Mermaid 和自然语言） |
 | `/ai-pm release-docs [PRD路径\|项目名]` | 上线文档套件——基于实际上线功能产「更新公告 + 操作手册」，可发飞书云文档（去版本号），流程见 `release-docs.md` |
@@ -106,6 +123,14 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 3. 直接返回子 Skill 的文章状态和输出路径。
 
 不要在主控中复制经验文章的写作流程；写作、私有素材边界和发布检查都由 `ai-pm-sharing` 负责。
+
+### `reconcile / impact / retrospective --system` 命令分派
+
+- 首个参数为 `reconcile`：解析当前项目后使用 `Skill(ai-pm-reconcile)`，原样传入后续参数。只返回 preview 与待决策项，不更新 phase、checkpoint、status、baseline 或产物。
+- 首个参数为 `impact`：解析当前项目后使用 `Skill(ai-pm-impact)`，原样传入后续参数。证据不足允许停在 observe/pending；只有用户确认的最终结论才可进入事实回写流程。
+- 首个参数为 `retrospective` 且含 `--system`：使用 `Skill(ai-pm-retrospective)` 的 system 模式，不绑定当前项目，不读取或复制 raw，不推进 Phase 9。
+
+主控只负责路由和项目解析；三项能力的契约、退出码和写入边界分别由对应 skill 负责，不在这里复制实现步骤。
 
 ---
 
@@ -149,6 +174,7 @@ import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → �
 ├── 01-requirement-draft/                需求草稿（文件夹，多版本）
 │   ├── README.md                        版本索引（可选）
 │   └── V1.md                            V1 时期草稿
+├── 01-baseline-manifest.json            事实基线（迭代 / 导入项目有主张时必须附来源）
 ├── 02-analysis-report/                  需求分析
 │   └── V1.md
 ├── 03-competitor-report/                竞品研究
@@ -159,7 +185,8 @@ import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → �
 │   ├── README.md                        PRD 索引（人读·活跃/历史/跨版本，由 ai-pm-prd 自动 patch）
 │   └── <当前 PRD 文件>.md                 默认 05-PRD-v1.0.md / 建议描述名；当前 PRD 权威源 = _status.json.active_prd（resolve_current_prd）
 ├── 06-prototype/                        原型
-│   └── index.html
+│   ├── index.html
+│   └── source-target-manifest.json      Web / Mobile 来源与目标证据
 ├── 07-references/                       参考资料
 │   ├── README.md                        参考资料索引（主题分类 + 用途，AI 维护，不确定标 [待 PM 补充]）
 │   └── ...
@@ -173,6 +200,7 @@ import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → �
 │   ├── data-driven-requirements.md      数据驱动需求
 │   ├── dashboard/                       数据仪表盘
 │   ├── feedback-analysis.md             用户反馈文本分析
+│   ├── impact-record.json               上线基线、观察值、证据与影响判断
 │   └── growth-diagnosis/                增长诊断 / 增长分析专项
 ├── 10-retrospective.md                  项目复盘（可选，单文件）
 ├── 11-illustrations/                    PRD / 流程图 AI 配图
@@ -185,6 +213,7 @@ import 复用 `/ai-pm new` 的骨架生成逻辑，增量只在「读 PRD → �
 ├── _summaries/                          阶段摘要（自动生成，用于上下文压缩）
 │   └── prd-summary.md
 ├── _logs/                               运行日志 / 临时调试日志
+├── _status.json                         生命周期状态 + baseline 指针 + artifacts 产物登记
 └── _memory/                             项目记忆（自动维护，勿手动删除）
     ├── L0-identity.md                   产品定位/用户/约束（~100 tokens）
     ├── L1-decisions.md                  关键决策 + why（~300 tokens）
@@ -289,9 +318,11 @@ Phase 8（可选）: 需求评审（六角色并行）
 ### continue 命令执行规范
 
 1. 读 `_status.json` 的 `last_phase` 和 `checkpoints[last_phase]`
-2. 若有 `pending_step` → 展示恢复点："从上次断点继续：{phase 中文名} · {pending_step 中文名}"
-3. 若无 checkpoint（旧项目）→ 按 phase 级别恢复（原有逻辑）
-4. 展示进度条后开始执行
+2. 若 status 已含 `baseline` 或 `artifacts`，只读运行 `python3 scripts/aipm_contracts.py project --project "{project_dir}"`；契约 error 先展示并停在 preview，不改 phase。
+3. 若是尚未登记新字段的旧项目，继续按原 phase 恢复；只有进入迭代 PRD、prototype 或 reconcile 时才走 bootstrap preview，不在 continue 开场批量迁移。
+4. 若有 `pending_step` → 展示恢复点："从上次断点继续：{phase 中文名} · {pending_step 中文名}"
+5. 若无 checkpoint（旧项目）→ 按 phase 级别恢复（原有逻辑）
+6. 展示进度条后开始执行
 
 ---
 
@@ -330,7 +361,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `references/project-memory.md` | 项目记忆系统规范（L0/L1/L2/layout-shell 格式 + continue 读取规范） |
 | `.claude/skills/ai-pm/references/output-containers.md` | `output/` 顶层容器唯一注册表 |
 | `references/pm-skills-traceability.md` | pm-skills 对标追踪表（65 skills + 36 commands 的归属、暂缓和不拿理由），用于后续审计或防止重复搬运 |
-| `doctor.md` | 技能健康检查（27 项） |
+| `doctor.md` | 技能健康检查（31 项） |
 | `refresh.md` | 项目状态对账与刷新（_status 滞后 / 索引漂移 / 死链）；数据源 `scripts/ai-sync/check-status-staleness.js` + `check-readme-index-drift.js`，机械层自动修、语义层留白 |
 | `illustration.md` | AI 流程图生成 |
 | `release-docs.md` | 上线文档套件命令流程（公告+手册+飞书发布），内核在 `references/release-docs-frameworks.md` |

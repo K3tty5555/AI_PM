@@ -1,0 +1,332 @@
+{
+  "$comment": "AI_PM 六种用户工作模式与底层 capability 的单一机读映射。mode 是无状态意图门面，不写 _status.last_phase；phase_effect 仅声明能力对现有生命周期状态的影响。",
+  "schema_version": 1,
+  "modes": [
+    {
+      "id": "explore",
+      "label": "探索研究",
+      "purpose": "确认问题、用户、数据和市场事实",
+      "capabilities": ["analyze", "research", "interview", "data", "gap-research"],
+      "exit_condition": "关键未知已显式，可进入决策或继续取证"
+    },
+    {
+      "id": "decide",
+      "label": "决策分析",
+      "purpose": "判断要不要做、先做什么、选择哪条路线",
+      "capabilities": ["priority", "strategy", "strategy-verify"],
+      "exit_condition": "待拍板项已收敛，范围边界可进入 PRD"
+    },
+    {
+      "id": "prd",
+      "label": "PRD",
+      "purpose": "定义本期做什么、不做什么以及如何验收",
+      "capabilities": ["prd", "story", "persona", "humanizer", "reconcile"],
+      "exit_condition": "范围、规则、影响、指标和责任边界可评审"
+    },
+    {
+      "id": "prototype",
+      "label": "原型",
+      "purpose": "把已确认需求转成忠于现状和端别的可评审交互",
+      "capabilities": ["prototype", "frontend-design", "design-spec", "humanizer", "reconcile"],
+      "exit_condition": "关键路径与状态齐全，端别差异有证据"
+    },
+    {
+      "id": "review",
+      "label": "评审验收",
+      "purpose": "检查文档质量并核实实现是否符合约定",
+      "capabilities": ["driver", "review", "acceptance", "plan-review", "reconcile"],
+      "exit_condition": "问题有证据和归属，真人保留最终判定权"
+    },
+    {
+      "id": "operate",
+      "label": "运营复盘",
+      "purpose": "回收交付效果、项目经验和后续动作",
+      "capabilities": ["data", "weekly", "retrospective", "impact", "knowledge", "sharing", "humanizer", "reconcile"],
+      "exit_condition": "形成继续、调整、停止或继续观察的结论并更新事实"
+    }
+  ],
+  "workspace_commands": ["init", "list", "switch", "continue", "new", "import", "reset", "delete", "config", "doctor", "refresh"],
+  "capabilities": [
+    {
+      "id": "orchestrate",
+      "skill": "ai-pm",
+      "modes": [],
+      "phase_effect": {"kind": "routes"},
+      "artifacts": ["project-status", "checkpoint"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm"]
+    },
+    {
+      "id": "analyze",
+      "skill": "ai-pm-analyze",
+      "modes": ["explore"],
+      "phase_effect": {"kind": "completes", "phase": "analysis"},
+      "artifacts": ["analysis-report"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm analyze"]
+    },
+    {
+      "id": "research",
+      "skill": "ai-pm-research",
+      "modes": ["explore"],
+      "phase_effect": {"kind": "completes", "phase": "research"},
+      "artifacts": ["research-report"],
+      "side_effects": ["read-project", "write-local", "network-read"],
+      "legacy_commands": ["/ai-pm research"]
+    },
+    {
+      "id": "interview",
+      "skill": "ai-pm-interview",
+      "modes": ["explore"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["interview-notes"],
+      "side_effects": ["write-local"],
+      "legacy_commands": ["/ai-pm interview"]
+    },
+    {
+      "id": "data",
+      "skill": "ai-pm-data",
+      "modes": ["explore", "operate"],
+      "phase_effect": {"kind": "completes", "phase": "analytics"},
+      "artifacts": ["metric-contract", "data-insight", "dashboard"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm data"]
+    },
+    {
+      "id": "gap-research",
+      "skill": "pm-gap-research",
+      "modes": ["explore"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["question-list"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/pm-gap-research"]
+    },
+    {
+      "id": "priority",
+      "skill": "ai-pm-priority",
+      "modes": ["decide"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["priority-report"],
+      "side_effects": ["write-local"],
+      "legacy_commands": ["/ai-pm priority"]
+    },
+    {
+      "id": "strategy",
+      "skill": "ai-pm-strategy",
+      "modes": ["decide"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["strategy-sandbox"],
+      "side_effects": ["write-local"],
+      "legacy_commands": ["/ai-pm strategy"]
+    },
+    {
+      "id": "strategy-verify",
+      "skill": "ai-pm-strategy-verify",
+      "modes": ["decide"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["evidence-ledger"],
+      "side_effects": ["write-local", "network-read"],
+      "legacy_commands": ["/ai-pm-strategy-verify"]
+    },
+    {
+      "id": "story",
+      "skill": "ai-pm-story",
+      "modes": ["prd"],
+      "phase_effect": {"kind": "completes", "phase": "stories"},
+      "artifacts": ["user-stories"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm story"]
+    },
+    {
+      "id": "prd",
+      "skill": "ai-pm-prd",
+      "modes": ["prd"],
+      "phase_effect": {"kind": "completes", "phase": "prd"},
+      "artifacts": ["prd", "prd-summary"],
+      "side_effects": ["read-project", "write-local", "write-cloud"],
+      "legacy_commands": ["/ai-pm prd", "/ai-pm-prd"]
+    },
+    {
+      "id": "persona",
+      "skill": "ai-pm-persona",
+      "modes": ["prd"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["persona-profile"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm persona"]
+    },
+    {
+      "id": "humanizer",
+      "skill": "humanizer-pm",
+      "modes": ["prd", "prototype", "operate"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": [],
+      "side_effects": ["read-project"],
+      "legacy_commands": ["/humanizer-pm"]
+    },
+    {
+      "id": "prototype",
+      "skill": "ai-pm-prototype",
+      "modes": ["prototype"],
+      "phase_effect": {"kind": "completes", "phase": "prototype"},
+      "artifacts": ["prototype", "prototype-source-manifest", "prototype-audit"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm prototype", "/ai-pm-prototype"]
+    },
+    {
+      "id": "frontend-design",
+      "skill": "ai-pm-frontend-design",
+      "modes": ["prototype"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["prototype"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm-frontend-design"]
+    },
+    {
+      "id": "design-spec",
+      "skill": "ai-pm-design-spec",
+      "modes": ["prototype"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["design-spec"],
+      "side_effects": ["write-local"],
+      "legacy_commands": ["/ai-pm design-spec"]
+    },
+    {
+      "id": "driver",
+      "skill": "ai-pm-driver",
+      "modes": ["review"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["lint-report"],
+      "side_effects": ["read-project"],
+      "legacy_commands": ["/ai-pm driver"]
+    },
+    {
+      "id": "review",
+      "skill": "ai-pm-review",
+      "modes": ["review"],
+      "phase_effect": {"kind": "completes", "phase": "review"},
+      "artifacts": ["review-report"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm review"]
+    },
+    {
+      "id": "acceptance",
+      "skill": "ai-pm-acceptance",
+      "modes": ["review"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["acceptance-ledger"],
+      "side_effects": ["read-project", "write-local", "external-write"],
+      "legacy_commands": ["/ai-pm acceptance"]
+    },
+    {
+      "id": "plan-review",
+      "skill": "multi-perspective-review",
+      "modes": ["review"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["plan-review"],
+      "side_effects": ["read-project"],
+      "legacy_commands": ["/multi-perspective-review"]
+    },
+    {
+      "id": "reconcile",
+      "skill": "ai-pm-reconcile",
+      "modes": ["prd", "prototype", "review", "operate"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["reconcile-report"],
+      "side_effects": ["read-project"],
+      "legacy_commands": ["/ai-pm reconcile"]
+    },
+    {
+      "id": "weekly",
+      "skill": "ai-pm-weekly",
+      "modes": ["operate"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["weekly-report"],
+      "side_effects": ["write-local"],
+      "legacy_commands": ["/ai-pm weekly"]
+    },
+    {
+      "id": "retrospective",
+      "skill": "ai-pm-retrospective",
+      "modes": ["operate"],
+      "phase_effect": {"kind": "completes", "phase": "retrospective"},
+      "artifacts": ["retrospective", "system-retrospective"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm retrospective"]
+    },
+    {
+      "id": "impact",
+      "skill": "ai-pm-impact",
+      "modes": ["operate"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["impact-record", "impact-report"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm impact"]
+    },
+    {
+      "id": "knowledge",
+      "skill": "ai-pm-knowledge",
+      "modes": ["operate"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["knowledge-candidate"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm knowledge"]
+    },
+    {
+      "id": "sharing",
+      "skill": "ai-pm-sharing",
+      "modes": ["operate"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["sharing-article"],
+      "side_effects": ["write-local"],
+      "legacy_commands": ["/ai-pm sharing"]
+    },
+    {
+      "id": "agent-team",
+      "skill": "agent-team",
+      "modes": [],
+      "phase_effect": {"kind": "delegates"},
+      "artifacts": [],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm --team"]
+    },
+    {
+      "id": "pdf",
+      "skill": "pdf-skill",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["reference-conversion"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/pdf"]
+    },
+    {
+      "id": "tutorial",
+      "skill": "tutorial-center-update",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["tutorial"],
+      "side_effects": ["write-local"],
+      "legacy_commands": ["/tutorial-center-update"]
+    },
+    {
+      "id": "tpd-adapter",
+      "skill": "tpd_cli",
+      "availability": "optional-private",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["external-project-record"],
+      "side_effects": ["network-read", "external-write"],
+      "legacy_commands": ["/tpd_cli"]
+    },
+    {
+      "id": "cloud-doc-adapter",
+      "skill": "xfchat-wiki",
+      "availability": "optional-private",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["cloud-document"],
+      "side_effects": ["network-read", "write-cloud"],
+      "legacy_commands": ["/xfchat-wiki"]
+    }
+  ]
+}

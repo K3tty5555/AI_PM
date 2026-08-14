@@ -1,13 +1,34 @@
 ---
 name: ai-pm-retrospective
 description: >-
-  项目复盘技能。项目完成后，基于全流程产出物进行复盘，总结经验、识别改进点、
-  提炼可复用的产品方法论。
+  复盘技能。默认在项目完成后基于全流程产出物总结决策、经验和改进点；当用户说「系统复盘」「复盘 AI_PM 自己」「看跨会话纠错」「检查对话覆盖」「retrospective --system」时进入工作区治理模式，只读脱敏会话摘要和索引，检查时间水位、摘要缺口、纠错候选与能力问题，不复制 raw、不直接覆盖项目 memory。
 argument-hint: "[项目目录路径]"
 allowed-tools: Read Write Edit Bash(mkdir)
 ---
 
 # 项目复盘
+
+## 模式分流
+
+- `/ai-pm retrospective`：执行下方项目复盘，产出 `10-retrospective.md`。
+- `/ai-pm retrospective --system --from YYYY-MM-DD --to YYYY-MM-DD`：执行系统复盘，不进入项目 Phase 9，不修改 `last_phase`。
+
+## System 模式
+
+1. 要求明确目标起止日期；“最近一段时间”先换算成日期并展示。
+2. 默认读取 Claude + Codex 的 `.ai-shared/conversations/index.jsonl` 与脱敏 summaries，不读取或复制 raw。
+3. 运行只读预览：
+
+   ```bash
+   python3 scripts/aipm_system_retrospective.py --from YYYY-MM-DD --to YYYY-MM-DD
+   ```
+
+4. 报告必须同时呈现：索引最早/最晚水位、缺失月份、目标会话数、summary missing、draft 数、纠错候选信号和数据边界。
+5. `index-bounds-complete` 只表示时间边界和月份有会话，不代表摘要内容完整；不能因索引文件 mtime 新就声称目标月份已覆盖。
+6. 关键词命中只是待核候选。需要形成规则或 skill 改动时，先写 `.ai-shared/pending-memory/` 候选并让用户确认，不直接覆盖 Claude memory 或项目 L0/L1。
+7. 用户要求把报告落盘时，写本机 docs 或 pending-memory；默认只在对话展示。
+
+System 模式到此结束，不继续执行下方项目复盘模板。
 
 ## 输入
 

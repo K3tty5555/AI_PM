@@ -12,10 +12,13 @@
 - 📂 参考资料 / 业务知识 / 调研 → [`07-references/README.md`](./07-references/README.md)
 - 🧠 AI 项目记忆（动态状态）→ `_memory/`
 - ⚙️ 状态配置 → `_status.json`
+- 🎯 当前事实基线 → `01-baseline-manifest.json`
+- 🔎 跨产物登记 → `_status.json` 的 `artifacts[]`
 
 {{可选：}}
 - 🎨 视觉锚点包 → `06-prototype-visual/`（如有 Codex 生成的视觉稿）
 - 📊 数据分析与指标产物 → `09-analytics/`（如有指标、洞察、仪表盘、反馈分析）
+- 📈 上线影响记录 → `09-analytics/impact-record.json`（如已上线并开始观察）
 - 🖼️ PRD / 流程图配图 → `11-illustrations/`（如有 AI 配图）
 - 🧪 现场调研草案 → `12-field-research/`（如有现场调研）
 - 📣 上线文档 → `13-release-docs/`（如有公告 / 操作手册）

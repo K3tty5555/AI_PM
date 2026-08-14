@@ -1,6 +1,6 @@
 <h1 align="center">AI PM</h1>
 <p align="center">
-  AI-powered product manager toolkit — from idea clarification to PRD, analytics design, prototype, review, and retrospective.
+  A stateful product management workbench for research, decisions, PRDs, prototypes, review, acceptance, and impact follow-up.
 </p>
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
@@ -16,7 +16,7 @@
 
 ## What is AI PM?
 
-AI PM is an AI product manager suite. Start with a rough idea, and it can help you clarify requirements, analyze users and competitors, write user stories, generate a PRD, design analytics, build an HTML prototype, run a six-role review, and summarize learnings. It runs as a set of Claude Code skills plus a PM sub-agent.
+AI PM is a stateful product management workbench. It exposes six task-oriented modes — Explore, Decide, PRD, Prototype, Review & Acceptance, and Operate & Retrospect — while keeping the existing project phase/status model for resumable work. It runs as a set of Claude Code skills plus PM-oriented sub-agents.
 
 ## Current Capabilities
 
@@ -29,6 +29,19 @@ Office Hours → Requirement → Analysis → Research → Stories → PRD → A
 - 9 core project phases, plus optional Office Hours before formal writing
 - Each phase saves independently and can be resumed
 - PM agent / driver workflow for PRD quality checks before review
+
+### Six Work Modes
+
+| Mode | Primary outcome |
+|------|-----------------|
+| Explore | Evidence, insights, and explicit unknowns |
+| Decide | Compared options, recommendation, and decisions |
+| PRD | A reviewable Markdown product requirement document |
+| Prototype | A source-grounded interactive prototype |
+| Review & Acceptance | Document findings or implementation evidence |
+| Operate & Retrospect | Impact follow-up, retrospective, and reusable knowledge |
+
+Modes are an intent layer, not a second project state machine. Existing phases, checkpoints, and `last_phase` remain authoritative.
 
 ### PRD and Review
 
@@ -81,6 +94,15 @@ HTML prototypes and dashboards use the bundled `ai-pm-frontend-design` skill by 
 | Command | Description |
 |---------|-------------|
 | `/ai-pm [idea]` | Main product workflow |
+| `/ai-pm explore [task]` | Research and evidence mode |
+| `/ai-pm decide [task]` | Product decision mode |
+| `/ai-pm prd [request or path]` | First-class PRD mode |
+| `/ai-pm prototype [project]` | Prototype mode with source/target evidence |
+| `/ai-pm review [artifact]` | Review or implementation acceptance mode |
+| `/ai-pm operate [task]` | Impact, retrospective, weekly, knowledge, or sharing |
+| `/ai-pm reconcile` | Read-only cross-artifact impact and stale-content preview |
+| `/ai-pm impact` | Post-delivery impact follow-up; evidence-insufficient is valid |
+| `/ai-pm retrospective --system` | Cross-session AI_PM system retrospective from redacted indexes/summaries |
 | `/ai-pm office-hours` | Early requirement discussion / feasibility check |
 | `/ai-pm --team [idea]` | Multi-agent workflow for complex requirements |
 | `/ai-pm continue` | Resume the last unfinished project |

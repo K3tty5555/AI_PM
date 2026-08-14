@@ -232,6 +232,8 @@ find .claude/skills -name "SKILL.md" -type f
 | `/ai-pm-prd` | PRD 生成 | 产品 | 输出完整产品需求文档 |
 | `/ai-pm-prototype` | 原型生成 | 设计 | 生成可交互 HTML 原型 |
 | `/ai-pm-review` | 需求评审 | 产品 | 六角色评审（产品/设计/前端/后端/测试/运营），支持多轮迭代 |
+| `/ai-pm reconcile` | 跨产物对账 | 产品 | 范围变化后的只读一致性扫描与决策提示 |
+| `/ai-pm impact` | 上线影响闭环 | 数据 | 基线、观察值、证据和继续/调整/停止判断 |
 | `/agent-team` | 多代理引擎 | 协作 | 内部引擎，通常由 `/ai-pm --team` 触发，也可直接调用 |
 | `/tutorial-center-update` | 教程中心更新 | 工具 | 扫描技能，生成离线 HTML 教程 |
 

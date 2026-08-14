@@ -26,6 +26,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 - 可选：`{项目目录}/.ai-pm-config.json`（项目配置，含 designSystem 字段）
 - 可选：`{项目目录}/06-prototype-visual/manifest.json`（Codex 生成的视觉锚点包）
 - 可选：`{项目目录}/06-prototype-visual/visual-fingerprint.md`（视觉指纹）
+- 迭代项目必需：`{项目目录}/06-prototype/source-target-manifest.json`（Web/Mobile 分别声明现状证据、目标变化和不变项）
 
 ## 输出
 
@@ -74,6 +75,24 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 - `manifest.images[].image` 用于约束页面整体视觉和关键状态，但图片中文字不作为最终文案事实源
 - HTML 原型仍必须可点击、可走主流程；视觉锚点图不能替代交互原型
 
+### 步骤1.8：当前产品 source/target 对照（迭代项目强制）
+
+在画蓝图前创建 `06-prototype/source-target-manifest.json`，字段 schema 见 `templates/project-index/prototype-source-manifest.schema.json`：
+
+- Web 和 Mobile 分开登记；用户只做单端时，另一端可不列。
+- `evidence_status=verified` 必须有截图、现网页面、代码仓或已确认原型等 source evidence。
+- 0→1 项目没有当前产品时写 `not-applicable`，不能伪造 current state。
+- `evidence_status=missing` 时允许做明确标注的假设稿，但不能宣称“已还原现状 / 已完成该端适配”，并在审计报告中列为阻断正式评审的问题。
+- 每端分别写 `current_state / target_changes / unchanged`；禁止把 Web 结构缩窄后直接当移动端方案。
+
+写完运行：
+
+```bash
+python3 scripts/aipm_contracts.py prototype --project "{项目目录}"
+```
+
+契约 error 未清零不进入蓝图；warning 必须进入审计报告。
+
 ### 步骤2：原型蓝图 + 视觉方向
 
 生成 HTML 前先按 `ai-pm-frontend-design/references/design-brief.md` 形成内部 `Design Brief`，再按 `prototype-agent` 的 Mode A 产出原型蓝图；Agent 工具不可用时，主对话按同一角色规则执行。
@@ -92,6 +111,7 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 - 视觉方向：布局密度、色彩气质、字体层级、组件风格、留白比例、数据呈现方式
 - 交互硬化：触控目标、focus、hover 替代、表单校验、长文本、移动端适配
 - 生成硬约束：5-8 条可执行约束，必须覆盖反 AI 味、状态、响应式和业务假数据
+- source/target 对照：当前已有能力、目标变化、不变项、证据缺口；Web/Mobile 分开写
 
 视觉设计是原型质量的一部分：
 - 有代码仓设计指纹时，优先复用其布局、色值、组件密度

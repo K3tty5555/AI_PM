@@ -94,6 +94,7 @@ test -f {project_dir}/01-baseline-delta.md
 | 0→1 项目 | 跳过本检查，进入下一步 |
 | 迭代项目 + 无 `01-baseline-delta.md` | **阻断**，回退到 Phase 1 补：「检测到迭代型项目（07-references 非空），但缺少基线 delta 工作表。请先运行 `/ai-pm continue` 回到 Phase 1 补出 `01-baseline-delta.md`，方法论见 `references/baseline-delta-worksheet.md`。」 |
 | 迭代项目 + 有 `01-baseline-delta.md` 但有未填写行 | **阻断**，列出未填写的行号让用户补全 |
+| 迭代项目 + 无 `01-baseline-manifest.json` 或契约 error | **阻断**，运行 `python3 scripts/aipm_contracts.py baseline --project "{project_dir}"`，回到 Phase 1 补来源、claim 和高风险未决项 |
 | 迭代项目 + delta 工作表完整 | 通过，进入下一步；**写 PRD 过程中持续对照 mitigation 列**，确保每条 delta 都有 PRD 章节承接 |
 
 ### 与 PRD 写作的衔接
@@ -705,11 +706,15 @@ PRD「详细功能设计」中每个核心功能，自动生成 FAB 三行描述
 
 **原型示意源侧机械检查（云文档增强 / 有原型图时强制）**：落盘后、push 云文档前，运行 `python3 .claude/skills/ai-pm/scripts/validate_prd_source_prototype_cells.py <PRD路径> --quiet`。❌ error（表外 `![]()` / 指向语「见下图/同上图」）必须先改源 Markdown：有图写进「原型示意」右侧 cell（`![xxx原型](path)<br>布局描述`），无界面写 `无界面交互（原因）`，待补写 `[待补原型：xxx] 布局描述`；⚠️ warn（旧 `[xxx原型]` 占位·仅云增强档报 / 裸「截图/原型图」歧义）逐条人工确认后可 push、**提示级不阻断**；复用写法（`同V1.1原型图，仅X变化`）合法不报。不要把表外图片 push 到云文档后再靠人工搬。
 
+**详细功能设计写入前契约（全员评审型强制）**：PRD 落盘前运行 `python3 scripts/aipm_contracts.py prd --file "<PRD路径>"`。它只检查可确定的承重章节、每个功能的「项目｜说明」两列表，以及用户场景/功能描述/原型示意/影响范围四个必填行；语义质量仍由 pm-agent/driver 判断。决策评审型传 `--doctype decision-review`，不强加详细功能设计。error 未清零不得发布或进入正式评审。
+
 **云文档序号约定（2026-07-03 用户拍板：云文档下序号用云文档原生序号）**：push 云文档的 PRD，**标题层级序号交给云文档原生「标题自动序号」**——目标文档开着该设置时，源 md 标题的手打「一、二、」会叠成"5. 五、"双重编号（见 pitfall_feishu_heading_auto_number；该设置 OpenAPI 改不了、只能 UI 手动开关）。操作口径：①目标文档已开自动序号 → push 前 strip 标题手打序号（渲染器能力 ⏳ 待下次真实 push 实装并真机验证，实装前手动处理）；②未开 → 保持源序号、别再手动开（会叠加）。正文有序列表 / cell 内 ①②③ 已由渲染器转原生列表（6-29 已修）。**本地 md 不受影响**（本地顺延编号 OK，用户 2026-07-03 判卷确认）。
 
 **push 后登记（云文档正本登记约定·唯一源）**：优先用一条龙 `python3 scripts/prd_publish.py --md <PRD.md> --project <项目目录>`（Stage4-A1：push+读回校验[防丢图/表数对账]+cloud_docs 登记+云端人改保护一次完成，任一校验不过退出码 2 禁止视为发布成功）；手工路径时在项目 `_status.json` **顶层 `cloud_docs` map** 登记（key=PRD 文件名）：`{"doc_token": "doxrz…", "url": "…", "pushed_at": "YYYY-MM-DD"}`；post-push 结构校验（xfchat-wiki `scripts/validate_prd_prototype_cells.py`）通过后补 `last_validated`，老格式文档（legacy_cells>0）加 `"legacy_format": true`。历史遗留的顶层 `feishu_doc` / `feishu_prd_doc` 字符串字段：该项目**下次 push 时迁入 cloud_docs 并删除旧字段**（本次不批量回填，历史盘点归 2026-06-29 重渲计划 WS-1）。
 
 **云文档链配套命令（波1 v2，均零内部域名入口）**：云端手改回收/同步回本地 `python3 scripts/prd_pull.py --md <PRD> --project <项目>`（预览默认，--apply 回写；标记层以本地为准永不被覆盖）；发布后清尾 `prd_publish.py --project <项目> --cleanup`（旧档/空壳/孤儿清单，删除一律显式 --delete-doc+--yes）；历史重渲盘点 `prd_rerender_survey.py`。
+
+**云文档正本归属 gate（下一版本新增，发布/回收前强制）**：先运行 `python3 scripts/aipm_contracts.py cloud --project "{project_dir}" --operation publish|pull`。当前 PRD 必须在 `_status.json.artifacts` 登记唯一权威源：`local-primary` 才可进入现有 publish 预览；`cloud-primary` 禁止本地直推，先 pull/reconcile；`mixed` 在稳定块 ID 和条件写未成立前只允许冲突预览，默认阻断整篇 apply。该 gate 不替代 `prd_publish/prd_pull` 的 hash、blocks、revision、baseline、有损和写后读回保护。
 
 **定稿收口必做（forced-artifact，Stage3-A4 · 2026-07-12 挂点）**：PRD 定稿（发出/push 正本）时，本轮定稿新拍的术语、口径、推翻项逐条回写项目 `_conventions.md` §6（带日期+来源"定稿 {日期}"）；无新增显式写「{日期} 定稿：本次无」。
 

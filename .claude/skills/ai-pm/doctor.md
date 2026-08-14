@@ -6,9 +6,9 @@
 
 ## 功能
 
-扫描所有技能文件，检查 27 项一致性指标，输出健康报告。
+扫描所有技能文件，检查 31 项一致性指标，输出健康报告。
 
-## 检查项（8 类共 27 项）
+## 检查项（9 类共 31 项）
 
 ### 命令路由一致性（3 项）
 
@@ -61,14 +61,27 @@
 
 27. **原型示意 cell 协议**：当项目存在当前 PRD Markdown 时，运行 `python3 .claude/skills/ai-pm/scripts/validate_prd_source_prototype_cells.py <PRD路径> --quiet`，检查「详细功能设计」区的原型示意协议。指向语指向表外（见下图 / 如下图 / 同上图等）、表格外 `![]()` 图片 → ❌ 错误；旧 `[xxx原型]` 占位（**仅云增强档 PRD 报**，本地 DOCX 项目是合法格式不报）、裸「截图/原型图」歧义 → ⚠️ 警告；复用写法（`同V1.1原型图` / 同§6.x / 复用 / 沿用）合法不报。脚本判定逻辑回归用 `--selftest`。云文档 push 后再用 `python3 .claude/skills/xfchat-wiki/scripts/validate_prd_prototype_cells.py --doc-id <doc_id> --quiet` 做 block 结构验收（旧占位在云端计 `legacy_cells`、不算结构失败）。
 
+### 工作台契约与证据闭环（4 项）
+
+28. **六模式能力注册表**：运行 `python3 scripts/aipm_contracts.py capabilities`。必须且只能有探索研究、决策分析、PRD、原型、评审验收、运营复盘六种 mode；mode 只做意图路由，不得写 lifecycle phase。
+29. **项目基线与产物契约**：检查 `baseline-manifest.schema.json`、`prototype-source-manifest.schema.json`、`impact-record.schema.json` 和扩展后的 `status.schema.json` 均存在且可解析；运行 `python3 scripts/aipm_contracts.py selftest`。
+30. **只读对账与影响判断边界**：分别运行 `python3 scripts/aipm_reconcile.py --selftest` 和 `python3 scripts/aipm_impact.py selftest`。对账前后字节必须一致；无证据的 continue / adjust / stop 必须被阻断。
+31. **系统复盘时间覆盖**：分别运行 `python3 scripts/ai-sync/conversation-coverage.py --selftest` 和 `python3 scripts/aipm_system_retrospective.py --selftest`。月份缺失必须明确报 coverage gap，不能用文件 mtime 伪装覆盖。
+
 ## 执行方式
 
 **先跑机械兜底脚本**（零歧义引用的快速门，秒级）：
 ```bash
 python3 scripts/check-skill-ref-exists.py
 python3 scripts/check-output-container-registry.py
+python3 scripts/aipm_contracts.py capabilities
+python3 scripts/aipm_contracts.py selftest
+python3 scripts/aipm_reconcile.py --selftest
+python3 scripts/aipm_impact.py selftest
+python3 scripts/ai-sync/conversation-coverage.py --selftest
+python3 scripts/aipm_system_retrospective.py --selftest
 ```
-它机械核对所有 skill 文档里"反引号内、`.claude/`或`templates/`开头的全路径引用"是否指向真实文件——覆盖第 6、22 项里最容易"路径归属写错"的那类（如 battlecard 跨 skill 引用、live-probe 全路径）。退出码非 0 即有悬空引用，按其输出定位。脚本刻意只查零歧义全路径（裸 `references/`、glob、项目产物不查，避免误报）；其余 27 项仍按下方逐项人工核。
+引用检查脚本机械核对所有 skill 文档里"反引号内、`.claude/`或`templates/`开头的全路径引用"是否指向真实文件——覆盖第 6、22 项里最容易"路径归属写错"的那类（如 battlecard 跨 skill 引用、live-probe 全路径）。退出码非 0 即有悬空引用或契约回归，按其输出定位。该脚本刻意只查零歧义全路径（裸 `references/`、glob、项目产物不查，避免误报）；其余项目仍按下方逐项人工核。
 
 然后逐项检查，使用 Read 工具读取相关文件，用文本匹配做比对。
 

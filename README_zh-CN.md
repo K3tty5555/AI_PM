@@ -1,6 +1,6 @@
 <h1 align="center">AI PM</h1>
 <p align="center">
-  AI 产品经理能力套件 — 从需求澄清到 PRD、埋点、原型、评审和复盘。
+  有状态的产品经理工作台 — 覆盖探索、决策、PRD、原型、评审验收和效果回收。
 </p>
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
@@ -16,7 +16,7 @@
 
 ## 这是什么
 
-AI PM 是一套 AI 产品经理能力套件。你可以从一句粗糙想法开始，让 AI 帮你澄清需求、分析用户和竞品、拆用户故事、写 PRD、设计埋点、生成 HTML 原型、做六角色评审，并把项目经验沉淀下来。它以一组 Claude Code 技能 + 一个 PM sub-agent 的形态运行。
+AI PM 是一个有状态的产品经理工作台。用户通过探索研究、决策分析、PRD、原型、评审验收、运营复盘六种模式进入任务；底层继续使用现有项目 phase/status，因此旧项目仍可断点续传。它以一组 Claude Code 技能和 PM sub-agent 的形态运行。
 
 ## 当前能力
 
@@ -29,6 +29,19 @@ AI PM 是一套 AI 产品经理能力套件。你可以从一句粗糙想法开�
 - 9 个核心阶段，正式写作前可先做需求速评
 - 每个阶段独立保存，支持恢复和跳过
 - PM agent / driver 工作流用于评审前的 PRD 质量守门
+
+### 六种工作模式
+
+| 模式 | 主要产出 |
+|------|----------|
+| 探索研究 | 事实、洞察和明确的未知项 |
+| 决策分析 | 方案比较、推荐和决策记录 |
+| PRD | 可评审的 Markdown 产品需求文档 |
+| 原型 | 有当前产品证据的可交互原型 |
+| 评审验收 | 文档问题或真实实现证据 |
+| 运营复盘 | 效果回收、项目复盘和可复用知识 |
+
+模式只是任务意图层，不是第二套状态机；phase、checkpoint 和 `last_phase` 仍是项目生命周期单源。
 
 ### PRD 与评审
 
@@ -81,6 +94,15 @@ HTML 原型和仪表盘默认使用项目自带的 `ai-pm-frontend-design` 技�
 | 命令 | 说明 |
 |------|------|
 | `/ai-pm [需求]` | 主产品工作流入口 |
+| `/ai-pm explore [任务]` | 探索研究模式 |
+| `/ai-pm decide [任务]` | 决策分析模式 |
+| `/ai-pm prd [需求或路径]` | PRD 独立一级入口 |
+| `/ai-pm prototype [项目]` | 原型模式，迭代项目先核 source/target |
+| `/ai-pm review [对象]` | 评审验收模式 |
+| `/ai-pm operate [任务]` | impact、复盘、周报、知识或分享 |
+| `/ai-pm reconcile` | 范围变化后的跨产物只读影响预览 |
+| `/ai-pm impact` | 发布后效果回收，允许证据不足继续观察 |
+| `/ai-pm retrospective --system` | 只读脱敏索引/摘要的 AI_PM 系统复盘 |
 | `/ai-pm office-hours` | 早期需求讨论 / 可行性速评 |
 | `/ai-pm --team [需求]` | 复杂需求的多 Agent 协作 |
 | `/ai-pm continue` | 恢复上次未完成项目 |

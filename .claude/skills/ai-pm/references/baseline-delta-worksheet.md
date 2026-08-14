@@ -4,6 +4,8 @@
 
 **迭代项目的需求 = delta，不是新功能。**
 
+> **机读兼容扩展（2026-08-14）**：`01-baseline-delta.md` 继续是 PM 可读事实源；同目录新增 `01-baseline-manifest.json`，只登记来源、水位、事实/目标/决策/假设分类、风险和 claim→source 关系。两者不是双源：delta 负责解释变化，manifest 负责让 grounding、reconcile 和写前 gate 可消费。字段单源见 `templates/project-index/baseline-manifest.schema.json` 与 `ai-pm-reconcile/references/contracts.md`。
+
 写 PRD 的根本问题不是「这个新功能怎么设计」，而是「老系统今天做的事，新版上线后会变成什么；用户/运营/系统的哪些行为会被影响」。
 
 跳过这一步直接写 PRD，必然遗漏一类坑：**老系统能做但新流程缺**、**老系统的某个隐性步骤新流程没承接**、**老系统的某个角色（运营/客服）不知道功能下线**。
@@ -16,6 +18,8 @@
 - 用户需求中含「迭代 / 扩展 / 兼容老 / 接入老 / V2/V3」等关键词
 
 0→1 项目不需要这张表，按现有 Phase 1 流程走。
+
+Import 项目先把导入材料登记为 `candidate` 来源；权威性未确认前，只能形成候选基线，不能静默当成当前事实。
 
 ## 三类高密度避坑信息（资料阅读重点）
 
@@ -123,4 +127,5 @@ Phase 5（PRD 生成）开始时，强制检查 `01-baseline-delta.md`：
 
 - 迭代项目 + 文件不存在 → 阻断，回到 Phase 1 补
 - 迭代项目 + 文件存在但有未填写行 → 阻断，回到 Phase 1 补
+- 迭代项目 + `01-baseline-manifest.json` 不存在或契约未通过 → 阻断；运行 `python3 scripts/aipm_contracts.py baseline --project "<项目目录>"` 查看具体缺口
 - 0→1 项目 → 跳过此检查

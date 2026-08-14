@@ -31,6 +31,8 @@ PROJECTS = REPO / "output" / "projects"
 STALENESS_JS = REPO / "scripts" / "ai-sync" / "check-status-staleness.js"
 sys.path.insert(0, str(REPO / "scripts"))  # status_migrate 契约校验（--set 写前）
 
+from aipm_core import validate_status_artifacts
+
 ACTIVE_DAYS = 7          # 最近 N 天动过 = 活跃
 KIND_ICON = {"待续": "▶", "等外部": "⏸", "待办": "○", "断点": "⏯"}
 
@@ -132,6 +134,7 @@ def build(stale: dict) -> list:
         na = st.get("next_action")
         if isinstance(na, str):
             na = {"text": na}
+        contract_errors, contract_warnings = validate_status_artifacts(st, PROJECTS / name)
         rows.append({
             "project": name,
             "newestDate": newest,
@@ -141,6 +144,7 @@ def build(stale: dict) -> list:
             "updated": st.get("updated"),
             "next_action": na,
             "dead": s.get("dead") or [],
+            "contract_issues": contract_errors + contract_warnings,
         })
     build.skipped_lifecycle = skipped_lifecycle  # 供渲染层报数
     return rows
@@ -211,12 +215,15 @@ def render(rows) -> str:
     # 滞后 + 死链提示（复用 staleness 的判断）
     lag = [r for r in rows if r["updated"] and r["newestDate"] and r["updated"] < r["newestDate"] and tier(r) < 2]
     dead = [r for r in rows if r["dead"]]
-    if lag or dead:
+    contracts = [r for r in rows if r["contract_issues"]]
+    if lag or dead or contracts:
         out.append("")
         for r in lag:
             out.append(f"  ⚠️ {r['project']}：状态卡 updated={r['updated']} 落后于最新文件 {r['newestDate']}，跑 /ai-pm refresh 或手动校准")
         for r in dead:
             out.append(f"  🔗 {r['project']}：{len(r['dead'])} 处死链（README/记忆卡引用已失效）")
+        for r in contracts:
+            out.append(f"  🧾 {r['project']}：产物契约 {len(r['contract_issues'])} 项待处理（运行 /ai-pm reconcile 查看）")
     return "\n".join(out)
 
 

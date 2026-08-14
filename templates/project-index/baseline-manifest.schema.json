@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aipm://baseline-manifest.schema.v1",
+  "title": "AI_PM 事实基线 manifest v1",
+  "description": "01-baseline-delta.md 的兼容机读扩展。Markdown 继续承载 PM 可读 delta，manifest 只承载来源、水位、事实分类和 claim→source 关系。",
+  "type": "object",
+  "required": ["schema_version", "project", "project_type", "generated_at", "sources", "claims", "open_questions"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "project": {"type": "string", "minLength": 1},
+    "project_type": {"enum": ["zero-to-one", "iteration", "import"]},
+    "generated_at": {"type": "string", "minLength": 10},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_id", "kind", "path_or_remote_id", "observed_at", "authority"],
+        "properties": {
+          "source_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+          "kind": {"enum": ["user-decision", "current-product", "project-document", "data", "external-evidence", "historical"]},
+          "path_or_remote_id": {"type": "string", "minLength": 1},
+          "observed_at": {"type": "string", "minLength": 10},
+          "valid_until": {"type": "string"},
+          "content_hash": {"type": "string"},
+          "revision": {"type": "string"},
+          "authority": {"enum": ["confirmed", "candidate", "reference"]}
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim_id", "kind", "statement", "risk", "state", "source_ids", "aliases"],
+        "properties": {
+          "claim_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+          "kind": {"enum": ["current-fact", "target", "decision", "assumption"]},
+          "statement": {"type": "string", "minLength": 1},
+          "risk": {"enum": ["high", "medium", "low"]},
+          "state": {"enum": ["active", "removed", "changed", "unknown"]},
+          "source_ids": {"type": "array", "items": {"type": "string"}},
+          "aliases": {"type": "array", "items": {"type": "string"}},
+          "applies_to": {"type": "array", "items": {"type": "string"}},
+          "supersedes": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question_id", "text", "risk"],
+        "properties": {
+          "question_id": {"type": "string"},
+          "text": {"type": "string", "minLength": 1},
+          "risk": {"enum": ["high", "medium", "low"]},
+          "owner": {"type": "string"}
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

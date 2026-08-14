@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI PM 一致性检查"
+  short_description: "在需求增删或口径变化后扫描多类项目产物的一致性与覆盖缺口"
+  default_prompt: "使用 $ai-pm-reconcile 检查这次范围变化会影响哪些项目产物。"

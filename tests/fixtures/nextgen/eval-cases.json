@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "development_cases": [
+    {
+      "id": "R1",
+      "failure": "已有能力被误写成新设计",
+      "gate": "baseline",
+      "expected": "迭代项目必须有 claim；高风险 claim 必须绑定来源",
+      "negative_control": "有 confirmed 来源的高风险 claim 可通过"
+    },
+    {
+      "id": "R2",
+      "failure": "删除范围后旧原型残留",
+      "gate": "reconcile",
+      "expected": "登记产物中的删除项残留标 stale",
+      "negative_control": "不含残留词的 PRD 标 aligned"
+    },
+    {
+      "id": "R3",
+      "failure": "Web/Mobile 无证据互抄",
+      "gate": "prototype-source-target",
+      "expected": "Web 与 Mobile 必须分别声明证据状态；missing 给出警告",
+      "negative_control": "明确 not-applicable 的端别不伪造适配证据"
+    },
+    {
+      "id": "R4",
+      "failure": "Part 6 偏离模板",
+      "gate": "prd-contract",
+      "expected": "每个详细设计小节使用项目/说明两列表并包含四个必填行",
+      "negative_control": "decision-review 文档不强套完整功能 PRD"
+    },
+    {
+      "id": "R5",
+      "failure": "云文档手写编号伪装原生列表",
+      "gate": "prd-publish-readback",
+      "expected": "现有 publish 自测继续检查块结构与写后读回",
+      "negative_control": "原生列表块可通过读回协议"
+    },
+    {
+      "id": "R6",
+      "failure": "数据指标口径反复修正",
+      "gate": "impact-record",
+      "expected": "rate 指标必须登记分子、分母、版本、基线、观察和来源",
+      "negative_control": "证据不足时允许 observe，但禁止强结论"
+    },
+    {
+      "id": "R7",
+      "failure": "对话快照 freshness 假绿",
+      "gate": "conversation-coverage",
+      "expected": "按索引原生时间边界和目标月份报 coverage gap",
+      "negative_control": "不使用索引文件 mtime 代替会话覆盖"
+    }
+  ],
+  "cold_cases": [
+    {
+      "id": "COLD-1",
+      "scenario": "登记哈希与本地文件内容不同",
+      "expected": "reconcile 标 pending-decision，且不自动更新哈希"
+    },
+    {
+      "id": "COLD-2",
+      "scenario": "mixed 所有权 PRD 请求整篇 publish",
+      "expected": "默认阻断，不能把候选块规则冒充为稳定 apply 能力"
+    }
+  ]
+}
