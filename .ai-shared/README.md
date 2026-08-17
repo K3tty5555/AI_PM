@@ -45,6 +45,17 @@ scripts/ai-sync/check-ai-context-freshness.sh
 scripts/ai-sync/sync-ai-context.sh
 ```
 
+个人风格月度审计：
+
+```bash
+scripts/ai-sync/run-monthly-voice-profile-update.sh --force --since-date YYYY-MM-DD
+```
+
+Claude 与 Codex 的项目级 `SessionStart` hook 会在每月首次进入项目时静默调用
+`scripts/ai-sync/voice-profile-monthly-hook.sh`。它直接从原生会话日志流式提取并脱敏，
+只在 `.ai-shared/pending-memory/` 生成待确认候选稿，不自动覆盖主 memory。
+如需把 PRD 样本限定到本人，可设置逗号分隔的 `AIPM_VOICE_PROFILE_AUTHOR_MARKERS` 作者别名。
+
 `check-ai-context-freshness.sh` 默认只查 memory 快照与索引水位（raw 档案对比需显式 `--check-raw`）。`sync-ai-context.sh` 刷新 memory/skill/agent 索引、生成 Codex 可读摘要、保存 memory 副本并重建会话索引；**2026-07-12 起默认不再复制 raw 会话**（`--include-raw` 显式开启；现存 raw 为历史档案，见 conversations/raw/INVENTORY.md）。
 
 生成文件会带 `generated_at` 和 `source`。如果索引与原始文件冲突，读取原始文件。

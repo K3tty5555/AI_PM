@@ -12,6 +12,11 @@ if [ -x "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" ]; then
   "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" 2>/dev/null || true
 fi
 
+# 每月首次进入项目时静默生成个人风格候选稿；只写 pending-memory，不改主 memory。
+if [ -x "$ROOT/scripts/ai-sync/voice-profile-monthly-hook.sh" ] && [ "${AIPM_VOICE_PROFILE_CHILD:-0}" != "1" ]; then
+  "$ROOT/scripts/ai-sync/voice-profile-monthly-hook.sh" >/dev/null 2>&1 || true
+fi
+
 PROJECTS_DIR="output/projects"
 
 # 首次使用检测：无项目 + 无生效个人风格 → 建议先做初始化（不强制）

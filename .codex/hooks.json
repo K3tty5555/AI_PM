@@ -1,0 +1,17 @@
+{
+  "description": "AI_PM-only local monthly personal-style review.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash \"$(git rev-parse --show-toplevel)/scripts/ai-sync/voice-profile-monthly-hook.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

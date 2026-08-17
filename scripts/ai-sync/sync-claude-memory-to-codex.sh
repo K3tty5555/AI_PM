@@ -78,6 +78,7 @@ fallback_desc() {
   echo "- 操作前先查已有工具，PRD 导出复用 md2docx.py。"
   echo "- AI 给最终用户的话术不透版本号、上线时间、下个迭代。"
   echo "- Codex 新沉淀先写 .ai-shared/pending-memory/，不自动覆盖 Claude memory。"
+  echo "- 生成用户口吻、对外表达或 PRD 前，先读 Claude memory 中的 user_voice_profile.md 与 user_prd_writing_style.md；个人风格不固化进通用 skill。"
   echo
   echo "## 文件摘要"
   echo

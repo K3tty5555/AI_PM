@@ -83,7 +83,9 @@ AI_PM_提效分享.html
 # 本地专属 / 项目专属 skill：含内部域名 + 凭证逻辑，只在本机用，不入库不推 GitHub
 .claude/skills/xfchat-wiki/
 .claude/skills/tpd_cli/
-.codex/
+# Codex 本地状态默认不入库，仅共享 AI_PM 项目级 hook 入口。
+.codex/*
+!.codex/hooks.json
 
 # Test reports
 coverage/
