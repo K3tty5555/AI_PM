@@ -7,7 +7,7 @@
 Codex 进入本项目后，优先读取以下上下文：
 
 1. Claude 项目级 memory 主源：优先使用 `CLAUDE_MEMORY_DIR`；未配置时按当前仓库路径在 `$HOME/.claude/projects/` 自动探测。本机旧路径仍可被脚本兼容识别。
-2. 共享索引：`.ai-shared/memory-index.md`
+2. 共享索引：`.ai-shared/memory-index.md` 与 `.ai-shared/skill-index.md`
 3. Claude skills：`.claude/skills/`
 4. Claude agents：`.claude/agents/`
 5. 项目规范：`CLAUDE.md`
@@ -49,6 +49,9 @@ scripts/ai-sync/check-ai-context-freshness.sh
 - 未经用户允许，不运行 Playwright 相关命令，包括 `playwright install`、`playwright test`、`npm run test:e2e`。
 - 用户允许运行 Playwright 后，优先复用本机缓存 `/Users/xiaowu/Library/Caches/ms-playwright`；若 MCP 报浏览器缺失，先查该缓存和 `mcp-chrome-for-testing-*`，不要直接触发下载。
 - 操作前先查已有工具，PRD 导出优先复用 `md2docx.py`。
+- 用户点名项目 skill 时，先查 `.ai-shared/skill-index.md` 并按登记路径读取原始 `SKILL.md`；不得仅凭系统级可用技能清单判定项目 skill 不存在。
+- `.claude/skills/` 可包含被 `.gitignore` 忽略的本机私有插件；发现时用 `find -L .claude/skills -maxdepth 2 -name SKILL.md` 或索引登记路径，禁止根据遵守 ignore 规则的 `rg --files` 空结果判定不存在。
+- 用户给出公司内网云文档链接时，先查 `.ai-shared/skill-index.md` 中登记的项目私有文档 skill，并按其 description 路由；不得因通用文档 skill 可用而跳过项目专用工具。
 - AI 给老师或最终用户的话术不能透露版本号、上线时间、下个迭代。
 - 写 PRD 时遵循KettyWu PM 风格与 `.claude/skills/ai-pm/references/pm-judgment-card.md`。
 - `.claude/skills/` 下的 Markdown 修改由主会话直接做，不派给并行子 Agent。
