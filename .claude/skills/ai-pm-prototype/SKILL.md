@@ -20,6 +20,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 
 **验证必带视觉核对**（判断卡 §11）——经用户允许跑浏览器时，每个关键状态（每道闸、每个异常态、每个产出件页面）都要 `browser_take_screenshot` 在目标视口下肉眼核对。DOM 断言（存在/计数/可见/类名/文本）只验逻辑，验不出溢出/折行/竖排/对齐等纯视觉 bug，**全绿也照样错**；没截图核对的状态在审计里如实标"仅 DOM 验证、未视觉核对"，不谎报"全过"。
 
+**本轮协作固化规则**：用户对页面职责、栏位归属、操作位置和状态文案的修正，优先级高于此前蓝图和 AI 假设；每次修改都要同步 `prototype-spec.json`、精细原型、巡检页、截图 manifest 和 active PRD，不能只改其中一层。
+
 ## 输入
 
 - 主要：`{项目目录}/05-prd/<当前 PRD 文件>`（由 `_status.json.active_prd` 指定；首次默认 `05-PRD-v1.0.md`）
@@ -28,6 +30,10 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 - 可选：`{项目目录}/06-prototype-visual/manifest.json`（Codex 生成的视觉锚点包）
 - 可选：`{项目目录}/06-prototype-visual/visual-fingerprint.md`（视觉指纹）
 - 迭代项目必需：`{项目目录}/06-prototype/source-target-manifest.json`（Web/Mobile 分别声明现状证据、目标变化和不变项）
+
+### 步骤0：先读输入文档
+
+用户提供 PRD、云文档 URL 或“之前版本原型”时，先读取并记录事实源，再开始蓝图和页面设计。不得只凭用户一句总结直接生成页面；若是 i讯飞/飞书云文档，按 `.ai-shared/skill-index.md` 路由到项目登记的文档 skill，先取正文、标题大纲和相关截图/原型引用。
 
 ## 输出
 
@@ -136,6 +142,8 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 - 有用户选定设计规范时，按该规范生成
 - AI 情境定制时，必须给出符合产品场景的视觉主张，不退回通用 SaaS 模板
 
+**布局职责锁定**：用户确认的“左 / 中 / 右”不是视觉建议，而是信息架构约束。规格必须写清每一栏承载什么、哪些操作禁止放入该栏。例如配置页若确定为“左题目列表 / 中间试卷切图 / 右答案设置”，则作答区的框选、拆分、合并、新增、删除和微调只能归中间工作台；右栏只能放答案、分值及其保存状态。后续反馈不得把已确认的栏位职责反向合并或移除。
+
 ### 步骤3：解析 PRD，提取页面信息
 
 - 功能清单 → 确定需要哪些页面
@@ -156,6 +164,7 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 - Agent / hybrid 产品必须体现用户输入、AI 回复、AI 状态、结果预确认、用户修改入口、失败兜底
 - 按 `ai-pm-frontend-design/references/visual-system.md` 建立 4pt 间距、稳定字阶、语义色彩和反 AI 味视觉系统
 - 按 `ai-pm-frontend-design/references/interaction-hardening.md` 补齐 focus、触控、表单、响应式、错误和边界状态
+- 中间试卷、答题卡、扫描件等背景素材必须是干净、单一职责的本地位图或真实产品素材；不得把旧页面标题、按钮、表单、状态标签直接当作试卷切图复用。图片应完整适配容器，区域框再作为 HTML 交互层叠加。
 
 ## 技术规范
 
@@ -229,6 +238,15 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 
 任一维度低于 3 分、总分低于 9 分，或三段式自检出现 stop condition，必须先自改 HTML，再进入截图与完成提示。
 
+落盘后、截图前必须执行 HTML 资源门禁：
+
+```bash
+python3 scripts/aipm_prototype_collab.py check-html \
+  --html "{项目目录}/06-prototype/index.html"
+```
+
+门禁至少检查 body、重复 `id`、`script/img/iframe` 本地资源是否存在。巡检生成器的运行逻辑必须包在 IIFE 中，不能在浏览器全局声明 `frames` 等宿主已有变量；原型文件或运行时更新后，引用地址要携带内容版本参数，避免浏览器继续加载旧文件。
+
 ### 步骤4.6：防 bleed 审计 + 设计师交接（落盘后强制，与 phase-7 同源）
 
 与 `/ai-pm` 全流程的 phase-7 共用一套机制，此处只接线不复制（细则见 `phases/phase-7-prototype.md` 同名两节）：
@@ -245,28 +263,28 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 3. 生成 `review/index.html`，按流程展示全部真实关键帧，允许逐帧记录结论和评论。
 4. 用户反馈导出 JSON；AI 只先生成修改预览，用户确认后才修改原型。
 
+收到“相关意见已经提交 / 已提完修改”时，先按文件修改时间读取 `feedback/review-feedback.json` 和 `feedback/annotations.json`，以最新导出内容为准；不要等待用户再次转述标签内容。修改前生成修改预览，修改后将已处理项改为 `pending-review`，保留原始评论和锚点。
+
+巡检页的最低可用性要求：
+
+- 左侧关键帧导航和右侧巡检记录可独立收起，收起后保留可见恢复按钮，并持久化展开状态。
+- 中间 iframe 必须有加载中和超时提示；加载失败不能只显示白屏。
+- 原型 iframe 地址必须带内容版本参数；标注运行时解析路由时忽略该参数，避免同一页面因缓存版本产生重复反馈。
+- 页面定点标注表单只保留“类型”和“内容”；已有标签支持“删除标签”并在删除前二次确认，文档引用、期望结果等上下文直接写入内容，历史 JSON 字段继续兼容但不再在 UI 展示。
+
 ### 步骤5：截图与 manifest 生成
 
-原型 HTML 生成完毕后，立即执行截图并写出 manifest，供后续 PDF 导出使用。
+原型 HTML 生成完毕后，**只有用户明确授权浏览器核验时**才执行截图并写出 manifest，供 PRD 和后续 PDF 导出使用。未授权时只做静态检查，并在状态中记录“未做视觉截图核对”。
 
 #### 5.1 截图
 
 ```bash
-CHROME=~/Library/Caches/ms-playwright/chromium-1212/chrome-mac-arm64/"Google Chrome for Testing.app"/Contents/MacOS/"Google Chrome for Testing"
-
 mkdir -p {项目目录}/06-prototype/screenshots/
 
-# 对每个原型页面截图（file:// 对 Chrome 二进制直接可用）
-"$CHROME" --headless=new --no-sandbox --disable-gpu \
-  --screenshot="{项目目录}/06-prototype/screenshots/01-{slug}.png" \
-  --window-size=1440,900 \
-  "file://{项目目录}/06-prototype/index.html" 2>/dev/null
-
-# 若有子页面，逐一截图
-"$CHROME" --headless=new --no-sandbox --disable-gpu \
-  --screenshot="{项目目录}/06-prototype/screenshots/02-{slug}.png" \
-  --window-size=1440,900 \
-  "file://{项目目录}/06-prototype/pages/{page}.html" 2>/dev/null
+# 对每个关键帧截图：使用 Playwright 打开本地 HTTP 服务，等待图片加载完成；不要用带标注浮层和临时 toast 的状态截图。
+# 浏览器优先复用本机缓存或已安装浏览器；MCP 报版本缺失时先查缓存，禁止直接下载。
+# 每个 query 都要执行：page.goto(url, {waitUntil: "networkidle"}) → 等待 document.images 解码
+# → 隐藏 #aipm-annotation-host 和临时 toast → page.screenshot({path, fullPage: false})。
 ```
 
 **截图命名规则**：`{两位序号}-{小节slug}.png`，slug 取 PRD 章节标题的拼音首字母或英文关键词（如 `01-task-list.png`、`02-grading.png`）。
@@ -301,6 +319,16 @@ require('fs').writeFileSync(
 ```
 
 **关键约定**：`label` 字段必须与 PRD 第六章对应小节的标题**完全一致**（如 `"任务列表与任务分配"`），PDF 导出时依此做精确匹配。
+
+截图完成后必须：
+
+1. 对每张图片写入 SHA-256、视口、捕获状态、控制台错误、页面错误和横向溢出结果。
+2. 更新 active PRD 对应“原型示意”图片和说明，图片路径必须可读；页面结构或交互发生变化时，旧截图不能继续作为当前事实源。
+3. 用户要求同步云文档时，按 `xfchat-wiki` 的“先读最新版 → 按 heading 定点替换 → 读回校验”流程更新，不得 `clear_first=True` 整篇重建；原型截图写入对应表格单元格后再做图片结构校验。
+
+### 核心流程图
+
+PRD 的“核心流程”优先使用 Mermaid 代码块表达，而不是堆叠长句。设置页、作答区、结果页等并行路径用 `flowchart TD` 或 `flowchart LR`，节点文案使用产品内真实动作；云文档 API 会将 Mermaid 写为代码块，必要时在云文档内手动开启流程图插件渲染。
 
 ## 文件结构
 
@@ -364,7 +392,7 @@ require('fs').writeFileSync(
 设备类型：{mobile/web/responsive}
 设计规范：{规范名}
 页面数量：{N} 个
-核心流程：{流程描述}
+核心流程：{Mermaid 流程图已写入 PRD 4.1}
 质量自检：{总分}/12（PRD覆盖/交互体验/视觉设计）
 
 截图已生成：06-prototype/screenshots/（共 {N} 张，供 PDF 导出使用）
@@ -385,6 +413,6 @@ require('fs').writeFileSync(
 
 **选「修改」时**：处理完用户反馈，重新执行步骤5截图，然后再次执行本步骤。
 
-**选「评审」时**：先将截图写入 PRD，再调用 `ai-pm-review` 技能执行六角色评审，完成后触发知识沉淀。
+**选「评审」时**：先将截图写入 active PRD；如果 PRD 有 i讯飞云文档正本，再按用户授权执行云端定点同步，随后调用 `ai-pm-review` 技能执行六角色评审，完成后触发知识沉淀。
 
 **选「完成」时**：将截图写入 PRD，触发 knowledge sync，输出项目总结。

@@ -4,6 +4,8 @@
 
 Generates low-fidelity keyframe galleries, high-fidelity review galleries, and
 an embeddable local-first annotation runtime from one prototype specification.
+It also provides a static HTML resource/ID gate for catching broken prototype
+assets before browser review.
 The implementation intentionally uses only Python's standard library.
 """
 
@@ -20,7 +22,8 @@ import re
 import shutil
 import sys
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from html.parser import HTMLParser
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 
 SCHEMA_VERSION = 1
@@ -29,6 +32,53 @@ ANNOTATION_MARKER = "data-aipm-annotation-runtime"
 
 class SpecError(ValueError):
     pass
+
+
+class PrototypeHTMLParser(HTMLParser):
+    """Collect stable IDs and local resource references without requiring a DOM package."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.ids: set[str] = set()
+        self.duplicate_ids: set[str] = set()
+        self.resources: list[tuple[str, str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrs_map = dict(attrs)
+        element_id = attrs_map.get("id")
+        if element_id:
+            if element_id in self.ids:
+                self.duplicate_ids.add(element_id)
+            self.ids.add(element_id)
+        attribute = "href" if tag == "link" else "src"
+        value = attrs_map.get(attribute)
+        if value:
+            self.resources.append((tag, value))
+
+
+def validate_html_file(path: Path) -> list[str]:
+    errors: list[str] = []
+    if not path.is_file():
+        return [f"HTML 文件不存在: {path}"]
+    source = path.read_text(encoding="utf-8")
+    if "<body" not in source.lower():
+        errors.append("HTML 缺少 body")
+    parser = PrototypeHTMLParser()
+    try:
+        parser.feed(source)
+        parser.close()
+    except Exception as exc:  # HTMLParser is permissive, but report malformed encodings.
+        errors.append(f"HTML 解析失败: {exc}")
+    for element_id in sorted(parser.duplicate_ids):
+        errors.append(f"HTML id 重复: {element_id}")
+    for tag, resource in parser.resources:
+        parts = urlsplit(resource)
+        if parts.scheme or parts.netloc or resource.startswith(("#", "data:")):
+            continue
+        target = (path.parent / unquote(parts.path)).resolve()
+        if not target.is_file():
+            errors.append(f"{tag} 本地资源不存在: {resource}")
+    return errors
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -325,7 +375,7 @@ function download(name,payload){const a=document.createElement('a');a.href=URL.c
 async function sync(payload){try{const r=await fetch('/__aipm_feedback__',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});return r.ok}catch(e){return false}}document.getElementById('exportFeedback').addEventListener('click',async()=>{const payload=feedback('revise');const saved=await sync(payload);if(!saved)download('lowfi-feedback.json',payload);toast(saved?'意见已同步到项目 feedback/':'已下载意见 JSON')});document.getElementById('approve').addEventListener('click',async()=>{const missing=cards.filter(c=>c.dataset.required==='true'&&(data[c.dataset.frame]?.status||'unreviewed')==='unreviewed');if(missing.length){toast(`还有 ${missing.length} 个必看关键帧未确认`);missing[0].scrollIntoView({behavior:'smooth',block:'center'});missing[0].classList.add('is-active');return}const hasIssue=cards.some(c=>data[c.dataset.frame]?.status==='open');const payload=feedback(hasIssue?'revise':'approved');const saved=await sync(payload);if(!saved)download('lowfi-approval.json',payload);toast(saved?(hasIssue?'修改意见已同步':'确认结果已同步'):(hasIssue?'已导出修改意见':'已导出低保真确认结果'))});
 document.querySelectorAll('.flow-filter').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.flow-filter').forEach(x=>x.classList.toggle('active',x===btn));cards.forEach(card=>card.hidden=btn.dataset.flow!=='all'&&!card.dataset.flows.split(' ').includes(btn.dataset.flow))}));function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.hidden=false;setTimeout(()=>el.hidden=true,2600)}updateSummary();
 """
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(spec['title'])} · 线框关键帧</title><style>{css}</style></head><body data-spec-hash="{spec_hash}"><header class="app-header"><div><h1>{esc(spec['title'])} · 线框确认</h1><p>先看清具体排版、页面结构和关键状态，再生成精细原型</p></div><div class="header-actions"><button class="btn" id="exportFeedback">导出意见</button><button class="btn btn-primary" id="approve">提交确认</button></div></header><div class="summary"><strong id="progress"></strong><span>所有关键帧均在本页展示</span><nav class="filters">{render_flow_filters(spec)}</nav></div><main class="gallery">{''.join(frames)}</main><div class="toast" id="toast" hidden></div><script type="application/json" id="aipm-spec">{embedded}</script><script>{script}</script></body></html>"""
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>{esc(spec['title'])} · 线框关键帧</title><style>{css}</style></head><body data-spec-hash="{spec_hash}"><header class="app-header"><div><h1>{esc(spec['title'])} · 线框确认</h1><p>先看清具体排版、页面结构和关键状态，再生成精细原型</p></div><div class="header-actions"><button class="btn" id="exportFeedback">导出意见</button><button class="btn btn-primary" id="approve">提交确认</button></div></header><div class="summary"><strong id="progress"></strong><span>所有关键帧均在本页展示</span><nav class="filters">{render_flow_filters(spec)}</nav></div><main class="gallery">{''.join(frames)}</main><div class="toast" id="toast" hidden></div><script type="application/json" id="aipm-spec">{embedded}</script><script>{script}</script></body></html>"""
 
 
 def join_prototype_route(base: str, route: str) -> str:
@@ -345,9 +395,9 @@ def with_revision(src: str, revision: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
-def review_frame(page: dict[str, Any], state: dict[str, Any], flows: list[str], prototype_src: str) -> str:
+def review_frame(page: dict[str, Any], state: dict[str, Any], flows: list[str], prototype_src: str, prototype_hash: str = "") -> str:
     key = frame_key(page["page_id"], state["state_id"])
-    src = join_prototype_route(prototype_src, state_route(page, state))
+    src = with_revision(join_prototype_route(prototype_src, state_route(page, state)), prototype_hash)
     return f"""
     <article class="review-card" data-frame="{esc(key)}" data-flows="{esc(' '.join(flows))}">
       <header class="review-head"><div><span>{esc(page['title'])}</span><h2>{esc(state['title'])}</h2></div><a href="{esc(src)}" target="_blank" rel="noopener">打开交互页</a></header>
@@ -402,7 +452,7 @@ def annotation_runtime() -> str:
     template = Path(__file__).resolve().parents[1] / "templates" / "prototype-collab" / "annotation-runtime.js"
     if template.is_file():
         return template.read_text(encoding="utf-8")
-    return r"""(()=>{'use strict';if(window.__AIPM_ANNOTATION_RUNTIME__)return;window.__AIPM_ANNOTATION_RUNTIME__=true;const script=document.currentScript;const project=script?.dataset.aipmProject||document.title||'prototype';const specHash=script?.dataset.aipmSpecHash||'';const route=location.pathname+location.search+location.hash;const params=new URLSearchParams(location.search);const routeParams=new URLSearchParams(params);routeParams.delete('aipm_rev');const routeQuery=routeParams.toString();const routeKey=(routeQuery?`?${routeQuery}`:'')+location.hash;let routeMap={};try{routeMap=JSON.parse(script?.dataset.aipmRouteMap||'{}')}catch(e){routeMap={}}const mapped=routeMap[routeKey]||{};const pageId=document.body.dataset.aipmPage||mapped.page_id||params.get('view')||location.pathname.split('/').pop()||'page';const stateId=document.body.dataset.aipmState||mapped.state_id||params.get('scenario')||'default';const frame=`${pageId}::${stateId}`;const key=`aipm:annotations:${project}:${specHash}`;let state={items:[]};try{state=JSON.parse(localStorage.getItem(key)||'{"items":[]}')}catch(e){state={items:[]}}if(!Array.isArray(state.items))state.items=[];let placing=false,active=null;
+    return r"""(()=>{'use strict';if(window.__AIPM_ANNOTATION_RUNTIME__)return;window.__AIPM_ANNOTATION_RUNTIME__=true;const script=document.currentScript;const project=script?.dataset.aipmProject||document.title||'prototype';const specHash=script?.dataset.aipmSpecHash||'';const params=new URLSearchParams(location.search);const routeParams=new URLSearchParams(params);routeParams.delete('aipm_rev');const routeQuery=routeParams.toString();const routeKey=(routeQuery?`?${routeQuery}`:'')+location.hash;const route=location.pathname+routeKey;let routeMap={};try{routeMap=JSON.parse(script?.dataset.aipmRouteMap||'{}')}catch(e){routeMap={}}const mapped=routeMap[routeKey]||{};const pageId=document.body.dataset.aipmPage||mapped.page_id||params.get('view')||location.pathname.split('/').pop()||'page';const stateId=document.body.dataset.aipmState||mapped.state_id||params.get('scenario')||'default';const frame=`${pageId}::${stateId}`;const key=`aipm:annotations:${project}:${specHash}`;let state={items:[]};try{state=JSON.parse(localStorage.getItem(key)||'{"items":[]}')}catch(e){state={items:[]}}if(!Array.isArray(state.items))state.items=[];let placing=false,active=null;
 const host=document.createElement('div');host.id='aipm-annotation-host';document.documentElement.appendChild(host);const root=host.attachShadow({mode:'open'});root.innerHTML=`<style>*{box-sizing:border-box;letter-spacing:0}.launcher{position:fixed;z-index:2147483645;right:18px;bottom:18px;display:flex;gap:6px;font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}.btn{min-height:36px;padding:6px 12px;border:1px solid #cbd3d7;border-radius:5px;color:#344149;background:#fff;box-shadow:0 5px 18px rgba(20,35,42,.16);cursor:pointer}.btn.primary{color:#fff;border-color:#0f766e;background:#0f766e}.panel{position:fixed;z-index:2147483644;top:16px;right:16px;width:340px;max-height:calc(100vh - 78px);overflow:auto;border:1px solid #cfd6da;border-radius:7px;background:#fff;box-shadow:0 14px 38px rgba(20,35,42,.22);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}.head{position:sticky;top:0;display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #e3e7e9;background:#fff}.head strong{font-size:15px}.head button{margin-left:auto;border:0;background:transparent;cursor:pointer}.tools{display:flex;gap:6px;padding:10px;border-bottom:1px solid #e7eaec}.tools button{flex:1}.list{padding:8px}.item{width:100%;margin-bottom:7px;padding:10px;border:1px solid #dbe0e3;border-radius:5px;background:#fff;text-align:left;cursor:pointer}.item.feature-note{border-left:4px solid #2563eb}.item.change-request{border-left:4px solid #dc5b45}.item.review-comment,.item.question{border-left:4px solid #d28a25}.item.resolved{opacity:.55}.meta{display:flex;justify-content:space-between;color:#7b858d;font-size:10px}.item strong{display:block;margin:4px 0}.empty{padding:28px 16px;color:#7b858d;text-align:center}.form{position:fixed;z-index:2147483646;top:50%;left:50%;width:min(440px,calc(100vw - 32px));transform:translate(-50%,-50%);padding:18px;border-radius:7px;background:#fff;box-shadow:0 20px 55px rgba(15,25,30,.3);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}.form h3{margin:0 0 12px}.form label{display:grid;gap:5px;margin-top:10px;color:#56616a}.form input,.form select,.form textarea{width:100%;border:1px solid #cbd3d7;border-radius:4px;font:inherit}.form input,.form select{height:36px;padding:0 8px}.form textarea{min-height:90px;padding:8px;resize:vertical}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.backdrop{position:fixed;z-index:2147483645;inset:0;background:rgba(26,38,44,.35)}.pin{position:fixed;z-index:2147483643;width:27px;height:27px;border:2px solid #fff;border-radius:50%;color:#fff;background:#dc5b45;box-shadow:0 3px 9px rgba(20,30,35,.28);font:700 11px/23px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;cursor:pointer}.pin.feature-note{background:#2563eb}.pin.review-comment,.pin.question{background:#d28a25}.hint{position:fixed;z-index:2147483642;top:14px;left:50%;transform:translateX(-50%);padding:9px 13px;border-radius:5px;color:#fff;background:#263f4b;font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}.hidden{display:none!important}</style><div class="launcher"><button class="btn primary" id="place">添加标签</button><button class="btn" id="open">标签列表 <span id="count">0</span></button></div><section class="panel hidden" id="panel"><div class="head"><strong>页面标注</strong><button id="close" aria-label="关闭">×</button></div><div class="tools"><button class="btn" id="export">导出</button><button class="btn" id="import">导入</button><input type="file" id="file" accept="application/json" hidden></div><div class="list" id="list"></div></section><div id="pins"></div><div class="hint hidden" id="hint">点击页面元素或位置添加标签，Esc 取消</div>`;
 const $=id=>root.getElementById(id);function save(){localStorage.setItem(key,JSON.stringify(state));render();window.parent?.postMessage({type:'aipm:annotations-changed',frame,count:state.items.filter(x=>x.page_id===pageId&&x.state_id===stateId).length},'*')}function cssEscape(v){return window.CSS?.escape?CSS.escape(v):String(v).replace(/[^a-zA-Z0-9_-]/g,'\\$&')}function selector(el){if(el.dataset?.aipmId)return`[data-aipm-id="${cssEscape(el.dataset.aipmId)}"]`;if(el.id)return`#${cssEscape(el.id)}`;const parts=[];let cur=el;while(cur&&cur.nodeType===1&&cur!==document.body&&parts.length<5){let part=cur.tagName.toLowerCase();const cls=[...cur.classList].filter(x=>!x.startsWith('aipm-')).slice(0,2);if(cls.length)part+=cls.map(x=>'.'+cssEscape(x)).join('');const siblings=cur.parentElement?[...cur.parentElement.children].filter(x=>x.tagName===cur.tagName):[];if(siblings.length>1)part+=`:nth-of-type(${siblings.indexOf(cur)+1})`;parts.unshift(part);cur=cur.parentElement}return parts.join('>')}function anchorFor(el,x,y){const stable=el.closest('[data-aipm-id]');const rect=el.getBoundingClientRect();return{strategy:stable?'stable-id':'selector',stable_id:stable?.dataset.aipmId||'',selector:selector(stable||el),text:(el.innerText||el.textContent||'').trim().slice(0,160),x_ratio:Math.max(0,Math.min(1,(x-rect.left)/Math.max(1,rect.width))),y_ratio:Math.max(0,Math.min(1,(y-rect.top)/Math.max(1,rect.height))),page_x_ratio:x/document.documentElement.clientWidth,page_y_ratio:(y+scrollY)/Math.max(1,document.documentElement.scrollHeight)}}function resolve(item){const a=item.anchor||{};let el=null;if(a.stable_id)el=document.querySelector(`[data-aipm-id="${cssEscape(a.stable_id)}"]`);if(!el&&a.selector){try{el=document.querySelector(a.selector)}catch(e){}}if(el)return{el,drift:false};return{el:null,drift:true}}function position(pin,item){const found=resolve(item);if(found.el){const r=found.el.getBoundingClientRect();pin.style.left=`${r.left+(item.anchor.x_ratio||.5)*r.width-13}px`;pin.style.top=`${r.top+(item.anchor.y_ratio||.5)*r.height-13}px`;pin.title=item.comment||item.feedback_type}else{pin.style.left=`${(item.anchor.page_x_ratio||.5)*innerWidth-13}px`;pin.style.top=`${(item.anchor.page_y_ratio||.5)*document.documentElement.scrollHeight-scrollY-13}px`;item.status='anchor-drift';pin.title='定位已漂移：'+(item.comment||'')}}function render(){const own=state.items.filter(x=>x.page_id===pageId&&x.state_id===stateId);$('count').textContent=own.length;$('list').innerHTML=own.length?'':`<div class="empty">还没有标签</div>`;$('pins').innerHTML='';own.forEach((item,index)=>{const row=document.createElement('button');row.className=`item ${item.feedback_type} ${item.status==='resolved'?'resolved':''}`;row.innerHTML=`<span class="meta"><span>#${index+1} ${item.feedback_type==='feature-note'?'功能说明':item.feedback_type==='change-request'?'修改意见':item.feedback_type==='question'?'问题':'评审评论'}</span><span>${item.status}</span></span><span>${escapeHtml(item.comment)}</span>`;row.onclick=()=>openDetail(item);$('list').appendChild(row);const pin=document.createElement('button');pin.className=`pin ${item.feedback_type}`;pin.textContent=String(index+1);pin.onclick=()=>{openDetail(item);$('panel').classList.remove('hidden')};$('pins').appendChild(pin);position(pin,item)})}function escapeHtml(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function startPlace(){placing=true;$('hint').classList.remove('hidden');$('panel').classList.add('hidden');document.documentElement.style.cursor='crosshair'}function stopPlace(){placing=false;$('hint').classList.add('hidden');document.documentElement.style.cursor=''}function form(item,anchor){const backdrop=document.createElement('div');backdrop.className='backdrop';const box=document.createElement('div');box.className='form';box.innerHTML=`<h3>${item?'编辑标签':'添加页面标签'}</h3><label>类型<select id="type"><option value="feature-note">功能说明</option><option value="review-comment">评审评论</option><option value="change-request">修改意见</option><option value="question">问题</option></select></label><label>内容<textarea id="comment" placeholder="说明功能，或写清要修改什么"></textarea></label><div class="actions"><button class="btn" id="cancel">取消</button><button class="btn primary" id="save">保存</button></div>`;root.append(backdrop,box);const get=id=>box.querySelector('#'+id);get('type').value=item?.feedback_type||'review-comment';get('comment').value=item?.comment||'';const close=()=>{backdrop.remove();box.remove()};get('cancel').onclick=close;backdrop.onclick=close;get('save').onclick=()=>{const comment=get('comment').value.trim();if(!comment){get('comment').focus();return}const now=new Date().toISOString();const payload={feedback_id:item?.feedback_id||`ann-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,feedback_type:get('type').value,page_id:pageId,state_id:stateId,target_id:anchor?.stable_id||item?.target_id||'',status:item?.status||'open',category:get('type').value==='change-request'?'interaction':'other',severity:get('type').value==='feature-note'?'info':'minor',title:item?.title||'',comment,expected:item?.expected||'',doc_refs:item?.doc_refs||[],anchor:anchor||item?.anchor||{strategy:'frame'},route,created_at:item?.created_at||now,updated_at:now};if(item){Object.assign(item,payload)}else state.items.push(payload);close();save()}}function openDetail(item){form(item,null)}function clickCapture(e){if(!placing)return;if(e.composedPath().includes(host))return;e.preventDefault();e.stopPropagation();const el=e.target;const anchor=anchorFor(el,e.clientX,e.clientY);stopPlace();form(null,anchor)}document.addEventListener('click',clickCapture,true);document.addEventListener('keydown',e=>{if(e.key==='Escape')stopPlace()});$('place').onclick=startPlace;$('open').onclick=()=>$('panel').classList.toggle('hidden');$('close').onclick=()=>$('panel').classList.add('hidden');$('export').onclick=()=>{const payload={schema_version:1,project,spec_hash:specHash,stage:'annotation',exported_at:new Date().toISOString(),items:state.items};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));a.download='annotations.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};$('import').onclick=()=>$('file').click();$('file').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const incoming=JSON.parse(await file.text());if(!Array.isArray(incoming.items))throw new Error('items');const ids=new Set(state.items.map(x=>x.feedback_id));incoming.items.forEach(x=>{if(!ids.has(x.feedback_id))state.items.push(x)});save()}catch(err){alert('无法导入：文件格式不正确')}e.target.value=''};addEventListener('scroll',render,{passive:true});addEventListener('resize',render);render();})();"""
 
@@ -504,6 +554,17 @@ def command_render_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_check_html(args: argparse.Namespace) -> int:
+    path = Path(args.html)
+    errors = validate_html_file(path)
+    if errors:
+        for error in errors:
+            print(f"ERROR: {error}")
+        return 1
+    print(f"PASS: HTML resources and IDs valid · {path}")
+    return 0
+
+
 def command_emit_runtime(args: argparse.Namespace) -> int:
     out = Path(args.out)
     write_text(out, annotation_runtime())
@@ -520,6 +581,9 @@ def command_instrument(args: argparse.Namespace) -> int:
     runtime_path = Path(args.runtime) if args.runtime else html_path.parent / "runtime" / "annotation-runtime.js"
     write_text(runtime_path, annotation_runtime())
     result = instrument_html(spec, html_path, runtime_path)
+    html_errors = validate_html_file(html_path)
+    if html_errors:
+        raise SpecError("；".join(html_errors))
     print(f"INSTRUMENT: {result} · {html_path}")
     print(f"RUNTIME: {runtime_path}")
     return 0
@@ -650,6 +714,9 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--prototype", required=True)
     review.add_argument("--out", required=True)
     review.set_defaults(func=command_render_review)
+    check_html = sub.add_parser("check-html", help="检查原型 HTML 的资源路径和重复 ID")
+    check_html.add_argument("--html", required=True)
+    check_html.set_defaults(func=command_check_html)
     runtime = sub.add_parser("emit-runtime", help="生成标注运行时")
     runtime.add_argument("--out", required=True)
     runtime.set_defaults(func=command_emit_runtime)

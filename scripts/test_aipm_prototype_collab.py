@@ -58,6 +58,23 @@ class PrototypeCollabTests(unittest.TestCase):
         self.assertIn("aipm_rev=abc123", rendered)
         self.assertIn("review-feedback.json", rendered)
 
+    def test_review_html_gate_checks_local_resources_and_duplicate_ids(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "runtime.js").write_text("", encoding="utf-8")
+            valid = root / "valid.html"
+            valid.write_text('<!doctype html><html><body><script src="runtime.js?v=1"></script><img src="data:,"/></body></html>', encoding="utf-8")
+            self.assertEqual(module.validate_html_file(valid), [])
+            invalid = root / "invalid.html"
+            invalid.write_text('<html><body><script src="missing.js"></script><div id="x"></div><span id="x"></span></body></html>', encoding="utf-8")
+            errors = module.validate_html_file(invalid)
+            self.assertTrue(any("资源不存在" in error for error in errors))
+            self.assertTrue(any("id 重复" in error for error in errors))
+
+    def test_revision_query_is_stable_and_replaces_old_revision(self):
+        self.assertEqual(module.with_revision("index.html?view=setup", "abcdef1234567890"), "index.html?view=setup&aipm_rev=abcdef123456")
+        self.assertEqual(module.with_revision("index.html?view=setup&aipm_rev=old", "newrevision"), "index.html?view=setup&aipm_rev=newrevision")
+
     def test_instrument_is_idempotent_and_creates_backup(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -81,6 +98,9 @@ class PrototypeCollabTests(unittest.TestCase):
         self.assertNotIn('<label>标题<input id="title"', runtime)
         self.assertNotIn('<label>文档关联<input id="doc"', runtime)
         self.assertNotIn('<label>期望结果<textarea id="expected"', runtime)
+        self.assertIn('routeParams.delete("aipm_rev")', runtime)
+        self.assertIn('id="remove">删除标签', runtime)
+        self.assertIn("state.items.splice(index, 1)", runtime)
 
     def test_approval_gate_checks_spec_hash_and_decision(self):
         valid = {"spec_hash": module.content_hash(self.spec), "decision": "approved"}

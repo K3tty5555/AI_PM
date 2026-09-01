@@ -6,12 +6,12 @@
   const script = document.currentScript;
   const project = script?.dataset.aipmProject || document.title || "prototype";
   const specHash = script?.dataset.aipmSpecHash || "";
-  const route = location.pathname + location.search + location.hash;
   const params = new URLSearchParams(location.search);
   const routeParams = new URLSearchParams(params);
   routeParams.delete("aipm_rev");
   const routeQuery = routeParams.toString();
   const routeKey = (routeQuery ? `?${routeQuery}` : "") + location.hash;
+  const route = location.pathname + routeKey;
   let routeMap = {};
   try { routeMap = JSON.parse(script?.dataset.aipmRouteMap || "{}"); } catch (_) {}
   const mapped = routeMap[routeKey] || {};
@@ -154,8 +154,9 @@
     const box = document.createElement("div");
     box.className = "form";
     const toggle = item ? `<button class="btn ${item.status === "resolved" ? "" : "danger"}" id="toggle">${item.status === "resolved" ? "重新打开" : "标记已解决"}</button>` : "";
+    const remove = item ? '<button class="btn danger" id="remove">删除标签</button>' : "";
     const thread = item ? `<div class="thread">${(item.replies || []).map(reply => `<div class="reply"><strong>${escapeHtml(reply.author || "评审者")}</strong><span>${escapeHtml(reply.text)}</span></div>`).join("")}</div><div class="reply-compose"><input id="reply" placeholder="回复这条标签"><button class="btn" id="addReply">回复</button></div>` : "";
-    box.innerHTML = `<h3>${item ? "编辑标签" : "添加页面标签"}</h3><label>类型<select id="type"><option value="feature-note">功能说明</option><option value="review-comment">评审评论</option><option value="change-request">修改意见</option><option value="question">问题</option></select></label><label>内容<textarea id="comment" placeholder="说明功能，或写清要修改什么"></textarea></label>${thread}<div class="actions">${toggle}<button class="btn" id="cancel">取消</button><button class="btn primary" id="save">保存</button></div>`;
+    box.innerHTML = `<h3>${item ? "编辑标签" : "添加页面标签"}</h3><label>类型<select id="type"><option value="feature-note">功能说明</option><option value="review-comment">评审评论</option><option value="change-request">修改意见</option><option value="question">问题</option></select></label><label>内容<textarea id="comment" placeholder="说明功能，或写清要修改什么"></textarea></label>${thread}<div class="actions">${toggle}${remove}<button class="btn" id="cancel">取消</button><button class="btn primary" id="save">保存</button></div>`;
     root.append(backdrop, box);
     const get = id => box.querySelector(`#${id}`);
     get("type").value = item?.feedback_type || "review-comment";
@@ -165,6 +166,13 @@
     backdrop.onclick = close;
     if (item) {
       get("toggle").onclick = () => { item.status = item.status === "resolved" ? "reopened" : "resolved"; item.updated_at = new Date().toISOString(); close(); save(); };
+      get("remove").onclick = () => {
+        if (!window.confirm("确定删除这条页面标签吗？删除后不可恢复。")) return;
+        const index = state.items.indexOf(item);
+        if (index >= 0) state.items.splice(index, 1);
+        close();
+        save();
+      };
       get("addReply").onclick = () => {
         const text = get("reply").value.trim();
         if (!text) return;
