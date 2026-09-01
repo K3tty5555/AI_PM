@@ -1,11 +1,12 @@
 ---
 name: ai-pm-prototype
 description: >-
-  原型生成技能。基于 PRD 生成可交互的单页网页原型，支持移动端和 Web 端。
+  原型生成技能。基于 PRD 先生成可同时浏览全部关键帧、能看清具体排版的中保真线框确认页，再生成可交互精细原型、
+  巡检画廊和页面定点标注，支持移动端和 Web 端。
   首次生成时询问设计规范（公司规范 / AI 情境定制 / 主流组件库），项目内记住偏好。
   若项目存在 Codex 生成的视觉锚点包（06-prototype-visual/manifest.json），生成 HTML 前必须读取并遵循。
   当用户说「生成原型」「做原型」「可交互原型」「HTML原型」「页面原型」「低保真」「高保真原型」
-  「画个界面」「把PRD做成原型」时，立即使用此技能。
+  「原型巡检」「原型标注」「画个界面」「把PRD做成原型」时，立即使用此技能。
   边界：本技能用于「把已有 PRD/需求做成可评审原型」；脱离 PRD 的纯视觉探索、通用 UI 组件生成或视觉精修，可使用外部 impeccable 增强，但 AI_PM 原型默认以 ai-pm-frontend-design 为本地设计内核。
 argument-hint: "[PRD路径 | --mobile | --web | --visual | --visual-strict]"
 allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
@@ -30,7 +31,15 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 
 ## 输出
 
-`{项目目录}/06-prototype/index.html`（单文件，可直接用浏览器打开）
+主要产物：
+
+- `{项目目录}/06-prototype/prototype-spec.json`
+- `{项目目录}/06-prototype/lowfi/index.html`
+- `{项目目录}/06-prototype/index.html`
+- `{项目目录}/06-prototype/review/index.html`
+- `{项目目录}/06-prototype/runtime/annotation-runtime.js`
+
+完整契约与命令见 [references/collaboration-loop.md](references/collaboration-loop.md)。
 
 ## 执行步骤
 
@@ -112,6 +121,14 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 - 交互硬化：触控目标、focus、hover 替代、表单校验、长文本、移动端适配
 - 生成硬约束：5-8 条可执行约束，必须覆盖反 AI 味、状态、响应式和业务假数据
 - source/target 对照：当前已有能力、目标变化、不变项、证据缺口；Web/Mobile 分开写
+
+### 步骤2.5：关键帧规格 + 中保真线框确认门
+
+按 [references/collaboration-loop.md](references/collaboration-loop.md) 生成 `prototype-spec.json`，随后生成一个同时展示全部关键流程和关键帧的 `lowfi/index.html`。线框必须看清真实栏宽、导航、表单、列表、表格、画布、弹窗和操作区关系；每个关键帧下方允许用户记录问题。
+
+- 0→1 原型，以及页面结构、主流程或关键状态变化：必须等待用户确认低保真。
+- 纯视觉调整或局部小修：只有用户明确要求时可跳过，并记录原因。
+- 未取得与当前 spec hash 一致的确认，不进入精细原型生成。
 
 视觉设计是原型质量的一部分：
 - 有代码仓设计指纹时，优先复用其布局、色值、组件密度
@@ -219,6 +236,15 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 1. **可见文案防 bleed 审计（forced-artifact）**：`grep -nE "原型示意|用于说明|可读不可点|标了来自|不进学生端|评审|PRD|规则如下" {项目目录}/06-prototype/*.html`，命中逐条填「可见文案 / 用户真会看到吗 / 是否 PRD meta / 处理动作」四列表，落 `06-prototype/visible-copy-audit.md`；**命中不自动删**（AI 对用户的真话术留，对评审解释的 meta 挪走）
 2. **设计师交接文件**：产 `06-prototype/HANDOFF.md`（页面清单 / 状态清单 / 组件策略 / 视觉约束来源 / 未实现交互 / 假数据边界 / 接手注意点）——**规格只进这里**，不写进 HTML 屏幕、不写回 PRD 功能表格
 
+### 步骤4.7：巡检画廊 + 定点标注
+
+精细原型生成后，按 [references/collaboration-loop.md](references/collaboration-loop.md)：
+
+1. 给关键元素写入稳定 `data-aipm-id`。
+2. 注入本地标注运行时，支持功能说明、评审评论、问题和修改意见。
+3. 生成 `review/index.html`，按流程展示全部真实关键帧，允许逐帧记录结论和评论。
+4. 用户反馈导出 JSON；AI 只先生成修改预览，用户确认后才修改原型。
+
 ### 步骤5：截图与 manifest 生成
 
 原型 HTML 生成完毕后，立即执行截图并写出 manifest，供后续 PDF 导出使用。
@@ -281,7 +307,12 @@ require('fs').writeFileSync(
 生成单文件原型（首选），所有代码内联：
 ```
 {项目目录}/06-prototype/
-├── index.html          # 全部 HTML + CSS + JS，无外部依赖
+├── prototype-spec.json # 页面、关键帧、流程和稳定元素 ID
+├── lowfi/index.html    # 全部关键帧同屏的中保真线框确认页
+├── index.html          # 精细可交互原型
+├── review/index.html   # 精细原型巡检画廊
+├── runtime/            # 本地标注运行时
+├── feedback/           # 导入后的正式反馈与修改预览
 └── screenshots/        # 步骤5 自动生成
     ├── manifest.json
     └── 01-{slug}.png
@@ -326,7 +357,9 @@ require('fs').writeFileSync(
 原型生成完成！
 
 文件位置：{项目目录}/06-prototype/index.html
-预览方式：直接用浏览器打开 index.html
+低保真确认：06-prototype/lowfi/index.html
+精细原型巡检：06-prototype/review/index.html
+预览方式：均可直接用浏览器打开
 
 设备类型：{mobile/web/responsive}
 设计规范：{规范名}

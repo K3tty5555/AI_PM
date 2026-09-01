@@ -23,6 +23,10 @@
 - `_status.json.baseline`：指向当前基线清单，不复制清单内容。
 - `_status.json.artifacts[]`：登记 PRD、原型、评审、指标等产物的路径、所有权和版本或哈希，是 reconcile 的扫描边界。
 - `06-prototype/source-target-manifest.json`：迭代原型分别登记 Web 与 Mobile 的来源、目标和 `verified / missing / not-applicable` 证据状态。
+- `06-prototype/prototype-spec.json`：原型页面、关键帧、主流程和稳定元素 ID 的单一事实源；低保真、精细原型、巡检和标注共用。
+- `06-prototype/lowfi/index.html`：全部关键流程和关键帧同屏展示的中保真线框确认页，能看清具体排版并逐帧记录意见。
+- `06-prototype/review/index.html`：精细原型巡检工作台，左侧切换关键帧、中间加载真实原型、右侧记录通过、问题和评论。
+- `06-prototype/runtime/annotation-runtime.js`：本地优先的页面标注层，支持功能说明、文档关联、评审标签和修改意见。
 - `09-analytics/impact-record.json`：上线影响记录，绑定发布锚点、基线、观察值、证据与最终判断。
 
 初始化只允许先预览：`python3 scripts/aipm_contracts.py bootstrap --project {项目路径} --type {zero-to-one|iteration|import}`。只有用户明确确认后才追加 `--apply`，且脚本不会覆盖已存在文件。
@@ -57,7 +61,12 @@
 │   └── V1.md
 ├── 05-prd/              ← 已是文件夹（不变）
 ├── 06-prototype/        ← 已是文件夹（不变）
-│   └── source-target-manifest.json       ← Web/Mobile 来源与目标证据
+│   ├── source-target-manifest.json       ← Web/Mobile 来源与目标证据
+│   ├── prototype-spec.json               ← 页面/关键帧/流程/稳定元素 ID
+│   ├── lowfi/index.html                  ← 低保真关键帧确认页
+│   ├── index.html                        ← 精细可交互原型
+│   ├── review/index.html                 ← 精细原型巡检画廊
+│   └── runtime/annotation-runtime.js     ← 页面定点标注层
 ├── 07-references/       ← 已是文件夹（不变）
 ├── 08-reviews/          ← 同 phase 多次评审都放这里
 │   ├── README.md        ← 评审历史索引（可选）

@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aipm://prototype-spec.schema.v1",
+  "title": "AI_PM 原型关键帧规格 v1",
+  "type": "object",
+  "required": ["schema_version", "project", "title", "pages", "flows"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "project": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "prd_hash": {"type": "string"},
+    "source_target_hash": {"type": "string"},
+    "prototype_path": {"type": "string", "default": "../index.html"},
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["page_id", "title", "states"],
+        "properties": {
+          "page_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+          "title": {"type": "string", "minLength": 1},
+          "summary": {"type": "string"},
+          "route": {"type": "string"},
+          "states": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["state_id", "title", "layout"],
+              "properties": {
+                "state_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+                "title": {"type": "string", "minLength": 1},
+                "kind": {"enum": ["default", "empty", "loading", "error", "success", "permission", "modal", "other"]},
+                "description": {"type": "string"},
+                "route": {"type": "string"},
+                "required": {"type": "boolean", "default": true},
+                "layout": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": ["kind", "label"],
+                    "properties": {
+                      "kind": {"enum": ["header", "sidebar", "toolbar", "content", "form", "list", "table", "dialog", "feedback", "media", "footer", "other"]},
+                      "label": {"type": "string", "minLength": 1},
+                      "note": {"type": "string"},
+                      "span": {"type": "integer", "minimum": 1, "maximum": 12},
+                      "row_span": {"type": "integer", "minimum": 1, "maximum": 4},
+                      "target_id": {"type": "string"},
+                      "doc_refs": {"type": "array", "items": {"type": "string"}}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "stable_elements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["target_id", "label"],
+              "properties": {
+                "target_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+                "label": {"type": "string"},
+                "selector": {"type": "string"},
+                "doc_refs": {"type": "array", "items": {"type": "string"}}
+              }
+            }
+          }
+        }
+      }
+    },
+    "flows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["flow_id", "title", "steps"],
+        "properties": {
+          "flow_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["step_id", "page_id", "state_id", "title"],
+              "properties": {
+                "step_id": {"type": "string"},
+                "page_id": {"type": "string"},
+                "state_id": {"type": "string"},
+                "title": {"type": "string"},
+                "target_id": {"type": "string"},
+                "action": {"type": "string"},
+                "expected": {"type": "string"},
+                "required": {"type": "boolean", "default": true}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

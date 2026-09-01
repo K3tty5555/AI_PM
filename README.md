@@ -37,7 +37,7 @@ Office Hours → Requirement → Analysis → Research → Stories → PRD → A
 | Explore | Evidence, insights, and explicit unknowns |
 | Decide | Compared options, recommendation, and decisions |
 | PRD | A reviewable Markdown product requirement document |
-| Prototype | A source-grounded interactive prototype |
+| Prototype | Mid-fidelity wireframe confirmation, a source-grounded interactive prototype, switchable review workspace, and pinned feedback |
 | Review & Acceptance | Document findings or implementation evidence |
 | Operate & Retrospect | Impact follow-up, retrospective, and reusable knowledge |
 
@@ -68,7 +68,7 @@ PM methods borrowed from established practice and **re-grounded for China-mainla
 | PRD export | PDF, DOCX, share page, and supporting export scripts |
 | Product tools | Priority assessment, weekly report, on-site interview, data insight |
 | Knowledge tools | Product persona, design spec, product knowledge base |
-| Prototype | HTML prototype generation, device preview, motion intensity, multi-file mode |
+| Prototype | Mid-fidelity wireframe gallery, HTML prototype generation, switchable review workspace, pinned annotations, device preview, motion intensity |
 | Collaboration | Claude-first project memory with Codex-readable shared indexes |
 
 ## Quick Start

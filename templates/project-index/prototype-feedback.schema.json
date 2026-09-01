@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aipm://prototype-feedback.schema.v1",
+  "title": "AI_PM 原型反馈与标注 v1",
+  "type": "object",
+  "required": ["schema_version", "project", "spec_hash", "items"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "project": {"type": "string", "minLength": 1},
+    "spec_hash": {"type": "string", "minLength": 8},
+    "prototype_hash": {"type": "string"},
+    "stage": {"enum": ["lowfi", "highfi-review", "annotation"]},
+    "exported_at": {"type": "string"},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["feedback_id", "feedback_type", "page_id", "state_id", "status", "comment"],
+        "properties": {
+          "feedback_id": {"type": "string", "minLength": 1},
+          "feedback_type": {"enum": ["frame-comment", "feature-note", "review-comment", "change-request", "question"]},
+          "page_id": {"type": "string"},
+          "state_id": {"type": "string"},
+          "flow_id": {"type": "string"},
+          "step_id": {"type": "string"},
+          "target_id": {"type": "string"},
+          "category": {"enum": ["content", "layout", "interaction", "visual", "missing", "question", "other"]},
+          "severity": {"enum": ["blocker", "major", "minor", "suggestion", "info"]},
+          "status": {"enum": ["unreviewed", "passed", "open", "in-progress", "pending-review", "resolved", "reopened", "not-applicable", "anchor-drift"]},
+          "comment": {"type": "string"},
+          "expected": {"type": "string"},
+          "doc_refs": {"type": "array", "items": {"type": "string"}},
+          "replies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["reply_id", "text", "created_at"],
+              "properties": {
+                "reply_id": {"type": "string"},
+                "author": {"type": "string"},
+                "text": {"type": "string", "minLength": 1},
+                "created_at": {"type": "string"}
+              }
+            }
+          },
+          "anchor": {
+            "type": "object",
+            "properties": {
+              "strategy": {"enum": ["stable-id", "selector", "text-fingerprint", "normalized-point", "frame"]},
+              "stable_id": {"type": "string"},
+              "selector": {"type": "string"},
+              "text": {"type": "string"},
+              "x_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+              "y_ratio": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          },
+          "created_at": {"type": "string"},
+          "updated_at": {"type": "string"}
+        }
+      }
+    }
+  }
+}

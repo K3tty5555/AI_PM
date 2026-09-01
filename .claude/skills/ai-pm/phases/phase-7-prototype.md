@@ -1,7 +1,7 @@
 # Phase 7: 原型生成 + 设计质量审计
 
 **输入**: `05-prd/` 下最新版本 PRD MD + `_memory/L2-prd-versions.md`（若存在）
-**输出**: `06-prototype/index.html` + `07-audit-report.md` + `_memory/L2-prototype.md`
+**输出**: `06-prototype/prototype-spec.json` + `06-prototype/lowfi/index.html` + `06-prototype/index.html` + `06-prototype/review/index.html` + `07-audit-report.md` + `_memory/L2-prototype.md`
 
 ## 参考文档读取（各阶段前置，自动执行）
 
@@ -187,6 +187,17 @@ Agent(subagent_type=prototype-agent, prompt="
 - AI 情境定制模式下，prototype-agent 负责做场景化视觉判断，不能退回通用 SaaS 模板。
 - 蓝图可作为上下文使用；若当前运行环境允许写文件，可同步记录到 `_memory/L2-prototype.md` 的「设计选择」草稿中。
 
+### 关键帧规格与中保真线框确认门（精细原型前强制）
+
+按 `ai-pm-prototype/references/collaboration-loop.md`：
+
+1. 把页面、关键状态、主流程和稳定功能点写入 `06-prototype/prototype-spec.json`。
+2. 校验 spec，生成 `06-prototype/lowfi/index.html`；该页必须同时展示全部关键流程和关键帧，并让用户看清具体栏宽、导航、表单、列表、表格、画布、弹窗和操作区关系，每帧下方可评论。
+3. 等待用户确认页面范围、布局和流程方向。
+4. 只有与当前 spec hash 一致的 `decision=approved` 才进入精细原型；用户提出问题时先修 spec 和低保真。
+
+0→1 原型，以及页面结构、主流程、关键状态变化必须执行。纯视觉或局部小修仅在用户明确要求时可跳过，并留 `skip_reason`。
+
 ### 动效强度档位
 
 原型生成前根据用户选择的动效档位注入对应的 CSS/JS 约束：
@@ -236,6 +247,15 @@ wc -c {project_dir}/06-prototype/index.html
 - 设计师接手注意点
 
 **规格只进 HANDOFF.md**：不写进 HTML 屏幕（= bleed，用户会看到）、不写回 PRD 功能表格（像素/色号/动效毫秒铁律不变）。
+
+## 原型落盘后：巡检画廊与定点标注（强制产出）
+
+按 `ai-pm-prototype/references/collaboration-loop.md`：
+
+1. 关键元素写入 `data-aipm-id`。
+2. 注入 `runtime/annotation-runtime.js`；支持功能说明、文档关联、评审评论、问题和修改意见。
+3. 生成 `review/index.html`，按流程展示精细原型全部关键帧，允许逐帧记录通过、有问题、待复核和评论。
+4. feedback/annotation JSON 经校验后，先生成修改预览；用户确认后才执行修改，完成后交用户复核关闭。
 
 ## Phase 7.5: 原型完整性 + 设计质量审计（自动触发）
 
@@ -377,11 +397,16 @@ PRD 版本: v1.0
 |---------|---------|------|
 | `preflight_confirm` | 原型生成前确认 | 用户确认 token 消耗 |
 | `prototype_blueprint` | 原型蓝图 + 视觉方向 | prototype-agent 输出页面/交互/视觉约束 |
+| `prototype_spec_done` | 关键帧规格完成 | 页面、状态、流程、稳定元素 ID 已登记并通过校验 |
+| `lowfi_done` | 低保真画廊完成 | 全部关键帧同屏展示且可评论 |
+| `lowfi_waiting_confirmation` | 等待低保真确认 | 不进入精细原型生成 |
+| `lowfi_confirmed` | 低保真已确认 | approval hash 与当前 spec 一致 |
 | `motion_select` | 动效档位选择 | 用户选择动效强度 |
 | `layout_structure` | 页面框架搭建 | 生成 HTML 骨架 + 导航 |
 | `page_generation` | 各页面生成 | 逐页生成交互内容 |
 | `style_polish` | 样式精修 | CSS 整体调整 |
 | `prototype_done` | 原型落盘 | 写入 06-prototype/index.html |
+| `review_gallery_done` | 巡检画廊完成 | review/index.html 与标注运行时已生成 |
 | `audit_running` | 完整性审计 | Phase 7.5 自动执行 |
 | `audit_done` | 审计完成 | 写入 07-audit-report.md |
 | `screenshot_plan` | 截图插入计划确认 | 输出计划表，等待用户确认 |
