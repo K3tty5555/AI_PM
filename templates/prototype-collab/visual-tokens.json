@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "glass-workbench",
+  "tokens": {
+    "canvas_background": "#10252d",
+    "surface_glass": "rgba(255,255,255,.1)",
+    "surface_glass_strong": "rgba(255,255,255,.16)",
+    "surface_paper": "#f4f8f8",
+    "text_primary": "#f2f6f7",
+    "text_muted": "#b8c8cc",
+    "text_on_paper": "#294047",
+    "accent": "#55d5c4",
+    "warning": "#f0bd68",
+    "danger": "#f08478",
+    "glass_blur": "16px",
+    "card_radius": "14px",
+    "preview_height_wide": "240px",
+    "preview_height_compact": "220px"
+  }
+}

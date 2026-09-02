@@ -33,7 +33,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 
 ### 步骤0：先读输入文档
 
-用户提供 PRD、云文档 URL 或“之前版本原型”时，先读取并记录事实源，再开始蓝图和页面设计。不得只凭用户一句总结直接生成页面；若是 i讯飞/飞书云文档，按 `.ai-shared/skill-index.md` 路由到项目登记的文档 skill，先取正文、标题大纲和相关截图/原型引用。
+用户提供 PRD、云文档 URL 或“之前版本原型”时，先读取并记录事实源，再开始蓝图和页面设计。不得只凭用户一句总结直接生成页面；若是企业云文档，按 `.ai-shared/skill-index.md` 路由到项目登记的云文档 skill，先取正文、标题大纲和相关截图/原型引用。
 
 ## 输出
 
@@ -44,6 +44,15 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 - `{项目目录}/06-prototype/index.html`
 - `{项目目录}/06-prototype/review/index.html`
 - `{项目目录}/06-prototype/runtime/annotation-runtime.js`
+
+协作工作台的视觉基线见 [references/collaboration-workbench-visual-spec.md](references/collaboration-workbench-visual-spec.md)。低保真总览必须遵守“左页面、右反馈”的布局；其他视觉表达默认使用该规范的克制玻璃拟态规则。
+
+原型能力命令集中在 `scripts/aipm_prototype_collab.py`：`scan-source` 生成源码/资料证据，`emit-tokens` 生成项目视觉 Token，`modification-preview` 汇总标签修改意见，`diff-prototype` 比较两版原型，`accept` 统一执行静态验收。
+
+```bash
+python3 scripts/aipm_prototype_collab.py scan-source --source "{代码仓或资料目录}" --out "{项目目录}/06-prototype/source-evidence.json"
+python3 scripts/aipm_prototype_collab.py emit-tokens --out "{项目目录}/06-prototype/visual-tokens.json"
+```
 
 完整契约与命令见 [references/collaboration-loop.md](references/collaboration-loop.md)。
 
@@ -260,7 +269,7 @@ python3 scripts/aipm_prototype_collab.py check-html \
 
 1. 给关键元素写入稳定 `data-aipm-id`。
 2. 注入本地标注运行时，支持功能说明、评审评论、问题和修改意见。
-3. 生成 `review/index.html`，按流程展示全部真实关键帧，允许逐帧记录结论和评论。
+3. 先用当前规格对应的 `lowfi-approval.json` 通过确认门，再生成 `review/index.html`，按流程展示全部真实关键帧，允许逐帧记录结论和评论。
 4. 用户反馈导出 JSON；AI 只先生成修改预览，用户确认后才修改原型。
 
 收到“相关意见已经提交 / 已提完修改”时，先按文件修改时间读取 `feedback/review-feedback.json` 和 `feedback/annotations.json`，以最新导出内容为准；不要等待用户再次转述标签内容。修改前生成修改预览，修改后将已处理项改为 `pending-review`，保留原始评论和锚点。
@@ -324,7 +333,7 @@ require('fs').writeFileSync(
 
 1. 对每张图片写入 SHA-256、视口、捕获状态、控制台错误、页面错误和横向溢出结果。
 2. 更新 active PRD 对应“原型示意”图片和说明，图片路径必须可读；页面结构或交互发生变化时，旧截图不能继续作为当前事实源。
-3. 用户要求同步云文档时，按 `xfchat-wiki` 的“先读最新版 → 按 heading 定点替换 → 读回校验”流程更新，不得 `clear_first=True` 整篇重建；原型截图写入对应表格单元格后再做图片结构校验。
+3. 用户要求同步云文档时，按项目登记的云文档 skill 执行“先读最新版 → 按 heading 定点替换 → 读回校验”，不得 `clear_first=True` 整篇重建；原型截图写入对应表格单元格后再做图片结构校验。
 
 ### 核心流程图
 
@@ -413,6 +422,6 @@ PRD 的“核心流程”优先使用 Mermaid 代码块表达，而不是堆叠�
 
 **选「修改」时**：处理完用户反馈，重新执行步骤5截图，然后再次执行本步骤。
 
-**选「评审」时**：先将截图写入 active PRD；如果 PRD 有 i讯飞云文档正本，再按用户授权执行云端定点同步，随后调用 `ai-pm-review` 技能执行六角色评审，完成后触发知识沉淀。
+**选「评审」时**：先将截图写入 active PRD；如果 PRD 有企业云文档正本，再按用户授权执行云端定点同步，随后调用 `ai-pm-review` 技能执行六角色评审，完成后触发知识沉淀。
 
 **选「完成」时**：将截图写入 PRD，触发 knowledge sync，输出项目总结。

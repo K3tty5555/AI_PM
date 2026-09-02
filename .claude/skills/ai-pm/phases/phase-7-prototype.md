@@ -198,7 +198,7 @@ Agent(subagent_type=prototype-agent, prompt="
 
 0→1 原型，以及页面结构、主流程、关键状态变化必须执行。纯视觉或局部小修仅在用户明确要求时可跳过，并留 `skip_reason`。
 
-PRD 的“核心流程”优先写成 Mermaid 代码块（通常使用 `flowchart TD` 或 `flowchart LR`），清楚表达并行路径、分支和确认节点；不要只堆叠一条无法体现分支关系的长句。i讯飞云文档同步后会落成代码块，需在文档侧手动开启流程图插件渲染。
+PRD 的“核心流程”优先写成 Mermaid 代码块（通常使用 `flowchart TD` 或 `flowchart LR`），清楚表达并行路径、分支和确认节点；不要只堆叠一条无法体现分支关系的长句。企业云文档同步后通常会落成代码块，需在文档侧手动开启流程图插件渲染。
 
 ### 动效强度档位
 
@@ -255,11 +255,12 @@ wc -c {project_dir}/06-prototype/index.html
 按 `ai-pm-prototype/references/collaboration-loop.md`：
 
 1. 关键元素写入 `data-aipm-id`。
-2. 注入 `runtime/annotation-runtime.js`；标签表单只保留类型和内容，支持功能说明、评审评论、问题、修改意见、回复、解决与重开；文档关联信息直接写入内容。
-3. 生成 `review/index.html`，按流程展示精细原型全部关键帧，允许逐帧记录通过、有问题、待复核和评论。
-4. 巡检页左侧关键帧导航和右侧记录区可独立收起；中间 iframe 有加载中/超时提示；原型和运行时资源引用带内容版本参数，避免白屏和旧缓存。
-5. 页面定点标注表单只保留“类型”和“内容”；已有标签支持“删除标签”并在删除前二次确认，历史 JSON 字段继续兼容但不再展示。用户说“意见已提交”时，读取 `feedback/` 下最新的 `review-feedback.json` 与 `annotations.json`。
-6. feedback/annotation JSON 经校验后，先生成修改预览；用户确认后才执行修改，完成后交用户复核关闭。
+2. 若用户指定代码仓、源码目录或资料文件夹，先运行 `scan-source` 生成来源证据 manifest；如项目有 `visual-tokens.json`，后续页面统一传入 `--tokens`。
+3. 读取当前规格对应的 `feedback/lowfi-approval.json` 并校验 hash；未通过低保真确认门不得生成精细原型巡检页。注入 `runtime/annotation-runtime.js`；标签表单只保留类型和内容，支持功能说明、评审评论、问题、修改意见、回复、解决与重开；文档关联信息直接写入内容。
+4. 生成 `review/index.html`，按流程展示精细原型全部关键帧，允许逐帧记录通过、有问题、待复核和评论。
+5. 巡检页左侧关键帧导航和右侧记录区可独立收起；中间 iframe 有加载中/超时提示；原型和运行时资源引用带内容版本参数，避免白屏和旧缓存。
+6. 页面定点标注表单只保留“类型”和“内容”；已有标签支持“删除标签”并在删除前二次确认，历史 JSON 字段继续兼容但不再展示。用户说“意见已提交”时，读取 `feedback/` 下最新的 `review-feedback.json` 与 `annotations.json`。
+7. feedback/annotation JSON 经校验后，先运行 `modification-preview`；用户确认后才执行修改，完成后用 `diff-prototype` 和 `accept` 留下复核证据。
 
 ## Phase 7.5: 原型完整性 + 设计质量审计（自动触发）
 
@@ -388,7 +389,7 @@ PRD 版本: v1.0
 
 ### Step 3：执行插入与导出
 
-预检通过后：**把截图写进原型示意 cell**——`[待补原型：xxx] 描述` / 旧 `[xxx原型]` 整段替换为 `![xxx原型](相对路径)<br>描述`（相对 PRD md 所在目录），然后调用 `md2docx.py` 导出 DOCX。若存在 i讯飞云文档正本，按 `xfchat-wiki` 的“先读最新版 → 按 heading 定点替换 → 读回结构校验”流程同步，禁止 `clear_first=True` 整篇覆盖。
+预检通过后：**把截图写进原型示意 cell**——`[待补原型：xxx] 描述` / 旧 `[xxx原型]` 整段替换为 `![xxx原型](相对路径)<br>描述`（相对 PRD md 所在目录），然后调用 `md2docx.py` 导出 DOCX。若存在企业云文档正本，按项目登记云文档 skill 的“先读最新版 → 按 heading 定点替换 → 读回结构校验”流程同步，禁止 `clear_first=True` 整篇覆盖。
 
 **注意**：`![](path)` cell 内图片语法是四态协议默认写法，**本地 DOCX 与云文档渲染器都直接消费**（md2docx 的 fill_cell 图片分支 2026-07-02 已支持）；旧 `[xxx原型]` 占位仅作历史兼容读取、不再往 MD 里新写。
 

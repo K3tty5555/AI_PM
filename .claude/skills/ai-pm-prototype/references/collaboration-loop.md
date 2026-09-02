@@ -29,7 +29,18 @@ schema：`templates/project-index/prototype-spec.schema.json`。
 
 用户确认的栏位职责是硬约束，必须写进关键帧 layout 或交接说明。以“左题目列表 / 中试卷切图 / 右答案设置”为例：中间负责区域框和区域编辑操作，右侧只负责答案与分值；不能因为生成器默认存在右侧 panel 就把作答区操作塞进右栏。
 
+## 源码证据与视觉 Token
+
+用户指定代码仓、源码目录或资料文件夹时，先运行 `scan-source` 生成来源证据 manifest，记录页面、组件、字体、颜色、图片和布局信号，只保留相对路径与 hash。视觉样式通过项目级 `visual-tokens.json` 注入低保真总览、精细巡检和标注运行时，不把单个项目的颜色或内部组件名写死进通用模板。
+
+```bash
+python3 scripts/aipm_prototype_collab.py scan-source --source "{代码仓或资料目录}" --out "{项目目录}/06-prototype/source-evidence.json"
+python3 scripts/aipm_prototype_collab.py emit-tokens --out "{项目目录}/06-prototype/visual-tokens.json"
+```
+
 ## 中保真线框确认门
+
+低保真总览的视觉基线见 [collaboration-workbench-visual-spec.md](collaboration-workbench-visual-spec.md)：每张卡片左侧展示页面、右侧录入反馈，桌面端优先多列展示，玻璃拟态只用于协作容器，不降低线框内容对比度。
 
 线框必须是一个能同时浏览全部关键流程和关键帧的 HTML。它不做品牌视觉和细节还原，但必须看清实际页面排版：真实栏宽比例、导航、表单、列表、表格、画布、弹窗、操作区和状态提示不能只用抽象方块代替。
 
@@ -71,8 +82,13 @@ python3 scripts/aipm_prototype_collab.py instrument \
 python3 scripts/aipm_prototype_collab.py render-review \
   --spec "{项目目录}/06-prototype/prototype-spec.json" \
   --prototype "{项目目录}/06-prototype/index.html" \
+  --approval "{项目目录}/06-prototype/feedback/lowfi-approval.json" \
   --out "{项目目录}/06-prototype/review/index.html"
 ```
+
+`render-review` 强制校验 `lowfi-approval.json`：文件必须存在、`decision=approved`，且 `spec_hash` 与当前规格一致；规格发生变化后必须重新走低保真确认。
+
+原型收口时运行 `accept` 统一检查规格、低保真审批、HTML 资源、反馈和截图 manifest；原型更新后运行 `diff-prototype` 留下版本差异。`modification-preview` 只生成计划，不自动修改原型。
 
 巡检状态：未检查、通过、有问题、待复核、不适用。浏览器 localStorage 只作为工作副本，导出的 `review-feedback.json` 才是正式交换产物。
 
@@ -124,6 +140,6 @@ python3 scripts/aipm_prototype_collab.py serve \
 
 只有用户明确授权浏览器核验时才做视觉截图。截图必须覆盖规格中的每个关键状态，并隐藏标注浮层、临时 toast 和非产品调试层；同时记录视口、SHA-256、控制台错误、页面错误和横向溢出。
 
-截图通过后更新 active PRD 的“原型示意”图片和说明；用户要求同步 i讯飞时，使用 `xfchat-wiki` 的增量流程：先读最新版，按 heading 定点替换，原型图片写入对应表格单元格，最后运行 `validate_prd_prototype_cells.py`。禁止对已有云文档使用 `clear_first=True`，避免覆盖人工编辑。
+截图通过后更新 active PRD 的“原型示意”图片和说明；用户要求同步企业云文档时，使用项目登记云文档 skill 的增量流程：先读最新版，按 heading 定点替换，原型图片写入对应表格单元格，最后运行结构校验脚本。禁止对已有云文档使用 `clear_first=True`，避免覆盖人工编辑。
 
-复杂主流程在 PRD“核心流程”中使用 Mermaid 代码块；i讯飞 API 会落成代码块，需在文档侧手动开启流程图插件时才会显示为图。
+复杂主流程在 PRD“核心流程”中使用 Mermaid 代码块；云文档 API 通常会落成代码块，需在文档侧手动开启流程图插件时才会显示为图。

@@ -39,9 +39,12 @@ class PrototypeCollabTests(unittest.TestCase):
         self.assertIn("所有关键帧均在本页展示", rendered)
         self.assertIn("写下这个页面或状态需要调整的地方", rendered)
         self.assertIn("lowfi-approval.json", rendered)
+        self.assertIn('class="frame-main"', rendered)
+        self.assertLess(rendered.index('class="wire-canvas"'), rendered.index('class="frame-review"'))
 
     def test_review_contains_real_prototype_frames(self):
-        rendered = module.render_review(self.spec, "../index.html", "abc123")
+        approval = {"spec_hash": module.content_hash(self.spec), "decision": "approved"}
+        rendered = module.render_review(self.spec, "../index.html", "abc123", approval)
         expected_frames = sum(len(page["states"]) for page in self.spec["pages"])
         self.assertEqual(rendered.count("<iframe "), 1)
         self.assertEqual(rendered.count('class="frame-nav-item"'), expected_frames)
@@ -57,6 +60,70 @@ class PrototypeCollabTests(unittest.TestCase):
         self.assertNotIn("let chrome=", rendered)
         self.assertIn("aipm_rev=abc123", rendered)
         self.assertIn("review-feedback.json", rendered)
+
+    def test_review_requires_current_lowfi_approval(self):
+        with self.assertRaises(module.SpecError):
+            module.render_review(self.spec, "../index.html", "abc123", {"decision": "approved"})
+        stale = {"spec_hash": "0" * 64, "decision": "approved"}
+        with self.assertRaises(module.SpecError):
+            module.render_review(self.spec, "../index.html", "abc123", stale)
+
+    def test_visual_tokens_can_override_defaults(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "tokens.json"
+            path.write_text(json.dumps({"tokens": {"accent": "#ff5500", "card_radius": "8px"}}), encoding="utf-8")
+            tokens = module.load_visual_tokens(path)
+            self.assertEqual(tokens["accent"], "#ff5500")
+            self.assertIn("--aipm-accent:#ff5500", module.visual_token_css(tokens))
+            self.assertIn("#ff5500", module.annotation_runtime(tokens))
+
+    def test_emit_tokens_has_complete_schema(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "visual-tokens.json"
+            args = type("Args", (), {"out": str(path)})()
+            self.assertEqual(module.command_emit_tokens(args), 0)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(data["schema_version"], 1)
+            self.assertEqual(set(module.DEFAULT_VISUAL_TOKENS), set(data["tokens"]))
+
+    def test_scan_source_outputs_relative_evidence(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "pages").mkdir()
+            (root / "pages" / "home.html").write_text("<title>Home</title><style>.x{display:grid;color:#123456;font-family:Inter}</style>", encoding="utf-8")
+            (root / "Button.tsx").write_text("export function Button(){ return <button/> }", encoding="utf-8")
+            report = module.scan_source_tree(root)
+            self.assertEqual(report["summary"]["pages"], 1)
+            self.assertIn("Button", report["components"])
+            self.assertIn("#123456", report["colors"])
+            self.assertTrue(all(not item["path"].startswith("/") for item in report["evidence_files"]))
+
+    def test_prototype_diff_reports_added_stable_elements(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            old = root / "old.html"
+            new = root / "new.html"
+            old.write_text("<html><body><h1>Old</h1><button id='save'>保存</button></body></html>", encoding="utf-8")
+            new.write_text("<html><body><h1>New</h1><button id='save'>保存</button><button id='review'>巡检</button></body></html>", encoding="utf-8")
+            diff = module.prototype_diff(old, new)
+            self.assertTrue(diff["changed"])
+            self.assertEqual(diff["ids"]["added"], ["review"])
+            self.assertEqual(diff["headings"]["added"], ["New"])
+
+    def test_unified_acceptance_passes_static_evidence(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            spec = root / "spec.json"
+            lowfi = root / "lowfi.html"
+            review = root / "review.html"
+            prototype = root / "prototype.html"
+            approval = root / "approval.json"
+            for path in (lowfi, review, prototype):
+                path.write_text("<!doctype html><html><body><main>ok</main></body></html>", encoding="utf-8")
+            spec.write_text(json.dumps(self.spec, ensure_ascii=False), encoding="utf-8")
+            approval.write_text(json.dumps({"spec_hash": module.content_hash(self.spec), "decision": "approved"}), encoding="utf-8")
+            args = type("Args", (), {"spec": str(spec), "approval": str(approval), "prototype": str(prototype), "review": str(review), "lowfi": str(lowfi), "tokens": None, "manifest": None, "feedback_dir": None, "browser_report": None})()
+            self.assertEqual(module.command_accept(args), 0)
 
     def test_review_html_gate_checks_local_resources_and_duplicate_ids(self):
         with tempfile.TemporaryDirectory() as temp:
