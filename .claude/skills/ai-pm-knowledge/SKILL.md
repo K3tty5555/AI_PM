@@ -14,6 +14,27 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep) Bash(printf *) Ba
 
 `templates/knowledge-base/`
 
+### 项目业务事实层（与通用经验库分离）
+
+从公司/产品知识库蒸馏出的项目业务地图和规则卡，不直接写入 `templates/knowledge-base/`。它们应先落在项目资产的 `derived/business-knowledge-view/`，带 `source_of_truth`、`status`、`confidence` 和证据引用，经过人工评审后才可进入检索推荐。
+
+本项目的本地业务事实层示例：
+
+```text
+output/assets/{资产名}/derived/business-knowledge-view/
+```
+
+校验和检索：
+
+```bash
+python3 scripts/business-knowledge.py validate
+python3 scripts/business-knowledge.py search "权限 报告"
+python3 scripts/business-knowledge.py recommend --requirement "{项目目录}/01-requirement-draft.md"
+python3 scripts/business-knowledge.py impact "多张 删除"
+```
+
+默认检索只返回 `source_of_truth: true` 的已确认卡片；草稿必须显式加 `--include-drafts`。`recommend` 用于 PRD 前置推荐，`impact` 用于跨域影响检查；两者都只读，不改写 PRD。业务事实层中的卡片不应自动复制为通用经验卡片，除非用户确认其已抽象为跨项目方法论。
+
 ## 命令路由
 
 | 命令 | 执行 |

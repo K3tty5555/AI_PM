@@ -109,8 +109,19 @@ test -f {project_dir}/01-baseline-delta.md
 
 1. 从 `01-requirement-draft.md` 提取业务关键词（3–6 个）
 2. 调用 `ai-pm-knowledge suggest {关键词}` 搜索相关踩坑/模式
-3. **有匹配结果** → 展示推荐，等待用户「查看详情」或「跳过」
-4. **无匹配结果** → 静默跳过，直接进入需求模糊点对齐
+3. 若项目存在唯一的 `derived/business-knowledge-view/manifest.json`，调用统一只读门禁：
+   ```bash
+   python3 scripts/prd-knowledge-gate.py \
+     --project-dir "{project_dir}" --json
+   ```
+   门禁一次返回业务视图保鲜状态、已确认规则推荐和潜在影响域；不要加 `--include-drafts`。不存在视图或命令失败时输出 `SKIP:business-view:{原因}`，不阻断 PRD。
+4. 合并通用经验库和业务知识视图结果，最多展示 3 条；每条标明来源（通用经验 / 业务知识视图）和来源路径。
+5. 有匹配结果 → 展示推荐和影响域，等待用户「查看详情」或「跳过」。
+6. 无匹配结果 → 静默跳过，直接进入需求模糊点对齐。
+
+### 跨域影响提示（Plan Mode 前只读检查）
+
+统一门禁返回的潜在影响域和检查清单作为 Plan Mode 前置提示：角色/权限、正常/异常/删除/重试、统计/报告/留痕/学情下游、历史存量兼容。该检查只提醒 PM 补齐范围，不自动修改需求草稿或 PRD；没有命中时静默跳过。
 
 ## 复述理解确认（接迭代需求的第一动作，Stage4-D1① · 2026-07-12）
 
@@ -710,7 +721,7 @@ PRD「详细功能设计」中每个核心功能，自动生成 FAB 三行描述
 
 **云文档序号约定（2026-07-03 用户拍板：云文档下序号用云文档原生序号）**：push 云文档的 PRD，**标题层级序号交给云文档原生「标题自动序号」**——目标文档开着该设置时，源 md 标题的手打「一、二、」会叠成"5. 五、"双重编号（见 pitfall_feishu_heading_auto_number；该设置 OpenAPI 改不了、只能 UI 手动开关）。操作口径：①目标文档已开自动序号 → push 前 strip 标题手打序号（渲染器能力 ⏳ 待下次真实 push 实装并真机验证，实装前手动处理）；②未开 → 保持源序号、别再手动开（会叠加）。正文有序列表 / cell 内 ①②③ 已由渲染器转原生列表（6-29 已修）。**本地 md 不受影响**（本地顺延编号 OK，用户 2026-07-03 判卷确认）。
 
-**push 后登记（云文档正本登记约定·唯一源）**：优先用一条龙 `python3 scripts/prd_publish.py --md <PRD.md> --project <项目目录>`（Stage4-A1：push+读回校验[防丢图/表数对账]+cloud_docs 登记+云端人改保护一次完成，任一校验不过退出码 2 禁止视为发布成功）；手工路径时在项目 `_status.json` **顶层 `cloud_docs` map** 登记（key=PRD 文件名）：`{"doc_token": "doxrz…", "url": "…", "pushed_at": "YYYY-MM-DD"}`；post-push 结构校验（xfchat-wiki `scripts/validate_prd_prototype_cells.py`）通过后补 `last_validated`，老格式文档（legacy_cells>0）加 `"legacy_format": true`。历史遗留的顶层 `feishu_doc` / `feishu_prd_doc` 字符串字段：该项目**下次 push 时迁入 cloud_docs 并删除旧字段**（本次不批量回填，历史盘点归 2026-06-29 重渲计划 WS-1）。
+**push 后登记（云文档正本登记约定·唯一源）**：优先用一条龙 `python3 scripts/prd_publish.py --md <PRD.md> --project <项目目录>`（Stage4-A1：push+读回校验[防丢图/表数对账]+cloud_docs 登记+云端人改保护一次完成，任一校验不过退出码 2 禁止视为发布成功）；手工路径时在项目 `_status.json` **顶层 `cloud_docs` map** 登记（key=PRD 文件名）：`{"doc_token": "doxrz…", "url": "…", "pushed_at": "YYYY-MM-DD"}`；post-push 结构校验（项目登记的云文档 skill 的 `scripts/validate_prd_prototype_cells.py`）通过后补 `last_validated`，老格式文档（legacy_cells>0）加 `"legacy_format": true`。历史遗留的顶层 `feishu_doc` / `feishu_prd_doc` 字符串字段：该项目**下次 push 时迁入 cloud_docs 并删除旧字段**（本次不批量回填，历史盘点归 2026-06-29 重渲计划 WS-1）。
 
 **云文档链配套命令（波1 v2，均零内部域名入口）**：云端手改回收/同步回本地 `python3 scripts/prd_pull.py --md <PRD> --project <项目>`（预览默认，--apply 回写；标记层以本地为准永不被覆盖）；发布后清尾 `prd_publish.py --project <项目> --cleanup`（旧档/空壳/孤儿清单，删除一律显式 --delete-doc+--yes）；历史重渲盘点 `prd_rerender_survey.py`。
 
