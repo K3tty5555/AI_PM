@@ -65,7 +65,15 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ## 输出文件路径
 
-所有周报统一保存到：`output/weekly/周报-{YYYY-MM-DD}.md`
+每个统计周期必须使用独立子目录，禁止把周报文件直接堆在 `output/weekly/` 根目录：
 
-日期取周报所属周的周五日期（或当天日期，如当天即为周五）。
-目录不存在时自动创建（`Bash(mkdir)`）。
+```text
+output/weekly/{开始日期}_{结束日期}/
+└── 周报.md
+```
+
+- 目录日期使用完整 `YYYY-MM-DD_YYYY-MM-DD`，以实际统计窗口为准。
+- 同一周期的补充分析、数据表和 HTML 报告统一放入该目录，不另建散落文件。
+- 项目级 SOP 规定为每期固定产出的配套文件（包括内部对话记录）必须自动生成，不等待用户重复提醒；同时遵守对应的脱敏、权限和完整性校验规则。
+- `output/weekly/` 根目录只保留 `README.md` 和日期子目录。
+- 目录不存在时自动创建（`Bash(mkdir)`）。
