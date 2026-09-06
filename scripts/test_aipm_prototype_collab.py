@@ -42,6 +42,14 @@ class PrototypeCollabTests(unittest.TestCase):
         self.assertIn('class="frame-main"', rendered)
         self.assertLess(rendered.index('class="wire-canvas"'), rendered.index('class="frame-review"'))
 
+    def test_lowfi_preserves_reviewable_desktop_proportions(self):
+        rendered = module.render_lowfi(self.spec)
+        self.assertIn(".gallery{grid-template-columns:minmax(0,1fr)", rendered)
+        self.assertIn("grid-template-columns:minmax(0,1fr) 240px", rendered)
+        self.assertIn("aspect-ratio:16/9", rendered)
+        self.assertIn("@media(max-width:1120px)", rendered)
+        self.assertIn(".frame-review{position:sticky", rendered)
+
     def test_review_contains_real_prototype_frames(self):
         approval = {"spec_hash": module.content_hash(self.spec), "decision": "approved"}
         rendered = module.render_review(self.spec, "../index.html", "abc123", approval)
