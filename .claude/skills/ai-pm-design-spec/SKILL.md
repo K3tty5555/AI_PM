@@ -37,13 +37,13 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
    - 设计文档截图或 PDF 描述
    - 文字描述（"主色 #1677ff，圆角 6px，字体 PingFang SC"）
 2. 解析内容，提取六类设计 Token（见下方格式）
-3. 对无法确定的值提示用户补充，或使用 Apple HIG 默认值填充
-4. 保存到 `templates/ui-specs/{规范名}/design-tokens.json`
+3. 对无法确定的值注明证据缺口，优先补查对应模块截图/源码；现网还原不能用 Apple HIG 或通用组件库默认值填补后宣称是公司规范
+4. 可随仓分发的通用示例保存到 `templates/ui-specs/{规范名}/design-tokens.json`；包含真实公司名称、品牌 Token 或内部材料的规范按项目隐私规则保存到 `output/assets/{产品设计规范}/`，并通过项目 `designSpecPath` 引用其 DESIGN.md
 5. 输出 Token 摘要，询问是否立即激活
 
 ## 设计 Token 格式
 
-存储路径：`templates/ui-specs/{规范名}/design-tokens.json`
+通用示例存储路径：`templates/ui-specs/{规范名}/design-tokens.json`。私有产品规范的 Token 与其 DESIGN.md 同目录，放在本机产品资产区；以下格式只表达 Token 结构。
 
 ```json
 {
@@ -98,7 +98,13 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls)
 
 ## 与主技能集成
 
+现网还原优先读取项目 `.ai-pm-config.json.designSpecPath` 指定的产品 DESIGN.md（路径相对项目目录），按角色、入口和业务模块 profile 选择规则。规范应登记证据日期与出处；源码 checkout、历史原型、AI 生图与当日现网页面分开标记。只有颜色表不足以约束整页还原，还要有壳层、页面密度、字体、组件和关键状态依据。具体流程见 `ai-pm-prototype/references/visual-fidelity-stage.md`。
+
+公司规范不得覆盖原型工作台外壳：布局确认、逐页确认及标签工具的设计单源在 `templates/prototype-collab/DESIGN.md`。业务设计规范中的真实公司资产保留在本机 `output/`，不写入公开通用模板。
+
 `ai-pm-prototype` 在生成原型时：
-1. 检查 `templates/ui-specs/.active-spec` 是否存在
-2. 若存在 → 加载对应 Token，替换 CSS 变量（公司规范模式）
-3. 若不存在 → 按项目 `.ai-pm-config.json` 的 `designMode` 执行（AI 情境定制 / 主流组件库）
+1. 优先按项目 `designSpecPath` 读取产品 DESIGN.md，不重复询问已选规范；设备/模块未覆盖时补读对应项目证据，不硬套其他端的尺寸和布局。
+2. 没有项目指针时，检查 `templates/ui-specs/.active-spec`，有有效激活项则加载其 Token。
+3. 两者均无时，按项目 `designMode` 和用户选择执行；未指定时使用项目本地设计内核的 AI 情境定制，不默认 Apple 风格。
+
+`apply/show/reset` 的 `.active-spec` 操作保留为全局 Token 库兼容流程；`reset` 不删除已有项目的 `designSpecPath`。用户要修改项目已选规范时更新该项目指针，不靠切换全局激活项间接覆盖。

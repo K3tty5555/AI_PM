@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "project": "通用任务协作工具",
+  "title": "任务协作工具",
+  "prd_hash": "demo-prd-hash",
+  "source_target_hash": "demo-source-target-hash",
+  "pages": [
+    {
+      "page_id": "task-board",
+      "title": "任务看板",
+      "summary": "查看任务状态并进入任务详情",
+      "route": "?view=board",
+      "stable_elements": [
+        {"target_id": "create-task", "label": "新建任务", "selector": "[data-aipm-id='create-task']", "doc_refs": ["需求文档 3.1"]},
+        {"target_id": "task-list", "label": "任务列表", "selector": "[data-aipm-id='task-list']", "doc_refs": ["操作手册 2.1"]}
+      ],
+      "states": [
+        {
+          "state_id": "default",
+          "title": "默认看板",
+          "kind": "default",
+          "description": "三列展示待处理、进行中和已完成任务",
+          "layout": [
+            {"kind": "header", "label": "产品导航与项目切换", "span": 12},
+            {"kind": "toolbar", "label": "搜索、筛选、新建任务", "span": 12, "target_id": "create-task", "doc_refs": ["需求文档 3.1"]},
+            {"kind": "list", "label": "待处理", "span": 4, "target_id": "task-list"},
+            {"kind": "list", "label": "进行中", "span": 4},
+            {"kind": "list", "label": "已完成", "span": 4}
+          ]
+        },
+        {
+          "state_id": "empty",
+          "title": "空项目",
+          "kind": "empty",
+          "description": "新项目没有任务时给出下一步操作",
+          "route": "?view=board&scenario=empty",
+          "layout": [
+            {"kind": "header", "label": "产品导航与项目切换", "span": 12},
+            {"kind": "feedback", "label": "还没有任务", "note": "新建第一个任务", "span": 12, "target_id": "create-task"}
+          ]
+        }
+      ]
+    },
+    {
+      "page_id": "task-editor",
+      "title": "任务编辑",
+      "summary": "填写任务信息并保存",
+      "route": "?view=editor",
+      "stable_elements": [
+        {"target_id": "task-title", "label": "任务标题", "selector": "[data-aipm-id='task-title']", "doc_refs": ["需求文档 4.2"]},
+        {"target_id": "save-task", "label": "保存任务", "selector": "[data-aipm-id='save-task']", "doc_refs": ["需求文档 4.2"]}
+      ],
+      "states": [
+        {
+          "state_id": "editing",
+          "title": "编辑任务",
+          "kind": "default",
+          "description": "填写标题、负责人、时间和说明",
+          "layout": [
+            {"kind": "header", "label": "返回与页面标题", "span": 12},
+            {"kind": "form", "label": "任务标题", "span": 12, "target_id": "task-title"},
+            {"kind": "form", "label": "负责人和截止时间", "span": 6},
+            {"kind": "form", "label": "优先级和状态", "span": 6},
+            {"kind": "content", "label": "任务说明", "span": 12},
+            {"kind": "footer", "label": "取消与保存", "span": 12, "target_id": "save-task"}
+          ]
+        },
+        {
+          "state_id": "validation-error",
+          "title": "必填项错误",
+          "kind": "error",
+          "description": "任务标题为空时阻止保存",
+          "route": "?view=editor&scenario=error",
+          "layout": [
+            {"kind": "header", "label": "返回与页面标题", "span": 12},
+            {"kind": "form", "label": "任务标题", "note": "请输入任务标题", "span": 12, "target_id": "task-title"},
+            {"kind": "feedback", "label": "保存失败提示", "span": 12},
+            {"kind": "footer", "label": "取消与保存", "span": 12, "target_id": "save-task"}
+          ]
+        },
+        {
+          "state_id": "saved",
+          "title": "保存成功",
+          "kind": "success",
+          "description": "保存后回到任务看板并展示新任务",
+          "route": "?view=editor&scenario=saved",
+          "layout": [
+            {"kind": "header", "label": "返回与页面标题", "span": 12},
+            {"kind": "feedback", "label": "任务已保存", "note": "返回任务看板", "span": 12}
+          ]
+        }
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "flow_id": "create-task-flow",
+      "title": "创建任务",
+      "description": "从看板创建并保存一个新任务",
+      "steps": [
+        {"step_id": "open-board", "page_id": "task-board", "state_id": "default", "title": "查看任务看板", "target_id": "create-task", "action": "点击新建任务", "expected": "进入任务编辑页", "required": true},
+        {"step_id": "edit-task", "page_id": "task-editor", "state_id": "editing", "title": "填写任务", "target_id": "task-title", "action": "填写标题和负责人", "expected": "表单可保存", "required": true},
+        {"step_id": "validate-task", "page_id": "task-editor", "state_id": "validation-error", "title": "检查必填项", "target_id": "task-title", "action": "标题留空后保存", "expected": "显示错误且保留输入", "required": true},
+        {"step_id": "save-task", "page_id": "task-editor", "state_id": "saved", "title": "保存成功", "target_id": "save-task", "action": "完成保存", "expected": "任务进入看板", "required": true}
+      ]
+    }
+  ]
+}

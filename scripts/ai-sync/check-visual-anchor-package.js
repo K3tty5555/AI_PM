@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 function usage() {
   console.log([
@@ -48,7 +49,11 @@ if (!projectDir || projectDir === '-h' || projectDir === '--help') {
 }
 
 const root = path.resolve(projectDir);
-const visualDir = path.join(root, '06-prototype-visual');
+const configPath = path.join(root, '.ai-pm-config.json');
+const config = exists(configPath) ? readJson(configPath) : {};
+if (config.__error) fail(`invalid project config: ${config.__error}`);
+const visualDir = path.resolve(root, config.visualPackagePath || '06-prototype-visual');
+if (!visualDir.startsWith(root + path.sep)) fail('visualPackagePath must stay within the project');
 const requestPath = path.join(visualDir, 'request.json');
 const manifestPath = path.join(visualDir, 'manifest.json');
 
@@ -89,7 +94,38 @@ if (manifest.__error) {
   fail(`manifest.json is not valid JSON: ${manifest.__error}`);
 }
 
+// A ready package from another PRD is historical evidence, not current authority.
+const statusPath = path.join(root, '_status.json');
+const projectStatus = exists(statusPath) ? readJson(statusPath) : {};
+const activePrd = projectStatus.active_prd;
+if (activePrd && manifest.sourcePrd && path.basename(activePrd) !== path.basename(manifest.sourcePrd)) {
+  console.log('STATUS: stale');
+  console.log('NEXT_ACTION: select or generate a visual package for the active PRD; preserve historical package');
+  console.log('MESSAGE: visual sourcePrd does not match active_prd');
+  process.exit(2);
+}
+function canonical(value) {
+  if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
+  if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonical(value[key])).join(',') + '}';
+  return JSON.stringify(value);
+}
+if (manifest.sourceSpecHash) {
+  const specPath = path.join(root, '06-prototype', 'prototype-spec.json');
+  const currentSpec = readJson(specPath);
+  if (currentSpec.__error) fail('cannot verify current prototype spec');
+  const hash = crypto.createHash('sha256').update(canonical(currentSpec)).digest('hex');
+  if (hash !== manifest.sourceSpecHash) {
+    console.log('STATUS: stale');
+    console.log('NEXT_ACTION: regenerate visual output for the approved current specification');
+    console.log('MESSAGE: visual sourceSpecHash does not match current spec');
+    process.exit(2);
+  }
+}
+
 const errors = [];
+if (manifest.designSpecPath && !exists(path.resolve(visualDir, manifest.designSpecPath))) {
+  errors.push('missing product design specification: ' + manifest.designSpecPath);
+}
 if (manifest.packageType !== 'visual-anchor-manifest') {
   errors.push('manifest.packageType must be visual-anchor-manifest');
 }

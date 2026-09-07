@@ -31,7 +31,7 @@ schema：`templates/project-index/prototype-spec.schema.json`。
 
 ## 源码证据与视觉 Token
 
-用户指定代码仓、源码目录或资料文件夹时，先运行 `scan-source` 生成来源证据 manifest，记录页面、组件、字体、颜色、图片和布局信号，只保留相对路径与 hash。视觉样式通过项目级 `visual-tokens.json` 注入低保真总览、精细巡检和标注运行时，不把单个项目的颜色或内部组件名写死进通用模板。
+用户指定代码仓、源码目录或资料文件夹时，先运行 `scan-source` 生成来源证据 manifest，记录页面、组件、字体、颜色、图片和布局信号，只保留相对路径与 hash。业务视觉证据只用于业务原型。前两步工作台和标签浮层统一读取 `templates/prototype-collab/DESIGN.md` 与同目录默认 Token；只有用户明确要覆盖工作台时才传 `--tokens`，不自动把业务品牌色传给工作台。`emit-tokens` 输出的是工作台 Token，不是业务产品设计规范。
 
 ```bash
 python3 scripts/aipm_prototype_collab.py scan-source --source "{代码仓或资料目录}" --out "{项目目录}/06-prototype/source-evidence.json"
@@ -40,7 +40,7 @@ python3 scripts/aipm_prototype_collab.py emit-tokens --out "{项目目录}/06-pr
 
 ## 中保真线框确认门
 
-低保真总览的视觉基线见 [collaboration-workbench-visual-spec.md](collaboration-workbench-visual-spec.md)：每张卡片左侧展示页面、右侧录入反馈，桌面端优先多列展示，玻璃拟态只用于协作容器，不降低线框内容对比度。
+低保真总览的视觉基线见 [collaboration-workbench-visual-spec.md](collaboration-workbench-visual-spec.md)，具体规则单源为 `templates/prototype-collab/DESIGN.md`：桌面端单列，每帧左侧展示页面、右侧录入反馈，窄屏反馈移到下方。工作台样式不进入线框内部或业务原型。
 
 线框必须是一个能同时浏览全部关键流程和关键帧的 HTML。它不做品牌视觉和细节还原，但必须看清实际页面排版：真实栏宽比例、导航、表单、列表、表格、画布、弹窗、操作区和状态提示不能只用抽象方块代替。
 
@@ -52,7 +52,7 @@ python3 scripts/aipm_prototype_collab.py render-lowfi \
   --out "{项目目录}/06-prototype/lowfi/index.html"
 ```
 
-每个关键帧下方必须能记录确认状态和评论。用户导出的 `lowfi-approval.json` 必须满足：
+每个关键帧旁必须能记录确认状态和评论（窄屏位于下方）。用户导出的 `lowfi-approval.json` 必须满足：
 
 - `spec_hash` 等于当前规格 hash。
 - `decision=approved` 才能进入精细原型生成。
@@ -67,6 +67,8 @@ python3 scripts/aipm_prototype_collab.py verify-approval \
 ```
 
 默认强制：0→1 原型，以及页面结构、主流程、关键状态变化。纯视觉调整或局部小修只有用户明确要求时可跳过，并记录 `decision=skipped + skip_reason`。
+
+只调整工作台外壳或标签工具的视觉时不修改业务 spec，有效审批原样沿用，不写新的 `skipped` 覆盖已有 `approved`。重新运行通用生成器产出两步界面；标签运行时更新后再 instrument，核对业务文件除运行时引用外内容一致。
 
 ## 精细原型巡检画廊
 

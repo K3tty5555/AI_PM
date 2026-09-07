@@ -29,21 +29,9 @@
   document.documentElement.appendChild(host);
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `
-    <style>
-      *{box-sizing:border-box;letter-spacing:0}.hidden{display:none!important}
-      .launcher{position:fixed;z-index:2147483645;right:18px;bottom:18px;display:flex;gap:6px;font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
-      .btn{min-height:36px;padding:6px 12px;border:1px solid #cbd3d7;border-radius:5px;color:#344149;background:#fff;box-shadow:0 5px 18px rgba(20,35,42,.16);cursor:pointer}.btn.primary{color:#fff;border-color:#0f766e;background:#0f766e}.btn.danger{color:#b64238;border-color:#e5bbb6}
-      .panel{position:fixed;z-index:2147483644;top:16px;right:16px;width:360px;max-height:calc(100vh - 78px);overflow:auto;border:1px solid #cfd6da;border-radius:7px;background:#fff;box-shadow:0 14px 38px rgba(20,35,42,.22);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
-      .head{position:sticky;top:0;display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #e3e7e9;background:#fff}.head strong{font-size:15px}.head button{margin-left:auto;border:0;background:transparent;cursor:pointer}.tools{display:flex;gap:6px;padding:10px;border-bottom:1px solid #e7eaec}.tools button{flex:1}
-      .list{padding:8px}.item{width:100%;margin-bottom:7px;padding:10px;border:1px solid #dbe0e3;border-radius:5px;background:#fff;text-align:left;cursor:pointer}.item.feature-note{border-left:4px solid #2563eb}.item.change-request{border-left:4px solid #dc5b45}.item.review-comment,.item.question{border-left:4px solid #d28a25}.item.resolved{opacity:.55}.meta{display:flex;justify-content:space-between;color:#7b858d;font-size:10px}.item-content{display:block;margin-top:5px;color:#344149;overflow-wrap:anywhere}.empty{padding:28px 16px;color:#7b858d;text-align:center}
-      .form{position:fixed;z-index:2147483646;top:50%;left:50%;width:min(420px,calc(100vw - 32px));transform:translate(-50%,-50%);padding:18px;border-radius:7px;background:#fff;box-shadow:0 20px 55px rgba(15,25,30,.3);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}.form h3{margin:0 0 12px}.form label{display:grid;gap:5px;margin-top:10px;color:#56616a}.form input,.form select,.form textarea{width:100%;border:1px solid #cbd3d7;border-radius:4px;font:inherit}.form input,.form select{height:36px;padding:0 8px}.form textarea{min-height:120px;padding:8px;resize:vertical}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.backdrop{position:fixed;z-index:2147483645;inset:0;background:rgba(26,38,44,.35)}
-      .thread{max-height:128px;margin-top:12px;overflow:auto;border-top:1px solid #e3e7e9}.reply{padding:8px 0;border-bottom:1px solid #edf0f2}.reply strong{font-size:11px}.reply span{display:block;color:#4f5962}.reply-compose{display:flex;gap:6px;margin-top:8px}.reply-compose input{flex:1}.reply-compose button{white-space:nowrap}
-      .pin{position:fixed;z-index:2147483643;width:27px;height:27px;border:2px solid #fff;border-radius:50%;color:#fff;background:#dc5b45;box-shadow:0 3px 9px rgba(20,30,35,.28);font:700 11px/23px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;cursor:pointer}.pin.feature-note{background:#2563eb}.pin.review-comment,.pin.question{background:#d28a25}.pin.resolved{opacity:.5}.pin.anchor-drift{box-shadow:0 0 0 3px #f5c54b,0 3px 9px rgba(20,30,35,.28)}
-      .hint{position:fixed;z-index:2147483642;top:14px;left:50%;transform:translateX(-50%);padding:9px 13px;border-radius:5px;color:#fff;background:#263f4b;font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
-      .launcher,.panel,.form{border-color:rgba(255,255,255,.26);background:rgba(245,251,251,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}.panel{background:rgba(245,251,251,.92)}.form{background:rgba(255,255,255,.95)}.head{background:transparent}.btn{background:rgba(255,255,255,.82)}.item{background:rgba(255,255,255,.72)}
-    </style>
-    <div class="launcher"><button class="btn primary" id="place">添加标签</button><button class="btn" id="open">标签列表 <span id="count">0</span></button></div>
-    <section class="panel hidden" id="panel"><div class="head"><strong>页面标注</strong><button id="close" aria-label="关闭">×</button></div><div class="tools"><button class="btn" id="export">导出</button><button class="btn" id="import">导入</button><input type="file" id="file" accept="application/json" hidden></div><div class="list" id="list"></div></section>
+    <style>/* AIPM_ANNOTATION_STYLE */</style>
+    <div class="launcher"><button class="btn primary" id="place"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>添加标签</button><button class="btn" id="open">标签列表 <span id="count">0</span></button></div>
+    <section class="panel hidden" id="panel"><div class="head"><strong>页面标注</strong><button id="close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="tools"><button class="btn" id="export">导出</button><button class="btn" id="import">导入</button><input type="file" id="file" accept="application/json" hidden></div><div class="list" id="list"></div></section>
     <div id="pins"></div><div class="hint hidden" id="hint">点击页面元素或位置添加标签，Esc 取消</div>`;
 
   const $ = id => root.getElementById(id);
@@ -124,13 +112,13 @@
   function render() {
     const own = state.items.filter(item => item.page_id === pageId && item.state_id === stateId);
     $("count").textContent = own.length;
-    $("list").innerHTML = own.length ? "" : '<div class="empty">还没有标签</div>';
+    $("list").innerHTML = own.length ? "" : '<div class="empty"><strong>把意见留在具体位置</strong><p>点击“添加标签”，再点选页面中的元素，即可记录说明或修改意见。</p></div>';
     $("pins").innerHTML = "";
     own.forEach((item, index) => {
       const row = document.createElement("button");
       row.className = `item ${item.feedback_type} ${item.status === "resolved" ? "resolved" : ""}`;
       const replies = (item.replies || []).length ? ` · ${(item.replies || []).length} 条回复` : "";
-      row.innerHTML = `<span class="meta"><span>#${index + 1} ${labelFor(item.feedback_type)}${replies}</span><span>${item.status}</span></span><span class="item-content">${escapeHtml(item.comment)}</span>`;
+      row.innerHTML = `<span class="meta"><span>#${index + 1} ${labelFor(item.feedback_type)}${replies}</span><span>${escapeHtml(({open:"待处理",resolved:"已解决",reopened:"重新打开","pending-review":"待复核","anchor-drift":"位置待确认"})[item.status] || item.status)}</span></span><span class="item-content">${escapeHtml(item.comment)}</span>`;
       row.onclick = () => openForm(item, null);
       $("list").appendChild(row);
 
@@ -154,6 +142,10 @@
     backdrop.className = "backdrop";
     const box = document.createElement("div");
     box.className = "form";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+    box.setAttribute("aria-label", item ? "编辑标签" : "添加页面标签");
+    const previousFocus = root.activeElement || document.activeElement;
     const toggle = item ? `<button class="btn ${item.status === "resolved" ? "" : "danger"}" id="toggle">${item.status === "resolved" ? "重新打开" : "标记已解决"}</button>` : "";
     const remove = item ? '<button class="btn danger" id="remove">删除标签</button>' : "";
     const thread = item ? `<div class="thread">${(item.replies || []).map(reply => `<div class="reply"><strong>${escapeHtml(reply.author || "评审者")}</strong><span>${escapeHtml(reply.text)}</span></div>`).join("")}</div><div class="reply-compose"><input id="reply" placeholder="回复这条标签"><button class="btn" id="addReply">回复</button></div>` : "";
@@ -162,7 +154,18 @@
     const get = id => box.querySelector(`#${id}`);
     get("type").value = item?.feedback_type || "review-comment";
     get("comment").value = item?.comment || "";
-    const close = () => { backdrop.remove(); box.remove(); };
+    const close = () => { backdrop.remove(); box.remove(); previousFocus?.focus(); };
+    box.addEventListener("keydown", event => {
+      if (event.key === "Escape") { event.stopPropagation(); close(); }
+      if (event.key === "Tab") {
+        const fields = [...box.querySelectorAll("button,input,select,textarea")];
+        const first = fields[0], last = fields[fields.length - 1];
+        if (event.shiftKey && root.activeElement === first) { event.preventDefault(); last.focus(); }
+        if (!event.shiftKey && root.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    });
+    get("comment").focus();
+    if (get("reply")) get("reply").setAttribute("aria-label", "回复这条标签");
     get("cancel").onclick = close;
     backdrop.onclick = close;
     if (item) {

@@ -58,6 +58,8 @@ run_check "判断卡篇幅预算（≤600 行，防只加不减膨胀）" bash -
 run_check "知识沉淀队列+摘要自测（id/ack竞态/分片）" python3 scripts/kc-digest.py --selftest
 run_check "知识沉淀 hook 单飞自测（双 Stop 只起一消费者）" python3 scripts/kc-hook-selftest.py
 run_check "skill 引用存在性（check-skill-ref-exists）" python3 scripts/check-skill-ref-exists.py
+run_check "原型协作生成器（确认门/资源/主题隔离）" python3 -m unittest scripts.test_aipm_prototype_collab
+run_check "视觉包版本与规格鲜度门禁" python3 -m unittest scripts.test_visual_anchor_freshness
 run_check "经验分享文章工具自测" python3 -m unittest tests.test_ai_pm_sharing_tools
 run_check "经验分享文章契约自测" python3 -m unittest tests.test_ai_pm_sharing_contract
 run_check "output 容器注册单源自测" python3 scripts/check-output-container-registry.py
@@ -144,6 +146,10 @@ PYEOF
       --include-untracked .claude/skills/ai-pm-sharing \
       --include-untracked .claude/skills/ai-pm/references/output-containers.md \
       --include-untracked templates/sharing \
+      --include-untracked templates/prototype-collab \
+      --include-untracked .claude/skills/ai-pm-prototype/references/visual-fidelity-stage.md \
+      --include-untracked scripts/test_visual_anchor_freshness.py \
+      --include-untracked tests/fixtures/prototype-collab \
       --include-untracked tests/fixtures/sharing \
       --include-untracked tests/test_ai_pm_sharing_tools.py \
       --include-untracked tests/test_ai_pm_sharing_contract.py \

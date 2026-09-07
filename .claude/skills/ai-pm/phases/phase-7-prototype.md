@@ -192,7 +192,7 @@ Agent(subagent_type=prototype-agent, prompt="
 按 `ai-pm-prototype/references/collaboration-loop.md`：
 
 1. 把页面、关键状态、主流程和稳定功能点写入 `06-prototype/prototype-spec.json`。
-2. 校验 spec，生成 `06-prototype/lowfi/index.html`；该页必须同时展示全部关键流程和关键帧，并让用户看清具体栏宽、导航、表单、列表、表格、画布、弹窗和操作区关系，每帧下方可评论。
+2. 校验 spec，生成 `06-prototype/lowfi/index.html`；先读 `templates/prototype-collab/DESIGN.md`，通过通用生成器应用工作台样式。该页必须同时展示全部关键流程和关键帧，桌面单列、左预览右反馈，窄屏反馈移至下方。工作台规范不改变业务页面布局、品牌色或最终 UI 稿。
 3. 等待用户确认页面范围、布局和流程方向。
 4. 只有与当前 spec hash 一致的 `decision=approved` 才进入精细原型；用户提出问题时先修 spec 和低保真。
 
@@ -255,7 +255,7 @@ wc -c {project_dir}/06-prototype/index.html
 按 `ai-pm-prototype/references/collaboration-loop.md`：
 
 1. 关键元素写入 `data-aipm-id`。
-2. 若用户指定代码仓、源码目录或资料文件夹，先运行 `scan-source` 生成来源证据 manifest；如项目有 `visual-tokens.json`，后续页面统一传入 `--tokens`。
+2. 若用户指定代码仓、源码目录或资料文件夹，先运行 `scan-source` 生成业务来源证据 manifest。逐页确认与标签工具使用 `templates/prototype-collab/DESIGN.md` 和同目录默认 Token；仅在用户明确指定工作台覆盖时传 `--tokens`，不自动传业务视觉 Token。原型 iframe 和标签 Shadow DOM 分别隔离两套样式。
 3. 读取当前规格对应的 `feedback/lowfi-approval.json` 并校验 hash；未通过低保真确认门不得生成精细原型巡检页。注入 `runtime/annotation-runtime.js`；标签表单只保留类型和内容，支持功能说明、评审评论、问题、修改意见、回复、解决与重开；文档关联信息直接写入内容。
 4. 生成 `review/index.html`，按流程展示精细原型全部关键帧，允许逐帧记录通过、有问题、待复核和评论。
 5. 巡检页左侧关键帧导航和右侧记录区可独立收起；中间 iframe 有加载中/超时提示；原型和运行时资源引用带内容版本参数，避免白屏和旧缓存。
@@ -263,6 +263,8 @@ wc -c {project_dir}/06-prototype/index.html
 7. feedback/annotation JSON 经校验后，先运行 `modification-preview`；用户确认后才执行修改，完成后用 `diff-prototype` 和 `accept` 留下复核证据。
 
 ## Phase 7.5: 原型完整性 + 设计质量审计（自动触发）
+
+若用户在前两步确认后要求第三步视觉稿，转 `ai-pm-prototype/references/visual-fidelity-stage.md`：读取项目 `designSpecPath` 与 `visualPackagePath`，先运行视觉包检查器核对 active PRD/spec；旧包 `ready` 不代表对当前版本有效。基于真实页面证据与已确认结构生成可编辑 HTML，再用浏览器导出逐帧 PNG，不能用通用工作台样式或跨版本 AI 生图替代产品视觉依据。
 
 **前提条件**: Phase 5（PRD）和 Phase 7（原型）均已完成，即当前 PRD（`05-prd/<当前 PRD 文件>`）和 `06-prototype/index.html` 都存在。
 

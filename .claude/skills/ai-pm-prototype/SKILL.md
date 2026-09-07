@@ -45,7 +45,9 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 - `{项目目录}/06-prototype/review/index.html`
 - `{项目目录}/06-prototype/runtime/annotation-runtime.js`
 
-协作工作台的视觉基线见 [references/collaboration-workbench-visual-spec.md](references/collaboration-workbench-visual-spec.md)。低保真总览必须遵守“左页面、右反馈”的布局；其他视觉表达默认使用该规范的克制玻璃拟态规则。
+前两步的通用操作界面必须先读取 `templates/prototype-collab/DESIGN.md`，并使用通用生成器内联该目录的 CSS 与 Token。适用范围是布局确认外壳、逐页确认外壳、标签浮层，默认黑白框架、胶囊按钮与浅色分区；入口说明见 [references/collaboration-workbench-visual-spec.md](references/collaboration-workbench-visual-spec.md)。业务原型、线框内部布局及最终 UI 稿仍遵循项目视觉来源，不继承工作台配色。不得把此 DESIGN.md 安装为项目全局设计规范。
+
+工作台纯视觉修改不改变 `prototype-spec.json` 或既有审批 hash；有效布局确认直接沿用。只更新通用模板、生成器和生成后的工作台，标签运行时用 Shadow DOM 隔离。不要为了给外壳换肤而重新生成业务页面或回写 PRD。
 
 原型能力命令集中在 `scripts/aipm_prototype_collab.py`：`scan-source` 生成源码/资料证据，`emit-tokens` 生成项目视觉 Token，`modification-preview` 汇总标签修改意见，`diff-prototype` 比较两版原型，`accept` 统一执行静态验收。
 
@@ -58,9 +60,16 @@ python3 scripts/aipm_prototype_collab.py emit-tokens --out "{项目目录}/06-pr
 
 ## 执行步骤
 
+### 已确认后的视觉还原入口（第三步）
+
+用户已确认前两步并要求视觉稿时，读取 [references/visual-fidelity-stage.md](references/visual-fidelity-stage.md)。项目配置 `designSpecPath` 指定业务产品规范，`visualPackagePath` 指定当前版本视觉包；先核对包与 active PRD/spec 的对应关系，不能直接继承旧包的 `ready`。本阶段默认由用户当前选定模型读取现网截图、保留已确认结构并输出可编辑 HTML 与浏览器 PNG，不强制重新生图或切模型。
+
 ### 步骤1：原型配置（一次性）
 
 读取 `{项目目录}/.ai-pm-config.json`，检查 `designMode` 和 `deviceType` 字段：
+
+先检查其中的 `designSpecPath`：若有，按项目目录解析路径并读取产品 DESIGN.md，沿用该选择，不再询问设计档位，也不让全局 `.active-spec` 覆盖它。该规范未覆盖当前设备/模块时，补读对应现网证据，不改变已有设备类型或已确认布局。
+
 - **两项都有** → 直接沿用，告知用户，跳至步骤2
 - **缺少任一项** → 用 **AskUserQuestion 工具** 同时询问两个问题（缺哪问哪）
 
@@ -180,7 +189,7 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 ### 三档设计规范应用规则
 
 **① 公司/团队规范**
-加载 `templates/ui-specs/{规范名}/design-tokens.json`，将其中颜色、字体、间距、圆角 Token 映射为 CSS variables 写入 `<style>` 标签。
+优先加载项目 `designSpecPath` 指向的产品 DESIGN.md，按对应设备/模块应用规则；如有配套 Token，将颜色、字体、间距、圆角映射为 CSS variables。没有项目指针时，才兼容读取 `templates/ui-specs/{规范名}/design-tokens.json`。不能因模板目录没有同名规范而忽略有效的产品 DESIGN.md。
 
 **② AI 情境定制**
 生成原型时自动注入项目自带 `ai-pm-frontend-design`，并在用户本机存在时追加 `impeccable:frontend-design` 作为增强。执行本地设计内核的 Context Gathering：先识别目标产品、用户角色、设备形态、设计来源和状态清单，再决定视觉方向。

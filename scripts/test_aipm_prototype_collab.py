@@ -4,6 +4,7 @@
 import copy
 import importlib.util
 import json
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -11,7 +12,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "scripts" / "aipm_prototype_collab.py"
-SPEC_PATH = ROOT / "output" / "assets" / "AI_PM原型协作闭环开源选型" / "demo" / "prototype-spec.json"
+SPEC_PATH = ROOT / "tests" / "fixtures" / "prototype-collab" / "prototype-spec.json"
 
 spec = importlib.util.spec_from_file_location("aipm_prototype_collab", MODULE_PATH)
 module = importlib.util.module_from_spec(spec)
@@ -93,6 +94,53 @@ class PrototypeCollabTests(unittest.TestCase):
             data = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(data["schema_version"], 1)
             self.assertEqual(set(module.DEFAULT_VISUAL_TOKENS), set(data["tokens"]))
+
+    def test_shared_theme_does_not_mutate_spec_or_approval(self):
+        before = copy.deepcopy(self.spec)
+        approval = {"spec_hash": module.content_hash(self.spec), "decision": "approved"}
+        for accent in ("#000000", "#923911"):
+            tokens = {**module.load_visual_tokens(), "accent": accent}
+            module.render_lowfi(self.spec, tokens)
+            module.render_review(self.spec, "../index.html", "abc123", approval, tokens)
+            self.assertEqual(self.spec, before)
+            self.assertEqual(module.verify_approval(self.spec, approval), "approved")
+
+    def test_runtime_theme_change_only_changes_instrumentation_reference(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            product = root / "index.html"
+            runtime = root / "runtime.js"
+            original = '<html><head><style>body{color:#aabbcc}</style></head><body><button data-aipm-id="save">保存</button></body></html>'
+            product.write_text(original, encoding="utf-8")
+            for color in ("#000000", "#923911"):
+                module.write_text(runtime, module.annotation_runtime({**module.load_visual_tokens(), "accent": color}))
+                module.instrument_html(self.spec, product, runtime)
+                without_runtime = re.sub(r'<script\b[^>]*data-aipm-annotation-runtime="1"[^>]*></script>\n?', "", product.read_text(encoding="utf-8"))
+                self.assertEqual(without_runtime, original)
+            emitted = runtime.read_text(encoding="utf-8")
+            self.assertIn(':host{--aipm-', emitted)
+            self.assertNotIn(':root{', emitted)
+            self.assertNotIn('AIPM_ANNOTATION_STYLE', emitted)
+
+    def test_lowfi_does_not_link_to_unbuilt_review(self):
+        self.assertNotIn('href="../review/index.html"', module.render_lowfi(self.spec))
+        self.assertIn('href="../review/index.html"', module.render_lowfi(self.spec, review_ready=True))
+
+    def test_packaged_defaults_match_emitted_tokens(self):
+        self.assertEqual(module.load_visual_tokens(), module.DEFAULT_VISUAL_TOKENS)
+
+    def test_third_stage_navigation_requires_generated_matching_spec(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            out = root / "lowfi" / "index.html"
+            visual = root / "visual" / "index.html"
+            self.assertFalse(module.generated_stage_ready(out, "visual", self.spec))
+            module.write_text(visual, '<body data-spec-hash="stale"></body>')
+            self.assertFalse(module.generated_stage_ready(out, "visual", self.spec))
+            module.write_text(visual, f'<body data-spec-hash="{module.content_hash(self.spec)}"></body>')
+            self.assertTrue(module.generated_stage_ready(out, "visual", self.spec))
+            self.assertIn('href="../visual/index.html"', module.render_lowfi(self.spec, visual_ready=True))
+            self.assertNotIn('href="../visual/index.html"', module.render_lowfi(self.spec))
 
     def test_scan_source_outputs_relative_evidence(self):
         with tempfile.TemporaryDirectory() as temp:
