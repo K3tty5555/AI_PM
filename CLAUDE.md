@@ -55,7 +55,8 @@ README.md                  项目介绍
 | `/ai-pm strategy` | 战略沙盘（项目级 / 产品级战略推演） |
 | `/ai-pm-strategy-verify` | 战略求证侦察兵（证据挖到尽头，交回反转+岔路；沙盘的后半场） |
 | `/ai-pm weekly` | 生成工作周报 |
-| `/ai-pm sharing [主题或素材路径]` | 生成可独立阅读的经验分享文章 |
+| `/ai-pm sharing [主题或素材路径]` | 生成可独立阅读的经验分享文章（**给人读**） |
+| `/ai-pm deck [主题]` | 上台讲的材料（**给人讲**）：讲者稿 + 叙事大纲 + HTML 幻灯片，可导出 pptx |
 | `/ai-pm interview` | 现场调研/客户访谈模式 |
 | `/ai-pm data [文件]` | 数据洞察分析 |
 | `/ai-pm persona` | 产品分身（学习你的写作风格） |

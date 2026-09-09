@@ -1,0 +1,332 @@
+<!doctype html>
+<!--
+  演讲用幻灯片骨架。复制一份改内容即可，不要从零写 CSS。
+
+  已经内建的东西（都是踩过坑才定下来的）：
+    · 中文黑体字体栈 + 字重 600，投影后排看得清（衬线 + 300 字重会让横画消失）
+    · 三段式版式：眉标 → 大标题 → 一块视觉 → 一句落点，九页节奏一致
+    · 四档响应式：720p 投屏 / 笔电 / 宽屏 / 手机，每档都收紧过间距
+    · 键盘翻页、进度点、全屏、触屏滑动
+    · 五色语义系统，按角色/阶段配色，前后页形成视觉线索
+
+  改完必须跑：
+    python3 ../scripts/check_deck.py 本文件.html --deny "内部代号,行话" --shots ./shots
+    版式好不好看脚本判断不了，截图自己翻一遍。
+
+  常用组件在文件末尾的注释里，按需复制到 .body-area 内。
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>【标题】：【副标题】</title>
+  <style>
+    :root {
+      --canvas: #f5f5f5;      /* 页面底色，别用纯白，投影会刺眼 */
+      --canvas-soft: #fafafa;
+      --ink: #0c0a09;         /* 标题 */
+      --ink-warm: #292524;    /* 正文重点 */
+      --body: #4e4e4e;        /* 正文 */
+      --muted: #777169;       /* 标签 */
+      --muted-soft: #a8a29e;
+      --line: #e7e5e4;
+      --line-strong: #d6d3d1;
+      /* 五色语义：建议固定绑定（如第一站/正面=mint，风险/反方=rose），前后页复现形成线索 */
+      --mint: #a7e5d3;
+      --peach: #f4c5a8;
+      --lavender: #c8b8e0;
+      --sky: #a8c8e8;
+      --rose: #e8b8c4;
+      /* 中文走苹方，英文数字走 Inter；Windows 会 fallback 到雅黑 */
+      --sans: Inter, "PingFang SC", "Hiragino Sans GB", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { background: #e8e7e5; color: var(--ink); font-family: var(--sans); overflow: hidden; }
+    button { font: inherit; }
+    .deck-shell {
+      min-height: 100dvh; display: grid; place-items: center; padding: 28px; position: relative;
+      background:
+        radial-gradient(760px 420px at 8% 4%, rgba(167,229,211,.34), transparent 68%),
+        radial-gradient(680px 480px at 92% 92%, rgba(244,197,168,.28), transparent 68%),
+        #e8e7e5;
+    }
+    .presentation { width: min(1320px, 100%); display: grid; gap: 14px; }
+    .topbar, .controls {
+      display: flex; align-items: center; justify-content: space-between;
+      min-height: 36px; color: var(--muted); font-size: 12px;
+    }
+    .wordmark { display: inline-flex; align-items: center; gap: 10px; color: var(--ink-warm); font-weight: 600; }
+    .wordmark-mark {
+      width: 20px; height: 20px; border: 1px solid var(--ink-warm); border-radius: 50%;
+      display: grid; place-items: center; font-size: 12px; line-height: 1;
+    }
+    .topbar-meta { display: flex; align-items: center; gap: 20px; }
+    .stage {
+      position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
+      background: var(--canvas); border: 1px solid rgba(12,10,9,.08); box-shadow: 0 24px 70px rgba(12,10,9,.14);
+    }
+    .slide {
+      position: absolute; inset: 0; display: none;
+      padding: clamp(40px, 6.2vw, 92px) clamp(44px, 7.4vw, 112px) clamp(34px, 4.6vw, 68px);
+      overflow: hidden; isolation: isolate;
+    }
+    /* flex 纵向三段：头部固定 / 内容区弹性居中 / 落点固定 */
+    .slide.active { display: flex; flex-direction: column; animation: appear .44s cubic-bezier(.2,.75,.25,1) both; }
+    @keyframes appear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .slide::before, .slide::after { content: ""; position: absolute; border-radius: 50%; filter: blur(1px); opacity: .4; z-index: -1; pointer-events: none; }
+    .slide::before { width: 34%; aspect-ratio: 1; top: -20%; right: -8%; background: radial-gradient(circle, rgba(167,229,211,.72), rgba(167,229,211,0) 68%); }
+    .slide::after { width: 30%; aspect-ratio: 1; bottom: -22%; left: -7%; background: radial-gradient(circle, rgba(200,184,224,.46), rgba(200,184,224,0) 68%); }
+
+    /* ---------- 三段式骨架 ---------- */
+    h1, h2, h3, p { margin: 0; }
+    .kicker { font-size: 14px; line-height: 1.4; color: var(--muted); letter-spacing: .08em; margin-bottom: 18px; flex: 0 0 auto; }
+    .kicker b { color: var(--ink-warm); font-weight: 600; }
+    .headline {
+      font-size: clamp(31px, 4vw, 54px); line-height: 1.16; font-weight: 600; letter-spacing: -.01em;
+      max-width: 1000px; flex: 0 0 auto; color: var(--ink);
+    }
+    .headline.sm { font-size: clamp(28px, 3.4vw, 46px); }
+    .body-area { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; min-height: 0; padding: clamp(18px, 2.4vw, 34px) 0; }
+    .kicker-num { position: absolute; top: clamp(34px, 4.2vw, 58px); right: clamp(44px, 7.4vw, 112px); color: var(--muted-soft); font-family: var(--mono); font-size: 13px; }
+    /* 落点：一句主张 + 一行注解。讲者要说的话别写这儿，写讲者稿 */
+    .punch {
+      flex: 0 0 auto; padding-top: clamp(14px, 1.8vw, 24px); border-top: 1px solid var(--line-strong);
+      color: var(--ink-warm); font-size: clamp(19px, 2.2vw, 29px); line-height: 1.3; font-weight: 600;
+    }
+    .punch em { font-style: normal; font-weight: 400; color: var(--body); font-size: clamp(14.5px, 1.45vw, 18px); display: block; margin-top: 11px; line-height: 1.55; }
+
+    /* ---------- 通用组件 ---------- */
+    /* 两栏对照：过去 / 现在，问题 / 解法 */
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 3vw, 42px); }
+    .pair-col { padding: clamp(16px, 2vw, 24px); border: 1px solid var(--line-strong); }
+    .pair-col.a { background: rgba(232,184,196,.18); }
+    .pair-col.b { background: rgba(167,229,211,.28); border-color: var(--ink-warm); }
+    .pair-col b { display: block; color: var(--muted); font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; margin-bottom: 14px; }
+    .pair-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: clamp(10px, 1.2vw, 14px); }
+    .pair-col li { display: flex; gap: 11px; align-items: baseline; color: var(--ink-warm); font-size: clamp(15px, 1.6vw, 20px); line-height: 1.35; }
+    .pair-col li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: var(--rose); }
+    .pair-col.b li::before { background: var(--mint); }
+
+    /* 三列表：横向对照，每格 ≤12 字 */
+    .grid3 { border-top: 1px solid var(--ink-warm); }
+    .g3-head, .g3-row { display: grid; grid-template-columns: 1fr .92fr 1.08fr; gap: clamp(16px, 2.4vw, 34px); }
+    .g3-head { padding: 10px 0; color: var(--muted); font-family: var(--mono); font-size: 12.5px; }
+    .g3-row { padding: clamp(15px, 1.9vw, 24px) 0; border-top: 1px solid var(--line); align-items: center; }
+    .g3-row strong { color: var(--ink-warm); font-size: clamp(17px, 1.85vw, 24px); font-weight: 600; padding-left: 13px; border-left: 3px solid var(--line-strong); }
+    .g3-row:nth-child(2) strong { border-left-color: var(--mint); }
+    .g3-row:nth-child(3) strong { border-left-color: var(--peach); }
+    .g3-row:nth-child(4) strong { border-left-color: var(--lavender); }
+    .g3-row span, .g3-row em { font-style: normal; font-size: clamp(15px, 1.6vw, 20px); line-height: 1.35; }
+    .g3-row span { color: var(--body); }
+    .g3-row em { color: var(--ink-warm); }
+
+    /* 卡片组：三问、三步、三要素 */
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 2.6vw, 36px); }
+    .card { padding: clamp(18px, 2.4vw, 30px) clamp(16px, 2vw, 24px); border: 1px solid var(--line-strong); }
+    .card:nth-child(1) { background: rgba(167,229,211,.26); }
+    .card:nth-child(2) { background: rgba(244,197,168,.24); }
+    .card:nth-child(3) { background: rgba(200,184,224,.22); }
+    .card b { display: block; color: var(--muted); font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; }
+    .card strong { display: block; margin-top: 11px; color: var(--ink-warm); font-size: clamp(16px, 1.75vw, 22px); font-weight: 600; line-height: 1.3; }
+    .card span { display: block; margin-top: 10px; color: var(--body); font-size: clamp(13.5px, 1.45vw, 17px); line-height: 1.45; }
+
+    /* 议题条 / 深色物证块：全场只用一两处，多了就不重了 */
+    .band { padding: clamp(11px, 1.4vw, 16px) clamp(16px, 2vw, 24px); background: var(--ink-warm); color: #fff; font-size: clamp(15px, 1.6vw, 19px); font-weight: 600; }
+    .band b { display: block; color: var(--mint); font-family: var(--mono); font-size: 12.5px; font-weight: 400; letter-spacing: .08em; margin-bottom: 10px; }
+
+    /* 原话卡：引用真实原句，卡角挂来源标签 */
+    .quote {
+      position: relative; padding: clamp(22px, 2.8vw, 34px) clamp(18px, 2.2vw, 28px);
+      border: 1px solid var(--line-strong); background: var(--canvas-soft);
+      color: var(--ink-warm); font-size: clamp(20px, 2.2vw, 29px); line-height: 1.26; font-weight: 600;
+    }
+    .quote::before {
+      content: attr(data-src); position: absolute; top: -10px; left: 18px; padding: 2px 9px;
+      background: var(--canvas); color: var(--muted); font-family: var(--mono); font-size: 12px; font-weight: 400;
+    }
+
+    /* ---------- 控制条 ---------- */
+    .controls { justify-content: center; gap: 18px; }
+    .control-button {
+      width: 34px; height: 30px; display: grid; place-items: center;
+      border: 1px solid var(--line-strong); border-radius: 999px; background: rgba(250,250,250,.75);
+      color: var(--ink-warm); cursor: pointer; transition: background .2s ease, transform .2s ease;
+    }
+    .control-button:hover { background: #fff; transform: translateY(-1px); }
+    .control-button:focus-visible { outline: 2px solid var(--ink-warm); outline-offset: 3px; }
+    .control-button[disabled] { opacity: .35; cursor: default; transform: none; }
+    .control-button.wide { width: auto; padding: 0 14px; font-size: 12px; }
+    .progress { display: flex; align-items: center; gap: 6px; }
+    .progress button { width: 20px; height: 4px; padding: 0; border: 0; border-radius: 999px; background: var(--line-strong); cursor: pointer; }
+    .progress button.active { width: 38px; background: var(--ink-warm); }
+    .counter { min-width: 52px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .hint-key { position: absolute; bottom: 14px; left: 18px; color: var(--muted-soft); font-family: var(--mono); font-size: 10px; opacity: .45; }
+
+    @media (prefers-reduced-motion: reduce) { .slide.active { animation: none; } .control-button { transition: none; } }
+
+    /* ---------- 手机：允许滚动，多栏转单列 ---------- */
+    @media (max-width: 760px) {
+      body { overflow: auto; }
+      .deck-shell { padding: 12px; }
+      .presentation { gap: 8px; }
+      .topbar { min-height: 28px; font-size: 10px; }
+      .stage { aspect-ratio: 9 / 16; max-height: calc(100dvh - 88px); }
+      .slide { padding: 34px 20px 26px; overflow-y: auto; }
+      .headline, .headline.sm { font-size: 27px; }
+      .body-area { padding: 16px 0; }
+      .pair, .cards { grid-template-columns: 1fr; gap: 14px; }
+      .g3-head { display: none; }
+      .g3-row { grid-template-columns: 1fr; gap: 7px; padding: 13px 0; }
+      .punch { font-size: 20px; }
+      .progress button { width: 12px; }
+      .progress button.active { width: 24px; }
+      .hint-key { display: none; }
+    }
+
+    /* ---------- 720p 投屏：会议室最常见也最矮，整体收一档 ---------- */
+    @media (min-width: 761px) and (max-height: 800px) {
+      .deck-shell { padding: 16px 20px; }
+      .presentation { gap: 8px; }
+      .stage { width: auto; height: calc(100dvh - 140px); max-height: none; justify-self: center; }
+      .slide { padding: 40px clamp(40px, 6.4vw, 88px) 26px; }
+      .headline { font-size: clamp(29px, 3.5vw, 44px); }
+      .headline.sm { font-size: clamp(26px, 3vw, 38px); }
+      .kicker { margin-bottom: 13px; font-size: 13px; }
+      .body-area { padding: 14px 0; }
+      .punch { font-size: clamp(19px, 2.1vw, 28px); padding-top: 13px; }
+      .punch em { margin-top: 7px; }
+      .g3-row { padding: 12px 0; }
+      .card { padding: 15px 14px; }
+      .pair-col { padding: 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck-shell">
+    <div class="presentation">
+      <header class="topbar" aria-label="演示信息">
+        <div class="wordmark"><span class="wordmark-mark">向</span><span>【主标题】</span></div>
+        <div class="topbar-meta"><span>【副标题】</span><span id="top-counter">01 / 01</span></div>
+      </header>
+
+      <main class="stage" id="stage" aria-live="polite">
+
+        <!-- ============ 每页都照这个三段式来 ============ -->
+        <section class="slide active" data-title="【进度点用的短标题】">
+          <div class="kicker">【眉标：这一页在整场里的位置】</div>
+          <h1 class="headline">【大标题：一个观点，不是一个小节名】</h1>
+          <div class="body-area">
+            <!-- 一块视觉。组件从下方注释里挑，别堆两块以上 -->
+            <div class="cards">
+              <div class="card"><b>01</b><strong>【要点】</strong><span>【一句说明，≤20 字】</span></div>
+              <div class="card"><b>02</b><strong>【要点】</strong><span>【一句说明】</span></div>
+              <div class="card"><b>03</b><strong>【要点】</strong><span>【一句说明】</span></div>
+            </div>
+          </div>
+          <div class="punch">【落点：这一页要听众记住的一句】<em>【一行注解，展开落点，不是讲稿】</em></div>
+          <span class="hint-key">← → / SPACE</span>
+        </section>
+
+        <section class="slide" data-title="【第二页】">
+          <span class="kicker-num">02</span>
+          <div class="kicker">第一站 · <b>【走向谁】</b></div>
+          <h2 class="headline sm">【大标题】</h2>
+          <div class="body-area">
+            <div class="pair">
+              <div class="pair-col a"><b>过去</b><ul><li>【≤12 字】</li><li>【≤12 字】</li><li>【≤12 字】</li></ul></div>
+              <div class="pair-col b"><b>现在</b><ul><li>【≤12 字】</li><li>【≤12 字】</li><li>【≤12 字】</li></ul></div>
+            </div>
+          </div>
+          <div class="punch">【落点】<em>【注解】</em></div>
+        </section>
+
+      </main>
+
+      <footer class="controls" aria-label="演示控制">
+        <button class="control-button" id="prev" aria-label="上一页" title="上一页">‹</button>
+        <div class="progress" id="progress" aria-label="选择页面"></div>
+        <span class="counter" id="counter">01 / 01</span>
+        <button class="control-button" id="next" aria-label="下一页" title="下一页">›</button>
+        <button class="control-button wide" id="fullscreen" aria-label="全屏播放" title="全屏播放">全屏</button>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const progress = document.getElementById('progress');
+      const counter = document.getElementById('counter');
+      const topCounter = document.getElementById('top-counter');
+      const prev = document.getElementById('prev');
+      const next = document.getElementById('next');
+      let current = 0;
+
+      slides.forEach((slide, index) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.setAttribute('aria-label', `第 ${index + 1} 页：${slide.dataset.title || ''}`);
+        dot.addEventListener('click', () => show(index));
+        progress.appendChild(dot);
+      });
+
+      function show(index) {
+        current = Math.max(0, Math.min(slides.length - 1, index));
+        slides.forEach((s, i) => s.classList.toggle('active', i === current));
+        Array.from(progress.children).forEach((d, i) => d.classList.toggle('active', i === current));
+        const v = `${String(current + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+        counter.textContent = v; topCounter.textContent = v;
+        prev.disabled = current === 0; next.disabled = current === slides.length - 1;
+      }
+      const move = d => show(current + d);
+
+      prev.addEventListener('click', () => move(-1));
+      next.addEventListener('click', () => move(1));
+      document.getElementById('fullscreen').addEventListener('click', () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      });
+      document.addEventListener('keydown', e => {
+        if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); move(1); }
+        if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); move(-1); }
+        if (e.key === 'Home') { e.preventDefault(); show(0); }
+        if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
+      });
+      let tx = null;
+      document.addEventListener('touchstart', e => { tx = e.changedTouches[0].clientX; }, { passive: true });
+      document.addEventListener('touchend', e => {
+        if (tx === null) return;
+        const d = e.changedTouches[0].clientX - tx;
+        if (Math.abs(d) > 50) move(d < 0 ? 1 : -1);
+        tx = null;
+      }, { passive: true });
+      show(0);
+    })();
+  </script>
+</body>
+</html>
+
+<!--
+  ============ 组件速查（复制到 .body-area 内） ============
+
+  三列表（三层对照，每格 ≤12 字）
+  <div class="grid3">
+    <div class="g3-head"><span>维度</span><span>过去</span><span>现在</span></div>
+    <div class="g3-row"><strong>【维度】</strong><span>【过去】</span><em>【现在】</em></div>
+  </div>
+
+  议题条 / 深色物证块（全场只用一两处）
+  <div class="band">议题：【一句话】</div>
+  <div class="band"><b>来源标签</b>【被引用的原句】</div>
+
+  原话卡（data-src 是卡角的来源标签，必须写清出处）
+  <div class="quote" data-src="文档原句">【原句】</div>
+
+  ============ 改完必做 ============
+  1. python3 ../scripts/check_deck.py 本文件.html --deny "内部代号,行话" --shots ./shots
+  2. 翻一遍截图，脚本判断不了版式好不好看
+  3. 导出：python3 ../scripts/export_pptx.py 本文件.html
+-->

@@ -41,7 +41,7 @@
       "id": "operate",
       "label": "运营复盘",
       "purpose": "回收交付效果、项目经验和后续动作",
-      "capabilities": ["data", "weekly", "retrospective", "impact", "knowledge", "sharing", "humanizer", "reconcile"],
+      "capabilities": ["data", "weekly", "retrospective", "impact", "knowledge", "sharing", "deck", "humanizer", "reconcile"],
       "exit_condition": "形成继续、调整、停止或继续观察的结论并更新事实"
     }
   ],
@@ -280,6 +280,15 @@
       "artifacts": ["sharing-article"],
       "side_effects": ["write-local"],
       "legacy_commands": ["/ai-pm sharing"]
+    },
+    {
+      "id": "deck",
+      "skill": "ai-pm-deck",
+      "modes": ["operate"],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["deck-html", "speaker-outline", "narrative-outline"],
+      "side_effects": ["write-local"],
+      "legacy_commands": ["/ai-pm deck"]
     },
     {
       "id": "agent-team",
