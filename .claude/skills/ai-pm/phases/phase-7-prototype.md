@@ -17,7 +17,7 @@
 python3 scripts/aipm_contracts.py prototype --project "{project_dir}"
 ```
 
-- Web/Mobile 分别取证，分别写 current/target/unchanged。
+- 按实际范围对已声明的 Web/Mobile 端分别取证，分别写 current/target/unchanged；单端项目不补造另一端。
 - 证据缺失可做显式假设稿，但不得宣称还原现状或完成端别适配，且不能通过正式评审 gate。
 - 0→1 项目写 `not-applicable`，不强造旧产品基线。
 - 原型审计必须核对被删除 claim 是否仍出现在入口、文案、状态和交互里；评审前运行 `/ai-pm reconcile`。

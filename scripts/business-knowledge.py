@@ -129,6 +129,13 @@ def load_entries(root: Path) -> tuple[dict, list[dict], list[str]]:
     return manifest, entries, errors
 
 
+def require_ready_view(manifest: dict) -> str | None:
+    status = manifest.get("view_status", manifest.get("status"))
+    if status != "ready":
+        return f"业务知识视图未就绪（view_status={status or 'missing'}）"
+    return None
+
+
 def discover_view_root() -> Path:
     """找到唯一业务知识视图；多个视图时拒绝猜测。"""
     configured = os.environ.get("AI_PM_BUSINESS_VIEW")
@@ -227,10 +234,14 @@ def extract_terms(requirement: str, entries: list[dict], limit: int = 6) -> list
 
 
 def command_search(root: Path, query: str, include_drafts: bool, limit: int, json_output: bool) -> int:
-    _, entries, errors = load_entries(root)
+    manifest, entries, errors = load_entries(root)
     if errors:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    not_ready = require_ready_view(manifest)
+    if not_ready:
+        print(f"ERROR: {not_ready}", file=sys.stderr)
         return 1
     terms = [term for term in re.split(r"\s+", query.strip()) if term]
     if not terms:
@@ -248,10 +259,14 @@ def command_search(root: Path, query: str, include_drafts: bool, limit: int, jso
 
 
 def command_recommend(root: Path, requirement_path: Path, include_drafts: bool, limit: int, json_output: bool) -> int:
-    _, entries, errors = load_entries(root)
+    manifest, entries, errors = load_entries(root)
     if errors:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    not_ready = require_ready_view(manifest)
+    if not_ready:
+        print(f"ERROR: {not_ready}", file=sys.stderr)
         return 1
     if not requirement_path.is_file():
         print(f"ERROR: requirement file not found: {requirement_path}", file=sys.stderr)
@@ -272,10 +287,14 @@ def command_recommend(root: Path, requirement_path: Path, include_drafts: bool, 
 
 
 def command_impact(root: Path, query: str, include_drafts: bool, limit: int, json_output: bool) -> int:
-    _, entries, errors = load_entries(root)
+    manifest, entries, errors = load_entries(root)
     if errors:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    not_ready = require_ready_view(manifest)
+    if not_ready:
+        print(f"ERROR: {not_ready}", file=sys.stderr)
         return 1
     terms = [term for term in re.split(r"\s+", query.strip()) if term]
     if not terms:

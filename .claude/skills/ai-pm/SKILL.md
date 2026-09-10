@@ -47,7 +47,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | PRD | `/ai-pm prd [需求或路径]` | 直接进入 PRD，不再藏在全流程或“定义”概念下 |
 | 原型 | `/ai-pm prototype [PRD或项目]` | 进入 prototype，迭代项目先过 source/target gate |
 | 评审验收 | `/ai-pm review [对象]` | PRD/原型质量用 review，真实实现用 acceptance；有歧义只问一次 |
-| 运营复盘 | `/ai-pm operate [任务]` | 按目标路由 impact / retrospective / weekly / knowledge / sharing |
+| 运营复盘 | `/ai-pm operate [任务]` | 按目标路由 impact / retrospective / weekly / knowledge / sharing / deck |
 
 自然语言不要求先选模式，按“用户最终想拿到什么”路由：要证据→探索；要拍板→决策；要需求文档→PRD；要界面→原型；要找问题→评审验收；要看结果→运营复盘。明确说“写 PRD / 改 PRD”时必须直接进入 PRD。
 
@@ -92,6 +92,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm strategy` | 战略沙盘：项目级 / 产品级多项目战略推演，重对话、轻文档，不进入 PRD / 原型 / 评审链路 |
 | `/ai-pm weekly` | 生成工作周报 |
 | `/ai-pm sharing [主题或素材路径]` | 经验分享文章：把实践、方法或心得整理成可独立阅读的长文；调用 `ai-pm-sharing` |
+| `/ai-pm deck [主题]` | 演讲材料三件套：讲者稿、叙事大纲和 HTML 幻灯片；调用 `ai-pm-deck` |
 | `/ai-pm interview` | 现场调研模式（面对面访谈） |
 | `/ai-pm data [文件]` | 数据洞察，从 CSV/Excel/JSON 中发现需求 |
 | `/ai-pm reconcile` | 范围/口径变化后的跨产物只读一致性预览；调用 `ai-pm-reconcile` |
@@ -123,6 +124,16 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 3. 直接返回子 Skill 的文章状态和输出路径。
 
 不要在主控中复制经验文章的写作流程；写作、私有素材边界和发布检查都由 `ai-pm-sharing` 负责。
+
+### `deck` 命令分派
+
+当首个参数为 `deck`：
+
+1. 不解析当前项目，不读取 `_status.json`，除非用户在参数中明确指定项目或素材路径。
+2. 使用 `Skill(ai-pm-deck)`，将 `deck` 后的原始参数完整传入。
+3. 由 `ai-pm-deck` 负责听众、时长、三件套一致性和幻灯片质检；主控只返回子 Skill 的状态和输出路径。
+
+不要在主控中复制演讲材料的写作流程；讲者稿、叙事大纲、幻灯片和导出检查由 `ai-pm-deck` 负责。
 
 ### `reconcile / impact / retrospective --system` 命令分派
 

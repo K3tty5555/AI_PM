@@ -16,10 +16,14 @@ from pathlib import Path
 SCRIPT = Path(__file__).with_name("business-knowledge.py")
 
 
-def run_json(args: list[str]) -> tuple[dict, str | None]:
+def run_json(args: list[str], root: Path | None = None) -> tuple[dict, str | None]:
+    command = [sys.executable, str(SCRIPT)]
+    if root:
+        command.extend(["--root", str(root)])
+    command.extend(args)
     try:
         result = subprocess.run(
-            [sys.executable, str(SCRIPT), *args, "--json"],
+            [*command, "--json"],
             check=False,
             capture_output=True,
             text=True,
@@ -46,20 +50,31 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
     requirement = args.project_dir / "01-requirement-draft.md"
+    view_root = None
+    config_path = args.project_dir / ".ai-pm-config.json"
+    if config_path.is_file():
+        try:
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            configured = config.get("businessKnowledgeViewPath")
+            if isinstance(configured, str) and configured.strip():
+                view_root = (args.project_dir / configured).resolve()
+        except (OSError, json.JSONDecodeError):
+            view_root = None
     output: dict[str, object] = {
         "project_dir": str(args.project_dir),
         "requirement": str(requirement),
         "source": "business-knowledge-view",
         "readonly": True,
     }
-    freshness, freshness_error = run_json(["freshness", "--max-age", str(args.max_age)])
+    freshness, freshness_error = run_json(["freshness", "--max-age", str(args.max_age)], view_root)
     if freshness_error:
         output["freshness"] = {"status": "unavailable", "error": freshness_error}
     else:
         output["freshness"] = freshness
     recommendation, recommendation_error = run_json(
         ["recommend", "--requirement", str(requirement), "--limit", str(args.limit)]
-        + (["--include-drafts"] if args.include_drafts else [])
+        + (["--include-drafts"] if args.include_drafts else []),
+        view_root,
     )
     if recommendation_error:
         output["recommendation"] = {"status": "unavailable", "error": recommendation_error}
@@ -70,7 +85,8 @@ def main() -> int:
         if terms:
             impact, impact_error = run_json(
                 ["impact", " ".join(str(term) for term in terms), "--limit", str(args.impact_limit)]
-                + (["--include-drafts"] if args.include_drafts else [])
+                + (["--include-drafts"] if args.include_drafts else []),
+                view_root,
             )
             output["impact"] = impact if not impact_error else {"status": "unavailable", "error": impact_error}
         else:

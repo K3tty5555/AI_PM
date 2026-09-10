@@ -24,6 +24,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(grep) Bash(printf *) Ba
 output/assets/{资产名}/derived/business-knowledge-view/
 ```
 
+视图 manifest 使用 `view_status` 表示整套视图是否可供推荐：`draft` 只允许继续整理，`ready` 才进入 PRD 推荐和跨域影响检查；卡片自身仍需分别维护 `status`、`confidence`、`source_of_truth`。项目存在多个业务视图时，可在 `.ai-pm-config.json` 用 `businessKnowledgeViewPath` 指向本项目应使用的视图。
+
 校验和检索：
 
 ```bash

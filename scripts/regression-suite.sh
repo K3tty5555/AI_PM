@@ -62,6 +62,7 @@ run_check "原型协作生成器（确认门/资源/主题隔离）" python3 -m 
 run_check "视觉包版本与规格鲜度门禁" python3 -m unittest scripts.test_visual_anchor_freshness
 run_check "经验分享文章工具自测" python3 -m unittest tests.test_ai_pm_sharing_tools
 run_check "经验分享文章契约自测" python3 -m unittest tests.test_ai_pm_sharing_contract
+run_check "演讲材料路由与骨架契约自测" python3 -m unittest tests.test_ai_pm_deck_contract
 run_check "output 容器注册单源自测" python3 scripts/check-output-container-registry.py
 run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500
 run_check "云文档 pull 离线自测（纯三方算法+复合键回写端到端）" python3 scripts/prd_pull.py --selftest

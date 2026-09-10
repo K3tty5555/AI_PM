@@ -85,6 +85,34 @@ JS_AUDIT = """() => {
 }"""
 
 
+def activate_slide(page, index):
+    """Activate a slide even when a custom deck has no progress controls."""
+    page.evaluate(
+        """index => {
+          const slides = [...document.querySelectorAll('.slide, [data-slide], section.slide')];
+          const dots = [...document.querySelectorAll('.progress button')];
+          if (dots[index]) { dots[index].click(); return; }
+          slides.forEach((slide, current) => slide.classList.toggle('active', current === index));
+        }""",
+        index,
+    )
+
+
+def blocking_count(report, min_font):
+    blocking = 0
+    for pages in report["viewports"].values():
+        for row in pages:
+            if row["out"] > 2 or row["burst"] > 2 or row["overlap"] > 2:
+                blocking += 1
+    base = report["viewports"].get(DEFAULT_VIEWPORTS[0][0], [])
+    fonts = [row["minFont"] for row in base if row["minFont"]]
+    if fonts and min(fonts) < min_font:
+        blocking += 1
+    if report["language"]["deny_hits"]:
+        blocking += 1
+    return blocking
+
+
 def find_browser():
     """复用本机 playwright 缓存，绝不触发下载。"""
     root = os.path.expanduser("~/Library/Caches/ms-playwright")
@@ -126,12 +154,13 @@ def audit(html, viewports, deny, max_chars, min_font, shots_dir):
             pg = b.new_page(viewport={"width": w, "height": h})
             pg.goto(url); pg.wait_for_timeout(500)
             n = pg.evaluate("document.querySelectorAll('.slide, [data-slide], section.slide').length")
+            if not n:
+                print("没找到幻灯片节点（.slide / [data-slide] / section.slide）", file=sys.stderr)
+                sys.exit(2)
             pages = []
             for i in range(n):
-                # 逐页切换：隐藏页 innerText 读不到，必须切到前台再量
-                pg.evaluate(
-                    f"(()=>{{const d=document.querySelectorAll('.progress button');"
-                    f"if(d[{i}]) d[{i}].click();}})()")
+                # 隐藏页 innerText 读不到，必须切到前台再量。
+                activate_slide(pg, i)
                 pg.wait_for_timeout(190)
                 r = pg.evaluate(JS_AUDIT)
                 if r: pages.append(r)
@@ -151,9 +180,7 @@ def audit(html, viewports, deny, max_chars, min_font, shots_dir):
             stage = pg.query_selector("#stage, .stage, main")
             n = pg.evaluate("document.querySelectorAll('.slide, [data-slide], section.slide').length")
             for i in range(n):
-                pg.evaluate(
-                    f"(()=>{{const d=document.querySelectorAll('.progress button');"
-                    f"if(d[{i}]) d[{i}].click();}})()")
+                activate_slide(pg, i)
                 pg.wait_for_timeout(330)
                 path = os.path.join(shots_dir, f"p{i+1}.png")
                 (stage or pg).screenshot(path=path)
@@ -174,11 +201,12 @@ def main():
 
     deny = [x.strip() for x in a.deny.split(",") if x.strip()]
     rep = audit(a.html, DEFAULT_VIEWPORTS, deny, a.max_chars, a.min_font, a.shots)
+    blocking = blocking_count(rep, a.min_font)
 
     if a.json:
-        print(json.dumps(rep, ensure_ascii=False, indent=2)); return
+        print(json.dumps(rep, ensure_ascii=False, indent=2))
+        sys.exit(0 if blocking == 0 else 1)
 
-    blocking = 0
     print("\n── 版面 ──")
     for name, pages in rep["viewports"].items():
         bad = []
@@ -187,7 +215,7 @@ def main():
             if r["out"] > 2: issues.append(f"越界+{r['out']}<{r['outWho']}>")
             if r["burst"] > 2: issues.append(f"撑破+{r['burst']}")
             if r["overlap"] > 2: issues.append(f"压落点+{r['overlap']}")
-            if issues: bad.append(f"P{i} " + "/".join(issues)); blocking += 1
+            if issues: bad.append(f"P{i} " + "/".join(issues))
         print(f"  {name:<10} {'全部通过' if not bad else ' | '.join(bad)}")
 
     base = rep["viewports"].get(DEFAULT_VIEWPORTS[0][0], [])
@@ -204,15 +232,12 @@ def main():
         if mn and mn < a.min_font:
             worst = min((r for r in base if r["minFont"]), key=lambda r: r["minFont"])
             print(f"  ⚠ 字号过小：「{worst['minWho']}」{worst['minFont']}px —— 投影后排看不清")
-            blocking += 1
 
     lg = rep["language"]
     print("\n── 语言 ──")
     print(f"  禁用词残留：{'无' if not lg['deny_hits'] else lg['deny_hits']}")
     tag = "" if lg["dashes"] <= DASH_BUDGET else f"  ⚠ 超过 {DASH_BUDGET}，是中文 AI 味的头号特征"
     print(f"  破折号 {lg['dashes']} 处{tag}")
-    if lg["deny_hits"]: blocking += 1
-
     if rep["shots"]:
         print(f"\n── 截图 ── {len(rep['shots'])} 张 → {os.path.dirname(rep['shots'][0])}")
         print("  版式是否好看，脚本判断不了，务必自己翻一遍")

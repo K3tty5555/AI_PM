@@ -213,9 +213,8 @@ def validate_prototype_manifest(project: Path) -> tuple[list[str], list[str]]:
             errors.append(f"{prefix} 标为 verified 但没有 source_evidence")
         if status == "missing":
             warnings.append(f"{prefix} 缺少当前产品证据，不能宣称完成该端适配")
-    missing_devices = sorted({"web", "mobile"} - seen)
-    if missing_devices:
-        errors.append(f"prototype manifest 必须分别声明 Web/Mobile；缺少: {', '.join(missing_devices)}")
+    # A project may intentionally target one device. When both devices are in
+    # scope, list both; an out-of-scope device does not need a placeholder row.
     return errors, warnings
 
 

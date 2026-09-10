@@ -22,7 +22,7 @@
 - `01-baseline-manifest.json`：零到一、迭代、导入项目统一使用的机读基线。迭代/导入项目有事实主张时必须附来源；高风险主张无来源直接阻断。
 - `_status.json.baseline`：指向当前基线清单，不复制清单内容。
 - `_status.json.artifacts[]`：登记 PRD、原型、评审、指标等产物的路径、所有权和版本或哈希，是 reconcile 的扫描边界。
-- `06-prototype/source-target-manifest.json`：迭代原型分别登记 Web 与 Mobile 的来源、目标和 `verified / missing / not-applicable` 证据状态。
+- `06-prototype/source-target-manifest.json`：迭代原型按实际范围登记 Web/Mobile 的来源、目标和 `verified / missing / not-applicable` 证据状态；单端项目只登记目标端。
 - `06-prototype/prototype-spec.json`：原型页面、关键帧、主流程和稳定元素 ID 的单一事实源；低保真、精细原型、巡检和标注共用。
 - `06-prototype/lowfi/index.html`：全部关键流程和关键帧同屏展示的中保真线框确认页，能看清具体排版并逐帧记录意见。
 - `06-prototype/review/index.html`：精细原型巡检工作台，左侧切换关键帧、中间加载真实原型、右侧记录通过、问题和评论。

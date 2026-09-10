@@ -99,7 +99,8 @@ HTML prototypes and dashboards use the bundled `ai-pm-frontend-design` skill by 
 | `/ai-pm prd [request or path]` | First-class PRD mode |
 | `/ai-pm prototype [project]` | Prototype mode with source/target evidence |
 | `/ai-pm review [artifact]` | Review or implementation acceptance mode |
-| `/ai-pm operate [task]` | Impact, retrospective, weekly, knowledge, or sharing |
+| `/ai-pm operate [task]` | Impact, retrospective, weekly, knowledge, sharing, or deck |
+| `/ai-pm deck [topic]` | Generate speaker notes, narrative outline, and HTML slides; optionally export PPTX |
 | `/ai-pm reconcile` | Read-only cross-artifact impact and stale-content preview |
 | `/ai-pm impact` | Post-delivery impact follow-up; evidence-insufficient is valid |
 | `/ai-pm retrospective --system` | Cross-session AI_PM system retrospective from redacted indexes/summaries |
@@ -109,6 +110,7 @@ HTML prototypes and dashboards use the bundled `ai-pm-frontend-design` skill by 
 | `/ai-pm strategy` | Strategy sandbox for project-level or product-level strategic thinking |
 | `/ai-pm sharing [topic or source path]` | Write a standalone experience-sharing article; not a PRD, retrospective, or training handout |
 | `/ai-pm-sharing` | Direct entry to the same experience-sharing article skill |
+| `/ai-pm-deck` | Direct entry to the presentation-material skill |
 | `/ai-pm-strategy-verify` | Strategy verification scout — dig evidence to the end, return reversals + forks (never the final call) |
 | `/ai-pm driver [PRD]` | PM-style quality gate before review |
 | `/ai-pm-prd` | Generate or update PRD |

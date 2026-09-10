@@ -19,7 +19,7 @@
       "id": "R3",
       "failure": "Web/Mobile 无证据互抄",
       "gate": "prototype-source-target",
-      "expected": "Web 与 Mobile 必须分别声明证据状态；missing 给出警告",
+      "expected": "已声明的 Web 与 Mobile 端分别记录证据状态；missing 给出警告",
       "negative_control": "明确 not-applicable 的端别不伪造适配证据"
     },
     {

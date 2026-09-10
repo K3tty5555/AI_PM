@@ -18,6 +18,8 @@
   const pageId = document.body.dataset.aipmPage || mapped.page_id || params.get("view") || location.pathname.split("/").pop() || "page";
   const stateId = document.body.dataset.aipmState || mapped.state_id || params.get("scenario") || "default";
   const frame = `${pageId}::${stateId}`;
+  const knownFrames = new Set(Object.values(routeMap).filter(value => value && typeof value === "object").map(value => `${value.page_id || ""}::${value.state_id || ""}`));
+  knownFrames.add(frame);
   const storageKey = `aipm:annotations:${project}:${specHash}`;
   let state = { items: [] };
   try { state = JSON.parse(localStorage.getItem(storageKey) || '{"items":[]}'); } catch (_) {}
@@ -31,7 +33,7 @@
   root.innerHTML = `
     <style>/* AIPM_ANNOTATION_STYLE */</style>
     <div class="launcher"><button class="btn primary" id="place"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>添加标签</button><button class="btn" id="open">标签列表 <span id="count">0</span></button></div>
-    <section class="panel hidden" id="panel"><div class="head"><strong>页面标注</strong><button id="close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="tools"><button class="btn" id="export">导出</button><button class="btn" id="import">导入</button><input type="file" id="file" accept="application/json" hidden></div><div class="list" id="list"></div></section>
+    <section class="panel hidden" id="panel"><div class="head"><strong>页面标注</strong><button id="close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="tools"><button class="btn" id="export">导出</button><button class="btn" id="import">导入</button><button class="sync-state" id="syncState" type="button" role="status" aria-live="polite" title="点击重试同步">浏览器草稿</button><input type="file" id="file" accept="application/json" hidden></div><div class="list" id="list"></div></section>
     <div id="pins"></div><div class="hint hidden" id="hint">点击页面元素或位置添加标签，Esc 取消</div>`;
 
   const $ = id => root.getElementById(id);
@@ -97,12 +99,31 @@
     pin.title = item.status === "anchor-drift" ? `定位已漂移：${item.comment}` : item.comment;
   }
 
-  function save() {
+  function setSyncState(text, kind = "draft") {
+    const el = $("syncState");
+    if (!el) return;
+    el.textContent = text;
+    el.dataset.state = kind;
+  }
+
+  async function syncProject() {
+    try {
+      const response = await fetch("/__aipm_feedback__", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schema_version: 1, project, spec_hash: specHash, stage: "annotation", exported_at: new Date().toISOString(), items: state.items }) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setSyncState("已同步项目", "synced");
+      return true;
+    } catch (_) {
+      setSyncState("同步失败，可重试或导出", "failed");
+      return false;
+    }
+  }
+
+  async function save() {
     localStorage.setItem(storageKey, JSON.stringify(state));
+    setSyncState("浏览器草稿", "draft");
     render();
     window.parent?.postMessage({ type: "aipm:annotations-changed", frame, count: state.items.filter(item => item.page_id === pageId && item.state_id === stateId).length }, "*");
-    const payload = { schema_version: 1, project, spec_hash: specHash, stage: "annotation", exported_at: new Date().toISOString(), items: state.items };
-    fetch("/__aipm_feedback__", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).catch(() => {});
+    await syncProject();
   }
 
   function labelFor(type) {
@@ -229,6 +250,7 @@
   $("place").onclick = () => { placing = true; $("hint").classList.remove("hidden"); $("panel").classList.add("hidden"); document.documentElement.style.cursor = "crosshair"; };
   $("open").onclick = () => $("panel").classList.toggle("hidden");
   $("close").onclick = () => $("panel").classList.add("hidden");
+  $("syncState").onclick = () => syncProject();
   $("export").onclick = () => {
     const payload = { schema_version: 1, project, spec_hash: specHash, stage: "annotation", exported_at: new Date().toISOString(), items: state.items };
     const link = document.createElement("a");
@@ -243,11 +265,15 @@
     if (!file) return;
     try {
       const incoming = JSON.parse(await file.text());
-      if (!Array.isArray(incoming.items)) throw new Error("items");
+      if (incoming.project !== project || incoming.spec_hash !== specHash) throw new Error("project-or-spec-mismatch");
+      if (incoming.stage !== "annotation" || !Array.isArray(incoming.items)) throw new Error("items");
+      const allowedTypes = new Set(["feature-note", "review-comment", "change-request", "question"]);
+      const allowedStatuses = new Set(["open", "in-progress", "pending-review", "resolved", "reopened", "anchor-drift"]);
+      if (incoming.items.some(item => !item || typeof item.feedback_id !== "string" || typeof item.page_id !== "string" || typeof item.state_id !== "string" || typeof item.comment !== "string" || !knownFrames.has(`${item.page_id}::${item.state_id}`) || !allowedTypes.has(item.feedback_type) || !allowedStatuses.has(item.status))) throw new Error("invalid-item");
       const ids = new Set(state.items.map(item => item.feedback_id));
       incoming.items.forEach(item => { if (!ids.has(item.feedback_id)) state.items.push(item); });
-      save();
-    } catch (_) { alert("无法导入：文件格式不正确"); }
+      await save();
+    } catch (_) { alert("无法导入：项目、规格版本或条目格式不匹配"); }
     event.target.value = "";
   };
   addEventListener("scroll", render, { passive: true });

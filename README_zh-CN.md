@@ -99,7 +99,8 @@ HTML 原型和仪表盘默认使用项目自带的 `ai-pm-frontend-design` 技�
 | `/ai-pm prd [需求或路径]` | PRD 独立一级入口 |
 | `/ai-pm prototype [项目]` | 原型模式，迭代项目先核 source/target |
 | `/ai-pm review [对象]` | 评审验收模式 |
-| `/ai-pm operate [任务]` | impact、复盘、周报、知识或分享 |
+| `/ai-pm operate [任务]` | impact、复盘、周报、知识、分享或演讲材料 |
+| `/ai-pm deck [主题]` | 生成讲者稿、叙事大纲和 HTML 幻灯片，可选导出 PPTX |
 | `/ai-pm reconcile` | 范围变化后的跨产物只读影响预览 |
 | `/ai-pm impact` | 发布后效果回收，允许证据不足继续观察 |
 | `/ai-pm retrospective --system` | 只读脱敏索引/摘要的 AI_PM 系统复盘 |
@@ -109,6 +110,7 @@ HTML 原型和仪表盘默认使用项目自带的 `ai-pm-frontend-design` 技�
 | `/ai-pm driver [PRD]` | 评审前 PM 风格质量守门 |
 | `/ai-pm sharing [主题或素材路径]` | 写可独立阅读的经验分享文章，不是 PRD、复盘或培训讲义 |
 | `/ai-pm-sharing` | 同一经验分享文章 Skill 的独立入口 |
+| `/ai-pm-deck` | 演讲材料 Skill 的独立入口 |
 | `/ai-pm-prd` | 生成或更新 PRD |
 | `/ai-pm-data metrics` | 埋点和指标设计 |
 | `/ai-pm-prototype` | 生成可交互 HTML 原型 |

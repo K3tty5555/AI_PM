@@ -72,6 +72,11 @@ class CapabilityAndBaselineTests(unittest.TestCase):
         self.assertIn("Skill(ai-pm-impact)", text)
         self.assertIn("不更新 phase、checkpoint、status、baseline 或产物", text)
 
+    def test_business_knowledge_view_ready_state_is_explicit(self):
+        module = load_module(REPO / "scripts/business-knowledge.py", "business_knowledge_contract_test")
+        self.assertIsNone(module.require_ready_view({"status": "ready", "view_status": "ready"}))
+        self.assertIsNotNone(module.require_ready_view({"status": "draft"}))
+
     def test_iteration_baseline_blocks_high_risk_claim_without_source(self):
         baseline = {
             "schema_version": 1,
@@ -182,7 +187,7 @@ class ArtifactContractTests(unittest.TestCase):
             finally:
                 module.PROJECTS = original_projects
 
-    def test_prototype_requires_both_devices_and_preserves_missing_semantics(self):
+    def test_prototype_allows_single_device_and_preserves_missing_semantics(self):
         with tempfile.TemporaryDirectory(prefix="aipm-prototype-test-") as raw:
             project = Path(raw)
             manifest_dir = project / "06-prototype"
@@ -202,8 +207,10 @@ class ArtifactContractTests(unittest.TestCase):
             }
             path = manifest_dir / "source-target-manifest.json"
             path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
-            errors, _ = aipm_contracts.validate_prototype_manifest(project)
-            self.assertTrue(any("缺少: mobile" in item for item in errors))
+            self.assertEqual(
+                aipm_contracts.validate_prototype_manifest(project),
+                ([], []),
+            )
 
             manifest["devices"].append({
                 "device": "mobile",

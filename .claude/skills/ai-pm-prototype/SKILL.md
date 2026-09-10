@@ -29,7 +29,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 - 可选：`{项目目录}/.ai-pm-config.json`（项目配置，含 designSystem 字段）
 - 可选：`{项目目录}/06-prototype-visual/manifest.json`（Codex 生成的视觉锚点包）
 - 可选：`{项目目录}/06-prototype-visual/visual-fingerprint.md`（视觉指纹）
-- 迭代项目必需：`{项目目录}/06-prototype/source-target-manifest.json`（Web/Mobile 分别声明现状证据、目标变化和不变项）
+- 迭代项目必需：`{项目目录}/06-prototype/source-target-manifest.json`（按实际范围声明 Web/Mobile 的现状证据、目标变化和不变项；单端项目只声明目标端）
 
 ### 步骤0：先读输入文档
 
@@ -144,7 +144,7 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 - 视觉方向：布局密度、色彩气质、字体层级、组件风格、留白比例、数据呈现方式
 - 交互硬化：触控目标、focus、hover 替代、表单校验、长文本、移动端适配
 - 生成硬约束：5-8 条可执行约束，必须覆盖反 AI 味、状态、响应式和业务假数据
-- source/target 对照：当前已有能力、目标变化、不变项、证据缺口；Web/Mobile 分开写
+- source/target 对照：当前已有能力、目标变化、不变项、证据缺口；已声明的 Web/Mobile 端分别写
 
 ### 步骤2.5：关键帧规格 + 中保真线框确认门
 

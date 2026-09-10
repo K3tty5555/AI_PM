@@ -19,6 +19,18 @@ import argparse, os, sys, glob, tempfile, shutil
 from pathlib import Path
 
 
+def activate_slide(page, index):
+    page.evaluate(
+        """index => {
+          const slides = [...document.querySelectorAll('.slide, [data-slide], section.slide')];
+          const dots = [...document.querySelectorAll('.progress button')];
+          if (dots[index]) { dots[index].click(); return; }
+          slides.forEach((slide, current) => slide.classList.toggle('active', current === index));
+        }""",
+        index,
+    )
+
+
 def find_browser():
     """复用本机 playwright 缓存，绝不触发下载。"""
     root = os.path.expanduser("~/Library/Caches/ms-playwright")
@@ -54,9 +66,7 @@ def shoot(html, tmp, scale):
             print("没找到幻灯片节点（.slide / [data-slide] / section.slide）", file=sys.stderr)
             sys.exit(2)
         for i in range(n):
-            pg.evaluate(
-                f"(()=>{{const d=document.querySelectorAll('.progress button');"
-                f"if(d[{i}]) d[{i}].click();}})()")
+            activate_slide(pg, i)
             pg.wait_for_timeout(650)   # 等翻页动画落定，短了会截到过渡帧
             (stage or pg).screenshot(path=os.path.join(tmp, f"s{i+1}.png"))
             titles.append(pg.evaluate(

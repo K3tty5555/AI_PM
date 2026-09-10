@@ -224,6 +224,10 @@ class PrototypeCollabTests(unittest.TestCase):
         self.assertIn('routeParams.delete("aipm_rev")', runtime)
         self.assertIn('id="remove">删除标签', runtime)
         self.assertIn("state.items.splice(index, 1)", runtime)
+        self.assertIn('id="syncState"', runtime)
+        self.assertIn("project-or-spec-mismatch", runtime)
+        self.assertIn("同步失败，可重试或导出", runtime)
+        self.assertIn("knownFrames.has", runtime)
 
     def test_approval_gate_checks_spec_hash_and_decision(self):
         valid = {"spec_hash": module.content_hash(self.spec), "decision": "approved"}

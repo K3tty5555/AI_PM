@@ -109,12 +109,12 @@ test -f {project_dir}/01-baseline-delta.md
 
 1. 从 `01-requirement-draft.md` 提取业务关键词（3–6 个）
 2. 调用 `ai-pm-knowledge suggest {关键词}` 搜索相关踩坑/模式
-3. 若项目存在唯一的 `derived/business-knowledge-view/manifest.json`，调用统一只读门禁：
+3. 若项目配置了 `businessKnowledgeViewPath`，或能发现唯一的 `derived/business-knowledge-view/manifest.json`，调用统一只读门禁：
    ```bash
    python3 scripts/prd-knowledge-gate.py \
      --project-dir "{project_dir}" --json
    ```
-   门禁一次返回业务视图保鲜状态、已确认规则推荐和潜在影响域；不要加 `--include-drafts`。不存在视图或命令失败时输出 `SKIP:business-view:{原因}`，不阻断 PRD。
+   门禁一次返回业务视图保鲜状态、已确认规则推荐和潜在影响域；不要加 `--include-drafts`。视图未标记 `view_status=ready`、不存在视图或命令失败时输出 `SKIP:business-view:{原因}`，不阻断 PRD。
 4. 合并通用经验库和业务知识视图结果，最多展示 3 条；每条标明来源（通用经验 / 业务知识视图）和来源路径。
 5. 有匹配结果 → 展示推荐和影响域，等待用户「查看详情」或「跳过」。
 6. 无匹配结果 → 静默跳过，直接进入需求模糊点对齐。
