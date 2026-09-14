@@ -17,6 +17,17 @@ if [ -x "$ROOT/scripts/ai-sync/voice-profile-monthly-hook.sh" ] && [ "${AIPM_VOI
   "$ROOT/scripts/ai-sync/voice-profile-monthly-hook.sh" >/dev/null 2>&1 || true
 fi
 
+# 每周首次进入项目时后台核对云文档目录漂移（遍历云盘要 1~2 分钟，绝不在前台等）。
+if [ -x "$ROOT/scripts/ai-sync/cloud-doc-folders-weekly-hook.sh" ] && [ "${AIPM_CLOUD_DOC_CHILD:-0}" != "1" ]; then
+  "$ROOT/scripts/ai-sync/cloud-doc-folders-weekly-hook.sh" >/dev/null 2>&1 || true
+fi
+
+# 只读上一次的一行摘要（亚秒、零 API）；clean 不出声，有漂移才提示。
+CLOUD_DOC_SUMMARY="${AIPM_CLOUD_DOC_STATE_DIR:-$HOME/.ai-pm/cloud-doc-folders}/summary.txt"
+if [ -f "$CLOUD_DOC_SUMMARY" ] && ! grep -q '^✅' "$CLOUD_DOC_SUMMARY" 2>/dev/null; then
+  cat "$CLOUD_DOC_SUMMARY"
+fi
+
 PROJECTS_DIR="output/projects"
 
 # 首次使用检测：无项目 + 无生效个人风格 → 建议先做初始化（不强制）

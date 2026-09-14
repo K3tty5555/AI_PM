@@ -134,6 +134,7 @@ README.md                  项目介绍
 - Chart.js `indexAxis:'y'` 必须在 `options` 顶层，不能放在 `scales` 里
 - 项目阶段产物放 `output/projects/{项目名}/`，产品级长期资产放 `output/assets/{资产名}/`，独立经验文章放 `output/sharing/articles/`。`output/` 顶层容器的唯一完整注册表见 `.claude/skills/ai-pm/references/output-containers.md`；新增容器必须先登记
 - 交互文案须经 humanizer-pm 处理，避免 AI 味
+- **PRD 推云文档后在 `_status.json.cloud_docs` 登记时必须带 `folder.path`**（云端所在目录），否则文档被人挪走无从发现。核对：`python3 scripts/ai-sync/check-cloud-doc-folders.py`（只读，`--write` 回写，遍历云盘约 1~2 分钟）；每周首次进项目由 `cloud-doc-folders-weekly-hook.sh` 后台自动跑，冷启动只读一行摘要、clean 时静默。⚠️ 月份文件夹里很多条目是**快捷方式**（token 前缀 `nodrz`、正本在别处），按 docx token 直接匹配会误报"文档不在云盘里"
 
 ### Playwright MCP 使用规范
 
