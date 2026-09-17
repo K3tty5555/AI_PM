@@ -144,6 +144,32 @@ def locate(prose: str, sents, m) -> dict:
 # 效应量 Cohen's d（2026-09-17 本地 82 份人类语料实测）：
 #   short_rate 1.58 ｜ dash_per_k 1.44 ｜ cv 0.88 ｜ mean_len 0.46
 #   已淘汰：colon_per_k 0.08、long_rate 0.19（基本无判别力）
+
+# ── 同段内数字复述（提示项，不计入判定）────────────────────────────
+# 抓「占整体的 43%，一半以上都在这条线上」这种同一事实说两遍。
+# 人类语料误报约 8%，所以只报不判——这条philosophy 来自
+# lucia-trend/de-ai-flavor：「脚本只报数据，不下结论」。
+FUZZY_QUANT = (r"一半以上|过半|大半|绝大多数|绝大部分|大部分|近[一二三四五六七八九十]成|"
+               r"超过[一二三四五六七八九十]成|三分之[一二]|四分之[一三]")
+
+
+def restate_hints(prose: str):
+    """返回疑似同义复述的句子。宁可漏报，不要吵。"""
+    out = []
+    for seg in re.split(r"[。！？\n]", prose):
+        seg = seg.strip()
+        if len(seg) < 12 or "http" in seg or "、" in seg:
+            continue
+        pcts = re.findall(r"\d+(?:\.\d+)?\s*%", seg)
+        # 百分比和模糊量词同时出现，且中间隔得近（>40 字多半在说两件事）
+        if pcts and re.search(FUZZY_QUANT, seg):
+            mp = seg.find(pcts[0])
+            mf = re.search(FUZZY_QUANT, seg).start()
+            if abs(mp - mf) <= 40:
+                out.append(seg[:66])
+    return out[:3]
+
+
 CHECKS = [
     ("短句占比(<10字)", "short_rate", "%", "low"),
     ("破折号铺陈", "dash_per_k", "/千字", "high"),
@@ -205,6 +231,12 @@ def check_file(path: Path, genre: str | None, quiet=False) -> int:
     failed = (ext5 >= 2) or (ext10 >= 3) or bool(ai_hit) or bool(soft_hit)
     print(f"   {'✗ 未过' if failed else '✓ 过'}：极端5% {ext5} 项 / 极端10% {ext10} 项"
           f"{'，AI 专属词' if ai_hit else ''}{'，软评价' if soft_hit else ''}｜规则 {FAIL_RULE}")
+
+    hints = restate_hints(m["_prose"])
+    if hints and not quiet:
+        print(f"   💡 疑似同义复述（提示，不计入判定，需人工核）：")
+        for s in hints:
+            print(f"       {s}")
 
     if failed and not quiet:
         for k, v in locate(m["_prose"], m["_sents"], m).items():
