@@ -196,3 +196,4 @@ scripts/.regression-baseline.local
 
 # 文字质量基线（含内部项目语料统计，仅本机）
 scripts/.prose-baseline.json
+scripts/.prose-corpus.conf

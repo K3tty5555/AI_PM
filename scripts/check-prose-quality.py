@@ -5,22 +5,33 @@
   AI 味不在「因此 / 所以 / 为了」这些连接词上——实测**人类用得比 AI 还多**
   （2.10 vs 1.23 每千字）。按词表抓 AI 腔，方向就错了。
 
-  真正的判别式是三个，全部机器可判：
-    ① 软评价尾巴   人类 0.04/千字 → AI 1.52/千字（38 倍）
-    ② 破折号铺陈   人类 0.47/千字 → AI 3.04/千字（6.5 倍）
-    ③ 长句率       人类 15.9%    → AI 25.0%
+  真正的判别式是「节奏」不是「用词」。四项全部机器可判，按效应量排
+  （Cohen's d，2026-09-17 本地 82 份人类语料实测）：
+    ① 短句占比(<10字)  d=1.58   人类会突然来一句「不支持。」，AI 不会
+    ② 破折号铺陈       d=1.44   人类 0.47/千字 → AI 3.04/千字
+    ③ 句长变异系数 CV  d=0.88   人类长短交错，AI 写等长句
+    ④ 句均长           d=0.46   判别力最弱，只当第四票
+  已淘汰：冒号密度 d=0.08、长句率 d=0.19（基本无判别力，别再加回来）。
 
-  四分之三的人类 PRD 里破折号和软评价是**零**。所以闸线取 P90，
+  另有两条零频词规则（软评价尾巴 / AI 专属词）走"命中即报"，不吃分位。
+  四分之三的人类 PRD 里破折号和软评价是**零**，所以闸线取分布尾部，
   允许偶尔用，只拦系统性滥用。
 
 阈值来源：scripts/.prose-baseline.json（由 build-prose-baseline.py 生成，
-gitignore）。基线缺失时退回内置保守值并明确告知——不静默降级。
+gitignore）。基线缺失或分布为空时**跳过分位判定、只跑零频词规则**——
+没有人类分布就没有"偏了多少"可言。这里原先想退回一组内置 p90 常量，
+实际是死代码：CHECKS 只读 dist，空分布会让两个 low 方向指标恒定拿到
+极端度 100，稳定凑满"≥2 项极端 5%"，把每篇文档都判成未过
+（2026-09-17 Codex 复核实证，fresh clone / CI 必踩）。
 
 用法：
     python3 scripts/check-prose-quality.py <file.md> [...]
     python3 scripts/check-prose-quality.py --selftest
     python3 scripts/check-prose-quality.py --genre report <file.md>
 退出码：0 = 过；1 = 有超标项；2 = 用法错误
+
+「💡 疑似同义复述」是提示项，**不进退出码**——所以 PostToolUse hook 在文档其它项
+都干净时看不到它（hook 只在 RC=1 才开口）。要看提示就手动跑本脚本。
 """
 
 from __future__ import annotations
@@ -34,12 +45,6 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 BASELINE = HERE / ".prose-baseline.json"
-
-# 基线缺失时的兜底（fresh clone 场景）。取自 2026-09-17 实测的 prd 档。
-FALLBACK = {
-    "mean_len_p90": 43.3, "long_rate_p90": 25.0,
-    "dash_per_k_p90": 0.86, "soft_per_k_p90": 0.00, "colon_per_k_p90": 13.29,
-}
 
 # 软评价尾巴：加了态度没加信息的补丁。已剔除人类语料里出现过的
 # （相对来说 / 较为 / 起到），只留真 0 次的。
@@ -56,16 +61,21 @@ SOFT_TAIL = [
 AI_ONLY_WORDS = ["接住", "接不住", "承接住", "抓手", "心智"]
 
 
+DEGRADED = "跳过分位判定，只跑零频词规则（软评价 / AI 专属词）"
+
+
 def load_baseline(genre: str):
+    """返回 (基线档, 告警)。拿不到分布就返回空档，调用方据此降级——
+    绝不用常量假装成分布，否则空分布会把所有文档判成未过。"""
     if not BASELINE.exists():
-        return FALLBACK, f"⚠️ 基线缺失（{BASELINE.name}），退回内置保守值；跑 build-prose-baseline.py 生成"
+        return {}, f"⚠️ 基线缺失（{BASELINE.name}）：{DEGRADED}；跑 build-prose-baseline.py 生成"
     data = json.loads(BASELINE.read_text(encoding="utf-8"))
     g = data.get("genres", {})
     if genre in g:
         return g[genre], None
     if "prd" in g:
         return g["prd"], f"⚠️ 基线里没有体裁 {genre}，退回 prd 档"
-    return FALLBACK, "⚠️ 基线为空，退回内置值"
+    return {}, f"⚠️ 基线为空：{DEGRADED}"
 
 
 def strip_noise(text: str) -> str:
@@ -199,14 +209,22 @@ def check_file(path: Path, genre: str | None, quiet=False) -> int:
     g = genre or genre_of(path)
     base, warn = load_baseline(g)
     dists = base.get("dist", {})
+    # 有分布的指标才参与判定。一个都没有 = 降级成纯词项检查，不是"全部超标"。
+    graded = [c for c in CHECKS if dists.get(c[1])]
     if warn and not quiet:
         print(f"  {warn}")
+    elif not graded and not quiet:
+        print(f"  ⚠️ 基线里没有可用分布（体裁 {g}）：{DEGRADED}")
 
     print(f"\n── {path.name}（体裁 {g}，散文 {m['chars']} 字 / {m['sentences']} 句"
           f"，对照 {base.get('docs', '?')} 份人类语料）")
     ext5 = ext10 = 0
     for label, key, unit, direction in CHECKS:
         d = dists.get(key, [])
+        arrow = "↓偏低" if direction == "low" else "↑偏高"
+        if not d:
+            print(f"   {label:16s} {m[key]:6.2f}{unit:5s} 人类分位 --    ({arrow}为病) ← 无分布，不判")
+            continue
         r = pct_rank(d, m[key])
         # "low" 方向：排名越低越异常，折算成同向的"极端度"
         extreme = (100 - r) if direction == "low" else r
@@ -218,7 +236,6 @@ def check_file(path: Path, genre: str | None, quiet=False) -> int:
         elif extreme > 90:
             ext10 += 1
             mark = "← 极端 10%"
-        arrow = "↓偏低" if direction == "low" else "↑偏高"
         print(f"   {label:16s} {m[key]:6.2f}{unit:5s} 人类分位 P{r:<5.1f} ({arrow}为病) {mark}")
 
     ai_hit = [w for w in AI_ONLY_WORDS if w in m["_prose"]]
@@ -228,8 +245,11 @@ def check_file(path: Path, genre: str | None, quiet=False) -> int:
     if soft_hit:
         print(f"   {'软评价尾巴':16s} 命中 {soft_hit[:5]}｜删掉不丢任何事实")
 
-    failed = (ext5 >= 2) or (ext10 >= 3) or bool(ai_hit) or bool(soft_hit)
-    print(f"   {'✗ 未过' if failed else '✓ 过'}：极端5% {ext5} 项 / 极端10% {ext10} 项"
+    dist_failed = bool(graded) and ((ext5 >= 2) or (ext10 >= 3))
+    failed = dist_failed or bool(ai_hit) or bool(soft_hit)
+    verdict = (f"极端5% {ext5} 项 / 极端10% {ext10} 项" if graded
+               else f"分位判定已跳过（{len(CHECKS)} 项均无人类分布）")
+    print(f"   {'✗ 未过' if failed else '✓ 过'}：{verdict}"
           f"{'，AI 专属词' if ai_hit else ''}{'，软评价' if soft_hit else ''}｜规则 {FAIL_RULE}")
 
     hints = restate_hints(m["_prose"])
@@ -247,6 +267,7 @@ def check_file(path: Path, genre: str | None, quiet=False) -> int:
 
 
 def selftest() -> int:
+    global BASELINE
     ok = True
     human = ("仅做中学电子作业场景的融合，小学电子作业场景不在本次讨论范围内。"
              "融合后资源统一，入口合并，流程统一。批改保持现状。"
@@ -273,6 +294,31 @@ def selftest() -> int:
     has = "破折号铺陈" in hits and "软评价" in hits
     print(f"  {'✓' if has else '✗'} 能报出具体位置（{list(hits)}）")
     ok &= has
+
+    # 回归闸：基线缺失时必须降级成"只跑零频词规则"，不能把干净文档判成未过。
+    # 2026-09-17 Codex 复核实证——空 dist 让两个 low 方向指标恒定拿极端度 100，
+    # 稳定凑满"≥2 项极端 5%"，fresh clone / CI 会 100% 假警报。这条别删。
+    import contextlib
+    import io
+    import tempfile
+    saved = BASELINE
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            BASELINE = Path(td) / "不存在的基线.json"
+            clean, dirty = Path(td) / "clean.md", Path(td) / "dirty.md"
+            clean.write_text(human, encoding="utf-8")
+            dirty.write_text(ai, encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc_clean = check_file(clean, None, quiet=True)
+                rc_dirty = check_file(dirty, None, quiet=True)
+    finally:
+        BASELINE = saved
+    for name, cond, got in [
+        ("无基线时干净文档不误判", rc_clean == 0, f"rc={rc_clean}"),
+        ("无基线时零频词规则仍生效", rc_dirty == 1, f"rc={rc_dirty}"),
+    ]:
+        print(f"  {'✓' if cond else '✗'} {name}（{got}）")
+        ok &= bool(cond)
 
     print("selftest:", "PASS" if ok else "FAIL")
     return 0 if ok else 1

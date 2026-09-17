@@ -5,10 +5,13 @@
 真实写出来的东西决定，否则校验器只是把我的主观偏好固化成规则。
 
 纯度纪律（照搬 memory/user_prd_writing_style.md 的判据，别自创）：
-  1. 只收 `_feishu-archive/`（飞书正本导出）和 `i讯飞历史PRD归档/`——
-     `05-prd/*.md` 大多是本工具 AI 起草的，收进来等于把病当成药。
+  1. 只收 `_feishu-archive/`（飞书正本导出）和本机 `EXTRA_CORPUS_DIRS` 配的
+     历史归档目录——`05-prd/*.md` 大多是本工具 AI 起草的，收进来等于把病当成药。
   2. 修订日志里出现 `AI_PM` 的一律剔除（AI 起草的稀释样本）。
   3. 他人项目整体排除，清单见 memory/user_prd_writing_style.md。
+
+⚠️ 归档目录名和他人项目名都是内部名，**不进版本库**（CLAUDE.md 版本库隐私规范），
+   放在 gitignore 的 scripts/.prose-corpus.conf 里，模板见同名 .example。
 
 体裁分档：PM 文档和讲稿的句长要求本来就不同，一刀切会两头不讨好。
 
@@ -29,8 +32,26 @@ HERE = Path(__file__).parent
 ROOT = HERE.parent
 OUT = HERE / ".prose-baseline.json"
 
-# 他人项目——不学别人的风格（单源见 memory/user_prd_writing_style.md）
-EXCLUDE_PROJECTS = {"精准教学3.0", "教学监管", "讲评融合", "智学网新容器"}
+CONF = HERE / ".prose-corpus.conf"
+
+
+def conf(key: str) -> list[str]:
+    """读本机语料配置（gitignore）。缺文件返回空——脚本本身不存任何内部名，
+    否则检漏脚本自己成泄漏源（本仓踩过这坑，见 .share-denylist 的同款做法）。"""
+    if not CONF.exists():
+        return []
+    for line in CONF.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith(f"{key}="):
+            val = line.split("=", 1)[1].strip().strip("\"'")
+            return [x for x in val.split("|") if x]
+    return []
+
+
+# 额外的人类正本归档目录（相对 output/projects/）
+EXTRA_CORPUS_DIRS = conf("EXTRA_CORPUS_DIRS")
+# 他人项目——不学别人的风格（判据单源见 memory/user_prd_writing_style.md）
+EXCLUDE_PROJECTS = set(conf("EXCLUDE_PROJECTS"))
 # AI 起草标记：修订日志作者列出现即整篇剔除
 AI_DRAFT_MARK = "AI_PM"
 
@@ -124,7 +145,8 @@ def collect():
         if not base.exists():
             continue
         files += list(base.glob("*/05-prd/_feishu-archive/*.md"))
-        files += list((base / "i讯飞历史PRD归档").rglob("*.md"))
+        for d in EXTRA_CORPUS_DIRS:
+            files += list((base / d).rglob("*.md"))
     return sorted(set(files))
 
 
@@ -137,6 +159,11 @@ def main():
 
     if args.selftest:
         return selftest()
+
+    # 纯度靠配置兜着，配置没了就静默变成"学所有人的风格"——必须出声。
+    if not CONF.exists():
+        print(f"⚠️ 缺 {CONF.name}（模板：{CONF.name}.example）："
+              f"不排除他人项目、不收额外归档目录，基线纯度会被稀释", file=sys.stderr)
 
     by_genre, skipped = {}, []
     for f in collect():
@@ -206,7 +233,8 @@ def main():
             print(f"  - {n[:46]} → {why}")
 
     payload = {
-        "generated_from": "output/projects/*/05-prd/_feishu-archive + i讯飞历史PRD归档",
+        "generated_from": "output/projects/*/05-prd/_feishu-archive"
+                          + "".join(f" + {d}" for d in EXTRA_CORPUS_DIRS),
         "purity": "已剔除他人项目与修订日志含 AI_PM 的稀释样本",
         "corpus_docs": sum(len(v) for v in by_genre.values()),
         "skipped": len(skipped),
@@ -239,8 +267,21 @@ def selftest():
     clean, why = is_clean_corpus(p, "修订日志 作者 AI_PM " + "正文" * 200)
     print(f"  {'✓' if not clean else '✗'} AI 起草稿被剔除（{why}）")
     ok &= not clean
-    clean2, _ = is_clean_corpus(Path("output/projects/讲评融合/05-prd/_feishu-archive/b.md"), "正文" * 200)
-    print(f"  {'✓' if not clean2 else '✗'} 他人项目被剔除")
+    # 排除清单来自本机 conf（gitignore），fresh clone 里必然是空的——所以这里自备
+    # fixture 打桩：既不依赖本机配置（否则 fresh-clone 验收必红），也不把真实项目名
+    # 写进版本库（CLAUDE.md 版本库隐私规范）。
+    global EXCLUDE_PROJECTS
+    saved_excl = EXCLUDE_PROJECTS
+    EXCLUDE_PROJECTS = {"某他人项目"}
+    try:
+        clean2, _ = is_clean_corpus(Path("output/projects/某他人项目/05-prd/_feishu-archive/b.md"), "正文" * 200)
+        # 阴性：不在清单里的项目必须放行，否则"全剔除"也能骗过上面那条
+        clean3, _ = is_clean_corpus(Path("output/projects/自己的项目/05-prd/_feishu-archive/c.md"), "正文" * 200)
+    finally:
+        EXCLUDE_PROJECTS = saved_excl
+    print(f"  {'✓' if not clean2 else '✗'} 他人项目被剔除（排除清单生效）")
+    print(f"  {'✓' if clean3 else '✗'} 清单外项目放行（阴性）")
+    ok &= clean3
     ok &= not clean2
 
     print("selftest:", "PASS" if ok else "FAIL")

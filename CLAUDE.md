@@ -137,6 +137,8 @@ README.md                  项目介绍
   - **已自动化**：`.claude/hooks/prose-quality-check.sh` 挂在 `PostToolUse(Edit|Write)`，`output/` 和 `docs/` 下的 `.md` 落盘即自动查。66 毫秒，干净时完全静默，只在未过时提示改法。手动跑：`python3 scripts/check-prose-quality.py <文件>`
   - 自动查的排除项：`_cloud/` 备份、`_feishu-archive/` 人类正本、README / CLAUDE.md / SKILL.md、`.claude/` 与 `templates/`（这些是给机器读的配置，不是散文）
   - 判定规则「≥2 项超 P95，或 ≥3 项超 P90」，人类语料实测误报 3.7%
+  - ⚠️ **基线缺失时降级成「只跑零频词规则」，不做分位判定**：没有人类分布就没有"偏了多少"可言。这里原先想退回一组内置 p90 常量，实测是死代码——空分布让两个 low 方向指标恒定拿满极端度，把每篇文档都判成未过（2026-09-17 Codex 复核实证，fresh clone / CI 必踩）。`--selftest` 有专门回归闸守着，别删
+  - 「💡 疑似同义复述」是**提示项、不进退出码**，所以自动 hook 在其它项都干净时看不到它（误报约 8%，不值得为它打断干净落盘）；要看就手动跑脚本
   - 判别式按效应量排（Cohen's d，82 份人类语料实测）：**短句占比 1.58** > **破折号铺陈 1.44** > **句长变异系数 CV 0.88** > 句均长 0.46。前两项里，短句占比和 CV 吸收自 [swaylq/humanize-chinese](https://github.com/swaylq/humanize-chinese)（HC3-Chinese 12853 对样本校准，论文 d=1.21/1.22，本地复现）
   - ⚠️ **最强的两个是「节奏」指标不是「用词」指标**：AI 写中文最稳定的破绽是句子长得都差不多，人类会突然来一句「不支持。」「同 V1。」
   - 软评价尾巴（「路是通的」「总体而言」）与 AI 专属词（「接住」）走规则命中，命中即报
@@ -144,7 +146,7 @@ README.md                  项目介绍
   - 机器只抓得住句法级的病。**「废话多」GitHub 上没有能机器判定的方案**（最接近的 de-ai-flavor 也明说 scan.py「只报数据不下结论」），靠 `humanizer-pm` 线 0 的 C6 三个自检动作人工过：①一段话能被一句话概括且不丢信息 = 密度低 ②每段问「推进了什么」四选一 ③每个细节问「删了会缺什么」
   - 改写顺序固定 **先砍后补四遍**：删 → 修逻辑 → 调节奏 → 补新信息。顺序乱了会把该删的润色得舍不得删
   - ⚠️ **单点特征不算证据**（防误伤，来自 de-ai-flavor 第零节）：破折号多、排比多、三段式单独出现一律放过，必须多条同时命中。也不要给整篇打「AI 概率百分比」
-  - 基线重建：`python3 scripts/build-prose-baseline.py`（语料纯度按修订日志作者列判，剔 AI_PM 起草稿与他人项目）
+  - 基线重建：`python3 scripts/build-prose-baseline.py`（语料纯度按修订日志作者列判，剔 AI_PM 起草稿与他人项目）。**归档目录名与他人项目名是内部名、不进版本库**，放在 gitignore 的 `scripts/.prose-corpus.conf`（模板 `.conf.example`，hook 也读它做豁免）；缺配置时脚本会在 stderr 提醒纯度被稀释
 - **PRD 推云文档后在 `_status.json.cloud_docs` 登记时必须带 `folder.path`**（云端所在目录），否则文档被人挪走无从发现。核对：`python3 scripts/ai-sync/check-cloud-doc-folders.py`（只读，`--write` 回写，遍历云盘约 1~2 分钟）；每周首次进项目由 `cloud-doc-folders-weekly-hook.sh` 后台自动跑，冷启动只读一行摘要、clean 时静默。⚠️ 月份文件夹里很多条目是**快捷方式**（token 前缀 `nodrz`、正本在别处），按 docx token 直接匹配会误报"文档不在云盘里"
 
 ### Playwright MCP 使用规范

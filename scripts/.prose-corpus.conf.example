@@ -1,0 +1,16 @@
+# 文字质量基线的本机语料配置。复制成 scripts/.prose-corpus.conf 后填真值。
+#
+# 为什么要externalize：归档目录名和他人项目名都是内部名，写进追踪文件会被
+# check-share-readiness.sh 拦下——见 CLAUDE.md「版本库隐私规范」。
+# 同 scripts/.share-denylist 的做法：脚本本身不存任何真实内部名。
+#
+# 格式：竖线分隔，shell 可 source、python 也按 KEY= 逐行解析。
+
+# 额外的人类正本归档目录（相对 output/projects/ 的目录名）。
+# 这些目录是人类写的正本，既做基线语料，也被 prose-quality hook 豁免检查。
+# 留空则只收 output/projects/*/05-prd/_feishu-archive/。
+EXTRA_CORPUS_DIRS="历史PRD归档目录名A|历史PRD归档目录名B"
+
+# 他人项目——不学别人的风格（判据单源见 memory/user_prd_writing_style.md）。
+# ⚠️ 留空 = 不排除任何项目，基线会被他人文风稀释，脚本会在 stderr 提醒。
+EXCLUDE_PROJECTS="他人项目A|他人项目B"
