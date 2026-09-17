@@ -51,6 +51,15 @@
             "command": "bash -c 'test -f .claude/hooks/skill-sync-check.sh && bash .claude/hooks/skill-sync-check.sh || true'"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'test -f .claude/hooks/prose-quality-check.sh && bash .claude/hooks/prose-quality-check.sh || true'"
+          }
+        ]
       }
     ],
     "Stop": [

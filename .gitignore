@@ -193,3 +193,6 @@ AI_PM/
 .claude/hooks/.knowledge-capture.enabled
 .claude/settings.json.bak*
 scripts/.regression-baseline.local
+
+# 文字质量基线（含内部项目语料统计，仅本机）
+scripts/.prose-baseline.json

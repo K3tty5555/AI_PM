@@ -133,7 +133,16 @@ README.md                  项目介绍
 - **grep / 搜记忆或语料里的业务实体前，先 `python3 scripts/entity-expand.py "<词>" --grep` 把词扩成所有叫法再搜**（Stage4-B2 同物异名归一，字典表三）：治「同一功能/权限项有多个称呼」这类同一物不同叫法的漏检；扩不出就查原词（不报错）；发现新异名往字典表三补一行
 - Chart.js `indexAxis:'y'` 必须在 `options` 顶层，不能放在 `scales` 里
 - 项目阶段产物放 `output/projects/{项目名}/`，产品级长期资产放 `output/assets/{资产名}/`，独立经验文章放 `output/sharing/articles/`。`output/` 顶层容器的唯一完整注册表见 `.claude/skills/ai-pm/references/output-containers.md`；新增容器必须先登记
-- 交互文案须经 humanizer-pm 处理，避免 AI 味
+- **一切交付给人读的散文都要过文字关**（2026-09-17 扩大范围，原先只管交互文案）：
+  - **已自动化**：`.claude/hooks/prose-quality-check.sh` 挂在 `PostToolUse(Edit|Write)`，`output/` 和 `docs/` 下的 `.md` 落盘即自动查。66 毫秒，干净时完全静默，只在未过时提示改法。手动跑：`python3 scripts/check-prose-quality.py <文件>`
+  - 自动查的排除项：`_cloud/` 备份、`_feishu-archive/` 人类正本、README / CLAUDE.md / SKILL.md、`.claude/` 与 `templates/`（这些是给机器读的配置，不是散文）
+  - 判定规则「≥2 项超 P95，或 ≥3 项超 P90」，人类语料实测误报 3.7%
+  - 判别式按效应量排（Cohen's d，82 份人类语料实测）：**短句占比 1.58** > **破折号铺陈 1.44** > **句长变异系数 CV 0.88** > 句均长 0.46。前两项里，短句占比和 CV 吸收自 [swaylq/humanize-chinese](https://github.com/swaylq/humanize-chinese)（HC3-Chinese 12853 对样本校准，论文 d=1.21/1.22，本地复现）
+  - ⚠️ **最强的两个是「节奏」指标不是「用词」指标**：AI 写中文最稳定的破绽是句子长得都差不多，人类会突然来一句「不支持。」「同 V1。」
+  - 软评价尾巴（「路是通的」「总体而言」）与 AI 专属词（「接住」）走规则命中，命中即报
+  - ⚠️ 实测推翻的想当然：**连接词（因此/所以/为了/实现/提升）人类用得比 AI 还多**，按连接词抓 AI 腔是错的方向
+  - 机器只抓得住句法级的病；「废话多 / 同义复述」要靠 `humanizer-pm` 线 0 的 C1–C4 人工判
+  - 基线重建：`python3 scripts/build-prose-baseline.py`（语料纯度按修订日志作者列判，剔 AI_PM 起草稿与他人项目）
 - **PRD 推云文档后在 `_status.json.cloud_docs` 登记时必须带 `folder.path`**（云端所在目录），否则文档被人挪走无从发现。核对：`python3 scripts/ai-sync/check-cloud-doc-folders.py`（只读，`--write` 回写，遍历云盘约 1~2 分钟）；每周首次进项目由 `cloud-doc-folders-weekly-hook.sh` 后台自动跑，冷启动只读一行摘要、clean 时静默。⚠️ 月份文件夹里很多条目是**快捷方式**（token 前缀 `nodrz`、正本在别处），按 docx token 直接匹配会误报"文档不在云盘里"
 
 ### Playwright MCP 使用规范

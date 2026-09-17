@@ -50,6 +50,8 @@ run_check "规则一致性（check-rule-drift，10 项）" bash scripts/check-ru
 run_check "骨架 canonical 单源（check-skeleton-rule-drift）" bash scripts/check-skeleton-rule-drift.sh
 run_check "doctype 骨架 fixture 回归（check-prd-skeleton）" bash scripts/check-prd-skeleton.sh
 run_check "PRD 字数三档口径自测（check-prd-word-count --selftest）" python3 scripts/check-prd-word-count.py --selftest
+run_check "文字质量校验器自测（check-prose-quality --selftest）" python3 scripts/check-prose-quality.py --selftest
+run_check "人类语料基线自测（build-prose-baseline --selftest）" python3 scripts/build-prose-baseline.py --selftest
 # 判断卡自身篇幅预算（2026-07-17 T5 拍板轻量版）：硬线 600 行，超线先合并/收编旧规则再新增（单源=判断卡头部预算注）
 run_check "判断卡篇幅预算（≤600 行，防只加不减膨胀）" bash -c '
   n=$(wc -l < .claude/skills/ai-pm/references/pm-judgment-card.md)
