@@ -1,0 +1,28 @@
+{
+  "_说明": "由 build-prose-baseline.py 生成。本文件是结构示例，真实基线含内部语料统计，gitignore 仅本机。",
+  "_重建": "python3 scripts/build-prose-baseline.py",
+  "_警告": "dist 的四个键必须与 check-prose-quality.py 的 CHECKS 一一对应（short_rate / cv / dash_per_k / mean_len）。照抄本文件的空数组只能得到一份空壳，校验器会降级成「只跑零频词规则」并明说——别拿空壳当基线用。",
+  "generated_from": "output/projects/*/05-prd/_feishu-archive（+ 本机 .prose-corpus.conf 里 EXTRA_CORPUS_DIRS 配的归档目录）",
+  "purity": "已剔除他人项目与修订日志含 AI_PM 的稀释样本",
+  "corpus_docs": 0,
+  "skipped": 0,
+  "genres": {
+    "prd": {
+      "docs": 0,
+      "dash_per_k_p75": 0,
+      "dash_per_k_p90": 0,
+      "soft_per_k_p75": 0,
+      "soft_per_k_p90": 0,
+      "mean_len_p90": 0,
+      "mean_len_p75": 0,
+      "short_rate_median": 0,
+      "cv_median": 0,
+      "mean_len_median": 0,
+      "median_len_median": 0,
+      "p90_len_median": 0,
+      "dist": {
+        "short_rate": [], "cv": [], "dash_per_k": [], "mean_len": []
+      }
+    }
+  }
+}

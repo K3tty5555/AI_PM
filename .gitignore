@@ -196,3 +196,7 @@ scripts/.regression-baseline.local
 
 # WorkBuddy 会话数据（memory 等），不入库
 .workbuddy/
+
+# 文字质量基线（含内部项目语料统计，仅本机）
+scripts/.prose-baseline.json
+scripts/.prose-corpus.conf

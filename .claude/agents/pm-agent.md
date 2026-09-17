@@ -173,7 +173,7 @@ tools: Read, Grep, Glob, Bash(wc), Bash(grep), Bash(ls)
 **步骤**：
 1. 读 PRD 全文（用 Read 工具，记录行号）
 2. 按 checklist 逐项扫，列出不通过项（行号 + 原文 + 修改建议）
-3. 检查越界红线（6 类）+ 缺失项（4 类——影响范围/暂不纳入/责任分工/修订日志口径；复用对照表仅迁移类才查；**决策评审型另按模板八条必答项扫缺失**，事实源在 decision-review-template 头部注释）+ Agent 4 项专项（agent / hybrid 才查）
+3. 检查越界红线（6 类）+ 缺失项（4 类——影响范围/暂不纳入/责任分工/修订日志口径；复用对照表仅迁移类才查；**决策评审型另按模板十条必答项扫缺失**，事实源在 decision-review-template 头部注释——其中 ⑨ 先分诊驱动类型再选证据范式（商务竞争驱动＝具名战役+先例+土办法代价，禁用推演替代事实）、⑩ 收尾向前看且落档期（§四默认「后续版本规划」而非「主要风险」、风险禁替兄弟部门操心、行动项不占决策点编号、必须有一句"期望 X 月底完成 Y"）是 2026-09-15 新增，别漏）+ Agent 4 项专项（agent / hybrid 才查）
 3bis. **承重骨架 + doctype 检测（窄检·只提示不阻断；骨架契约见判断卡 §6 二分 / doctype 契约见 phase-5-prd 步骤 A.0.1）**：
    - **读 doctype**：① 先 grep PRD 文件头 `<!-- doctype: (full|decision_review) -->`；② 缺文件头标记时，**仅当路径形如 `{project}/05-prd/*.md`** 才读 `{project}/_status.json` 的 `checkpoints.prd.doctype`（`project` = `05-prd` 上一级），否则**不读、只认文件头**（不递归乱找、不扫错项目）；**靠 `_status` 判出 doctype（文件头缺）→ 输出 `DOCTYPE_WARNING: missing_header`**（已以 _status 判定、提示补回文件头标记，别让单文件 lint 权威静默缺失）；③ 文件头与 `_status` 冲突 → 输出 `DOCTYPE_WARNING: conflict`、不静默跳过。
    - `decision_review` → **跳过骨架检查**，输出 `STRUCTURE_HINT: skipped_decision_review`。
@@ -202,7 +202,7 @@ L{行号}: 「{原文}」
   改成：{建议}
 
 ⚠️ 缺失（{N} 项）
-[ ] {项名}：{说明}（决策评审型含八条必答项扫缺结果）
+[ ] {项名}：{说明}（决策评审型含十条必答项扫缺结果）
 
 🔧 骨架 / doctype 机器行（fixture smoke 断言用）
 STRUCTURE_HINT: {missing_skeleton | pass | skipped_decision_review}

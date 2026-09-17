@@ -53,17 +53,25 @@ elif [ -z "$J_AGENT" ]; then note_fail "pm-agent.md 缺 jargon-blacklist 内化�
 elif [ "$J_CARD" != "$J_AGENT" ]; then note_fail "行话表两副本内容不一致（diff 判断卡 vs pm-agent）："; diff <(printf '%s\n' "$J_CARD") <(printf '%s\n' "$J_AGENT") | sed 's/^/       /'
 else note_ok "行话表两副本一致（$(printf '%s\n' "$J_CARD" | grep -cv '^#') 行词条）"; fi
 
-echo "▶ 检查 7：决策评审八条必答项——模板为唯一事实源，判断卡 / phase-5 只留指针"
+echo "▶ 检查 7：决策评审十条必答项——模板为唯一事实源，判断卡 / phase-5 只留指针"
 TPL=templates/prd-styles/default/decision-review-template.md
-if ! grep -q "八条必答项" "$TPL"; then note_fail "模板缺「八条必答项」事实源段"; fi
+if ! grep -q "十条必答项" "$TPL"; then note_fail "模板缺「十条必答项」事实源段"; fi
 for f in .claude/skills/ai-pm/references/pm-judgment-card.md .claude/skills/ai-pm/phases/phase-5-prd.md; do
-  if ! grep -q "八条必答" "$f"; then note_fail "$f 缺「八条必答」指针"; fi
+  if ! grep -q "十条必答" "$f"; then note_fail "$f 缺「十条必答」指针"; fi
 done
 MISS=0
-for tag in "必答①" "必答②" "必答③" "必答④" "必答⑤" "必答⑥" "必答⑦" "必答⑧"; do
+for tag in "必答①" "必答②" "必答③" "必答④" "必答⑤" "必答⑥" "必答⑦" "必答⑧" "必答⑨" "必答⑩"; do
   grep -q "$tag" "$TPL" || { MISS=1; note_fail "模板正文缺 ${tag} 落位锚点"; }
 done
-[ "$MISS" -eq 0 ] && grep -q "八条必答项" "$TPL" && note_ok "八必答：模板事实源 + 正文 ①-⑧ 锚点 + 两处指针齐全"
+# 7a 负向：旧项数残留。只查「十条在不在」会假绿——2026-09-15 从八条扩到十条时，
+# pm-agent.md 和 driver/SKILL.md（唯二真去执行扫描的入口）都还写着八条，
+# 等于 ⑨⑩ 只活在文档里、lint 根本不查（Codex 2026-09-17 复核实证）。
+STALE=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "[八九]条必答" 2>/dev/null | grep -v "扩到\|扩为\|原八条\|已废\|墓碑")
+if [ -n "$STALE" ]; then MISS=1; note_fail "残留旧必答项数（应为「十条必答」）："; printf '%s\n' "$STALE" | sed 's/^/       /'; fi
+# 7b 负向：4 节骨架不得再把 §四 写死成「主要风险」（必答⑩：默认「后续版本规划」）
+STALE4=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "需要决策的内容.{0,14}主要风险" 2>/dev/null)
+if [ -n "$STALE4" ]; then MISS=1; note_fail "4 节骨架把 §四 写死成「主要风险」（必答⑩默认应为「后续版本规划」）："; printf '%s\n' "$STALE4" | sed 's/^/       /'; fi
+[ "$MISS" -eq 0 ] && grep -q "十条必答项" "$TPL" && note_ok "十必答：模板事实源 + 正文 ①-⑩ 锚点 + 两处指针 + 无旧项数/旧 §四 残留"
 
 echo "▶ 检查 8：原型示意判定正则跨副本一致（源侧校验器 / 云侧校验器 / push 计数器；精确比对走 python）"
 if python3 scripts/check-prototype-regex-drift.py | sed 's/^/  /'; then :; else note_fail "原型示意判定正则漂移（详见上方输出；唯一源=2026-07-02 计划附录 A）"; fi
@@ -136,4 +144,4 @@ if python3 scripts/check-prd-word-count.py --selftest >/dev/null 2>&1; then :; e
 
 echo ""
 if [ "$FAIL" -eq 0 ]; then echo "✅ 规则一致性检查全部通过"; exit 0
-else echo "❌ 发现规则漂移，请把上述文件改回统一口径（事实源：pm-agent 单源 / 行话表→判断卡 §9.3；八条必答→decision-review 模板头部注释）"; exit 1; fi
+else echo "❌ 发现规则漂移，请把上述文件改回统一口径（事实源：pm-agent 单源 / 行话表→判断卡 §9.3；十条必答→decision-review 模板头部注释）"; exit 1; fi
