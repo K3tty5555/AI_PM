@@ -193,3 +193,6 @@ AI_PM/
 .claude/hooks/.knowledge-capture.enabled
 .claude/settings.json.bak*
 scripts/.regression-baseline.local
+
+# WorkBuddy 会话数据（memory 等），不入库
+.workbuddy/
