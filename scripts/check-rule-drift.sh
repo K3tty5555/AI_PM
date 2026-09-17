@@ -63,7 +63,15 @@ MISS=0
 for tag in "必答①" "必答②" "必答③" "必答④" "必答⑤" "必答⑥" "必答⑦" "必答⑧" "必答⑨" "必答⑩"; do
   grep -q "$tag" "$TPL" || { MISS=1; note_fail "模板正文缺 ${tag} 落位锚点"; }
 done
-[ "$MISS" -eq 0 ] && grep -q "十条必答项" "$TPL" && note_ok "十必答：模板事实源 + 正文 ①-⑩ 锚点 + 两处指针齐全"
+# 7a 负向：旧项数残留。只查「十条在不在」会假绿——2026-09-15 从八条扩到十条时，
+# pm-agent.md 和 driver/SKILL.md（唯二真去执行扫描的入口）都还写着八条，
+# 等于 ⑨⑩ 只活在文档里、lint 根本不查（Codex 2026-09-17 复核实证）。
+STALE=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "[八九]条必答" 2>/dev/null | grep -v "扩到\|扩为\|原八条\|已废\|墓碑")
+if [ -n "$STALE" ]; then MISS=1; note_fail "残留旧必答项数（应为「十条必答」）："; printf '%s\n' "$STALE" | sed 's/^/       /'; fi
+# 7b 负向：4 节骨架不得再把 §四 写死成「主要风险」（必答⑩：默认「后续版本规划」）
+STALE4=$(printf '%s\n' "$FILES" | tr '\n' '\0' | xargs -0 grep -nE "需要决策的内容.{0,14}主要风险" 2>/dev/null)
+if [ -n "$STALE4" ]; then MISS=1; note_fail "4 节骨架把 §四 写死成「主要风险」（必答⑩默认应为「后续版本规划」）："; printf '%s\n' "$STALE4" | sed 's/^/       /'; fi
+[ "$MISS" -eq 0 ] && grep -q "十条必答项" "$TPL" && note_ok "十必答：模板事实源 + 正文 ①-⑩ 锚点 + 两处指针 + 无旧项数/旧 §四 残留"
 
 echo "▶ 检查 8：原型示意判定正则跨副本一致（源侧校验器 / 云侧校验器 / push 计数器；精确比对走 python）"
 if python3 scripts/check-prototype-regex-drift.py | sed 's/^/  /'; then :; else note_fail "原型示意判定正则漂移（详见上方输出；唯一源=2026-07-02 计划附录 A）"; fi
