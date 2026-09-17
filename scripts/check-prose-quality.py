@@ -46,19 +46,41 @@ from pathlib import Path
 HERE = Path(__file__).parent
 BASELINE = HERE / ".prose-baseline.json"
 
-# 软评价尾巴：加了态度没加信息的补丁。已剔除人类语料里出现过的
-# （相对来说 / 较为 / 起到），只留真 0 次的。
-SOFT_TAIL = [
-    "路是通的", "效果不错", "值得关注", "总体而言", "整体来看",
-    "有一定", "发挥", "还算", "基本可用",
-    "是个不错的", "值得一提", "颇为", "略显", "尚可",
+# ── 词表：按实测人类使用密度分两档（2026-09-17 重订）──────────────
+#
+# 校准语料两套：
+#   建表集 —— 内部 82 份（作者本人 PRD，26 万字）
+#   验证集 —— 外部 2607 份（同事飞书正本，445 万字，READONLY SNAPSHOT 快照）
+#             2026-09-17 新加，**没参与建表**。它把「人类语料 0 次」这个前提
+#             独立验了一遍，19 个词里 12 个没过——原来的 0 次不是因为样本少，
+#             是因为语料窄（只有一个人的 PRD）。
+#
+# 分界线不是拍的：验证集里各词要么出现 0~1 次，要么 3~12 次，中间是空的。
+# ⚠️ 入表纪律：往 HARD_WORDS 加词前，**必须先在验证集上数一遍**。
+#    "看着像 AI 腔"不是证据——2026-09-17 就是这么把「抓手」「发挥」误判进去的。
+#    历史上被这条纪律拦下的：颗粒度 6 次 / 赋能 1 次 / 相对来说 / 较为 / 起到。
+
+# 硬拦：445 万字人类正本里 ≤1 次，和 0 无法区分。命中即判未过。
+HARD_WORDS = [
+    "接住", "接不住", "承接住",   # 建这个 hook 的起因，别松
+    "路是通的", "效果不错", "值得关注", "总体而言",
+    "是个不错的", "值得一提", "颇为", "尚可", "还算",
 ]
 
-# 人类语料里一次都没出现过的词。
-# ⚠️ 入表纪律：必须先跑 scripts/build-prose-baseline.py 的语料做 0 次验证再加。
-# 2026-09-17 验证被剔除的（以为是 AI 词，实测人类也用）：
-#   颗粒度 6 次 / 赋能 1 次 / 相对来说 1 次 / 较为 1 次 / 起到 1 次
-AI_ONLY_WORDS = ["接住", "接不住", "承接住", "抓手", "心智"]
+# 只提示不判死：真人在用的普通商务中文，硬拦会误伤。括号内 = 验证集出现次数。
+# 实测代价：output/ 下 3176 份里 47 份"只因一个词被判死"，「发挥」一词占 3 份。
+HINT_WORDS = [
+    "抓手",      # 12 次 / 12 份
+    "发挥",      # 10 次 / 7 份 —— 本属范畴词冗余（归 humanizer），不是软评价尾巴
+    "整体来看",  # 5
+    "有一定",    # 5 —— 同上，范畴词
+    "略显",      # 5
+    "心智",      # 4（裸子串还会命中「心智模型」）
+    "基本可用",  # 3
+]
+
+# soft_per_k 保持两档合计的老口径——该指标 d=0.08 早已退出判定，只作诊断输出
+SOFT_TAIL = HARD_WORDS + HINT_WORDS
 
 
 DEGRADED = "跳过分位判定，只跑零频词规则（软评价 / AI 专属词）"
@@ -135,16 +157,13 @@ def locate(prose: str, sents, m) -> dict:
     dash = [s.strip()[:56] for s in re.split(r"[。！？\n]", prose) if "——" in s][:3]
     if dash:
         hits["破折号铺陈"] = dash
-    soft = []
-    for w in SOFT_TAIL:
+    hard = []
+    for w in HARD_WORDS:
         for mm in re.finditer(re.escape(w), prose):
-            soft.append(f"「{w}」… {prose[mm.start():mm.start()+26]}")
+            hard.append(f"「{w}」… {prose[mm.start():mm.start()+26]}")
             break
-    if soft:
-        hits["软评价"] = soft[:4]
-    ai = [w for w in AI_ONLY_WORDS if w in prose]
-    if ai:
-        hits["AI 专属词（人类语料 0 次）"] = ai
+    if hard:
+        hits["硬拦词（445 万字人类正本里 ≤1 次）"] = hard[:4]
     return hits
 
 
@@ -188,7 +207,7 @@ CHECKS = [
 ]
 
 # 判定规则与误报率（82 份人类语料实测）
-FAIL_RULE = "≥2 项进人类分布的极端 5%，或 ≥3 项进极端 10%"
+FAIL_RULE = "≥2 项进人类分布的极端 5%，或 ≥3 项进极端 10%，或命中硬拦词"
 
 
 def pct_rank(dist, v) -> float:
@@ -201,6 +220,13 @@ def pct_rank(dist, v) -> float:
 
 def check_file(path: Path, genre: str | None, quiet=False) -> int:
     text = path.read_text(encoding="utf-8")
+    # 别人写的飞书正本快照（知识库蒸馏产物）——和 _feishu-archive 同性质：
+    # 人类正本，拿 AI 腔的尺子去量它没有任何可执行的意义（改不了，也不该改）。
+    # 2026-09-17 实测：output/ 下 47 份"只因一个词被判死"里有 4 份是这类。
+    if "READONLY SNAPSHOT" in text[:200]:
+        if not quiet:
+            print(f"  ⏭  {path.name}：人类正本快照（READONLY SNAPSHOT），跳过")
+        return 0
     m = analyze(text)
     if not m:
         if not quiet:
@@ -238,20 +264,21 @@ def check_file(path: Path, genre: str | None, quiet=False) -> int:
             mark = "← 极端 10%"
         print(f"   {label:16s} {m[key]:6.2f}{unit:5s} 人类分位 P{r:<5.1f} ({arrow}为病) {mark}")
 
-    ai_hit = [w for w in AI_ONLY_WORDS if w in m["_prose"]]
-    if ai_hit:
-        print(f"   {'AI 专属词':16s} 命中 {ai_hit}｜这些词在人类语料里 0 次")
-    soft_hit = [w for w in SOFT_TAIL if w in m["_prose"]]
-    if soft_hit:
-        print(f"   {'软评价尾巴':16s} 命中 {soft_hit[:5]}｜删掉不丢任何事实")
+    hard_hit = [w for w in HARD_WORDS if w in m["_prose"]]
+    if hard_hit:
+        print(f"   {'硬拦词':16s} 命中 {hard_hit[:5]}｜删掉不丢任何事实，必改")
+    hint_hit = [w for w in HINT_WORDS if w in m["_prose"]]
 
     dist_failed = bool(graded) and ((ext5 >= 2) or (ext10 >= 3))
-    failed = dist_failed or bool(ai_hit) or bool(soft_hit)
+    failed = dist_failed or bool(hard_hit)
     verdict = (f"极端5% {ext5} 项 / 极端10% {ext10} 项" if graded
                else f"分位判定已跳过（{len(CHECKS)} 项均无人类分布）")
     print(f"   {'✗ 未过' if failed else '✓ 过'}：{verdict}"
-          f"{'，AI 专属词' if ai_hit else ''}{'，软评价' if soft_hit else ''}｜规则 {FAIL_RULE}")
+          f"{'，硬拦词' if hard_hit else ''}｜规则 {FAIL_RULE}")
 
+    if hint_hit and not quiet:
+        print(f"   💡 可疑用词（提示，不计入判定）：{hint_hit}"
+              f"｜真人也在用，自己判是不是真的必要")
     hints = restate_hints(m["_prose"])
     if hints and not quiet:
         print(f"   💡 疑似同义复述（提示，不计入判定，需人工核）：")
@@ -291,9 +318,16 @@ def selftest() -> int:
 
     # 定位功能必须报得出位置
     hits = locate(am["_prose"], am["_sents"], am)
-    has = "破折号铺陈" in hits and "软评价" in hits
+    has = "破折号铺陈" in hits and any("硬拦词" in k for k in hits)
     print(f"  {'✓' if has else '✗'} 能报出具体位置（{list(hits)}）")
     ok &= has
+
+    # 两档词表纪律（2026-09-17 外部集 445 万字重订后加）：
+    #   不许重叠——同一个词不能既硬拦又只提示
+    #   HINT_WORDS 单独出现绝不能判死，否则等于没分档
+    overlap = set(HARD_WORDS) & set(HINT_WORDS)
+    print(f"  {'✓' if not overlap else '✗'} 硬拦/提示两档不重叠（{overlap or '无交集'}）")
+    ok &= not overlap
 
     # 回归闸：基线缺失时必须降级成"只跑零频词规则"，不能把干净文档判成未过。
     # 2026-09-17 Codex 复核实证——空 dist 让两个 low 方向指标恒定拿极端度 100，
@@ -308,14 +342,24 @@ def selftest() -> int:
             clean, dirty = Path(td) / "clean.md", Path(td) / "dirty.md"
             clean.write_text(human, encoding="utf-8")
             dirty.write_text(ai, encoding="utf-8")
+            # 只含提示档词的干净文档：不许被判死，否则分档等于白分
+            hintonly = Path(td) / "hintonly.md"
+            hintonly.write_text(human + "这个能力还没充分发挥，抓手也不够。" * 2, encoding="utf-8")
+            # 人类正本快照：必须整篇跳过，不该被 AI 腔的尺子量
+            snap = Path(td) / "snapshot.md"
+            snap.write_text("<!-- READONLY SNAPSHOT; source node=x -->\n" + ai, encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
                 rc_clean = check_file(clean, None, quiet=True)
                 rc_dirty = check_file(dirty, None, quiet=True)
+                rc_hint = check_file(hintonly, None, quiet=True)
+                rc_snap = check_file(snap, None, quiet=True)
     finally:
         BASELINE = saved
     for name, cond, got in [
         ("无基线时干净文档不误判", rc_clean == 0, f"rc={rc_clean}"),
-        ("无基线时零频词规则仍生效", rc_dirty == 1, f"rc={rc_dirty}"),
+        ("无基线时硬拦词规则仍生效", rc_dirty == 1, f"rc={rc_dirty}"),
+        ("只命中提示档词不判死", rc_hint == 0, f"rc={rc_hint}"),
+        ("人类正本快照整篇跳过", rc_snap == 0, f"rc={rc_snap}"),
     ]:
         print(f"  {'✓' if cond else '✗'} {name}（{got}）")
         ok &= bool(cond)
