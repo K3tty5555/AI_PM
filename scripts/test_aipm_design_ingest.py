@@ -248,5 +248,62 @@ class SlugTests(unittest.TestCase):
         self.assertEqual(module.slugify_page_id("   ", "1:2"), "1-2")
 
 
+class TokenTests(unittest.TestCase):
+    def setUp(self):
+        self.tokens = module.extract_tokens(load_fixture("dsl-sample.json")["styles"])
+
+    def test_same_color_value_merges_into_one_alias_group(self):
+        # 实测一个产品里同一品牌色有新旧两套命名，二选一会丢可读性
+        black = next(c for c in self.tokens["colors"] if c["value"] == "#0A0B0C")
+        self.assertEqual(sorted(black["names"]), sorted(["sys-color/text/text-primary", "旧色板/--color-text"]))
+
+    def test_distinct_colors_stay_separate(self):
+        values = sorted(c["value"] for c in self.tokens["colors"])
+        self.assertEqual(values, ["#0A0B0C", "#FFFFFF"])
+
+    def test_typography_is_extracted_with_name(self):
+        body = self.tokens["typography"][0]
+        self.assertEqual(body["family"], "Demo Sans")
+        self.assertEqual(body["size"], 14)
+        self.assertEqual(body["names"], ["body/body-m"])
+
+    def test_effect_with_empty_value_is_dropped(self):
+        self.assertEqual(len(self.tokens["effects"]), 1)
+        self.assertIn("box-shadow", self.tokens["effects"][0]["value"])
+
+    def test_image_paints_are_listed_with_url(self):
+        self.assertEqual(self.tokens["images"], [
+            {"style_id": "paint_img", "url": "https://example.test/pic.png?expire=1"}
+        ])
+
+    def test_unnamed_color_still_recorded_with_empty_names(self):
+        tokens = module.extract_tokens({"paint_x": {"value": ["#123456"]}})
+        self.assertEqual(tokens["colors"], [{"value": "#123456", "names": []}])
+
+    def test_colors_are_sorted_for_deterministic_output(self):
+        tokens = module.extract_tokens({
+            "paint_1": {"value": ["#FFFFFF"]},
+            "paint_2": {"value": ["#000000"]},
+        })
+        self.assertEqual([c["value"] for c in tokens["colors"]], ["#000000", "#FFFFFF"])
+
+
+class MergeTokenSetsTests(unittest.TestCase):
+    def test_alias_groups_merge_across_pages(self):
+        a = {"schema_version": 1, "colors": [{"value": "#05C1AE", "names": ["brand/primary"]}],
+             "typography": [], "effects": [], "images": []}
+        b = {"schema_version": 1, "colors": [{"value": "#05C1AE", "names": ["主色/常规"]}],
+             "typography": [], "effects": [], "images": []}
+        merged = module.merge_token_sets([a, b])
+        self.assertEqual(merged["colors"], [
+            {"value": "#05C1AE", "names": ["brand/primary", "主色/常规"]}
+        ])
+
+    def test_merging_empty_list_yields_empty_sections(self):
+        merged = module.merge_token_sets([])
+        self.assertEqual(merged["colors"], [])
+        self.assertEqual(merged["schema_version"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

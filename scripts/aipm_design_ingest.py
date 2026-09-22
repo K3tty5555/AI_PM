@@ -226,3 +226,96 @@ def build_structure(dsl: dict, css: list[dict], layer_id: str) -> dict[str, Any]
         "navigations": navigations,
         "texts": texts,
     }
+
+
+def extract_tokens(styles: dict[str, dict]) -> dict[str, Any]:
+    """按色值归并别名，不按名字。名字可以有好几个，值只有一个。"""
+    colors: dict[str, list[str]] = {}
+    effects: dict[str, list[str]] = {}
+    fonts: dict[tuple, list[str]] = {}
+    images: list[dict[str, str]] = []
+
+    for style_id, style in sorted((styles or {}).items()):
+        if not isinstance(style, dict):
+            continue
+        name = style.get("token")
+        value = style.get("value")
+
+        if isinstance(value, dict):
+            key = (
+                value.get("family"), value.get("size"), value.get("weight"),
+                value.get("lineHeight"), value.get("letterSpacing"),
+            )
+            bucket = fonts.setdefault(key, [])
+            if name and name not in bucket:
+                bucket.append(name)
+            continue
+
+        for item in value or []:
+            if isinstance(item, dict) and item.get("url"):
+                images.append({"style_id": style_id, "url": item["url"]})
+                continue
+            if not isinstance(item, str) or not item.strip():
+                continue
+            target = effects if style_id.startswith("effect") else colors
+            bucket = target.setdefault(item, [])
+            if name and name not in bucket:
+                bucket.append(name)
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "colors": [{"value": v, "names": n} for v, n in sorted(colors.items())],
+        "typography": [
+            {
+                "family": key[0], "size": key[1], "weight": key[2],
+                "line_height": key[3], "letter_spacing": key[4], "names": names,
+            }
+            for key, names in sorted(fonts.items(), key=lambda kv: str(kv[0]))
+        ],
+        "effects": [{"value": v, "names": n} for v, n in sorted(effects.items())],
+        "images": images,
+    }
+
+
+def merge_token_sets(sets: list[dict]) -> dict[str, Any]:
+    """跨画板合并。同一套归并逻辑也给产品级蒸馏用。"""
+    colors: dict[str, list[str]] = {}
+    effects: dict[str, list[str]] = {}
+    fonts: dict[tuple, list[str]] = {}
+    images: list[dict[str, str]] = []
+
+    for token_set in sets or []:
+        for entry in token_set.get("colors", []):
+            bucket = colors.setdefault(entry["value"], [])
+            for name in entry.get("names", []):
+                if name not in bucket:
+                    bucket.append(name)
+        for entry in token_set.get("effects", []):
+            bucket = effects.setdefault(entry["value"], [])
+            for name in entry.get("names", []):
+                if name not in bucket:
+                    bucket.append(name)
+        for entry in token_set.get("typography", []):
+            key = (
+                entry.get("family"), entry.get("size"), entry.get("weight"),
+                entry.get("line_height"), entry.get("letter_spacing"),
+            )
+            bucket = fonts.setdefault(key, [])
+            for name in entry.get("names", []):
+                if name not in bucket:
+                    bucket.append(name)
+        images.extend(token_set.get("images", []))
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "colors": [{"value": v, "names": n} for v, n in sorted(colors.items())],
+        "typography": [
+            {
+                "family": key[0], "size": key[1], "weight": key[2],
+                "line_height": key[3], "letter_spacing": key[4], "names": names,
+            }
+            for key, names in sorted(fonts.items(), key=lambda kv: str(kv[0]))
+        ],
+        "effects": [{"value": v, "names": n} for v, n in sorted(effects.items())],
+        "images": images,
+    }
