@@ -5,12 +5,15 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
 import unittest
 import unittest.mock
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "scripts" / "aipm_design_ingest.py"
+CHECK_SCRIPT = ROOT / "scripts" / "ai-sync" / "check-visual-anchor-package.js"
 
 _spec = importlib.util.spec_from_file_location("aipm_design_ingest", MODULE_PATH)
 module = importlib.util.module_from_spec(_spec)
@@ -184,6 +187,23 @@ def load_fixture(name):
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
 
+def fixture_opener(calls=None):
+    """dsl/css 端点回固定 fixture；其余 URL（素材下载）回一段 PNG 字节。"""
+    dsl = load_fixture("dsl-sample.json")
+    css = load_fixture("css-sample.json")
+
+    def opener(request):
+        if calls is not None:
+            calls.append(request.full_url)
+        if "/mcp/dsl" in request.full_url:
+            return json.dumps(dsl).encode()
+        if "/mcp/style" in request.full_url:
+            return json.dumps(css).encode()
+        return b"\x89PNG\r\n\x1a\nfixture"
+
+    return opener
+
+
 class StructureTests(unittest.TestCase):
     def setUp(self):
         self.dsl = load_fixture("dsl-sample.json")
@@ -219,8 +239,8 @@ class StructureTests(unittest.TestCase):
 
     def test_text_runs_are_joined(self):
         node = next(n for n in self.structure["nodes"] if n["id"] == "1:4")
-        self.assertEqual(node["text"], "确认")
-        self.assertEqual(self.structure["texts"], ["确认"])
+        self.assertEqual(node["text"], "确认 <OK>")
+        self.assertEqual(self.structure["texts"], ["确认 <OK>"])
 
     def test_navigation_is_collected_with_variant(self):
         self.assertEqual(self.structure["navigations"], [
@@ -235,6 +255,13 @@ class StructureTests(unittest.TestCase):
     def test_css_index_ignores_nesting(self):
         index = module.index_css(self.css)
         self.assertEqual(set(index), {"1:1", "1:2", "1:3", "1:4", "1:5"})
+
+    def test_remote_url_in_css_code_is_stripped_from_structure(self):
+        # 签名图链可能藏在 cssCode 里；structures/ 也是持久化产物，
+        # 除 raw/（逐字快照）外一律不落盘
+        node = next(n for n in self.structure["nodes"] if n["id"] == "1:2")
+        self.assertNotIn("expire=", node["css"])
+        self.assertNotIn("https://", node["css"])
 
 
 class SlugTests(unittest.TestCase):
@@ -327,10 +354,31 @@ class RenderTests(unittest.TestCase):
         self.assertIn("left:32px;top:45px", self.html)
 
     def test_text_content_is_escaped_and_present(self):
-        self.assertIn("确认", self.html)
+        # fixture 文本带 <OK>，转义必须真的发生：原始尖括号不进 HTML
+        self.assertIn("确认 &lt;OK&gt;", self.html)
+        self.assertNotIn("<OK>", self.html)
+
+    def test_quoted_font_family_survives_attribute_escaping(self):
+        # cssCode 里的引号字体会打断双引号 style 属性，转义后必须还能解析回原声明
+        from html.parser import HTMLParser
+
+        captured = {}
+
+        class DivGrabber(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                if tag == "div":
+                    attrs_dict = dict(attrs)
+                    if attrs_dict.get("data-id") == "1:4":
+                        captured["style"] = attrs_dict.get("style")
+
+        self.assertIn("font-family: &quot;Demo Sans&quot;", self.html)
+        DivGrabber().feed(self.html)
+        # 属性值经 HTMLParser 反转义后必须还原成原始声明（引号原样回来）
+        self.assertIn('font-family: "Demo Sans"', captured["style"])
 
     def test_image_fill_uses_local_asset_path(self):
         self.assertIn("url('assets/paint_img.png')", self.html)
+        # fixture 的 cssCode（节点 1:2）里也埋了同一个签名 URL，两条路都不许漏出去
         self.assertNotIn("https://example.test/pic.png", self.html)
 
     def test_icon_placeholder_carries_semantic_name(self):
@@ -376,23 +424,24 @@ class FingerprintTests(unittest.TestCase):
     def test_readonly_boundary_is_stated(self):
         self.assertIn("只读", self.text)
 
+    def test_typography_line_includes_letter_spacing_when_set(self):
+        # 字距是五元组的一部分，只差字距的两条规格必须在指纹里肉眼可分
+        tokens = {
+            "colors": [], "effects": [],
+            "typography": [
+                {"family": "Demo Sans", "size": 14, "weight": "400", "line_height": "22",
+                 "letter_spacing": "1", "names": ["body/body-m"]},
+                {"family": "Demo Sans", "size": 16, "weight": "500", "line_height": "24",
+                 "letter_spacing": "auto", "names": ["title/title-m"]},
+            ],
+        }
+        text = module.render_fingerprint([self.structure], tokens)
+        self.assertIn("行高 22 字距 1", text)
+        self.assertIn("行高 24 —", text)
+        self.assertNotIn("字距 auto", text)
+
 
 class IngestTests(unittest.TestCase):
-    def _fake_opener(self, calls=None):
-        dsl = load_fixture("dsl-sample.json")
-        css = load_fixture("css-sample.json")
-
-        def opener(request):
-            if calls is not None:
-                calls.append(request.full_url)
-            if "/mcp/dsl" in request.full_url:
-                return json.dumps(dsl).encode()
-            if "/mcp/style" in request.full_url:
-                return json.dumps(css).encode()
-            return b"\x89PNG\r\n\x1a\nfixture"
-
-        return opener
-
     def test_ingest_writes_the_full_package_layout(self):
         with tempfile.TemporaryDirectory() as temp:
             out = Path(temp)
@@ -400,7 +449,7 @@ class IngestTests(unittest.TestCase):
                 "https://example.test/file/9?layer_id=1%3A1",
                 out,
                 {"base_url": "https://example.test", "token": "mg_x"},
-                opener=self._fake_opener(),
+                opener=fixture_opener(),
                 runner=lambda *a, **k: True,
             )
             page_id = result["pages"][0]["page_id"]
@@ -417,7 +466,7 @@ class IngestTests(unittest.TestCase):
             module.ingest(
                 "https://example.test/file/9?layer_id=1%3A1", out,
                 {"base_url": "https://example.test", "token": "mg_x"},
-                opener=self._fake_opener(), runner=lambda *a, **k: True,
+                opener=fixture_opener(), runner=lambda *a, **k: True,
             )
             manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["source"], "mastergo")
@@ -430,7 +479,7 @@ class IngestTests(unittest.TestCase):
             module.ingest(
                 "https://example.test/file/9?layer_id=1%3A1", out,
                 {"base_url": "https://example.test", "token": "mg_x"},
-                opener=self._fake_opener(), runner=lambda *a, **k: True,
+                opener=fixture_opener(), runner=lambda *a, **k: True,
             )
             manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(len(manifest["images"]), 1)
@@ -442,7 +491,7 @@ class IngestTests(unittest.TestCase):
             module.ingest(
                 "https://example.test/file/9?layer_id=1%3A1", out,
                 {"base_url": "https://example.test", "token": "mg_x"},
-                opener=self._fake_opener(), runner=lambda *a, **k: True,
+                opener=fixture_opener(), runner=lambda *a, **k: True,
             )
             # 唯一豁免 raw/：spec 明文「原始快照，留证据」，逐字保真是设计意图；
             # 其余产出文件（含 design-tokens.json 与二进制 assets）一律不得含签名参数
@@ -460,25 +509,127 @@ class IngestTests(unittest.TestCase):
             module.ingest(
                 "https://example.test/file/9?layer_id=1%3A1", out,
                 {"base_url": "https://example.test", "token": "mg_x"},
-                opener=self._fake_opener(), runner=lambda *a, **k: True,
+                opener=fixture_opener(), runner=lambda *a, **k: True,
             )
             tokens = json.loads((out / "design-tokens.json").read_text(encoding="utf-8"))
             self.assertEqual(tokens["images"], [
                 {"style_id": "paint_img", "url": "assets/paint_img.png"}
             ])
 
-    def test_screenshot_failure_degrades_to_partial_not_crash(self):
+    def test_all_screenshots_failed_marks_status_failed(self):
+        # 全挂时必须降级为 failed（校验器豁免 failed 的 images 非空检查），
+        # 而不是登记指向不存在 PNG 的 images[] 让整包变 invalid
         with tempfile.TemporaryDirectory() as temp:
             out = Path(temp)
             result = module.ingest(
                 "https://example.test/file/9?layer_id=1%3A1", out,
                 {"base_url": "https://example.test", "token": "mg_x"},
-                opener=self._fake_opener(), runner=lambda *a, **k: False,
+                opener=fixture_opener(), runner=lambda *a, **k: False,
+            )
+            manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "failed")
+            self.assertEqual(manifest["images"], [])
+            self.assertTrue(any("截图" in risk for risk in manifest["knownRisks"]))
+            self.assertEqual(result["pages"][0]["screenshot_ok"], False)
+
+    def test_partial_screenshot_failure_lists_only_successful_images(self):
+        outcomes = [True, False]
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            module.ingest(
+                "https://example.test/file/9?layer_id=1%3A1&layer_id=1%3A1", out,
+                {"base_url": "https://example.test", "token": "mg_x"},
+                opener=fixture_opener(),
+                runner=lambda *a, **k: outcomes.pop(0),
             )
             manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["status"], "partial")
+            self.assertEqual([item["image"] for item in manifest["images"]], ["images/1-1.png"])
             self.assertTrue(any("截图" in risk for risk in manifest["knownRisks"]))
-            self.assertEqual(result["pages"][0]["screenshot_ok"], False)
+
+    def test_page_id_collision_is_disambiguated_not_overwritten(self):
+        # 同名画板 / 重复 layer_id 会 slug 撞车；静默覆盖会丢前一个的全部证据
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            result = module.ingest(
+                "https://example.test/file/9?layer_id=1%3A1&layer_id=1%3A1", out,
+                {"base_url": "https://example.test", "token": "mg_x"},
+                opener=fixture_opener(), runner=lambda *a, **k: True,
+            )
+            self.assertTrue((out / "structures/1-1.json").is_file())
+            self.assertTrue((out / "structures/1-1-2.json").is_file())
+            self.assertTrue((out / "renders/1-1.html").is_file())
+            self.assertTrue((out / "renders/1-1-2.html").is_file())
+            self.assertEqual([page["page_id"] for page in result["pages"]], ["1-1", "1-1-2"])
+            manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                sorted(item["image"] for item in manifest["images"]),
+                ["images/1-1-2.png", "images/1-1.png"],
+            )
+            self.assertEqual(
+                sorted(item["id"] for item in manifest["images"]),
+                ["img-1-1", "img-1-1-2"],
+            )
+
+    def test_failed_asset_downloads_leave_a_known_risks_trace(self):
+        inner = fixture_opener()
+
+        def failing_asset_opener(request):
+            if "pic.png" in request.full_url:
+                raise OSError("download boom")
+            return inner(request)
+
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            module.ingest(
+                "https://example.test/file/9?layer_id=1%3A1", out,
+                {"base_url": "https://example.test", "token": "mg_x"},
+                opener=failing_asset_opener, runner=lambda *a, **k: True,
+            )
+            manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "ready")
+            risks = "\n".join(manifest["knownRisks"])
+            self.assertIn("素材下载失败", risks)
+            self.assertIn("重跑 ingest 可恢复", risks)
+
+
+@unittest.skipUnless(shutil.which("node"), "node 不在 PATH，跳过跨模块契约测试")
+class ValidatorContractTests(unittest.TestCase):
+    """ingest 的产出必须真能过校验器——两边契约不能只靠各自单元测试各自为真。"""
+
+    def _run_validator_after_ingest(self, runner):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        # 校验器固定读 <root>/06-prototype-visual，ingest 的 out_dir 就是这个目录
+        root = Path(temp.name)
+        module.ingest(
+            "https://example.test/file/9?layer_id=1%3A1",
+            root / "06-prototype-visual",
+            {"base_url": "https://example.test", "token": "mg_x"},
+            opener=fixture_opener(),
+            runner=runner,
+        )
+        return subprocess.run(
+            ["node", str(CHECK_SCRIPT), str(root)], capture_output=True, text=True
+        )
+
+    def test_all_failed_package_is_accepted_by_validator_and_points_back_at_ingest(self):
+        result = self._run_validator_after_ingest(runner=lambda *a, **k: False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("STATUS: failed", result.stdout)
+        # T6 遗留：mastergo 降级包的下一步指回 ingest-design，不是 Codex
+        self.assertIn("ingest-design", result.stdout)
+        self.assertNotIn("Codex", result.stdout)
+
+    def test_ready_package_is_accepted_by_validator(self):
+        def writing_runner(html_path, png_path, width, height):
+            png_path.parent.mkdir(parents=True, exist_ok=True)
+            png_path.write_bytes(b"\x89PNG\r\n\x1a\nfixture")
+            return True
+
+        result = self._run_validator_after_ingest(runner=writing_runner)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("STATUS: ready", result.stdout)
 
 
 class DistillTests(unittest.TestCase):
@@ -554,6 +705,22 @@ class DistillTests(unittest.TestCase):
              "incoming": ("Demo Sans", 16, 500, 24, 0),
              "existing": ("Demo Sans", 14, 500, 22, 0)}
         ])
+
+    def test_letter_spacing_only_conflict_renders_distinct_sides(self):
+        # 只差字距的两条规格是五元组层面的真冲突；报告两侧必须肉眼可分，
+        # 否则人拿着退出码 2 也判不了
+        base = {"family": "Demo Sans", "size": 14, "weight": 500, "line_height": 22}
+        incoming = {"colors": [], "typography": [
+            dict(base, letter_spacing=1, names=["body/body-m"])
+        ], "effects": []}
+        existing = {"colors": [], "typography": [
+            dict(base, letter_spacing=0, names=["body/body-m"])
+        ], "effects": []}
+        diff = module.diff_token_sets(incoming, existing)
+        self.assertEqual(len(diff["conflicts"]), 1)
+        report = module.render_distill_report(diff)
+        self.assertIn("`Demo Sans 14px/500 行高 22 字距 1`", report)
+        self.assertIn("`Demo Sans 14px/500 行高 22`", report)
 
 
 if __name__ == "__main__":

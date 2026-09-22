@@ -33,7 +33,7 @@
             {
               "type": "TEXT", "id": "1:4", "name": "按钮文字",
               "layoutStyle": {"width": 56, "height": 22, "relativeX": 12, "relativeY": 5},
-              "text": [{"text": "确认", "font": "font_a"}],
+              "text": [{"text": "确认 <OK>", "font": "font_a"}],
               "textColor": [{"start": 0, "end": 2, "color": "paint_a"}],
               "textAlign": "center", "textMode": "single-line"
             }

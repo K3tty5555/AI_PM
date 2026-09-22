@@ -121,6 +121,16 @@ def fetch_layer(
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
+# cssCode 里的远程 url()：要么是必须不落盘的签名图链，要么是过期引用；
+# 本地底图的正路是 asset_map 重写，不依赖 cssCode 里的 url
+_REMOTE_URL_RE = re.compile(r"url\(\s*['\"]?\s*https?://", re.IGNORECASE)
+
+
+def strip_remote_urls(css: str) -> str:
+    """把 cssCode 里带远程 url() 的声明整条剔除，其余声明原样保留。"""
+    declarations = [d.strip() for d in (css or "").split(";")]
+    return "; ".join(d for d in declarations if d and not _REMOTE_URL_RE.search(d))
+
 
 def slugify_page_id(name: str, layer_id: str) -> str:
     """名字能 slug 就用名字，中文或空则退回 layer_id。产物路径不放非 ASCII。"""
@@ -185,7 +195,7 @@ def build_structure(dsl: dict, css: list[dict], layer_id: str) -> dict[str, Any]
             "y": y,
             "width": float(layout.get("width") or 0),
             "height": float(layout.get("height") or 0),
-            "css": css_index.get(node.get("id"), ""),
+            "css": strip_remote_urls(css_index.get(node.get("id"), "")),
             "token": node.get("_token"),
             "fill": node.get("fill"),
             "color": node.get("_color"),
@@ -352,7 +362,10 @@ def render_html(structure: dict, tokens: dict, asset_map: dict[str, str] | None 
                 prop = declaration.split(":", 1)[0].strip().lower()
                 if prop in {"position", "left", "top", "width", "height"}:
                     continue
-                declarations.append(declaration)
+                if _REMOTE_URL_RE.search(declaration):
+                    continue
+                # 引号字体名等字符会打断双引号属性，必须转义后放进 style
+                declarations.append(html_lib.escape(declaration, quote=True))
 
         asset = assets.get(node.get("fill") or "")
         if asset:
@@ -398,6 +411,15 @@ def _num(value: Any) -> str:
     return f"{number:.2f}"
 
 
+def _format_typography_line(family, size, weight, line_height, letter_spacing) -> str:
+    """typography 印成可读一行。字距只在真有值时印（None/auto/0 不算）——
+    只差字距的两条规格若印成一模一样，冲突报告就没法让人判。"""
+    text = f"{family} {size}px/{weight} 行高 {line_height}"
+    if letter_spacing not in (None, "", "auto", 0, "0"):
+        text += f" 字距 {letter_spacing}"
+    return text
+
+
 def render_fingerprint(structures: list[dict], tokens: dict) -> str:
     lines: list[str] = [
         "# 视觉指纹",
@@ -438,8 +460,12 @@ def render_fingerprint(structures: list[dict], tokens: dict) -> str:
     for entry in tokens.get("typography", []):
         names = "、".join(entry.get("names") or []) or "（无语义名）"
         lines.append(
-            f"- {entry.get('family')} {entry.get('size')}px/{entry.get('weight')} "
-            f"行高 {entry.get('line_height')} — {names}"
+            "- "
+            + _format_typography_line(
+                entry.get("family"), entry.get("size"), entry.get("weight"),
+                entry.get("line_height"), entry.get("letter_spacing"),
+            )
+            + f" — {names}"
         )
     for entry in tokens.get("effects", []):
         names = "、".join(entry.get("names") or []) or "（无语义名）"
@@ -464,10 +490,16 @@ def find_headless_shell() -> Path | None:
     return matches[-1] if matches else None
 
 
-def download_assets(tokens: dict, out_dir: Path, opener=None) -> dict[str, str]:
-    """签名 URL 实测约 23 小时过期，当场下载，绝不持久化 URL。"""
+def download_assets(tokens: dict, out_dir: Path, opener=None) -> tuple[dict[str, str], int]:
+    """签名 URL 实测约 23 小时过期，当场下载，绝不持久化 URL。
+
+    返回 (style_id -> 本地路径映射, 失败条数)。失败不静默吞掉：
+    调用方会把失败数写进 manifest 的 knownRisks，否则像素比对基准
+    会悄悄缺底图。
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     mapping: dict[str, str] = {}
+    failed = 0
     for item in tokens.get("images", []):
         style_id = item["style_id"]
         filename = f"{style_id.replace(':', '_')}.png"
@@ -476,9 +508,10 @@ def download_assets(tokens: dict, out_dir: Path, opener=None) -> dict[str, str]:
         try:
             target.write_bytes((opener or _default_opener)(request))
         except Exception:
+            failed += 1
             continue
         mapping[style_id] = f"assets/{filename}"
-    return mapping
+    return mapping, failed
 
 
 def screenshot(html_path: Path, png_path: Path, width: int, height: int, runner=None) -> bool:
@@ -511,12 +544,22 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
     token_sets: list[dict[str, Any]] = []
     images: list[dict[str, Any]] = []
     asset_maps: dict[str, str] = {}
-    all_ok = True
+    used_page_ids: set[str] = set()
+    screenshot_ok_count = 0
+    download_failed_count = 0
 
     for layer_id in layer_ids:
         payload = fetch_layer(cfg, file_id, layer_id, opener=opener, require_nodes=True)
         structure = build_structure(payload["dsl"], payload["css"], layer_id)
         page_id = structure["page_id"]
+        if page_id in used_page_ids:
+            # 同名画板 / 重复 layer_id 会 slug 撞车；静默覆盖会丢前一层全部证据
+            suffix = 2
+            while f"{page_id}-{suffix}" in used_page_ids:
+                suffix += 1
+            page_id = f"{page_id}-{suffix}"
+            structure["page_id"] = page_id
+        used_page_ids.add(page_id)
         tokens = extract_tokens(payload["dsl"].get("styles") or {})
         token_sets.append(tokens)
         structures_written.append(structure)
@@ -525,8 +568,9 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
         _write_json(out_dir / "raw" / f"css-{page_id}.json", payload["css"])
         _write_json(out_dir / "structures" / f"{page_id}.json", structure)
 
-        asset_map = download_assets(tokens, out_dir / "assets", opener=opener)
+        asset_map, download_failures = download_assets(tokens, out_dir / "assets", opener=opener)
         asset_maps.update(asset_map)
+        download_failed_count += download_failures
         html_path = out_dir / "renders" / f"{page_id}.html"
         html_path.parent.mkdir(parents=True, exist_ok=True)
         html_path.write_text(render_html(structure, tokens, asset_map), encoding="utf-8")
@@ -538,8 +582,12 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
             structure["canvas"].get("height") or 900,
             runner=runner,
         )
-        all_ok = all_ok and ok
         pages.append({"page_id": page_id, "layer_id": layer_id, "screenshot_ok": ok})
+        if not ok:
+            # 截图失败的页面不登记 images[]：登记了指向不存在 PNG 的条目，
+            # 校验器会按文件缺失把整包判成 invalid
+            continue
+        screenshot_ok_count += 1
         images.append({
             "id": f"img-{page_id}",
             "pageId": page_id,
@@ -560,16 +608,24 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
     ]
     _write_json(out_dir / "design-tokens.json", merged)
     (out_dir / "visual-fingerprint.md").write_text(
-        render_fingerprint(structures_written, merge_token_sets(token_sets)), encoding="utf-8"
+        render_fingerprint(structures_written, merged), encoding="utf-8"
     )
 
     risks = ["图中文字只作视觉表达，不作 PRD 字段或用户话术事实源"]
-    if not all_ok:
-        risks.append("截图未完成，manifest 降级为 partial，需装好 chrome-headless-shell 后重跑")
+    if download_failed_count:
+        risks.append(f"{download_failed_count} 个设计稿素材下载失败，对应底图缺失，重跑 ingest 可恢复")
+    if screenshot_ok_count == len(layer_ids):
+        status = "ready"
+    elif screenshot_ok_count == 0:
+        status = "failed"
+        risks.append("截图全部失败，manifest 降级为 failed，需装好 chrome-headless-shell 后重跑")
+    else:
+        status = "partial"
+        risks.append("部分截图未完成，manifest 降级为 partial，需装好 chrome-headless-shell 后重跑")
     manifest = {
         "version": 1,
         "packageType": "visual-anchor-manifest",
-        "status": "ready" if all_ok else "partial",
+        "status": status,
         "source": "mastergo",
         "generatedAt": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
         "generatedBy": "mastergo-ingest",
@@ -620,7 +676,7 @@ def _token_value(kind: str, entry: dict) -> Any:
 
 
 def diff_token_sets(incoming: dict, existing: dict) -> dict[str, Any]:
-    """新增 / 别名 / 冲突三类。别名按色值判，冲突按名字判。"""
+    """新增 / 别名 / 冲突三类。别名按值判（色值/字体五元组），冲突按名字判。"""
     added: list[dict[str, Any]] = []
     aliases: list[dict[str, Any]] = []
     conflicts: list[dict[str, Any]] = []
@@ -657,8 +713,8 @@ def diff_token_sets(incoming: dict, existing: dict) -> dict[str, Any]:
 def _format_token_value(kind: str, value: Any) -> str:
     """typography 五元组印成可读一行（与视觉指纹同格式），色值/效果原样。"""
     if kind == "typography":
-        family, size, weight, line_height, _letter_spacing = value
-        return f"{family} {size}px/{weight} 行高 {line_height}"
+        family, size, weight, line_height, letter_spacing = value
+        return _format_typography_line(family, size, weight, line_height, letter_spacing)
     return str(value)
 
 
