@@ -13,12 +13,6 @@
     "summaryPath": "_summaries/prd-summary.md",
     "version": "v1.0"
   },
-  "designSource": {
-    "provider": "mastergo",
-    "fileId": "{{FILE_ID}}",
-    "layerIds": ["{{LAYER_ID}}"],
-    "fetchedAt": "{{ISO8601}}"
-  },
   "referenceAssets": [
     {
       "id": "ref-current-screen-1",

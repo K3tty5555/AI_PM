@@ -9,7 +9,7 @@ CHECK = Path(__file__).resolve().parent / 'ai-sync/check-visual-anchor-package.j
 
 
 class MasterGoSourceTests(unittest.TestCase):
-    def run_case(self, source='mastergo', with_tokens=True, with_structure=True):
+    def run_case(self, source='mastergo', with_tokens=True, with_structure=True, status='ready'):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             visual = root / '06-prototype-visual'
@@ -24,10 +24,10 @@ class MasterGoSourceTests(unittest.TestCase):
                 (visual / 'structures/entry.json').write_text('{"schema_version":1}')
             manifest = {
                 'packageType': 'visual-anchor-manifest',
-                'status': 'ready',
+                'status': status,
                 'sourcePrd': 'current.md',
                 'source': source,
-                'images': [{'pageId': 'entry', 'image': 'images/entry.png'}],
+                'images': [{'pageId': 'entry', 'image': 'images/entry.png'}] if status != 'failed' else [],
             }
             (visual / 'manifest.json').write_text(json.dumps(manifest))
             return subprocess.run(['node', str(CHECK), str(root)], capture_output=True, text=True)
@@ -55,6 +55,50 @@ class MasterGoSourceTests(unittest.TestCase):
         result = self.run_case(with_structure=False)
         self.assertEqual(result.returncode, 1)
         self.assertIn('structures/entry.json', result.stdout)
+
+    def test_partial_mastergo_next_action_mentions_ingest_design(self):
+        # 降级包的下一步要指回 ingest-design 重跑，而不是把人引去 Codex
+        result = self.run_case(status='partial')
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn('ingest-design', result.stdout)
+        self.assertNotIn('Codex', result.stdout)
+
+    def test_failed_mastergo_next_action_mentions_ingest_design(self):
+        result = self.run_case(status='failed')
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn('STATUS: failed', result.stdout)
+        self.assertIn('ingest-design', result.stdout)
+        self.assertNotIn('Codex', result.stdout)
+
+
+class RequestRoutingTests(unittest.TestCase):
+    """requestSource 只认 designSource.provider=mastergo，不看 truthiness。"""
+
+    def run_request_only(self, request):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            visual = root / '06-prototype-visual'
+            visual.mkdir(parents=True)
+            (visual / 'request.json').write_text(json.dumps(request))
+            return subprocess.run(['node', str(CHECK), str(root)], capture_output=True, text=True)
+
+    def test_mastergo_provider_request_routes_to_ingest_design(self):
+        result = self.run_request_only({
+            'packageType': 'visual-anchor-request', 'gateMode': 'strict',
+            'designSource': {'provider': 'mastergo', 'fileId': '9', 'layerIds': ['1:1']},
+        })
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn('ingest-design', result.stdout)
+        self.assertNotIn('Codex', result.stdout)
+
+    def test_non_mastergo_design_source_is_not_misrouted(self):
+        # 脏数据/别的 provider 不许被 truthiness 判成 mastergo 流
+        result = self.run_request_only({
+            'packageType': 'visual-anchor-request', 'gateMode': 'strict',
+            'designSource': {'provider': 'figma'},
+        })
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn('Codex', result.stdout)
 
 
 if __name__ == '__main__':

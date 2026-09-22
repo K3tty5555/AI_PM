@@ -81,5 +81,6 @@ node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}
 ## 注意
 
 - 图片文字只作为视觉表达，不能当作 PRD 字段或最终文案事实源。
+- `request.json` 的 `designSource` 块仅设计稿来源流程使用（`ingest-design` 产出的包可带上它，校验器只认 `provider: "mastergo"`）；Codex 生图流程不写这个字段。
 - 参考截图若含敏感信息，只在本地项目输出目录使用，不提交到仓库。
 - `visual-fingerprint.md` 应抽象视觉规律，不复制真实业务敏感数据。

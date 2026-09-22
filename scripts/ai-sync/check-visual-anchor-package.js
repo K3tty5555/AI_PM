@@ -87,7 +87,7 @@ if (!exists(manifestPath)) {
     const pages = Array.isArray(request.pages) ? request.pages.length : 0;
     console.log(`REQUESTED_PAGES: ${pages}`);
   }
-  const requestSource = request && request.designSource ? 'mastergo' : 'codex';
+  const requestSource = request && request.designSource && request.designSource.provider === 'mastergo' ? 'mastergo' : 'codex';
   if (gateMode === 'strict') {
     console.log(`NEXT_ACTION: ${producerHint(requestSource)} before HTML prototype`);
     process.exit(2);
@@ -211,9 +211,9 @@ if (manifest.status === 'partial') {
     console.log(`NEXT_ACTION: ${producerHint(source)}`);
     process.exit(2);
   }
-  console.log('NEXT_ACTION: continue with partial visual constraints; record missing pages in prototype audit');
+  console.log(`NEXT_ACTION: continue with partial visual constraints; record missing pages in prototype audit${source === 'mastergo' ? `; or ${producerHint(source)}` : ''}`);
   process.exit(0);
 }
 
-console.log('NEXT_ACTION: downgrade to normal HTML prototype; record visual anchor failure reason in audit');
+console.log(`NEXT_ACTION: downgrade to normal HTML prototype; record visual anchor failure reason in audit${source === 'mastergo' ? `; or ${producerHint(source)}` : ''}`);
 process.exit(0);
