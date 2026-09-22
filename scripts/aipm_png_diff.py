@@ -126,3 +126,64 @@ def encode_png(width: int, height: int, rgb: bytes) -> bytes:
         out += struct.pack(">I", len(payload)) + name + payload
         out += struct.pack(">I", zlib.crc32(name + payload) & 0xFFFFFFFF)
     return bytes(out)
+
+
+SCHEMA_VERSION = 1
+
+
+def _region_diff(base: bytes, cand: bytes, width: int, box: tuple[int, int, int, int], threshold: int) -> float:
+    x0, y0, w, h = box
+    differing = 0
+    total = w * h
+    for row in range(y0, y0 + h):
+        start = (row * width + x0) * BYTES_PER_PIXEL
+        end = start + w * BYTES_PER_PIXEL
+        base_row = base[start:end]
+        cand_row = cand[start:end]
+        for i in range(0, len(base_row), BYTES_PER_PIXEL):
+            if (abs(base_row[i] - cand_row[i]) > threshold
+                    or abs(base_row[i + 1] - cand_row[i + 1]) > threshold
+                    or abs(base_row[i + 2] - cand_row[i + 2]) > threshold):
+                differing += 1
+    return differing / total if total else 0.0
+
+
+def diff_regions(
+    baseline: Path,
+    candidate: Path,
+    regions: list[dict],
+    threshold: int = 16,
+    top: int = 10,
+) -> dict[str, Any]:
+    """按区块出偏差榜。不给全局通过阈值——全局数字说不出该改哪里。"""
+    base_w, base_h, base_rgb = read_png(baseline)
+    cand_w, cand_h, cand_rgb = read_png(candidate)
+    if (base_w, base_h) != (cand_w, cand_h):
+        raise PngError(f"两张图尺寸不一致：{base_w}×{base_h} vs {cand_w}×{cand_h}")
+
+    scored: list[dict[str, Any]] = []
+    skipped: list[dict[str, str]] = []
+    for region in regions or []:
+        x0 = int(region.get("x") or 0)
+        y0 = int(region.get("y") or 0)
+        w = int(region.get("width") or 0)
+        h = int(region.get("height") or 0)
+        if w <= 0 or h <= 0 or x0 < 0 or y0 < 0 or x0 + w > base_w or y0 + h > base_h:
+            skipped.append({"id": str(region.get("id")), "reason": "区块超出画布"})
+            continue
+        ratio = _region_diff(base_rgb, cand_rgb, base_w, (x0, y0, w, h), threshold)
+        scored.append({
+            "id": region.get("id"), "name": region.get("name"),
+            "diff_ratio": round(ratio, 4),
+            "x": x0, "y": y0, "width": w, "height": h,
+        })
+
+    scored.sort(key=lambda item: (-item["diff_ratio"], str(item["id"])))
+    overall = _region_diff(base_rgb, cand_rgb, base_w, (0, 0, base_w, base_h), threshold)
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "canvas": {"width": base_w, "height": base_h},
+        "overall_diff_ratio": round(overall, 4),
+        "regions": scored[:top],
+        "skipped": skipped,
+    }

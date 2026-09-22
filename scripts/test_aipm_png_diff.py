@@ -141,5 +141,74 @@ class ReadPngTests(unittest.TestCase):
             self.assertEqual(module.read_png(path), (width, height, rgb))
 
 
+class DiffRegionTests(unittest.TestCase):
+    def make(self, temp, name, width, height, colour):
+        path = Path(temp) / name
+        write_png(path, width, height, bytes(colour) * (width * height))
+        return path
+
+    def test_identical_images_score_zero(self):
+        with tempfile.TemporaryDirectory() as temp:
+            a = self.make(temp, "a.png", 10, 10, [255, 255, 255])
+            b = self.make(temp, "b.png", 10, 10, [255, 255, 255])
+            report = module.diff_regions(a, b, [{"id": "r1", "name": "全幅", "x": 0, "y": 0, "width": 10, "height": 10}])
+            self.assertEqual(report["overall_diff_ratio"], 0.0)
+            self.assertEqual(report["regions"][0]["diff_ratio"], 0.0)
+
+    def test_black_versus_white_scores_one(self):
+        with tempfile.TemporaryDirectory() as temp:
+            a = self.make(temp, "a.png", 10, 10, [0, 0, 0])
+            b = self.make(temp, "b.png", 10, 10, [255, 255, 255])
+            report = module.diff_regions(a, b, [{"id": "r1", "name": "全幅", "x": 0, "y": 0, "width": 10, "height": 10}])
+            self.assertEqual(report["overall_diff_ratio"], 1.0)
+
+    def test_small_channel_noise_is_ignored_by_threshold(self):
+        with tempfile.TemporaryDirectory() as temp:
+            a = self.make(temp, "a.png", 4, 4, [100, 100, 100])
+            b = self.make(temp, "b.png", 4, 4, [105, 105, 105])
+            report = module.diff_regions(a, b, [{"id": "r1", "name": "全幅", "x": 0, "y": 0, "width": 4, "height": 4}])
+            self.assertEqual(report["overall_diff_ratio"], 0.0)
+
+    def test_regions_are_sorted_by_diff_desc(self):
+        with tempfile.TemporaryDirectory() as temp:
+            a = self.make(temp, "a.png", 4, 2, [0, 0, 0])
+            path_b = Path(temp) / "b.png"
+            # 左半黑、右半白
+            rgb = bytearray()
+            for _ in range(2):
+                rgb += bytes([0, 0, 0]) * 2 + bytes([255, 255, 255]) * 2
+            write_png(path_b, 4, 2, bytes(rgb))
+            report = module.diff_regions(a, path_b, [
+                {"id": "left", "name": "左", "x": 0, "y": 0, "width": 2, "height": 2},
+                {"id": "right", "name": "右", "x": 2, "y": 0, "width": 2, "height": 2},
+            ])
+            self.assertEqual([r["id"] for r in report["regions"]], ["right", "left"])
+            self.assertEqual(report["regions"][0]["diff_ratio"], 1.0)
+
+    def test_mismatched_canvas_size_raises(self):
+        with tempfile.TemporaryDirectory() as temp:
+            a = self.make(temp, "a.png", 4, 4, [0, 0, 0])
+            b = self.make(temp, "b.png", 8, 8, [0, 0, 0])
+            with self.assertRaises(module.PngError) as ctx:
+                module.diff_regions(a, b, [])
+            self.assertIn("尺寸不一致", str(ctx.exception))
+
+    def test_out_of_canvas_region_is_skipped_not_crashed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            a = self.make(temp, "a.png", 4, 4, [0, 0, 0])
+            b = self.make(temp, "b.png", 4, 4, [0, 0, 0])
+            report = module.diff_regions(a, b, [{"id": "oops", "name": "越界", "x": 10, "y": 10, "width": 5, "height": 5}])
+            self.assertEqual(report["regions"], [])
+            self.assertEqual(report["skipped"][0]["id"], "oops")
+
+    def test_top_limits_the_ranking(self):
+        with tempfile.TemporaryDirectory() as temp:
+            a = self.make(temp, "a.png", 6, 1, [0, 0, 0])
+            b = self.make(temp, "b.png", 6, 1, [255, 255, 255])
+            regions = [{"id": f"r{i}", "name": str(i), "x": i, "y": 0, "width": 1, "height": 1} for i in range(6)]
+            report = module.diff_regions(a, b, regions, top=2)
+            self.assertEqual(len(report["regions"]), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
