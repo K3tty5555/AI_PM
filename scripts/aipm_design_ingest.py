@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import re
 from typing import Any
 import urllib.request
 from urllib.parse import parse_qs, quote, urlsplit
@@ -113,3 +114,115 @@ def fetch_layer(
             f"layerId={layer_id} 没有任何节点。确认它是画板（frame）而不是画布（page_id）。"
         )
     return {"dsl": dsl, "css": css if isinstance(css, list) else []}
+
+
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def slugify_page_id(name: str, layer_id: str) -> str:
+    """名字能 slug 就用名字，中文或空则退回 layer_id。产物路径不放非 ASCII。"""
+    slug = _SLUG_RE.sub("-", (name or "").strip().lower()).strip("-")
+    if slug:
+        return slug
+    return _SLUG_RE.sub("-", layer_id.lower()).strip("-")
+
+
+def index_css(css: list[dict]) -> dict[str, str]:
+    """把 /mcp/style 的嵌套树压平成 {node_id: cssCode}。"""
+    index: dict[str, str] = {}
+
+    def walk(items):
+        for item in items or []:
+            if isinstance(item, dict) and item.get("id"):
+                index[item["id"]] = item.get("cssCode") or ""
+                walk(item.get("children"))
+
+    walk(css)
+    return index
+
+
+def _variant_of(node: dict) -> dict[str, Any]:
+    info = node.get("componentInfo")
+    if isinstance(info, dict):
+        properties = info.get("properties")
+        if isinstance(properties, dict):
+            return {str(k): v for k, v in properties.items()}
+    return {}
+
+
+def build_structure(dsl: dict, css: list[dict], layer_id: str) -> dict[str, Any]:
+    roots = dsl.get("nodes") or []
+    if not roots:
+        raise DesignIngestError(f"layerId={layer_id} 没有节点，确认它是画板不是画布")
+    root = roots[0]
+    css_index = index_css(css)
+
+    nodes: list[dict[str, Any]] = []
+    navigations: list[dict[str, Any]] = []
+    texts: list[str] = []
+
+    def walk(node: dict, base_x: float, base_y: float, depth: int) -> None:
+        layout = node.get("layoutStyle") or {}
+        x = base_x + float(layout.get("relativeX") or 0)
+        y = base_y + float(layout.get("relativeY") or 0)
+        variant = _variant_of(node)
+        text = "".join(
+            run.get("text", "") for run in (node.get("text") or []) if isinstance(run, dict)
+        )
+        # PATH 的矢量数据实测恒为空，标成图标占位交给下游替换
+        raw_path = node.get("path")
+        icon_placeholder = node.get("type") == "PATH" and not raw_path
+
+        entry: dict[str, Any] = {
+            "id": node.get("id"),
+            "type": node.get("type"),
+            "name": node.get("name"),
+            "depth": depth,
+            "x": x,
+            "y": y,
+            "width": float(layout.get("width") or 0),
+            "height": float(layout.get("height") or 0),
+            "css": css_index.get(node.get("id"), ""),
+            "token": node.get("_token"),
+            "fill": node.get("fill"),
+            "color": node.get("_color"),
+            "font": (node.get("text") or [{}])[0].get("font") if node.get("text") else None,
+            "text_color": (node.get("textColor") or [{}])[0].get("color") if node.get("textColor") else None,
+            "text_align": node.get("textAlign"),
+            "border_radius": node.get("borderRadius"),
+            "effect": node.get("effect"),
+            "opacity": node.get("opacity"),
+            "flex": node.get("flexContainerInfo"),
+            "component_id": node.get("componentId"),
+            "variant": variant,
+            "text": text,
+            "icon_placeholder": icon_placeholder,
+        }
+        nodes.append(entry)
+        if text:
+            texts.append(text)
+        for action in node.get("interactive") or []:
+            if isinstance(action, dict) and action.get("targetLayerId"):
+                navigations.append({
+                    "from_id": node.get("id"),
+                    "to_layer_id": action["targetLayerId"],
+                    "variant": variant,
+                })
+        for child in node.get("children") or []:
+            walk(child, x, y, depth + 1)
+
+    root_layout = root.get("layoutStyle") or {}
+    walk(root, -float(root_layout.get("relativeX") or 0), -float(root_layout.get("relativeY") or 0), 0)
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "layer_id": layer_id,
+        "page_id": slugify_page_id(root.get("name") or "", layer_id),
+        "canvas": {
+            "width": root_layout.get("width"),
+            "height": root_layout.get("height"),
+        },
+        "nodes": nodes,
+        "navigations": navigations,
+        "texts": texts,
+    }

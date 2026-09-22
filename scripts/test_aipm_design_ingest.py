@@ -177,5 +177,76 @@ class FetchLayerTests(unittest.TestCase):
         self.assertIn("<!DOCTYPE html", str(ctx.exception))
 
 
+FIXTURES = ROOT / "tests" / "fixtures" / "design-ingest"
+
+
+def load_fixture(name):
+    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+class StructureTests(unittest.TestCase):
+    def setUp(self):
+        self.dsl = load_fixture("dsl-sample.json")
+        self.css = load_fixture("css-sample.json")
+        self.structure = module.build_structure(self.dsl, self.css, "1:1")
+
+    def test_canvas_comes_from_root_layout_style(self):
+        self.assertEqual(self.structure["canvas"], {"width": 400, "height": 300})
+
+    def test_every_node_is_flattened(self):
+        ids = [node["id"] for node in self.structure["nodes"]]
+        self.assertEqual(ids, ["1:1", "1:2", "1:3", "1:4", "1:5"])
+
+    def test_coordinates_are_accumulated_to_absolute(self):
+        # 1:4 相对 1:3 是 (12,5)，1:3 相对根是 (20,40)，绝对应为 (32,45)
+        text_node = next(n for n in self.structure["nodes"] if n["id"] == "1:4")
+        self.assertEqual((text_node["x"], text_node["y"]), (32.0, 45.0))
+
+    def test_css_code_is_attached_by_id(self):
+        node = next(n for n in self.structure["nodes"] if n["id"] == "1:3")
+        self.assertIn("border-radius: 4px", node["css"])
+
+    def test_width_height_come_from_dsl_not_css(self):
+        # /mcp/style 实测 294/294 都没有宽高，宽高只能取 dsl
+        node = next(n for n in self.structure["nodes"] if n["id"] == "1:3")
+        self.assertEqual((node["width"], node["height"]), (80.0, 32.0))
+
+    def test_instance_variant_comes_from_component_info_not_name(self):
+        # name 是变体串，靠 name 认组件会全错
+        node = next(n for n in self.structure["nodes"] if n["id"] == "1:3")
+        self.assertEqual(node["variant"], {"state": "enable", "size": "m"})
+        self.assertEqual(node["component_id"], "9:1")
+
+    def test_text_runs_are_joined(self):
+        node = next(n for n in self.structure["nodes"] if n["id"] == "1:4")
+        self.assertEqual(node["text"], "确认")
+        self.assertEqual(self.structure["texts"], ["确认"])
+
+    def test_navigation_is_collected_with_variant(self):
+        self.assertEqual(self.structure["navigations"], [
+            {"from_id": "1:3", "to_layer_id": "9:7", "variant": {"state": "enable", "size": "m"}}
+        ])
+
+    def test_empty_vector_path_is_marked_as_icon_placeholder(self):
+        node = next(n for n in self.structure["nodes"] if n["id"] == "1:5")
+        self.assertTrue(node["icon_placeholder"])
+        self.assertEqual(node["name"], "解释说明-疑问")
+
+    def test_css_index_ignores_nesting(self):
+        index = module.index_css(self.css)
+        self.assertEqual(set(index), {"1:1", "1:2", "1:3", "1:4", "1:5"})
+
+
+class SlugTests(unittest.TestCase):
+    def test_chinese_name_falls_back_to_layer_id(self):
+        self.assertEqual(module.slugify_page_id("入口页", "1336:92937"), "1336-92937")
+
+    def test_ascii_name_is_slugified(self):
+        self.assertEqual(module.slugify_page_id("Entry Page", "1:2"), "entry-page")
+
+    def test_blank_name_falls_back_to_layer_id(self):
+        self.assertEqual(module.slugify_page_id("   ", "1:2"), "1-2")
+
+
 if __name__ == "__main__":
     unittest.main()
