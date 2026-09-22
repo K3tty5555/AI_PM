@@ -415,9 +415,28 @@ class IngestTests(unittest.TestCase):
                 {"base_url": "https://example.test", "token": "mg_x"},
                 opener=self._fake_opener(), runner=lambda *a, **k: True,
             )
-            rendered = (out / "renders").glob("*.html")
-            for path in rendered:
-                self.assertNotIn("expire=", path.read_text(encoding="utf-8"))
+            # 唯一豁免 raw/：spec 明文「原始快照，留证据」，逐字保真是设计意图；
+            # 其余产出文件（含 design-tokens.json 与二进制 assets）一律不得含签名参数
+            files = [
+                p for p in out.rglob("*")
+                if p.is_file() and p.relative_to(out).parts[0] != "raw"
+            ]
+            self.assertTrue(files)
+            for path in files:
+                self.assertNotIn(b"expire=", path.read_bytes(), str(path))
+
+    def test_design_tokens_images_carry_local_asset_paths_not_signed_urls(self):
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            module.ingest(
+                "https://example.test/file/9?layer_id=1%3A1", out,
+                {"base_url": "https://example.test", "token": "mg_x"},
+                opener=self._fake_opener(), runner=lambda *a, **k: True,
+            )
+            tokens = json.loads((out / "design-tokens.json").read_text(encoding="utf-8"))
+            self.assertEqual(tokens["images"], [
+                {"style_id": "paint_img", "url": "assets/paint_img.png"}
+            ])
 
     def test_screenshot_failure_degrades_to_partial_not_crash(self):
         with tempfile.TemporaryDirectory() as temp:

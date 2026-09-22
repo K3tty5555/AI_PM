@@ -454,6 +454,7 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
     pages: list[dict[str, Any]] = []
     token_sets: list[dict[str, Any]] = []
     images: list[dict[str, Any]] = []
+    asset_maps: dict[str, str] = {}
     all_ok = True
 
     for layer_id in layer_ids:
@@ -468,6 +469,7 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
         _write_json(out_dir / "structures" / f"{page_id}.json", structure)
 
         asset_map = download_assets(tokens, out_dir / "assets", opener=opener)
+        asset_maps.update(asset_map)
         html_path = out_dir / "renders" / f"{page_id}.html"
         html_path.parent.mkdir(parents=True, exist_ok=True)
         html_path.write_text(render_html(structure, tokens, asset_map), encoding="utf-8")
@@ -492,7 +494,14 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
             "notes": "设计稿几何还原，只读视觉基准，不可直接当交付原型",
         })
 
-    _write_json(out_dir / "design-tokens.json", merge_token_sets(token_sets))
+    merged = merge_token_sets(token_sets)
+    # 签名 URL 绝不持久化：images[] 重写成本地 assets/ 相对路径，下载失败的条目直接丢弃
+    # （raw/ 豁免——spec 明文原始快照留证据，逐字保真）
+    merged["images"] = [
+        {"style_id": item["style_id"], "url": asset_maps[item["style_id"]]}
+        for item in merged.get("images", []) if item.get("style_id") in asset_maps
+    ]
+    _write_json(out_dir / "design-tokens.json", merged)
 
     risks = ["图中文字只作视觉表达，不作 PRD 字段或用户话术事实源"]
     if not all_ok:
