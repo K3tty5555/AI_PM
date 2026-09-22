@@ -8,6 +8,7 @@ MASTERGO_BASE_URL 读取，避免把部署域名写进版本库。
 
 from __future__ import annotations
 
+import html as html_lib
 import json
 import os
 from pathlib import Path
@@ -319,3 +320,77 @@ def merge_token_sets(sets: list[dict]) -> dict[str, Any]:
         "effects": [{"value": v, "names": n} for v, n in sorted(effects.items())],
         "images": images,
     }
+
+
+ICON_PLACEHOLDER_COLOR = "#C9CDD4"
+
+
+def render_html(structure: dict, tokens: dict, asset_map: dict[str, str] | None = None) -> str:
+    """按绝对坐标还原。这是只读视觉基准，不是可交付原型。"""
+    assets = asset_map or {}
+    canvas = structure.get("canvas") or {}
+    width = canvas.get("width") or 0
+    height = canvas.get("height") or 0
+
+    parts: list[str] = []
+    for node in structure.get("nodes", []):
+        declarations = [
+            "position:absolute",
+            f"left:{_num(node['x'])}px",
+            f"top:{_num(node['y'])}px",
+            f"width:{_num(node['width'])}px",
+            f"height:{_num(node['height'])}px",
+        ]
+        # MasterGo 自己生成的 CSS 直接用，但它不带宽高，所以宽高在前面先给
+        if node.get("css"):
+            for declaration in node["css"].split(";"):
+                declaration = declaration.strip()
+                if not declaration:
+                    continue
+                prop = declaration.split(":", 1)[0].strip().lower()
+                if prop in {"position", "left", "top", "width", "height"}:
+                    continue
+                declarations.append(declaration)
+
+        asset = assets.get(node.get("fill") or "")
+        if asset:
+            declarations.append(f"background-image:url('{asset}')")
+            declarations.append("background-size:100% 100%")
+
+        if node.get("icon_placeholder"):
+            declarations.append(f"background:{ICON_PLACEHOLDER_COLOR}")
+
+        attrs = [
+            f'data-id="{html_lib.escape(str(node.get("id")))}"',
+            f'data-type="{html_lib.escape(str(node.get("type")))}"',
+            f'data-name="{html_lib.escape(str(node.get("name") or ""))}"',
+        ]
+        if node.get("icon_placeholder"):
+            attrs.append(f'data-icon="{html_lib.escape(str(node.get("name") or ""))}"')
+        if node.get("token"):
+            attrs.append(f'data-token="{html_lib.escape(str(node["token"]))}"')
+
+        text = html_lib.escape(node.get("text") or "")
+        if text:
+            declarations.append("display:flex;align-items:center;white-space:pre-wrap")
+        parts.append(
+            f'<div {" ".join(attrs)} style="{";".join(declarations)}">{text}</div>'
+        )
+
+    body = "\n".join(parts)
+    return (
+        "<!DOCTYPE html>\n<html lang=\"zh-CN\"><head><meta charset=\"utf-8\">\n"
+        f"<title>设计稿几何还原 · {html_lib.escape(str(structure.get('page_id')))}</title>\n"
+        "<style>body{margin:0;background:#8A8F99}"
+        f"#stage{{position:relative;width:{_num(width)}px;height:{_num(height)}px;overflow:hidden}}"
+        "#stage div{box-sizing:border-box}</style></head>\n"
+        f"<body><div id=\"stage\">\n{body}\n</div></body></html>\n"
+    )
+
+
+def _num(value: Any) -> str:
+    """整数不带小数点，小数保留两位，保证输出稳定可比。"""
+    number = float(value or 0)
+    if number == int(number):
+        return str(int(number))
+    return f"{number:.2f}"

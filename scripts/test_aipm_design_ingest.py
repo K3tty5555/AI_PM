@@ -305,5 +305,48 @@ class MergeTokenSetsTests(unittest.TestCase):
         self.assertEqual(merged["schema_version"], 1)
 
 
+class RenderTests(unittest.TestCase):
+    def setUp(self):
+        dsl = load_fixture("dsl-sample.json")
+        css = load_fixture("css-sample.json")
+        self.structure = module.build_structure(dsl, css, "1:1")
+        self.tokens = module.extract_tokens(dsl["styles"])
+        self.html = module.render_html(self.structure, self.tokens, {"paint_img": "assets/paint_img.png"})
+
+    def test_stage_uses_canvas_size(self):
+        self.assertIn("width:400px", self.html)
+        self.assertIn("height:300px", self.html)
+
+    def test_every_node_becomes_a_positioned_div(self):
+        for node_id in ("1:1", "1:2", "1:3", "1:4", "1:5"):
+            self.assertIn(f'data-id="{node_id}"', self.html)
+        self.assertEqual(self.html.count("position:absolute"), 5)
+
+    def test_absolute_coordinates_are_used_not_relative(self):
+        # 1:4 绝对坐标 (32,45)，不是 DSL 里的相对 (12,5)
+        self.assertIn("left:32px;top:45px", self.html)
+
+    def test_text_content_is_escaped_and_present(self):
+        self.assertIn("确认", self.html)
+
+    def test_image_fill_uses_local_asset_path(self):
+        self.assertIn("url('assets/paint_img.png')", self.html)
+        self.assertNotIn("https://example.test/pic.png", self.html)
+
+    def test_icon_placeholder_carries_semantic_name(self):
+        self.assertIn('data-icon="解释说明-疑问"', self.html)
+
+    def test_effect_shadow_is_applied(self):
+        self.assertIn("box-shadow: 0px 2px 6px 0px rgba(0, 0, 0, 0.2)", self.html)
+
+    def test_output_is_deterministic(self):
+        again = module.render_html(self.structure, self.tokens, {"paint_img": "assets/paint_img.png"})
+        self.assertEqual(self.html, again)
+
+    def test_missing_asset_falls_back_to_flat_colour_not_remote_url(self):
+        html_without = module.render_html(self.structure, self.tokens, {})
+        self.assertNotIn("https://example.test", html_without)
+
+
 if __name__ == "__main__":
     unittest.main()
