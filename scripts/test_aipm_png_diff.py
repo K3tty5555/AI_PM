@@ -57,12 +57,16 @@ class ReadPngTests(unittest.TestCase):
         for y in range(height):
             row = bytearray()
             for x in range(width):
-                # 每行每像素都不同，保证每个过滤器都在真变换数据
-                row.extend(((x * 37 + y * 11 + 5) % 256,
+                # 每行每像素都不同，保证每个过滤器都在真变换数据。
+                # R 通道常数手工挑过：Paeth 行 byte 3 处 left=0, up=200, upper_left=100
+                # → p=100，pa=pb=100、pc=0，预测器必须选 c（_paeth 第三分支）。
+                row.extend(((x * 100 + y * 156 + 44) % 256,
                             (x * 17 + y * 71 + 90) % 256,
                             (x * 89 + y * 3 + 200) % 256))
             rows.append(bytes(row))
         rgb = b"".join(rows)
+        # 钉死设计意图：这一处 triple 真的走到 c 分支，否则常数漂移后分支覆盖悄悄消失
+        self.assertEqual(_paeth_predictor(rows[3][0], rows[2][3], rows[2][0]), rows[2][0])
 
         filters = [1, 2, 3, 4]  # Sub / Up / Average / Paeth
         raw = bytearray()
@@ -104,6 +108,20 @@ class ReadPngTests(unittest.TestCase):
             path.write_bytes(b"not a png at all")
             with self.assertRaises(module.PngError):
                 module.read_png(path)
+
+    def test_truncated_ihdr_raises_png_error_not_struct_error(self):
+        # IHDR 载荷不足 13 字节时 struct.unpack 会抛 struct.error，
+        # 而 accept 的 design_diff_section 只接 PngError，必须在这里就拦下
+        import struct
+        ihdr = struct.pack(">IIBBB", 1, 1, 8, 2, 0)  # 8 字节，短 5 字节
+        chunk = struct.pack(">I", len(ihdr)) + b"IHDR" + ihdr
+        chunk += struct.pack(">I", zlib.crc32(b"IHDR" + ihdr) & 0xFFFFFFFF)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "short.png"
+            path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk)
+            with self.assertRaises(module.PngError) as ctx:
+                module.read_png(path)
+            self.assertIn("IHDR", str(ctx.exception))
 
     def test_unsupported_colour_type_is_rejected_loudly(self):
         # 造一个 colorType=6（RGBA）的头，应当明确拒绝而不是猜

@@ -52,6 +52,10 @@ def read_png(path: Path) -> tuple[int, int, bytes]:
     seen_header = False
     for name, payload in _chunks(raw):
         if name == b"IHDR":
+            # accept 的 design_diff_section 只接 PngError；短载荷在这里就得拦，
+            # 不能漏成 struct.error
+            if len(payload) < 13:
+                raise PngError(f"IHDR 载荷不足 13 字节，实际 {len(payload)}: {path}")
             width, height, depth, color_type, compression, filter_method, interlace = struct.unpack(
                 ">IIBBBBB", payload[:13]
             )
