@@ -62,6 +62,7 @@ run_check "知识沉淀 hook 单飞自测（双 Stop 只起一消费者）" pyth
 run_check "skill 引用存在性（check-skill-ref-exists）" python3 scripts/check-skill-ref-exists.py
 run_check "原型协作生成器（确认门/资源/主题隔离）" python3 -m unittest scripts.test_aipm_prototype_collab
 run_check "设计稿抽取（URL/合并/token/还原）" python3 -m unittest scripts.test_aipm_design_ingest
+run_check "视觉包设计稿来源门禁" python3 -m unittest scripts.test_visual_anchor_mastergo
 run_check "视觉包版本与规格鲜度门禁" python3 -m unittest scripts.test_visual_anchor_freshness
 run_check "经验分享文章工具自测" python3 -m unittest tests.test_ai_pm_sharing_tools
 run_check "经验分享文章契约自测" python3 -m unittest tests.test_ai_pm_sharing_contract

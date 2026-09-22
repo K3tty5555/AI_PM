@@ -9,12 +9,12 @@ function usage() {
     'Usage:',
     '  node scripts/ai-sync/check-visual-anchor-package.js <project_dir>',
     '',
-    'Checks <project_dir>/06-prototype-visual handoff state for Claude Code <-> Codex.',
+    'Checks <project_dir>/06-prototype-visual handoff state (source: codex or mastergo).',
     '',
     'Exit codes:',
     '  0  ready, partial-soft, failed-soft, or no-package-soft',
     '  1  invalid package or missing required files',
-    '  2  strict gate requires Codex visual-anchor generation before HTML prototype',
+    '  2  strict gate requires visual-anchor generation before HTML prototype',
   ].join('\n'));
 }
 
@@ -40,6 +40,12 @@ function fail(message, details = []) {
   console.log(`MESSAGE: ${message}`);
   details.forEach(d => console.log(`- ${d}`));
   process.exit(1);
+}
+
+function producerHint(src) {
+  return src === 'mastergo'
+    ? 'rerun ingest-design against the MasterGo file'
+    : 'switch to Codex and generate visual anchor package';
 }
 
 const projectDir = process.argv[2];
@@ -81,11 +87,12 @@ if (!exists(manifestPath)) {
     const pages = Array.isArray(request.pages) ? request.pages.length : 0;
     console.log(`REQUESTED_PAGES: ${pages}`);
   }
+  const requestSource = request && request.designSource ? 'mastergo' : 'codex';
   if (gateMode === 'strict') {
-    console.log('NEXT_ACTION: switch to Codex and generate visual anchor package before HTML prototype');
+    console.log(`NEXT_ACTION: ${producerHint(requestSource)} before HTML prototype`);
     process.exit(2);
   }
-  console.log('NEXT_ACTION: continue normal HTML prototype or switch to Codex for optional visual anchor package');
+  console.log(`NEXT_ACTION: continue normal HTML prototype or ${producerHint(requestSource)}`);
   process.exit(0);
 }
 
@@ -123,6 +130,20 @@ if (manifest.sourceSpecHash) {
 }
 
 const errors = [];
+// 设计稿来源的包，DSL 派生产物才是正文；图是给人看的辅助。
+const source = manifest.source === 'mastergo' ? 'mastergo' : 'codex';
+if (source === 'mastergo') {
+  if (!exists(path.join(visualDir, 'design-tokens.json'))) {
+    errors.push('missing design-tokens.json (required when manifest.source=mastergo)');
+  }
+  (Array.isArray(manifest.images) ? manifest.images : []).forEach(item => {
+    if (!item.pageId) return;
+    const structurePath = path.join(visualDir, 'structures', `${item.pageId}.json`);
+    if (!exists(structurePath)) {
+      errors.push(`missing structures/${item.pageId}.json (required when manifest.source=mastergo)`);
+    }
+  });
+}
 if (manifest.designSpecPath && !exists(path.resolve(visualDir, manifest.designSpecPath))) {
   errors.push('missing product design specification: ' + manifest.designSpecPath);
 }
@@ -187,7 +208,7 @@ if (manifest.status === 'ready') {
 
 if (manifest.status === 'partial') {
   if (gateMode === 'strict') {
-    console.log('NEXT_ACTION: switch to Codex and complete missing visual anchor pages');
+    console.log(`NEXT_ACTION: ${producerHint(source)}`);
     process.exit(2);
   }
   console.log('NEXT_ACTION: continue with partial visual constraints; record missing pages in prototype audit');
