@@ -606,3 +606,123 @@ def command_ingest_design(args) -> int:
     print(f"STATUS: {result['manifest']['status']}")
     print(f"OUT: {args.out}")
     return 0
+
+
+_KIND_KEYS = (("colors", "color"), ("effects", "effect"), ("typography", "typography"))
+_TYPOGRAPHY_FIELDS = ("family", "size", "weight", "line_height", "letter_spacing")
+
+
+def _token_value(kind: str, entry: dict) -> Any:
+    """colors/effects 的值在 value 字段；typography 的值是五元组。"""
+    if kind == "typography":
+        return tuple(entry.get(field) for field in _TYPOGRAPHY_FIELDS)
+    return entry["value"]
+
+
+def diff_token_sets(incoming: dict, existing: dict) -> dict[str, Any]:
+    """新增 / 别名 / 冲突三类。别名按色值判，冲突按名字判。"""
+    added: list[dict[str, Any]] = []
+    aliases: list[dict[str, Any]] = []
+    conflicts: list[dict[str, Any]] = []
+
+    for section, kind in _KIND_KEYS:
+        existing_by_value = {_token_value(kind, e): list(e.get("names") or []) for e in existing.get(section, [])}
+        existing_by_name: dict[str, Any] = {}
+        for entry in existing.get(section, []):
+            for name in entry.get("names") or []:
+                existing_by_name[name] = _token_value(kind, entry)
+
+        for entry in incoming.get(section, []):
+            value = _token_value(kind, entry)
+            names = list(entry.get("names") or [])
+            for name in names:
+                if name in existing_by_name and existing_by_name[name] != value:
+                    conflicts.append({
+                        "kind": kind, "name": name,
+                        "incoming": value, "existing": existing_by_name[name],
+                    })
+            if value not in existing_by_value:
+                added.append({"kind": kind, "value": value, "names": names})
+                continue
+            new_names = [n for n in names if n not in existing_by_value[value]]
+            if new_names:
+                aliases.append({
+                    "kind": kind, "value": value,
+                    "added_names": new_names, "existing_names": existing_by_value[value],
+                })
+
+    return {"added": added, "aliases": aliases, "conflicts": conflicts}
+
+
+def _format_token_value(kind: str, value: Any) -> str:
+    """typography 五元组印成可读一行（与视觉指纹同格式），色值/效果原样。"""
+    if kind == "typography":
+        family, size, weight, line_height, _letter_spacing = value
+        return f"{family} {size}px/{weight} 行高 {line_height}"
+    return str(value)
+
+
+def render_distill_report(diff: dict) -> str:
+    lines = [
+        "# 产品级设计 Token 蒸馏建议",
+        "",
+        "本报告**不自动写入**产品规范。产品级规范是跨项目长期资产，",
+        "单次设计稿抽取不得静默改写它。",
+        "",
+    ]
+    lines.append(f"## 新增（{len(diff['added'])}）")
+    lines.append("")
+    for item in diff["added"]:
+        names = "、".join(item.get("names") or []) or "（无语义名）"
+        lines.append(f"- `{_format_token_value(item['kind'], item['value'])}` — {names}")
+    lines.append("")
+    lines.append(f"## 别名合并（{len(diff['aliases'])}）")
+    lines.append("")
+    lines.append("同一个值有多个名字，全部保留。按值判同一性，不按名字。")
+    lines.append("")
+    for item in diff["aliases"]:
+        lines.append(
+            f"- `{_format_token_value(item['kind'], item['value'])}` 已有 {'、'.join(item['existing_names'])}，"
+            f"新增 {'、'.join(item['added_names'])}"
+        )
+    lines.append("")
+    lines.append(f"## 冲突（{len(diff['conflicts'])}）")
+    lines.append("")
+    lines.append("同名不同值，必须**人判**，工具不猜。")
+    lines.append("")
+    for item in diff["conflicts"]:
+        lines.append(
+            f"- `{item['name']}`：设计稿 `{_format_token_value(item['kind'], item['incoming'])}`，"
+            f"现有规范 `{_format_token_value(item['kind'], item['existing'])}`"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def command_distill_tokens(args) -> int:
+    source = Path(args.source)
+    target = Path(args.target)
+    try:
+        incoming = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"FAIL: 读不了 {source}: {exc}")
+        return 1
+
+    existing_path = target / "design-tokens.json"
+    existing = {"colors": [], "typography": [], "effects": []}
+    if existing_path.is_file():
+        try:
+            existing = json.loads(existing_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            print(f"FAIL: 现有产品规范 JSON 格式错误 {existing_path}: {exc}")
+            return 1
+
+    diff = diff_token_sets(incoming, existing)
+    report_path = target / "distill-report.md"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(render_distill_report(diff), encoding="utf-8")
+
+    print(f"新增 {len(diff['added'])}｜别名 {len(diff['aliases'])}｜冲突 {len(diff['conflicts'])}")
+    print(f"REPORT: {report_path}")
+    print("不自动写入产品规范，确认后手工合并。")
+    return 2 if diff["conflicts"] else 0

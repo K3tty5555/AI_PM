@@ -481,5 +481,80 @@ class IngestTests(unittest.TestCase):
             self.assertEqual(result["pages"][0]["screenshot_ok"], False)
 
 
+class DistillTests(unittest.TestCase):
+    def test_new_colour_is_reported_as_added(self):
+        incoming = {"colors": [{"value": "#111111", "names": ["brand/x"]}], "typography": [], "effects": []}
+        existing = {"colors": [], "typography": [], "effects": []}
+        diff = module.diff_token_sets(incoming, existing)
+        self.assertEqual(diff["added"], [{"kind": "color", "value": "#111111", "names": ["brand/x"]}])
+        self.assertEqual(diff["conflicts"], [])
+
+    def test_same_value_new_name_is_alias_not_conflict(self):
+        incoming = {"colors": [{"value": "#05C1AE", "names": ["主色/常规"]}], "typography": [], "effects": []}
+        existing = {"colors": [{"value": "#05C1AE", "names": ["brand/primary"]}], "typography": [], "effects": []}
+        diff = module.diff_token_sets(incoming, existing)
+        self.assertEqual(diff["conflicts"], [])
+        self.assertEqual(diff["aliases"], [
+            {"kind": "color", "value": "#05C1AE", "added_names": ["主色/常规"],
+             "existing_names": ["brand/primary"]}
+        ])
+
+    def test_same_name_different_value_is_conflict(self):
+        incoming = {"colors": [{"value": "#000000", "names": ["brand/primary"]}], "typography": [], "effects": []}
+        existing = {"colors": [{"value": "#05C1AE", "names": ["brand/primary"]}], "typography": [], "effects": []}
+        diff = module.diff_token_sets(incoming, existing)
+        self.assertEqual(diff["conflicts"], [
+            {"kind": "color", "name": "brand/primary", "incoming": "#000000", "existing": "#05C1AE"}
+        ])
+
+    def test_identical_token_produces_nothing(self):
+        same = {"colors": [{"value": "#FFFFFF", "names": ["bg/primary"]}], "typography": [], "effects": []}
+        diff = module.diff_token_sets(same, same)
+        self.assertEqual(diff["added"], [])
+        self.assertEqual(diff["aliases"], [])
+        self.assertEqual(diff["conflicts"], [])
+
+    def test_report_marks_conflicts_as_needing_a_human(self):
+        diff = {"added": [], "aliases": [],
+                "conflicts": [{"kind": "color", "name": "brand/primary", "incoming": "#000", "existing": "#05C1AE"}]}
+        report = module.render_distill_report(diff)
+        self.assertIn("brand/primary", report)
+        self.assertIn("人判", report)
+
+    def test_report_states_nothing_is_written_automatically(self):
+        report = module.render_distill_report({"added": [], "aliases": [], "conflicts": []})
+        self.assertIn("不自动写入", report)
+
+    def test_same_typography_spec_new_name_is_alias_not_conflict(self):
+        spec = {"family": "Demo Sans", "size": 14, "weight": 500, "line_height": 22, "letter_spacing": 0}
+        incoming = {"colors": [], "typography": [dict(spec, names=["标题/中号"])], "effects": []}
+        existing = {"colors": [], "typography": [dict(spec, names=["title/title-m-medium"])], "effects": []}
+        diff = module.diff_token_sets(incoming, existing)
+        self.assertEqual(diff["conflicts"], [])
+        self.assertEqual(diff["aliases"], [
+            {"kind": "typography", "value": ("Demo Sans", 14, 500, 22, 0),
+             "added_names": ["标题/中号"], "existing_names": ["title/title-m-medium"]}
+        ])
+        report = module.render_distill_report(diff)
+        self.assertIn("`Demo Sans 14px/500 行高 22`", report)
+        self.assertNotIn("('Demo Sans', 14", report)
+
+    def test_same_typography_name_different_size_is_conflict(self):
+        incoming = {"colors": [], "typography": [
+            {"family": "Demo Sans", "size": 16, "weight": 500, "line_height": 24,
+             "letter_spacing": 0, "names": ["title/title-m-medium"]}
+        ], "effects": []}
+        existing = {"colors": [], "typography": [
+            {"family": "Demo Sans", "size": 14, "weight": 500, "line_height": 22,
+             "letter_spacing": 0, "names": ["title/title-m-medium"]}
+        ], "effects": []}
+        diff = module.diff_token_sets(incoming, existing)
+        self.assertEqual(diff["conflicts"], [
+            {"kind": "typography", "name": "title/title-m-medium",
+             "incoming": ("Demo Sans", 16, 500, 24, 0),
+             "existing": ("Demo Sans", 14, 500, 22, 0)}
+        ])
+
+
 if __name__ == "__main__":
     unittest.main()

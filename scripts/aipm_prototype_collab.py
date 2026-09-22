@@ -1170,6 +1170,17 @@ def _delegate_ingest_design(args: argparse.Namespace) -> int:
     return module.command_ingest_design(args)
 
 
+def _delegate_distill_tokens(args: argparse.Namespace) -> int:
+    import importlib.util
+
+    module_path = Path(__file__).resolve().parent / "aipm_design_ingest.py"
+    spec = importlib.util.spec_from_file_location("aipm_design_ingest", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader
+    spec.loader.exec_module(module)
+    return module.command_distill_tokens(args)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="AI_PM 原型协作闭环工具")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1254,6 +1265,10 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument("--token", help="覆盖访问令牌")
     ingest.add_argument("--config", help="覆盖凭证配置文件路径，默认 .d2c/config.json")
     ingest.set_defaults(func=_delegate_ingest_design)
+    distill = sub.add_parser("distill-tokens", help="把设计稿 token 与产品级规范比对，只出建议不写入")
+    distill.add_argument("--source", required=True, help="{项目}/06-prototype-visual/design-tokens.json")
+    distill.add_argument("--target", required=True, help="output/assets/{产品}设计规范/")
+    distill.set_defaults(func=_delegate_distill_tokens)
 
     serve = sub.add_parser("serve", help="启动本地原型巡检服务并把反馈写入项目 feedback/")
     serve.add_argument("--root", required=True, help="06-prototype 目录")
