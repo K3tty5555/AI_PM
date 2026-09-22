@@ -5,6 +5,9 @@
 # Git worktrees
 .worktrees/
 
+# Subagent-driven development 工作区（ledger / brief / review package，纯临时）
+.superpowers/
+
 # -----------------------------------------------------------------------------
 # Operating System Files
 # -----------------------------------------------------------------------------
@@ -83,6 +86,17 @@ AI_PM_提效分享.html
 # 本地专属 / 项目专属 skill：含内部域名 + 凭证逻辑，只在本机用，不入库不推 GitHub
 .claude/skills/xfchat-wiki/
 .claude/skills/tpd_cli/
+# D2C 运行时目录：config.json 存 MasterGo PAT 明文，dsl_raw.json 含真实设计稿内容
+.d2c/
+# 内网专属依赖（MasterGo MCP 等）：随项目走、不入库，与 .claude/skills/xfchat-wiki 同待遇
+# 安装方式记在本机 docs/ 下的设计文档里，不写进版本库（内网 registry 域名不得入库）
+vendor/
+# MasterGo D2C（内网 npm 源分发 + mg_ 凭证 + iflytek 域名），同上只在本机
+.claude/skills/d2c/
+.claude/skills/d2c-analyze/
+.claude/skills/d2c-codegen/
+.claude/skills/d2c-fetch/
+.claude/skills/d2c-setup/
 # Codex 本地状态默认不入库，仅共享 AI_PM 项目级 hook 入口。
 .codex/*
 !.codex/hooks.json
