@@ -348,6 +348,35 @@ class RenderTests(unittest.TestCase):
         self.assertNotIn("https://example.test", html_without)
 
 
+class FingerprintTests(unittest.TestCase):
+    def setUp(self):
+        dsl = load_fixture("dsl-sample.json")
+        css = load_fixture("css-sample.json")
+        self.structure = module.build_structure(dsl, css, "1:1")
+        self.tokens = module.extract_tokens(dsl["styles"])
+        self.text = module.render_fingerprint([self.structure], self.tokens)
+
+    def test_measured_section_is_present(self):
+        self.assertIn("## 实测值", self.text)
+
+    def test_canvas_size_is_recorded(self):
+        self.assertIn("400 × 300", self.text)
+
+    def test_colour_alias_group_is_rendered_on_one_line(self):
+        self.assertIn("#0A0B0C", self.text)
+        self.assertIn("sys-color/text/text-primary", self.text)
+        self.assertIn("旧色板/--color-text", self.text)
+
+    def test_source_layer_id_is_recorded(self):
+        self.assertIn("1:1", self.text)
+
+    def test_icon_placeholders_are_listed_for_substitution(self):
+        self.assertIn("解释说明-疑问", self.text)
+
+    def test_readonly_boundary_is_stated(self):
+        self.assertIn("只读", self.text)
+
+
 class IngestTests(unittest.TestCase):
     def _fake_opener(self, calls=None):
         dsl = load_fixture("dsl-sample.json")

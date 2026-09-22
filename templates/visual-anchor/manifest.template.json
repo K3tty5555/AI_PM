@@ -4,6 +4,7 @@
   "status": "ready",
   "generatedAt": "{{ISO8601}}",
   "generatedBy": "codex",
+  "source": "codex",
   "requestPath": "request.json",
   "visualFingerprint": "visual-fingerprint.md",
   "auditPath": "audit.md",

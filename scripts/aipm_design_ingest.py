@@ -398,6 +398,61 @@ def _num(value: Any) -> str:
     return f"{number:.2f}"
 
 
+def render_fingerprint(structures: list[dict], tokens: dict) -> str:
+    lines: list[str] = [
+        "# 视觉指纹",
+        "",
+        "> 本文件由 `ingest-design` 从 MasterGo 设计稿生成。实测值层记精确数字，",
+        "> 定性层记规律。还原稿是**只读**视觉基准，不能直接当交付原型。",
+        "",
+        "## 实测值（设计稿来源专有）",
+        "",
+    ]
+    for structure in structures:
+        canvas = structure.get("canvas") or {}
+        lines.append(f"### {structure.get('page_id')}")
+        lines.append("")
+        lines.append(f"- 来源图层：`{structure.get('layer_id')}`")
+        lines.append(f"- 画布：{canvas.get('width')} × {canvas.get('height')}")
+        top = [n for n in structure.get("nodes", []) if n.get("depth") == 1]
+        if top:
+            boxes = "；".join(
+                f"{n.get('name')} {_num(n['x'])},{_num(n['y'])} {_num(n['width'])}×{_num(n['height'])}"
+                for n in top
+            )
+            lines.append(f"- 一级区块：{boxes}")
+        icons = [n.get("name") for n in structure.get("nodes", []) if n.get("icon_placeholder")]
+        if icons:
+            lines.append(f"- 待替换图标（按语义名映射图标库）：{'、'.join(icons)}")
+        navigations = structure.get("navigations") or []
+        if navigations:
+            hops = "；".join(f"{n['from_id']} → {n['to_layer_id']}" for n in navigations)
+            lines.append(f"- 稿内跳转（仅供与 spec 核对，不自动改 spec）：{hops}")
+        lines.append("")
+
+    lines.append("## Token")
+    lines.append("")
+    for entry in tokens.get("colors", []):
+        names = "、".join(entry.get("names") or []) or "（无语义名）"
+        lines.append(f"- `{entry['value']}` — {names}")
+    for entry in tokens.get("typography", []):
+        names = "、".join(entry.get("names") or []) or "（无语义名）"
+        lines.append(
+            f"- {entry.get('family')} {entry.get('size')}px/{entry.get('weight')} "
+            f"行高 {entry.get('line_height')} — {names}"
+        )
+    for entry in tokens.get("effects", []):
+        names = "、".join(entry.get("names") or []) or "（无语义名）"
+        lines.append(f"- `{entry['value']}` — {names}")
+    lines.append("")
+    lines.append("## 定性层")
+    lines.append("")
+    lines.append("- 设计稿没画到的页面，布局沿用最新已确认原型，视觉刷成上面这套 token。")
+    lines.append("- 图中文字只作视觉表达，不作 PRD 字段或用户话术事实源。")
+    lines.append("")
+    return "\n".join(lines)
+
+
 PLAYWRIGHT_CACHE = Path.home() / "Library/Caches/ms-playwright"
 
 
@@ -452,6 +507,7 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
     out_dir.mkdir(parents=True, exist_ok=True)
 
     pages: list[dict[str, Any]] = []
+    structures_written: list[dict] = []
     token_sets: list[dict[str, Any]] = []
     images: list[dict[str, Any]] = []
     asset_maps: dict[str, str] = {}
@@ -463,6 +519,7 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
         page_id = structure["page_id"]
         tokens = extract_tokens(payload["dsl"].get("styles") or {})
         token_sets.append(tokens)
+        structures_written.append(structure)
 
         _write_json(out_dir / "raw" / f"dsl-{page_id}.json", payload["dsl"])
         _write_json(out_dir / "raw" / f"css-{page_id}.json", payload["css"])
@@ -502,6 +559,9 @@ def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=Non
         for item in merged.get("images", []) if item.get("style_id") in asset_maps
     ]
     _write_json(out_dir / "design-tokens.json", merged)
+    (out_dir / "visual-fingerprint.md").write_text(
+        render_fingerprint(structures_written, merge_token_sets(token_sets)), encoding="utf-8"
+    )
 
     risks = ["图中文字只作视觉表达，不作 PRD 字段或用户话术事实源"]
     if not all_ok:
