@@ -348,5 +348,90 @@ class RenderTests(unittest.TestCase):
         self.assertNotIn("https://example.test", html_without)
 
 
+class IngestTests(unittest.TestCase):
+    def _fake_opener(self, calls=None):
+        dsl = load_fixture("dsl-sample.json")
+        css = load_fixture("css-sample.json")
+
+        def opener(request):
+            if calls is not None:
+                calls.append(request.full_url)
+            if "/mcp/dsl" in request.full_url:
+                return json.dumps(dsl).encode()
+            if "/mcp/style" in request.full_url:
+                return json.dumps(css).encode()
+            return b"\x89PNG\r\n\x1a\nfixture"
+
+        return opener
+
+    def test_ingest_writes_the_full_package_layout(self):
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            result = module.ingest(
+                "https://example.test/file/9?layer_id=1%3A1",
+                out,
+                {"base_url": "https://example.test", "token": "mg_x"},
+                opener=self._fake_opener(),
+                runner=lambda *a, **k: True,
+            )
+            page_id = result["pages"][0]["page_id"]
+            self.assertTrue((out / "design-tokens.json").is_file())
+            self.assertTrue((out / f"structures/{page_id}.json").is_file())
+            self.assertTrue((out / f"renders/{page_id}.html").is_file())
+            self.assertTrue((out / f"raw/dsl-{page_id}.json").is_file())
+            self.assertTrue((out / f"raw/css-{page_id}.json").is_file())
+            self.assertTrue((out / "manifest.json").is_file())
+
+    def test_manifest_marks_source_and_generator(self):
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            module.ingest(
+                "https://example.test/file/9?layer_id=1%3A1", out,
+                {"base_url": "https://example.test", "token": "mg_x"},
+                opener=self._fake_opener(), runner=lambda *a, **k: True,
+            )
+            manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["source"], "mastergo")
+            self.assertEqual(manifest["generatedBy"], "mastergo-ingest")
+            self.assertEqual(manifest["packageType"], "visual-anchor-manifest")
+
+    def test_manifest_images_point_at_renders_not_downloaded_assets(self):
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            module.ingest(
+                "https://example.test/file/9?layer_id=1%3A1", out,
+                {"base_url": "https://example.test", "token": "mg_x"},
+                opener=self._fake_opener(), runner=lambda *a, **k: True,
+            )
+            manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(manifest["images"]), 1)
+            self.assertTrue(manifest["images"][0]["image"].startswith("images/"))
+
+    def test_signed_urls_are_never_persisted(self):
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            module.ingest(
+                "https://example.test/file/9?layer_id=1%3A1", out,
+                {"base_url": "https://example.test", "token": "mg_x"},
+                opener=self._fake_opener(), runner=lambda *a, **k: True,
+            )
+            rendered = (out / "renders").glob("*.html")
+            for path in rendered:
+                self.assertNotIn("expire=", path.read_text(encoding="utf-8"))
+
+    def test_screenshot_failure_degrades_to_partial_not_crash(self):
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp)
+            result = module.ingest(
+                "https://example.test/file/9?layer_id=1%3A1", out,
+                {"base_url": "https://example.test", "token": "mg_x"},
+                opener=self._fake_opener(), runner=lambda *a, **k: False,
+            )
+            manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "partial")
+            self.assertTrue(any("截图" in risk for risk in manifest["knownRisks"]))
+            self.assertEqual(result["pages"][0]["screenshot_ok"], False)
+
+
 if __name__ == "__main__":
     unittest.main()

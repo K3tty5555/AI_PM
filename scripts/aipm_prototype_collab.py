@@ -1105,6 +1105,18 @@ def command_standing_decisions(args: argparse.Namespace) -> int:
     return 0
 
 
+def _delegate_ingest_design(args: argparse.Namespace) -> int:
+    """抽取逻辑在 aipm_design_ingest.py，这里只转发，避免本文件继续膨胀。"""
+    import importlib.util
+
+    module_path = Path(__file__).resolve().parent / "aipm_design_ingest.py"
+    spec = importlib.util.spec_from_file_location("aipm_design_ingest", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader
+    spec.loader.exec_module(module)
+    return module.command_ingest_design(args)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="AI_PM 原型协作闭环工具")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1179,6 +1191,13 @@ def build_parser() -> argparse.ArgumentParser:
     standing.add_argument("--root", required=True, help="项目的 06-prototype 目录")
     standing.add_argument("--json", action="store_true")
     standing.set_defaults(func=command_standing_decisions)
+    ingest = sub.add_parser("ingest-design", help="从 MasterGo 设计稿抽出视觉锚点包（可选，没有设计稿不影响既有流程）")
+    ingest.add_argument("--url", required=True, help="MasterGo 设计稿地址，必须带 layer_id")
+    ingest.add_argument("--out", required=True, help="输出目录，通常是 {项目}/06-prototype-visual")
+    ingest.add_argument("--base-url", help="覆盖 MasterGo 站点地址")
+    ingest.add_argument("--token", help="覆盖访问令牌")
+    ingest.add_argument("--config", help="覆盖凭证配置文件路径，默认 .d2c/config.json")
+    ingest.set_defaults(func=_delegate_ingest_design)
 
     serve = sub.add_parser("serve", help="启动本地原型巡检服务并把反馈写入项目 feedback/")
     serve.add_argument("--root", required=True, help="06-prototype 目录")

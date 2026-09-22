@@ -8,11 +8,13 @@ MASTERGO_BASE_URL 读取，避免把部署域名写进版本库。
 
 from __future__ import annotations
 
+import datetime
 import html as html_lib
 import json
 import os
 from pathlib import Path
 import re
+import subprocess
 from typing import Any
 import urllib.request
 from urllib.parse import parse_qs, quote, urlsplit
@@ -394,3 +396,144 @@ def _num(value: Any) -> str:
     if number == int(number):
         return str(int(number))
     return f"{number:.2f}"
+
+
+PLAYWRIGHT_CACHE = Path.home() / "Library/Caches/ms-playwright"
+
+
+def find_headless_shell() -> Path | None:
+    """复用本机缓存，绝不下载浏览器（CLAUDE.md 明令）。"""
+    if not PLAYWRIGHT_CACHE.is_dir():
+        return None
+    matches = sorted(PLAYWRIGHT_CACHE.glob("chromium_headless_shell-*/chrome-headless-shell-*/chrome-headless-shell"))
+    return matches[-1] if matches else None
+
+
+def download_assets(tokens: dict, out_dir: Path, opener=None) -> dict[str, str]:
+    """签名 URL 实测约 23 小时过期，当场下载，绝不持久化 URL。"""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    mapping: dict[str, str] = {}
+    for item in tokens.get("images", []):
+        style_id = item["style_id"]
+        filename = f"{style_id.replace(':', '_')}.png"
+        target = out_dir / filename
+        request = urllib.request.Request(item["url"])
+        try:
+            target.write_bytes((opener or _default_opener)(request))
+        except Exception:
+            continue
+        mapping[style_id] = f"assets/{filename}"
+    return mapping
+
+
+def screenshot(html_path: Path, png_path: Path, width: int, height: int, runner=None) -> bool:
+    if runner is not None:
+        return bool(runner(html_path, png_path, width, height))
+    shell = find_headless_shell()
+    if shell is None:
+        return False
+    png_path.parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        str(shell), "--headless", "--disable-gpu", "--no-sandbox",
+        "--virtual-time-budget=4000",
+        f"--window-size={int(width)},{int(height)}",
+        f"--screenshot={png_path}",
+        html_path.resolve().as_uri(),
+    ]
+    try:
+        subprocess.run(command, capture_output=True, timeout=120, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return png_path.is_file() and png_path.stat().st_size > 0
+
+
+def ingest(url: str, out_dir: Path, cfg: dict[str, str], opener=None, runner=None) -> dict[str, Any]:
+    file_id, layer_ids = parse_design_url(url)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    pages: list[dict[str, Any]] = []
+    token_sets: list[dict[str, Any]] = []
+    images: list[dict[str, Any]] = []
+    all_ok = True
+
+    for layer_id in layer_ids:
+        payload = fetch_layer(cfg, file_id, layer_id, opener=opener, require_nodes=True)
+        structure = build_structure(payload["dsl"], payload["css"], layer_id)
+        page_id = structure["page_id"]
+        tokens = extract_tokens(payload["dsl"].get("styles") or {})
+        token_sets.append(tokens)
+
+        _write_json(out_dir / "raw" / f"dsl-{page_id}.json", payload["dsl"])
+        _write_json(out_dir / "raw" / f"css-{page_id}.json", payload["css"])
+        _write_json(out_dir / "structures" / f"{page_id}.json", structure)
+
+        asset_map = download_assets(tokens, out_dir / "assets", opener=opener)
+        html_path = out_dir / "renders" / f"{page_id}.html"
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+        html_path.write_text(render_html(structure, tokens, asset_map), encoding="utf-8")
+
+        png_path = out_dir / "images" / f"{page_id}.png"
+        ok = screenshot(
+            html_path, png_path,
+            structure["canvas"].get("width") or 1440,
+            structure["canvas"].get("height") or 900,
+            runner=runner,
+        )
+        all_ok = all_ok and ok
+        pages.append({"page_id": page_id, "layer_id": layer_id, "screenshot_ok": ok})
+        images.append({
+            "id": f"img-{page_id}",
+            "pageId": page_id,
+            "label": structure.get("page_id"),
+            "role": "design-render",
+            "image": f"images/{page_id}.png",
+            "usableForPrd": False,
+            "usableForHtmlConstraint": True,
+            "notes": "设计稿几何还原，只读视觉基准，不可直接当交付原型",
+        })
+
+    _write_json(out_dir / "design-tokens.json", merge_token_sets(token_sets))
+
+    risks = ["图中文字只作视觉表达，不作 PRD 字段或用户话术事实源"]
+    if not all_ok:
+        risks.append("截图未完成，manifest 降级为 partial，需装好 chrome-headless-shell 后重跑")
+    manifest = {
+        "version": 1,
+        "packageType": "visual-anchor-manifest",
+        "status": "ready" if all_ok else "partial",
+        "source": "mastergo",
+        "generatedAt": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "generatedBy": "mastergo-ingest",
+        "visualFingerprint": "visual-fingerprint.md",
+        "designSource": {"provider": "mastergo", "fileId": file_id, "layerIds": layer_ids},
+        "images": images,
+        "knownRisks": risks,
+    }
+    _write_json(out_dir / "manifest.json", manifest)
+    return {"pages": pages, "manifest": manifest}
+
+
+def _write_json(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(path.suffix + ".tmp")
+    temp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temp.replace(path)
+
+
+def command_ingest_design(args) -> int:
+    try:
+        cfg = resolve_config(
+            base_url=getattr(args, "base_url", None),
+            token=getattr(args, "token", None),
+            config_path=Path(args.config) if getattr(args, "config", None) else None,
+        )
+        result = ingest(args.url, Path(args.out), cfg)
+    except DesignIngestError as exc:
+        print(f"FAIL: {exc}")
+        return 1
+    for page in result["pages"]:
+        mark = "OK" if page["screenshot_ok"] else "WARN(无截图)"
+        print(f"{mark} {page['page_id']}  <- layer {page['layer_id']}")
+    print(f"STATUS: {result['manifest']['status']}")
+    print(f"OUT: {args.out}")
+    return 0
