@@ -31,6 +31,29 @@ schema：`templates/project-index/prototype-spec.schema.json`。
 
 用户确认的栏位职责是硬约束，必须写进关键帧 layout 或交接说明。以“左题目列表 / 中试卷切图 / 右答案设置”为例：中间负责区域框和区域编辑操作，右侧只负责答案与分值；不能因为生成器默认存在右侧 panel 就把作答区操作塞进右栏。
 
+## 设计稿来源的视觉锚点包
+
+设计稿已定稿时，用一条命令把它抽成视觉锚点包：
+
+```bash
+python3 scripts/aipm_prototype_collab.py ingest-design \
+  --url "{带 layer_id 的 MasterGo 地址}" \
+  --out "{项目目录}/06-prototype-visual"
+```
+
+产物与 Codex 来源同构，`manifest.source=mastergo`，门禁与鲜度校验完全复用。
+
+三条必须守的：
+
+- **URL 必须带 `layer_id`，且要指向画板。** 只给 `page_id` 会拿到空结构——画布本身没有 DSL。
+- **还原稿是只读基准，不是交付原型。** 它是绝对定位死版面、没有交互、图标是占位块。
+  任何情况下不得直接拿去评审。
+- **设计稿没画到的页面，布局沿用最新已确认原型**，只把 token 与组件规格刷成设计稿那套。
+  不要从画了的几页外推出设计师没画过的布局。
+
+稿内的 `interactive` 跳转会落进 `structures/{pageId}.json`，拿来与 `prototype-spec.json`
+的状态和 route 对一遍即可，**不自动改 spec**——spec 里的状态来自 PRD，设计稿只是佐证。
+
 ## 已确认结论：动手前先把用户拍过的约束捞出来
 
 反馈 JSON 里躺着的不只是"某一轮的历史记录"，还有**跨版本长期有效的约束**——用户对栏位职责、交互形态、文案口径下过的判断，不会因为换了版本号就失效。

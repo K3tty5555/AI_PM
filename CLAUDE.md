@@ -106,9 +106,13 @@ README.md                  项目介绍
 3. **Phase 7 脚手架**（`phase-7-prototype.md`）—— 在页面框架搭建前锁定页面/流程/状态/视觉方向；落盘后做 PRD 覆盖 + 交互体验 + 视觉设计审计
 4. **质量门槛**—— 12 分制：PRD 覆盖 / 交互体验 / 视觉设计各 0-4 分；任一维度 < 3 或总分 < 9，必须修完再评审
 
-### 视觉锚点包（Codex 生图协作）
+### 视觉锚点包（两个来源）
 
 需要继承现网截图/历史原型视觉节奏，或用户要高保真视觉稿级原型时，启用 `{项目目录}/06-prototype-visual/`。**流程/角色分工/状态机单源 = `templates/visual-anchor/README.md`**（Claude 只读写 request.json 不调生图；manifest ready 后 HTML 必须继承视觉指纹；图中文字不作事实源）。状态检查：`node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}`。
+
+第二个来源是 MasterGo 设计稿：`aipm_prototype_collab.py ingest-design --url {地址} --out {项目}/06-prototype-visual`，
+产物与 Codex 来源同构、门禁相同。**还原稿是只读视觉基准，绝不能直接当交付原型**；
+设计稿没画到的页面，布局沿用最新已确认原型、只刷视觉。凭证与抓取快照落 `.d2c/`（已 gitignore）。
 
 **铁律（原型必守）**：
 - **动原型前无条件读 `ai-pm-prototype/references/collaboration-loop.md`**，别先判"这次算不算结构变化"再决定读不读——那个判断正是它要约束的东西（2026-09-19 翻车实证：判成"局部加字段"→ 没读 → spec/确认门/巡检画廊三件全漏）

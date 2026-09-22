@@ -1,6 +1,14 @@
 # 原型视觉锚点包模板
 
-视觉锚点包用于在原型阶段把 Claude Code 与 Codex 串起来：
+视觉锚点包给 HTML 原型提供视觉约束。它有两个来源，产物结构相同、门禁相同：
+
+| 来源 | `manifest.source` | 谁生产 | 什么时候用 |
+|---|---|---|---|
+| Codex 生图 | `codex` | 用户切到 Codex 生成 | 没有设计稿，需要建立视觉方向 |
+| MasterGo 设计稿 | `mastergo` | `ingest-design` 一条命令 | 设计稿已定稿，要让原型照着它产 |
+
+两者都是可选的。没有视觉锚点包时，`check-visual-anchor-package.js` 报 `no-package`，
+继续普通 HTML 原型，流程不变。
 
 1. Claude Code 或人工根据 PRD、原型蓝图和参考截图写出 `request.json`。
 2. 用户切到 Codex，让 Codex 读取 `request.json`。
@@ -15,6 +23,17 @@
 | `manifest.template.json` | 视觉稿生成结果模板，由 Codex 生成后写回                                   |
 | `visual-fingerprint.template.md` | 视觉指纹模板，由 Codex 提炼参考图和 PRD 后写回 |
 | `audit.template.md` | 视觉锚点包质量审计模板，由 Codex 写回 |
+
+设计稿来源（`ingest-design`）在 `06-prototype-visual/` 里额外产出：
+
+| 文件/目录 | 用途 |
+|---|---|
+| `design-tokens.json` | 从设计稿提取的合并 Token（色彩 / 字体 / 间距；图片引用改写为本地 `assets/` 路径，签名 URL 不落盘） |
+| `structures/` | 每页 `{pageId}.json` 结构与 `interactive` 跳转，可与 `prototype-spec.json` 的状态和 route 对照 |
+| `renders/` | 每页 `{pageId}.html` 几何还原稿——只读视觉基准，不是交付原型 |
+| `images/` | 每页 `{pageId}.png` 还原稿截图，manifest `images[]` 引用它们做 HTML 视觉约束 |
+| `raw/` | 每页原始 `dsl-{pageId}.json` / `css-{pageId}.json` 抓取快照，逐字保真留证据 |
+| `assets/` | 从设计稿下载的图片素材，供还原稿本地引用 |
 
 ## 推荐项目目录
 

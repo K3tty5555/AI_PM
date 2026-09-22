@@ -55,6 +55,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 
 | # | 命令 | 必须产出 | 缺了会怎样 |
 |---|---|---|---|
+| -1 | `ingest-design --url {设计稿地址} --out {项目}/06-prototype-visual`（**仅当有设计稿**） | `design-tokens.json` + `images/{pageId}.png` | 设计稿白出，原型又一次靠印象复现 |
 | 0 | `standing-decisions --root {项目}/06-prototype` | 逐条读完输出 | **推翻用户拍过的决定**。这些约束跨版本长期有效，不因为"这版是新页面"失效 |
 | 1 | `validate --kind spec` | `prototype-spec.json` 且 PASS | 没有 spec hash，后面两道闸无处可挂 |
 | 2 | `render-lowfi` | `lowfi/index.html` | 结构没人确认就进精细，返工风险自担 |
@@ -63,6 +64,8 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 | 5 | `instrument` | 原型内出现运行时引用 + `runtime/` | **禁止手工往 HTML 塞 `<script>`**（DESIGN.md 明令） |
 | 6 | `render-review` | `review/index.html` | 用户没有定点标注入口，只能口头描述改哪里 |
 | 7 | `accept` | 静态验收 PASS | spec / 审批 / HTML / 截图 manifest 四者可能早已对不上 |
+
+第 -1 步是可选的。没有设计稿就跳过，从第 0 步开始，其余步骤一个不变。
 
 其余：`scan-source` 生成源码证据，`emit-tokens` 生成工作台 Token，`summarize-feedback` / `modification-preview` 把反馈转修改计划（只出计划不改原型），`diff-prototype` 比两版差异，`serve` 起本地服务让反馈直接写回项目。
 
