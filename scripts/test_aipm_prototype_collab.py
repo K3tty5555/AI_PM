@@ -356,6 +356,51 @@ class PrototypeCollabTests(unittest.TestCase):
         rendered = module.render_lowfi(self.spec)
         self.assertIn("未连接项目服务", rendered)
 
+    def test_design_diff_is_skipped_when_baseline_absent(self):
+        # 没有设计稿时 accept 行为一个字不变
+        report = module.design_diff_section(None, None, None)
+        self.assertEqual(report, [])
+
+    def test_design_diff_reports_top_regions_as_warnings(self):
+        import importlib.util
+        diff_path = Path(module.__file__).resolve().parent / "aipm_png_diff.py"
+        diff_spec = importlib.util.spec_from_file_location("aipm_png_diff", diff_path)
+        diff_module = importlib.util.module_from_spec(diff_spec)
+        diff_spec.loader.exec_module(diff_module)
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            baseline = root / "base.png"
+            shot = root / "shot.png"
+            baseline.write_bytes(diff_module.encode_png(4, 1, bytes([0, 0, 0]) * 4))
+            shot.write_bytes(diff_module.encode_png(4, 1, bytes([255, 255, 255]) * 4))
+            structure = root / "s.json"
+            structure.write_text(json.dumps({
+                "schema_version": 1,
+                "nodes": [{"id": "a", "name": "标题区", "x": 0, "y": 0, "width": 4, "height": 1, "depth": 1}],
+            }), encoding="utf-8")
+            warnings = module.design_diff_section(baseline, shot, structure)
+            self.assertTrue(any("标题区" in line for line in warnings))
+            self.assertTrue(any("1.0" in line or "100" in line for line in warnings))
+
+    def test_design_diff_size_mismatch_becomes_warning_not_crash(self):
+        import importlib.util
+        diff_path = Path(module.__file__).resolve().parent / "aipm_png_diff.py"
+        diff_spec = importlib.util.spec_from_file_location("aipm_png_diff", diff_path)
+        diff_module = importlib.util.module_from_spec(diff_spec)
+        diff_spec.loader.exec_module(diff_module)
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            baseline = root / "base.png"
+            shot = root / "shot.png"
+            baseline.write_bytes(diff_module.encode_png(4, 1, bytes([0, 0, 0]) * 4))
+            shot.write_bytes(diff_module.encode_png(8, 1, bytes([0, 0, 0]) * 8))
+            structure = root / "s.json"
+            structure.write_text(json.dumps({"schema_version": 1, "nodes": []}), encoding="utf-8")
+            warnings = module.design_diff_section(baseline, shot, structure)
+            self.assertTrue(any("尺寸不一致" in line for line in warnings))
+
 
 if __name__ == "__main__":
     unittest.main()

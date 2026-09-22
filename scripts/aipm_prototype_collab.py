@@ -845,6 +845,54 @@ def validate_screenshot_manifest(path: Path) -> list[str]:
     return errors
 
 
+def design_diff_section(
+    baseline: Path | None,
+    shot: Path | None,
+    structure_path: Path | None,
+    top: int = 5,
+) -> list[str]:
+    """设计稿还原度只出提示，不作闸。三个参数缺一就整段跳过。"""
+    if not (baseline and shot and structure_path):
+        return []
+    if not (Path(baseline).is_file() and Path(shot).is_file() and Path(structure_path).is_file()):
+        return ["design-diff: 基准图、原型截图或 structure 缺失，跳过还原度比对"]
+
+    import importlib.util
+
+    diff_path = Path(__file__).resolve().parent / "aipm_png_diff.py"
+    spec = importlib.util.spec_from_file_location("aipm_png_diff", diff_path)
+    diff_module = importlib.util.module_from_spec(spec)
+    assert spec.loader
+    spec.loader.exec_module(diff_module)
+
+    try:
+        structure = load_json(Path(structure_path))
+    except SpecError as exc:
+        return [f"design-diff: structure 读取失败 {exc}"]
+
+    regions = [
+        {"id": node.get("id"), "name": node.get("name"),
+         "x": node.get("x"), "y": node.get("y"),
+         "width": node.get("width"), "height": node.get("height")}
+        for node in structure.get("nodes", [])
+        if node.get("depth") in (1, 2)
+    ]
+    try:
+        report = diff_module.diff_regions(Path(baseline), Path(shot), regions, top=top)
+    except diff_module.PngError as exc:
+        return [f"design-diff: {exc}"]
+
+    lines = [f"design-diff: 整体差异 {report['overall_diff_ratio']:.4f}（仅作记录，不作通过条件）"]
+    for item in report["regions"]:
+        lines.append(
+            f"design-diff: {item['name'] or item['id']} 差异 {item['diff_ratio']:.4f} "
+            f"@({item['x']},{item['y']}) {item['width']}×{item['height']}"
+        )
+    for item in report["skipped"]:
+        lines.append(f"design-diff: 跳过 {item['id']}（{item['reason']}）")
+    return lines
+
+
 def command_accept(args: argparse.Namespace) -> int:
     errors: list[str] = []
     warnings: list[str] = []
@@ -877,6 +925,11 @@ def command_accept(args: argparse.Namespace) -> int:
                     errors.extend(f"{name}: {error}" for error in validate_feedback(feedback))
                 except SpecError as exc:
                     errors.append(f"{name}: {exc}")
+    warnings.extend(design_diff_section(
+        Path(args.design_baseline) if getattr(args, "design_baseline", None) else None,
+        Path(args.design_shot) if getattr(args, "design_shot", None) else None,
+        Path(args.design_structure) if getattr(args, "design_structure", None) else None,
+    ))
     if args.browser_report:
         try:
             report = load_json(Path(args.browser_report))
@@ -1180,6 +1233,9 @@ def build_parser() -> argparse.ArgumentParser:
     accept.add_argument("--manifest")
     accept.add_argument("--feedback-dir")
     accept.add_argument("--browser-report")
+    accept.add_argument("--design-baseline", help="设计稿还原基准图 06-prototype-visual/images/{pageId}.png")
+    accept.add_argument("--design-shot", help="待比对的原型截图，需与基准同尺寸")
+    accept.add_argument("--design-structure", help="对应的 structures/{pageId}.json")
     accept.add_argument("--allow-skipped", action="store_true", help="接受 decision=skipped 且带 skip_reason 的审批")
     accept.set_defaults(func=command_accept)
     approval = sub.add_parser("verify-approval", help="验证低保真确认与当前规格 hash 一致")
