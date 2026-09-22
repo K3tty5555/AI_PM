@@ -75,8 +75,16 @@ for (const line of lines) {
 }
 
 // 3. 双向 diff
+// 登记项分两类：本目录顶层条目按「目录里还在不在」判；跨目录登记（带 / 或 ../ 的相对路径，
+// 如 ../../ai辅批助手/05-prd/x.md）按「文件还存不存在」判——它们本来就不该出现在顶层 entries 里，
+// 一刀切判孤儿会把正常的跨项目引用全报成假阳性（2026-09-22 实测 10 条孤儿里 9 条属此类）。
+const isCrossDir = p => p.includes('/');
 const unindexed = [...actual].filter(p => !registered.has(p)).sort();   // 目录有，README 没登记
-const orphaned = [...registered].filter(p => !actual.has(p)).sort();    // README 登记，目录已删
+const orphaned = [...registered]
+  .filter(p => (isCrossDir(p)
+    ? !fs.existsSync(path.resolve(refDir, p))   // 跨目录：按路径实查
+    : !actual.has(p)))                          // 顶层：按目录 entries 比对
+  .sort();                                                              // README 登记，实体已不在
 
 if (unindexed.length === 0 && orphaned.length === 0) {
   console.log('STATUS: clean');
@@ -93,7 +101,7 @@ if (unindexed.length) {
   unindexed.forEach(p => console.log(`  🔴 ${p}`));
 }
 if (orphaned.length) {
-  console.log(`孤儿（README 登记，目录已删）：${orphaned.length}`);
+  console.log(`孤儿（README 登记，实体已不在）：${orphaned.length}`);
   orphaned.forEach(p => console.log(`  🟡 ${p}`));
 }
 process.exit(3);

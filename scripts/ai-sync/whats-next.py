@@ -137,6 +137,7 @@ def build(stale: dict) -> list:
         contract_errors, contract_warnings = validate_status_artifacts(st, PROJECTS / name)
         rows.append({
             "project": name,
+            "lifecycle": st.get("lifecycle"),
             "newestDate": newest,
             "newestFile": s.get("newestFile"),
             "quiet_days": quiet,
@@ -154,6 +155,9 @@ def tier(r) -> int:
     q = r["quiet_days"]
     active = q is not None and q < ACTIVE_DAYS
     has_prd = bool(r["active_prd"])
+    if r.get("lifecycle") == "completed":
+        return 4                      # ✅ 已完成未归档：留档可见，但不再催下一步
+
     if active and has_prd:
         return 0                      # 🔴 在做（PRD 进行中）
     if active:
@@ -212,6 +216,9 @@ def render(rows) -> str:
     bg = [r for r in rows if tier(r) == 3 and r not in due_hits]
     if bg:
         out.append(f"\n⚪ 背景（长期未动，{len(bg)} 个）：" + "、".join(r["project"] for r in bg))
+    done = [r for r in rows if tier(r) == 4 and r not in due_hits]
+    if done:
+        out.append(f"\n✅ 已完成（未归档，{len(done)} 个）：" + "、".join(r["project"] for r in done))
     # 滞后 + 死链提示（复用 staleness 的判断）
     lag = [r for r in rows if r["updated"] and r["newestDate"] and r["updated"] < r["newestDate"] and tier(r) < 2]
     dead = [r for r in rows if r["dead"]]
