@@ -49,7 +49,26 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 
 工作台纯视觉修改不改变 `prototype-spec.json` 或既有审批 hash；有效布局确认直接沿用。只更新通用模板、生成器和生成后的工作台，标签运行时用 Shadow DOM 隔离。不要为了给外壳换肤而重新生成业务页面或回写 PRD。
 
-原型能力命令集中在 `scripts/aipm_prototype_collab.py`：`scan-source` 生成源码/资料证据，`emit-tokens` 生成项目视觉 Token，`modification-preview` 汇总标签修改意见，`diff-prototype` 比较两版原型，`accept` 统一执行静态验收。
+### ⚠️ 落盘前必过：命令链与产物核对（forced-artifact）
+
+原型能力集中在 `scripts/aipm_prototype_collab.py`（14 个子命令，`--help` 可列全）。**下面这条链是默认路径，不是可选增强**——按顺序跑，每步的产物文件都必须真实存在，缺一件就不算"原型生成完成"：
+
+| # | 命令 | 必须产出 | 缺了会怎样 |
+|---|---|---|---|
+| 0 | `standing-decisions --root {项目}/06-prototype` | 逐条读完输出 | **推翻用户拍过的决定**。这些约束跨版本长期有效，不因为"这版是新页面"失效 |
+| 1 | `validate --kind spec` | `prototype-spec.json` 且 PASS | 没有 spec hash，后面两道闸无处可挂 |
+| 2 | `render-lowfi` | `lowfi/index.html` | 结构没人确认就进精细，返工风险自担 |
+| 3 | `verify-approval` | `feedback/lowfi-approval.json` | 确认门形同虚设 |
+| 4 | `check-html` | PASS | 死链、重复 id 带进评审 |
+| 5 | `instrument` | 原型内出现运行时引用 + `runtime/` | **禁止手工往 HTML 塞 `<script>`**（DESIGN.md 明令） |
+| 6 | `render-review` | `review/index.html` | 用户没有定点标注入口，只能口头描述改哪里 |
+| 7 | `accept` | 静态验收 PASS | spec / 审批 / HTML / 截图 manifest 四者可能早已对不上 |
+
+其余：`scan-source` 生成源码证据，`emit-tokens` 生成工作台 Token，`summarize-feedback` / `modification-preview` 把反馈转修改计划（只出计划不改原型），`diff-prototype` 比两版差异，`serve` 起本地服务让反馈直接写回项目。
+
+**自检一句话**：交付前回答「用户现在能不能打开一个页面，在图上点一下写条意见，然后导出给我？」——答不上就是第 6 步没做。
+
+> 📌 完整契约、每条命令的完整参数、并行版本目录约定、截图工具链降级路径，全部在 [references/collaboration-loop.md](references/collaboration-loop.md)。**动原型就读它，无条件读**；别先判"这次算不算结构变化"再决定读不读。
 
 ```bash
 python3 scripts/aipm_prototype_collab.py scan-source --source "{代码仓或资料目录}" --out "{项目目录}/06-prototype/source-evidence.json"
@@ -112,6 +131,28 @@ python3 scripts/aipm_prototype_collab.py emit-tokens --out "{项目目录}/06-pr
 
 在画蓝图前创建 `06-prototype/source-target-manifest.json`，字段 schema 见 `templates/project-index/prototype-source-manifest.schema.json`：
 
+**先跑一遍已确认结论，再挑基线**——这些是用户拍过的、跨版本长期有效的约束，优先级高于任何一版原型的现状：
+
+```bash
+python3 scripts/aipm_prototype_collab.py standing-decisions --root "{项目目录}/06-prototype"
+```
+
+它会把各版本 `feedback/`（含 `历史版本/` 下的）里的 `decision` / `confirmation_source` / `skip_reason` 与每条巡检评论、修改意见按来源文件列出来，带页面与状态归属。**逐条读完再动手**；与之冲突的改动必须先问用户，不能因为「这版是新页面」就绕过。不做语义筛选是有意的——漏掉的那条往往正是最要命的那条。
+
+⚠️ **基线取「最新已确认的那一版」，不是「同一功能的老原型」**（2026-09-20 翻车实证）：V7 要做作文配置页，我顺手拿了 2026-07 的《英语作文定标模式》原型当基线——它确实是作文配置页，但 V6 在 2026-09 **已经把这个页面改成三栏**（题目实体列表 / 试卷切图 / 设置批改参数），而且三栏职责是用户在 V6 高保真第二轮巡检时**明确要求**的。结果 V7 做成两栏、丢了中间试卷切图、连主色都用了旧版的。
+
+落 manifest 前先做这两件，做完才能写 `evidence_status=verified`：
+
+1. **按修改时间列出同页面的所有历史原型**，取**最新**的那份当布局基线；老版本只能当字段清单来源，且要在 `source_evidence` 里注明「布局已被 X 取代」。
+2. **和最新版逐项 diff 四件**：栏数与栏宽、每栏承载什么、主色与画布色、已确认的栏位职责。有差异就以最新版为准；确实要改动已确认的职责，先问用户。
+
+```bash
+ls -lt {项目目录}/06-prototype/当前版本/*.html          # 谁最新
+grep -oE "grid-template-columns:[^;]*;" <最新原型>      # 栏数栏宽
+sed -n '/:root/,/}/p' <最新原型>                        # 主色
+grep -l "栏位职责\|已确认" {项目目录}/06-prototype/feedback/*.json  # 用户确认过什么
+```
+
 - Web 和 Mobile 分开登记；用户只做单端时，另一端可不列。
 - `evidence_status=verified` 必须有截图、现网页面、代码仓或已确认原型等 source evidence。
 - 0→1 项目没有当前产品时写 `not-applicable`，不能伪造 current state。
@@ -150,9 +191,20 @@ Design Brief 必须从 PRD / 项目记忆 / 参考资料中提取：
 
 按 [references/collaboration-loop.md](references/collaboration-loop.md) 生成 `prototype-spec.json`，随后生成一个同时展示全部关键流程和关键帧的 `lowfi/index.html`。线框必须看清真实栏宽、导航、表单、列表、表格、画布、弹窗和操作区关系；每个关键帧下方允许用户记录问题。
 
-- 0→1 原型，以及页面结构、主流程或关键状态变化：必须等待用户确认低保真。
-- 纯视觉调整或局部小修：只有用户明确要求时可跳过，并记录原因。
-- 未取得与当前 spec hash 一致的确认，不进入精细原型生成。
+**该不该走闸，按可数的事实判，别按"我觉得这次算小改"判**（2026-09-19 实跑翻车处：把新增 10 个关键状态judged 成「局部加字段」，闸和留痕一起省掉了）：
+
+| 事实 | 结论 |
+|---|---|
+| 0→1 原型 | **必走** |
+| spec 里新增或删除 page | **必走** |
+| spec 里新增关键状态 ≥ 3 个 | **必走** |
+| 主流程 steps 有增删或改序 | **必走** |
+| 已确认栏位职责有变动 | **必走** |
+| 以上都不沾，只改文案 / 间距 / 配色 | 可跳过 |
+
+- 跳过必须同时满足两条：**用户明确要求**，且写 `decision=skipped` + 非空 `skip_reason` 落盘。渲染画廊时显式加 `--allow-skipped`（会打印 WARN）。
+- ⛔ **不得把 skipped 改写成 approved 来让命令跑通**——那是把"跳过"伪装成"通过"，审批留痕从此不可信。
+- 未取得与当前 spec hash 一致的确认（approved 或带理由的 skipped），不进入精细原型生成。
 
 视觉设计是原型质量的一部分：
 - 有代码仓设计指纹时，优先复用其布局、色值、组件密度
@@ -276,10 +328,23 @@ python3 scripts/aipm_prototype_collab.py check-html \
 
 精细原型生成后，按 [references/collaboration-loop.md](references/collaboration-loop.md)：
 
-1. 给关键元素写入稳定 `data-aipm-id`。
-2. 注入本地标注运行时，支持功能说明、评审评论、问题和修改意见。
-3. 先用当前规格对应的 `lowfi-approval.json` 通过确认门，再生成 `review/index.html`，按流程展示全部真实关键帧，允许逐帧记录结论和评论。
-4. 用户反馈导出 JSON；AI 只先生成修改预览，用户确认后才修改原型。
+1. 给关键元素写入稳定 `data-aipm-id`，并与 spec 的 `target_id` 一一对上。
+2. 用命令注入标注运行时——**不是手写 `<script>` 标签**：
+   ```bash
+   python3 scripts/aipm_prototype_collab.py instrument \
+     --spec "{项目目录}/06-prototype/prototype-spec.json" \
+     --html "{精细原型 HTML}"
+   ```
+   手工注入会绕开 route-map 生成与运行时版本管理，且违反 `templates/prototype-collab/DESIGN.md`「不得只手改项目 HTML」。注入前留一份 `.pre-annotation.bak`。
+3. 先过确认门再渲染画廊：
+   ```bash
+   python3 scripts/aipm_prototype_collab.py render-review \
+     --spec "{…}/prototype-spec.json" --prototype "{精细原型 HTML}" \
+     --approval "{…}/feedback/lowfi-approval.json" --out "{…}/review/index.html"
+   ```
+   确认门被有意跳过时才加 `--allow-skipped`。
+4. 渲染完**自己打开核对一遍**：iframe 真的加载出来了（不是白屏）、左侧帧数与 spec 一致、原型右下角标注工具条在。
+5. 用户反馈导出 JSON；AI 只先生成修改预览，用户确认后才修改原型。
 
 收到“相关意见已经提交 / 已提完修改”时，先按文件修改时间读取 `feedback/review-feedback.json` 和 `feedback/annotations.json`，以最新导出内容为准；不要等待用户再次转述标签内容。修改前生成修改预览，修改后将已处理项改为 `pending-review`，保留原始评论和锚点。
 
@@ -304,6 +369,8 @@ mkdir -p {项目目录}/06-prototype/screenshots/
 # 每个 query 都要执行：page.goto(url, {waitUntil: "networkidle"}) → 等待 document.images 解码
 # → 隐藏 #aipm-annotation-host 和临时 toast → page.screenshot({path, fullPage: false})。
 ```
+
+**本机没有 Playwright 时**（无 `node_modules`、`require.resolve('playwright')` 失败）：不要下载浏览器，按 [references/collaboration-loop.md](references/collaboration-loop.md)「截图工具链不可用时怎么办」走 `chrome-headless-shell` 降级路径。⚠️ 该路径**只能截图、不能点击**，拿到的是静态渲染核对而非交互回归——关键帧必须能只靠 URL 直达，且 manifest 与审计里必须如实标注「未做真实点击回归」，不得报成全流程验证通过。
 
 **截图命名规则**：`{两位序号}-{小节slug}.png`，slug 取 PRD 章节标题的拼音首字母或英文关键词（如 `01-task-list.png`、`02-grading.png`）。
 

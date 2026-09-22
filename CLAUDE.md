@@ -111,6 +111,11 @@ README.md                  项目介绍
 需要继承现网截图/历史原型视觉节奏，或用户要高保真视觉稿级原型时，启用 `{项目目录}/06-prototype-visual/`。**流程/角色分工/状态机单源 = `templates/visual-anchor/README.md`**（Claude 只读写 request.json 不调生图；manifest ready 后 HTML 必须继承视觉指纹；图中文字不作事实源）。状态检查：`node scripts/ai-sync/check-visual-anchor-package.js output/projects/{项目名}`。
 
 **铁律（原型必守）**：
+- **动原型前无条件读 `ai-pm-prototype/references/collaboration-loop.md`**，别先判"这次算不算结构变化"再决定读不读——那个判断正是它要约束的东西（2026-09-19 翻车实证：判成"局部加字段"→ 没读 → spec/确认门/巡检画廊三件全漏）
+- **动手前先跑 `aipm_prototype_collab.py standing-decisions --root {项目}/06-prototype`**，把用户拍过的跨版本约束逐条读完再挑基线——这些约束不因换版本号失效，与之冲突要先问用户
+- **迭代项目的布局基线取「最新已确认版」，不取「同一功能的老原型」**：先 `ls -lt 06-prototype/当前版本/*.html` 看谁最新，再 diff 栏数/栏位职责/主色。老版只能当字段清单源（2026-09-20 翻车实证：V7 拿 7 月的作文原型当基线，丢了 V6 已确认的三栏与中间试卷切图，主色也用错）
+- **产出走 `scripts/aipm_prototype_collab.py` 命令链**：`validate → render-lowfi → verify-approval → check-html → instrument → render-review → accept`。⛔ 不手工往 HTML 塞运行时 `<script>`、不手写巡检画廊（违反 `templates/prototype-collab/DESIGN.md`「不得只手改项目 HTML」）。交付前自检一句：**用户能不能打开页面、在图上点一下写条意见、提交后直接落进项目 `feedback/`？** 交付默认走 serve——起本地服务把 localhost 地址给用户（render-lowfi/render-review 输出的 `SERVE:`/`OPEN:` 两行），意见按 spec_hash 自动写回所属版本目录；⛔ 别用 `open` 走 file://（fetch POST 必挂、降级成浏览器下载 JSON，用户被迫经手文件——2026-09-20 翻车实证：用户提交两条意见全丢在 Downloads 的空 JSON 里）。答不上就是 `render-review` / serve 没做
+- 确认门可以跳过，但**只能记成 `decision=skipped` + `skip_reason` 并加 `--allow-skipped`**；⛔ 不得改写成 `approved` 让命令跑通——那是把"跳过"伪装成"通过"
 - 原型不是线框草图，必须可评审、可体验、视觉可信
 - 视觉设计是原型质量的一部分，不能因为是原型就接受模板套壳、灰白卡片、假数据糊弄
 - B 端重信息密度和扫描效率，不能做成营销页；C 端重路径流畅和引导，不能做成后台表格脸

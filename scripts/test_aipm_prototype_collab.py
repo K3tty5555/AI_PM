@@ -77,6 +77,58 @@ class PrototypeCollabTests(unittest.TestCase):
         with self.assertRaises(module.SpecError):
             module.render_review(self.spec, "../index.html", "abc123", stale)
 
+    def test_review_accepts_skipped_gate_only_with_reason_and_opt_in(self):
+        """确认门被有意跳过时，render-review 必须显式 opt-in 才渲染；
+        缺 skip_reason 或没 opt-in 一律拒绝——防止把 skipped 改写成 approved 来骗过闸。"""
+        base = {"spec_hash": module.content_hash(self.spec), "decision": "skipped"}
+        # 没 opt-in：拒
+        with self.assertRaises(module.SpecError):
+            module.render_review(self.spec, "../index.html", "abc123", dict(base, skip_reason="有理由"))
+        # opt-in 但没写理由：拒
+        with self.assertRaises(module.SpecError):
+            module.render_review(self.spec, "../index.html", "abc123", base, allow_skipped=True)
+        # opt-in + 有理由：过
+        rendered = module.render_review(
+            self.spec, "../index.html", "abc123",
+            dict(base, skip_reason="用户明确要求跳过，精细原型已先行产出"),
+            allow_skipped=True,
+        )
+        self.assertIn("aipm-frames", rendered)
+        # spec 变了，跳过也不能放行
+        stale = copy.deepcopy(self.spec)
+        stale["title"] = "changed"
+        with self.assertRaises(module.SpecError):
+            module.render_review(stale, "../index.html", "abc123",
+                                 dict(base, skip_reason="x"), allow_skipped=True)
+
+    def test_standing_decisions_surfaces_cross_version_constraints(self):
+        """跨版本长期有效的约束必须被捞出来——含历史版本目录里的巡检评论。
+        2026-09-20 实证：V6 巡检里「左实体列表/中试卷切图/右设置批改参数」被漏读，
+        导致 V7 把已确认的三栏做成两栏。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "feedback").mkdir(parents=True)
+            (root / "feedback" / "lowfi-approval.json").write_text(json.dumps({
+                "stage": "lowfi", "decision": "approved",
+                "confirmation_source": "用户要求改为左实体列表、中试卷切图、右设置批改参数",
+            }), encoding="utf-8")
+            old = root / "历史版本" / "协作" / "V6" / "feedback"
+            old.mkdir(parents=True)
+            (old / "review-feedback.json").write_text(json.dumps({
+                "items": [{"page_id": "solution", "state_id": "sci",
+                           "feedback_type": "review-comment", "comment": "布局有问题，应该是三栏"}]
+            }), encoding="utf-8")
+            # 非 feedback 目录下的同名噪音文件不应混入
+            (root / "visual-tokens.json").write_text(json.dumps({"note": "不该被当成结论"}), encoding="utf-8")
+
+            found = module.collect_standing_decisions(root)
+            texts = [d["text"] for d in found]
+            self.assertTrue(any("中试卷切图" in t for t in texts), "当前版本的确认结论漏了")
+            self.assertTrue(any("布局有问题" in t for t in texts), "历史版本目录里的巡检结论漏了")
+            self.assertFalse(any("不该被当成结论" in t for t in texts), "非 feedback 文件被误收")
+            scopes = [d["scope"] for d in found if "布局有问题" in d["text"]]
+            self.assertEqual(scopes, ["solution::sci"], "结论没带上页面/状态归属")
+
     def test_visual_tokens_can_override_defaults(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "tokens.json"
@@ -269,6 +321,40 @@ class PrototypeCollabTests(unittest.TestCase):
         self.assertEqual(module.feedback_filename({"stage": "lowfi", "decision": "revise"}), "lowfi-feedback.json")
         self.assertEqual(module.feedback_filename({"stage": "highfi-review"}), "review-feedback.json")
         self.assertEqual(module.feedback_filename({"stage": "annotation"}), "annotations.json")
+
+    def test_serve_routes_parallel_version_feedback_by_spec_hash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "prototype-spec.json").write_text(json.dumps(self.spec, ensure_ascii=False), encoding="utf-8")
+            parallel = copy.deepcopy(self.spec)
+            parallel["title"] = "V7 并行版本 Web 关键帧规格"
+            v7 = root / "V7"
+            v7.mkdir()
+            (v7 / "prototype-spec.json").write_text(json.dumps(parallel, ensure_ascii=False), encoding="utf-8")
+            self.assertEqual(module.resolve_feedback_dir(root, module.content_hash(parallel)), v7 / "feedback")
+            self.assertEqual(module.resolve_feedback_dir(root, module.content_hash(self.spec)), root / "feedback")
+            self.assertEqual(module.resolve_feedback_dir(root, "unknown-hash"), root / "feedback")
+
+    def test_serve_root_for_parallel_version_escapes_to_shared_parent(self):
+        # 并行版本画廊通过 ../../ 引用 当前版本/ 下的原型，serve root 必须同时包住两者
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp) / "06-prototype"
+            v7_out = base / "V7" / "review" / "index.html"
+            v7_out.parent.mkdir(parents=True)
+            prototype = base / "当前版本" / "v7.html"
+            self.assertEqual(module.serve_root_for(v7_out, prototype), base)
+            self.assertEqual(module.serve_root_for(base / "review" / "index.html", base / "index.html"), base)
+            self.assertEqual(module.serve_root_for(base / "lowfi" / "index.html", None), base)
+
+    def test_review_gallery_states_offline_degradation(self):
+        approval = {"spec_hash": module.content_hash(self.spec), "decision": "approved"}
+        rendered = module.render_review(self.spec, "../index.html", "abc123", approval)
+        self.assertIn('class="toast" id="toast"', rendered)
+        self.assertIn("未连接项目服务", rendered)
+
+    def test_lowfi_offline_toast_names_degradation(self):
+        rendered = module.render_lowfi(self.spec)
+        self.assertIn("未连接项目服务", rendered)
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ import shutil
 import sys
 from typing import Any
 from html.parser import HTMLParser
-from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, unquote, urlencode, urlsplit, urlunsplit
 
 
 SCHEMA_VERSION = 1
@@ -524,7 +524,7 @@ const cards=[...document.querySelectorAll('.frame-card')];function persist(){loc
 cards.forEach(card=>{const key=card.dataset.frame;const saved=data[key]||{};const status=card.querySelector('[data-role=status]');const comment=card.querySelector('[data-role=comment]');const saveState=card.querySelector('[data-role=save-state]');status.value=saved.status||'unreviewed';comment.value=saved.comment||'';const markSaved=()=>{if(saveState)saveState.textContent='草稿已保存'};status.addEventListener('change',()=>{data[key]={...data[key],status:status.value,comment:comment.value,updated_at:new Date().toISOString()};persist();markSaved()});comment.addEventListener('input',()=>{data[key]={...data[key],status:status.value,comment:comment.value,updated_at:new Date().toISOString()};persist();markSaved()})});
 function feedback(decision){const items=cards.map(card=>{const [page_id,state_id]=card.dataset.frame.split('::');const item=data[card.dataset.frame]||{};return{feedback_id:`lowfi-${page_id}-${state_id}`,feedback_type:'frame-comment',page_id,state_id,status:item.status||'unreviewed',comment:item.comment||'',category:'other',severity:item.status==='open'?'major':'info',updated_at:item.updated_at||new Date().toISOString()}}).filter(x=>x.status!=='unreviewed'||x.comment);return{schema_version:1,project:spec.project,spec_hash:specHash,stage:'lowfi',decision,exported_at:new Date().toISOString(),items}}
 function download(name,payload){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
-async function sync(payload){try{const r=await fetch('/__aipm_feedback__',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});return r.ok}catch(e){return false}}document.getElementById('exportFeedback').addEventListener('click',async()=>{const payload=feedback('revise');const saved=await sync(payload);if(!saved)download('lowfi-feedback.json',payload);toast(saved?'意见已同步到项目 feedback/':'已下载意见 JSON')});document.getElementById('approve').addEventListener('click',async()=>{const missing=cards.filter(c=>c.dataset.required==='true'&&(data[c.dataset.frame]?.status||'unreviewed')==='unreviewed');if(missing.length){toast(`还有 ${missing.length} 个必看关键帧未确认`);missing[0].scrollIntoView({behavior:'smooth',block:'center'});missing[0].classList.add('is-active');return}const hasIssue=cards.some(c=>data[c.dataset.frame]?.status==='open');const payload=feedback(hasIssue?'revise':'approved');const saved=await sync(payload);if(!saved)download('lowfi-approval.json',payload);toast(saved?(hasIssue?'修改意见已同步':'确认结果已同步'):(hasIssue?'已导出修改意见':'已导出低保真确认结果'))});
+async function sync(payload){try{const r=await fetch('/__aipm_feedback__',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});return r.ok}catch(e){return false}}document.getElementById('exportFeedback').addEventListener('click',async()=>{const payload=feedback('revise');const saved=await sync(payload);if(!saved)download('lowfi-feedback.json',payload);toast(saved?'意见已同步到项目 feedback/':'未连接项目服务，已下载意见 JSON——请改用 serve 地址打开')});document.getElementById('approve').addEventListener('click',async()=>{const missing=cards.filter(c=>c.dataset.required==='true'&&(data[c.dataset.frame]?.status||'unreviewed')==='unreviewed');if(missing.length){toast(`还有 ${missing.length} 个必看关键帧未确认`);missing[0].scrollIntoView({behavior:'smooth',block:'center'});missing[0].classList.add('is-active');return}const hasIssue=cards.some(c=>data[c.dataset.frame]?.status==='open');const payload=feedback(hasIssue?'revise':'approved');const saved=await sync(payload);if(!saved)download('lowfi-approval.json',payload);toast(saved?(hasIssue?'修改意见已同步':'确认结果已同步'):(hasIssue?'未连接项目服务，已下载修改意见 JSON':'未连接项目服务，已下载确认结果 JSON'))});
 document.getElementById('nextUnreviewed').addEventListener('click',()=>{const next=cards.find(card=>!card.hidden&&(data[card.dataset.frame]?.status||'unreviewed')==='unreviewed');if(next){next.scrollIntoView({behavior:'smooth',block:'center'});next.classList.add('is-active');setTimeout(()=>next.classList.remove('is-active'),1800)}});document.querySelectorAll('.flow-filter').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.flow-filter').forEach(x=>(x.classList.toggle('active',x===btn),x.setAttribute('aria-pressed',String(x===btn))));cards.forEach(card=>card.hidden=btn.dataset.flow!=='all'&&!card.dataset.flows.split(' ').includes(btn.dataset.flow));updateSummary()}));function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.hidden=false;setTimeout(()=>el.hidden=true,2600)}updateSummary();})();
 """
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>{esc(spec['title'])} · 线框关键帧</title><style>{css}</style></head><body class="workbench-lowfi" data-spec-hash="{spec_hash}">{workbench_header(spec, 'lowfi', '<button class="btn" id="nextUnreviewed">下一条未确认</button><button class="btn" id="exportFeedback">导出意见</button><button class="btn btn-primary" id="approve">提交布局确认</button>', review_ready, visual_ready)}<section class="summary"><div class="summary-line"><div><h1>先确认布局，再打磨细节</h1><p>逐帧查看页面结构，在右侧留下确认结果或修改意见。</p></div><div class="progress-block"><strong id="progress"></strong><div class="progress-track" role="progressbar" aria-label="布局确认进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="progressFill"></i></div></div></div><div class="summary-bottom"><span class="summary-note">所有关键帧均在本页展示</span><nav class="filters" aria-label="按流程筛选">{render_flow_filters(spec)}</nav></div></section><main class="gallery">{''.join(frames)}</main><div class="toast" id="toast" hidden></div><script type="application/json" id="aipm-spec">{embedded}</script><script>{script}</script></body></html>"""
@@ -564,9 +564,10 @@ def render_review(
     approval: dict[str, Any],
     tokens: dict[str, str] | None = None,
     visual_ready: bool = False,
+    allow_skipped: bool = False,
 ) -> str:
     tokens = tokens or load_visual_tokens()
-    verify_approval(spec, approval)
+    verify_approval(spec, approval, allow_skipped)
     spec_hash = content_hash(spec)
     mapping = flow_map(spec)
     frames: list[dict[str, Any]] = []
@@ -601,10 +602,10 @@ function visibleIndices(){return frames.map((frame,index)=>({frame,index})).filt
 function updateNavState(index){const frame=frames[index];const item=data[frame.key]||{};nav[index].className=`frame-nav-item ${index===current?'active':''} status-${item.status||'unreviewed'}`}
 function selectFrame(index,pushHash=true){if(!frames[index])return;current=index;document.getElementById('annotationCount').textContent='页面标注 0 条';const frame=frames[index];document.getElementById('currentPage').textContent=frame.page_title;document.getElementById('currentTitle').textContent=frame.state_title;document.getElementById('currentDescription').textContent=frame.description;document.getElementById('frameCounter').textContent=`${index+1} / ${frames.length}`;frameHost.classList.remove('frame-loaded','frame-slow');frameState.innerHTML='<div><strong>正在加载页面</strong><span>请稍候</span></div>';clearTimeout(frameTimer);frameTimer=setTimeout(()=>{frameHost.classList.add('frame-slow');frameState.innerHTML='<div><strong>页面加载时间较长</strong><span>可以使用上方“独立打开”继续查看</span></div>'},8000);prototypeFrame.src=frame.src;prototypeFrame.title=`${frame.page_title} - ${frame.state_title}`;document.getElementById('openInteractive').href=frame.src;const saved=currentData();status.value=saved.status||'unreviewed';comment.value=saved.comment||'';nav.forEach((_,navIndex)=>updateNavState(navIndex));if(pushHash)history.replaceState(null,'',`#frame=${encodeURIComponent(frame.key)}`)}
 function move(delta){const visible=visibleIndices();const position=visible.indexOf(current);const next=visible[(position+delta+visible.length)%visible.length];if(next!==undefined)selectFrame(next)}nav.forEach((button,index)=>button.addEventListener('click',()=>selectFrame(index)));status.addEventListener('change',updateCurrent);comment.addEventListener('input',updateCurrent);document.getElementById('prevFrame').addEventListener('click',()=>move(-1));document.getElementById('nextFrame').addEventListener('click',()=>move(1));document.getElementById('flowSelect').addEventListener('change',event=>{activeFlow=event.target.value;nav.forEach((button,index)=>button.hidden=activeFlow!=='all'&&!frames[index].flows.includes(activeFlow));document.querySelectorAll('.frame-nav-group').forEach(group=>group.hidden=![...group.querySelectorAll('.frame-nav-item')].some(button=>!button.hidden));const visible=visibleIndices();if(!visible.includes(current)&&visible.length)selectFrame(visible[0])});
-function payload(){const items=frames.map(frame=>{const item=data[frame.key]||{};return{feedback_id:`review-${frame.page_id}-${frame.state_id}`,feedback_type:'review-comment',page_id:frame.page_id,state_id:frame.state_id,status:item.status||'unreviewed',comment:item.comment||'',category:'other',severity:item.status==='open'?'major':'info',updated_at:item.updated_at||new Date().toISOString()}}).filter(item=>item.status!=='unreviewed'||item.comment);return{schema_version:1,project,spec_hash:specHash,prototype_hash:prototypeHash,stage:'highfi-review',exported_at:new Date().toISOString(),items}}function download(value){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));a.download='review-feedback.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}async function sync(){const value=payload();try{const response=await fetch('/__aipm_feedback__',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});if(response.ok){showSaved();return}}catch(e){}download(value)}document.getElementById('exportFeedback').addEventListener('click',sync);document.getElementById('saveFrame').addEventListener('click',async()=>{updateCurrent();await sync()});function showSaved(){const button=document.getElementById('saveFrame');const previous=button.textContent;button.textContent='已保存';setTimeout(()=>button.textContent=previous,1600)}function renderSummary(){const values=Object.values(data);const percent=Math.round(values.filter(item=>item.status==='passed').length/frames.length*100);document.getElementById('progressFill').style.width=percent+'%';document.querySelector('[role=progressbar]').setAttribute('aria-valuenow',percent);document.getElementById('progress').textContent=`${values.filter(item=>item.status==='passed').length}/${frames.length} 已通过 · ${values.filter(item=>item.status==='open').length} 个有问题`}
-window.addEventListener('message',event=>{if(event.source!==prototypeFrame.contentWindow||!event.data||event.data.type!=='aipm:annotations-changed')return;if(event.data.frame===frames[current].key)document.getElementById('annotationCount').textContent=`页面标注 ${event.data.count} 条`});document.addEventListener('keydown',event=>{if(event.altKey&&event.key==='ArrowLeft')move(-1);if(event.altKey&&event.key==='ArrowRight')move(1)});const requested=decodeURIComponent((location.hash.match(/frame=([^&]+)/)||[])[1]||'');const initial=frames.findIndex(frame=>frame.key===requested);applyShell();selectFrame(initial>=0?initial:0,false);renderSummary();})();
+function payload(){const items=frames.map(frame=>{const item=data[frame.key]||{};return{feedback_id:`review-${frame.page_id}-${frame.state_id}`,feedback_type:'review-comment',page_id:frame.page_id,state_id:frame.state_id,status:item.status||'unreviewed',comment:item.comment||'',category:'other',severity:item.status==='open'?'major':'info',updated_at:item.updated_at||new Date().toISOString()}}).filter(item=>item.status!=='unreviewed'||item.comment);return{schema_version:1,project,spec_hash:specHash,prototype_hash:prototypeHash,stage:'highfi-review',exported_at:new Date().toISOString(),items}}function download(value){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));a.download='review-feedback.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}async function sync(source){const value=payload();try{const response=await fetch('/__aipm_feedback__',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});if(response.ok){toast(source==='exportFeedback'?'全部意见已提交到项目 feedback/':'当前页意见已提交到项目 feedback/');return}}catch(e){}download(value);toast('未连接项目服务，已下载 JSON——请改用 serve 地址打开，提交可直接写回项目 feedback/')}document.getElementById('exportFeedback').addEventListener('click',()=>sync('exportFeedback'));document.getElementById('saveFrame').addEventListener('click',async()=>{updateCurrent();await sync('saveFrame')});function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.hidden=false;setTimeout(()=>el.hidden=true,3200)}function renderSummary(){const values=Object.values(data);const percent=Math.round(values.filter(item=>item.status==='passed').length/frames.length*100);document.getElementById('progressFill').style.width=percent+'%';document.querySelector('[role=progressbar]').setAttribute('aria-valuenow',percent);document.getElementById('progress').textContent=`${values.filter(item=>item.status==='passed').length}/${frames.length} 已通过 · ${values.filter(item=>item.status==='open').length} 个有问题`}
+window.addEventListener('message',event=>{if(event.source!==prototypeFrame.contentWindow||!event.data)return;/* hash 切帧不重载 iframe，load 可能不触发：靠运行时的 frame-ready 清加载态 */if(event.data.type==='aipm:frame-ready'){clearTimeout(frameTimer);frameHost.classList.add('frame-loaded');frameHost.classList.remove('frame-slow');if(event.data.frame===frames[current].key)document.getElementById('annotationCount').textContent=`页面标注 ${event.data.count} 条`;return}if(event.data.type!=='aipm:annotations-changed')return;if(event.data.frame===frames[current].key)document.getElementById('annotationCount').textContent=`页面标注 ${event.data.count} 条`});document.addEventListener('keydown',event=>{if(event.altKey&&event.key==='ArrowLeft')move(-1);if(event.altKey&&event.key==='ArrowRight')move(1)});const requested=decodeURIComponent((location.hash.match(/frame=([^&]+)/)||[])[1]||'');const initial=frames.findIndex(frame=>frame.key===requested);applyShell();selectFrame(initial>=0?initial:0,false);renderSummary();})();
 """
-    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>{esc(spec['title'])} · 原型巡检</title><style>{css}</style></head><body class="workbench-review" data-project="{esc(spec['project'])}" data-spec-hash="{spec_hash}" data-prototype-hash="{esc(prototype_hash)}">{workbench_header(spec, 'review', '<button class="btn btn-primary" id="exportFeedback">提交全部意见</button>', visual_ready=visual_ready)}<main class="review-shell"><aside class="review-nav" id="reviewNav"><div class="nav-toolbar"><div class="nav-toolbar-head"><strong>关键页面</strong><button class="collapse-btn" id="toggleNav" type="button" aria-controls="reviewNav" aria-expanded="true" aria-label="收起关键页面"><i class="collapse-mark" aria-hidden="true"></i></button></div><label>查看范围<select id="flowSelect">{''.join(flow_options)}</select></label></div><nav>{''.join(nav_groups)}</nav></aside><section class="review-stage"><header class="stage-head"><div><span id="currentPage"></span><h2 id="currentTitle"></h2><p id="currentDescription"></p></div><div class="stage-actions"><button class="btn" id="prevFrame">上一页</button><button class="btn" id="nextFrame">下一页</button><a class="btn" id="openInteractive" target="_blank" rel="noopener">独立打开</a></div></header><div class="prototype-frame" id="frameHost"><div class="frame-state" id="frameState" role="status"><div><strong>正在加载页面</strong><span>请稍候</span></div></div><iframe id="prototypeFrame" title="正在加载原型"></iframe></div></section><aside class="review-inspector" id="reviewInspector"><div class="inspector-head"><strong>页面确认</strong><span id="frameCounter"></span><button class="collapse-btn" id="toggleInspector" type="button" aria-controls="reviewInspector" aria-expanded="true" aria-label="收起巡检记录"><i class="collapse-mark" aria-hidden="true"></i></button></div><label>当前结论<select id="reviewStatus"><option value="unreviewed">未检查</option><option value="passed">通过</option><option value="open">有问题</option><option value="pending-review">待复核</option><option value="not-applicable">不适用</option></select></label><label>页面评论<textarea id="reviewComment" placeholder="记录当前页面的问题、建议或确认结论"></textarea></label><div class="annotation-guide"><div class="annotation-count" id="annotationCount">页面标注 0 条</div><p class="inspector-help">从左侧切换关键页面。需要说明具体位置时，点击原型右下角“添加标签”。</p></div><div class="review-progress"><strong id="progress"></strong><div class="progress-track" role="progressbar" aria-label="逐页确认进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="progressFill"></i></div></div><div class="inspector-actions"><button class="btn" id="saveFrame">保存当前页意见</button><small>编辑自动存为浏览器草稿</small></div></aside></main><script type="application/json" id="aipm-frames">{embedded}</script><script>{script}</script></body></html>"""
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>{esc(spec['title'])} · 原型巡检</title><style>{css}</style></head><body class="workbench-review" data-project="{esc(spec['project'])}" data-spec-hash="{spec_hash}" data-prototype-hash="{esc(prototype_hash)}">{workbench_header(spec, 'review', '<button class="btn btn-primary" id="exportFeedback">提交全部意见</button>', visual_ready=visual_ready)}<main class="review-shell"><aside class="review-nav" id="reviewNav"><div class="nav-toolbar"><div class="nav-toolbar-head"><strong>关键页面</strong><button class="collapse-btn" id="toggleNav" type="button" aria-controls="reviewNav" aria-expanded="true" aria-label="收起关键页面"><i class="collapse-mark" aria-hidden="true"></i></button></div><label>查看范围<select id="flowSelect">{''.join(flow_options)}</select></label></div><nav>{''.join(nav_groups)}</nav></aside><section class="review-stage"><header class="stage-head"><div><span id="currentPage"></span><h2 id="currentTitle"></h2><p id="currentDescription"></p></div><div class="stage-actions"><button class="btn" id="prevFrame">上一页</button><button class="btn" id="nextFrame">下一页</button><a class="btn" id="openInteractive" target="_blank" rel="noopener">独立打开</a></div></header><div class="prototype-frame" id="frameHost"><div class="frame-state" id="frameState" role="status"><div><strong>正在加载页面</strong><span>请稍候</span></div></div><iframe id="prototypeFrame" title="正在加载原型"></iframe></div></section><aside class="review-inspector" id="reviewInspector"><div class="inspector-head"><strong>页面确认</strong><span id="frameCounter"></span><button class="collapse-btn" id="toggleInspector" type="button" aria-controls="reviewInspector" aria-expanded="true" aria-label="收起巡检记录"><i class="collapse-mark" aria-hidden="true"></i></button></div><label>当前结论<select id="reviewStatus"><option value="unreviewed">未检查</option><option value="passed">通过</option><option value="open">有问题</option><option value="pending-review">待复核</option><option value="not-applicable">不适用</option></select></label><label>页面评论<textarea id="reviewComment" placeholder="记录当前页面的问题、建议或确认结论"></textarea></label><div class="annotation-guide"><div class="annotation-count" id="annotationCount">页面标注 0 条</div><p class="inspector-help">从左侧切换关键页面。需要说明具体位置时，点击原型右下角“添加标签”。</p></div><div class="review-progress"><strong id="progress"></strong><div class="progress-track" role="progressbar" aria-label="逐页确认进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="progressFill"></i></div></div><div class="inspector-actions"><button class="btn" id="saveFrame">保存当前页意见</button><small>编辑自动存为浏览器草稿</small></div></aside></main><div class="toast" id="toast" hidden></div><script type="application/json" id="aipm-frames">{embedded}</script><script>{script}</script></body></html>"""
 
 
 def annotation_runtime(tokens: dict[str, str] | None = None) -> str:
@@ -697,8 +698,12 @@ def command_render_lowfi(args: argparse.Namespace) -> int:
     out = Path(args.out)
     tokens = load_visual_tokens(Path(args.tokens) if args.tokens else None)
     write_text(out, render_lowfi(spec, tokens, generated_stage_ready(out, "review", spec), generated_stage_ready(out, "visual", spec)))
+    root = serve_root_for(out, None)
     print(f"LOWFI: {out}")
     print(f"SPEC_HASH: {content_hash(spec)}")
+    print(f"SERVE: python3 scripts/aipm_prototype_collab.py serve --root {root} --port 8765")
+    print(f"OPEN: http://127.0.0.1:8765/{quote(out.parent.relative_to(root).as_posix())}/index.html")
+    print("NOTE: 交付用上面的 serve 地址——提交直接写回项目 feedback/；file:// 直开只能降级下载 JSON")
     return 0
 
 
@@ -709,16 +714,23 @@ def command_render_review(args: argparse.Namespace) -> int:
     if errors:
         raise SpecError("；".join(errors))
     approval = load_json(Path(args.approval))
-    decision = verify_approval(spec, approval)
+    allow_skipped = bool(getattr(args, "allow_skipped", False))
+    decision = verify_approval(spec, approval, allow_skipped)
     out = Path(args.out)
     prototype = Path(args.prototype).resolve()
     prototype_src = os.path.relpath(prototype, out.parent.resolve()).replace(os.sep, "/")
     prototype_hash = hashlib.sha256(prototype.read_bytes()).hexdigest() if prototype.exists() else "missing"
     tokens = load_visual_tokens(Path(args.tokens) if args.tokens else None)
-    write_text(out, render_review(spec, prototype_src, prototype_hash, approval, tokens, generated_stage_ready(out, "visual", spec)))
+    write_text(out, render_review(spec, prototype_src, prototype_hash, approval, tokens, generated_stage_ready(out, "visual", spec), allow_skipped))
+    root = serve_root_for(out, prototype if prototype.exists() else None)
     print(f"REVIEW: {out}")
     print(f"PROTOTYPE_HASH: {prototype_hash}")
     print(f"LOWFI_APPROVAL: {decision} · spec_hash={content_hash(spec)}")
+    if decision == "skipped":
+        print(f"WARN: 低保真确认门被跳过 · skip_reason={approval.get('skip_reason', '(未填)')}")
+    print(f"SERVE: python3 scripts/aipm_prototype_collab.py serve --root {root} --port 8765")
+    print(f"OPEN: http://127.0.0.1:8765/{quote(out.parent.relative_to(root).as_posix())}/index.html")
+    print("NOTE: 交付用上面的 serve 地址——提交直接写回项目 feedback/；file:// 直开只能降级下载 JSON")
     return 0
 
 
@@ -842,7 +854,7 @@ def command_accept(args: argparse.Namespace) -> int:
         errors.extend(validate_spec(spec))
         if not errors:
             approval = load_json(Path(args.approval))
-            verify_approval(spec, approval)
+            verify_approval(spec, approval, bool(getattr(args, "allow_skipped", False)))
     except SpecError as exc:
         errors.append(str(exc))
     for label, value in (("prototype", args.prototype), ("review", args.review), ("lowfi", args.lowfi)):
@@ -892,6 +904,45 @@ def feedback_filename(data: dict[str, Any]) -> str:
     raise SpecError(f"未知 feedback stage: {stage}")
 
 
+def resolve_feedback_dir(root: Path, spec_hash: str) -> Path:
+    """按 spec_hash 把反馈路由到所属版本的 feedback/ 目录。
+
+    并行版本（见 collaboration-loop.md「并行版本」节）自带 prototype-spec.json；
+    提交的 spec_hash 命中哪份规格，反馈就写进哪个目录的 feedback/，避免 V6 主线
+    和 V7 并行版的反馈混写。主线规格在根目录，未命中时回落根 feedback/。
+    """
+    candidates = [root] + sorted(child for child in root.iterdir() if child.is_dir())
+    for candidate in candidates:
+        spec_path = candidate / "prototype-spec.json"
+        if not spec_path.is_file():
+            continue
+        try:
+            if content_hash(load_json(spec_path)) == spec_hash:
+                return candidate / "feedback"
+        except SpecError:
+            continue
+    return root / "feedback"
+
+
+def serve_root_for(out: Path, prototype: Path | None) -> Path:
+    """serve 服务的根目录：必须同时包住画廊页面和它引用的原型 HTML。
+
+    巡检画廊通过相对路径引用原型；并行版本画廊在 {版本}/review/ 下、原型在
+    当前版本/ 下，根目录取少了 iframe 会 404。按原型相对地址里的 "../" 层数
+    上溯到共同父目录；不带原型（如低保真页）时默认上两级（06-prototype）。
+    """
+    root = out.parent
+    if prototype is None:
+        return root.parent
+    src = os.path.relpath(prototype, out.parent).replace(os.sep, "/")
+    ups = len(re.match(r"^(?:\.\./)*", src).group(0)) // 3
+    for _ in range(ups):
+        if root.parent == root:
+            break
+        root = root.parent
+    return root
+
+
 def serve_project(root: Path, host: str, port: int) -> None:
     root = root.resolve()
     feedback_dir = root / "feedback"
@@ -916,8 +967,10 @@ def serve_project(root: Path, host: str, port: int) -> None:
                 if errors:
                     raise SpecError("；".join(errors))
                 filename = feedback_filename(data)
-                write_text(feedback_dir / filename, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-                payload = json.dumps({"ok": True, "path": f"feedback/{filename}"}, ensure_ascii=False).encode("utf-8")
+                target = resolve_feedback_dir(root, data.get("spec_hash", ""))
+                target.mkdir(parents=True, exist_ok=True)
+                write_text(target / filename, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+                payload = json.dumps({"ok": True, "path": (target / filename).relative_to(root).as_posix()}, ensure_ascii=False).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(payload)))
@@ -932,14 +985,18 @@ def serve_project(root: Path, host: str, port: int) -> None:
                 self.wfile.write(payload)
 
         def log_message(self, format_string: str, *values: Any) -> None:
-            print(f"[prototype-review] {format_string % values}")
+            print(f"[prototype-review] {format_string % values}", flush=True)
 
     server = ThreadingHTTPServer((host, port), Handler)
-    print(f"ROOT: {root}")
-    print(f"LOWFI: http://{host}:{port}/lowfi/index.html")
-    print(f"HIGHFI: http://{host}:{port}/index.html")
-    print(f"REVIEW: http://{host}:{port}/review/index.html")
-    print(f"FEEDBACK: {feedback_dir}")
+    # flush=True：后台运行（输出接管道）时，启动横幅必须立刻可读，否则调用方拿不到 URL
+    print(f"ROOT: {root}", flush=True)
+    print(f"LOWFI: http://{host}:{port}/lowfi/index.html", flush=True)
+    print(f"HIGHFI: http://{host}:{port}/index.html", flush=True)
+    print(f"REVIEW: http://{host}:{port}/review/index.html", flush=True)
+    for child in sorted(root.iterdir()):
+        if child.is_dir() and (child / "prototype-spec.json").is_file() and (child / "review" / "index.html").is_file():
+            print(f"REVIEW[{child.name}]: http://{host}:{port}/{quote(child.name)}/review/index.html", flush=True)
+    print(f"FEEDBACK: 反馈按 spec_hash 写入所属版本的 feedback/（主线 {feedback_dir}）", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -976,6 +1033,78 @@ def command_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+# 用户在反馈里留下的、跨版本长期有效的约束所在字段。
+# 不做语义筛选——漏掉的那一条往往正是最要命的那条（2026-09-20 实证：
+# V6 审批的 confirmation_source 写着「改为左实体列表/中试卷切图/右设置批改参数」，
+# 文件被读过，但那句话被当成历史记录扫过去了）。
+STANDING_TEXT_FIELDS = ("confirmation_source", "skip_reason", "scope_note", "note")
+
+
+def collect_standing_decisions(root: Path) -> list[dict[str, Any]]:
+    """扫项目 06-prototype 下所有反馈 JSON，捞出用户留下的结论原文。"""
+    found: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*.json")):
+        if "feedback" not in path.parts and path.name != "lowfi-approval.json":
+            continue
+        try:
+            data = load_json(path)
+        except Exception:
+            continue
+        if not isinstance(data, dict):
+            continue
+        rel = str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
+        decision = data.get("decision")
+        if decision:
+            found.append({"source": rel, "kind": "decision", "scope": data.get("stage", ""),
+                          "text": f"decision={decision}", "at": data.get("exported_at", "")})
+        for field in STANDING_TEXT_FIELDS:
+            text = data.get(field)
+            if isinstance(text, str) and text.strip():
+                found.append({"source": rel, "kind": field, "scope": data.get("stage", ""),
+                              "text": text.strip(), "at": data.get("exported_at", "")})
+        for item in data.get("items", []) or []:
+            if not isinstance(item, dict):
+                continue
+            for field in ("comment", "expected", "title"):
+                text = item.get(field)
+                if isinstance(text, str) and text.strip():
+                    scope = "::".join(x for x in (item.get("page_id"), item.get("state_id")) if x)
+                    found.append({"source": rel, "kind": item.get("feedback_type") or field,
+                                  "scope": scope, "text": text.strip(),
+                                  "at": item.get("updated_at", "")})
+    return found
+
+
+def command_standing_decisions(args: argparse.Namespace) -> int:
+    root = Path(args.root)
+    if not root.exists():
+        print(f"ERROR: 目录不存在 · {root}")
+        return 1
+    found = collect_standing_decisions(root)
+    if args.json:
+        print(json.dumps({"root": str(root), "count": len(found), "decisions": found},
+                         ensure_ascii=False, indent=2))
+        return 0
+    if not found:
+        print(f"STANDING_DECISIONS: 0 · {root}")
+        print("本项目还没有已确认结论——0→1 原型属正常；迭代项目出现 0 条，先确认 feedback/ 是否放在别处。")
+        return 0
+    print(f"STANDING_DECISIONS: {len(found)} 条 · {root}")
+    print("⚠️ 这些是用户拍过的、跨版本长期有效的约束。挑基线、画栏位、定交互前逐条过一遍；")
+    print("   与之冲突的改动必须先问用户，不能因为「这版是新页面」就绕过。\n")
+    current = ""
+    for d in found:
+        if d["source"] != current:
+            current = d["source"]
+            print(f"── {current}")
+        scope = f"[{d['scope']}] " if d["scope"] else ""
+        text = d["text"].replace("\n", " ")
+        if len(text) > 300:
+            text = text[:300] + "…（截断，回原文件看全）"
+        print(f"   · {scope}{d['kind']}: {text}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="AI_PM 原型协作闭环工具")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -994,6 +1123,7 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--approval", required=True, help="用户导出的 lowfi-approval.json")
     review.add_argument("--tokens", help="工作台视觉 Token JSON；缺省使用通用 DESIGN.md 配套 Token")
     review.add_argument("--out", required=True)
+    review.add_argument("--allow-skipped", action="store_true", help="接受 decision=skipped 且带 skip_reason 的审批（低保真确认门被有意跳过时用，会打印 WARN）")
     review.set_defaults(func=command_render_review)
     check_html = sub.add_parser("check-html", help="检查原型 HTML 的资源路径和重复 ID")
     check_html.add_argument("--html", required=True)
@@ -1038,12 +1168,18 @@ def build_parser() -> argparse.ArgumentParser:
     accept.add_argument("--manifest")
     accept.add_argument("--feedback-dir")
     accept.add_argument("--browser-report")
+    accept.add_argument("--allow-skipped", action="store_true", help="接受 decision=skipped 且带 skip_reason 的审批")
     accept.set_defaults(func=command_accept)
     approval = sub.add_parser("verify-approval", help="验证低保真确认与当前规格 hash 一致")
     approval.add_argument("--spec", required=True)
     approval.add_argument("--approval", required=True)
     approval.add_argument("--allow-skipped", action="store_true")
     approval.set_defaults(func=command_verify_approval)
+    standing = sub.add_parser("standing-decisions", help="列出项目里用户拍过的、跨版本长期有效的约束（挑基线前先跑）")
+    standing.add_argument("--root", required=True, help="项目的 06-prototype 目录")
+    standing.add_argument("--json", action="store_true")
+    standing.set_defaults(func=command_standing_decisions)
+
     serve = sub.add_parser("serve", help="启动本地原型巡检服务并把反馈写入项目 feedback/")
     serve.add_argument("--root", required=True, help="06-prototype 目录")
     serve.add_argument("--host", default="127.0.0.1")

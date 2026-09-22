@@ -6,18 +6,23 @@
   const script = document.currentScript;
   const project = script?.dataset.aipmProject || document.title || "prototype";
   const specHash = script?.dataset.aipmSpecHash || "";
-  const params = new URLSearchParams(location.search);
-  const routeParams = new URLSearchParams(params);
-  routeParams.delete("aipm_rev");
-  const routeQuery = routeParams.toString();
-  const routeKey = (routeQuery ? `?${routeQuery}` : "") + location.hash;
-  const route = location.pathname + routeKey;
   let routeMap = {};
   try { routeMap = JSON.parse(script?.dataset.aipmRouteMap || "{}"); } catch (_) {}
-  const mapped = routeMap[routeKey] || {};
-  const pageId = document.body.dataset.aipmPage || mapped.page_id || params.get("view") || location.pathname.split("/").pop() || "page";
-  const stateId = document.body.dataset.aipmState || mapped.state_id || params.get("scenario") || "default";
-  const frame = `${pageId}::${stateId}`;
+  /* 路由从地址推导；巡检画廊切帧只改 hash、不重载页面，hashchange 时必须重算 */
+  let pageId, stateId, frame, route;
+  function applyRoute() {
+    const params = new URLSearchParams(location.search);
+    const routeParams = new URLSearchParams(params);
+    routeParams.delete("aipm_rev");
+    const routeQuery = routeParams.toString();
+    const routeKey = (routeQuery ? `?${routeQuery}` : "") + location.hash;
+    const mapped = routeMap[routeKey] || {};
+    pageId = document.body.dataset.aipmPage || mapped.page_id || params.get("view") || location.pathname.split("/").pop() || "page";
+    stateId = document.body.dataset.aipmState || mapped.state_id || params.get("scenario") || "default";
+    frame = `${pageId}::${stateId}`;
+    route = location.pathname + routeKey;
+  }
+  applyRoute();
   const knownFrames = new Set(Object.values(routeMap).filter(value => value && typeof value === "object").map(value => `${value.page_id || ""}::${value.state_id || ""}`));
   knownFrames.add(frame);
   const storageKey = `aipm:annotations:${project}:${specHash}`;
@@ -278,6 +283,12 @@
   };
   addEventListener("scroll", render, { passive: true });
   addEventListener("resize", render);
+  addEventListener("hashchange", () => {
+    stopPlacing();
+    applyRoute();
+    render();
+    window.parent?.postMessage({ type: "aipm:frame-ready", frame, count: state.items.filter(item => item.page_id === pageId && item.state_id === stateId).length }, "*");
+  });
   render();
   window.parent?.postMessage({ type: "aipm:annotations-changed", frame, count: state.items.filter(item => item.page_id === pageId && item.state_id === stateId).length }, "*");
 })();
