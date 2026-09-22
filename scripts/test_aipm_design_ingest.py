@@ -87,6 +87,23 @@ class ResolveConfigTests(unittest.TestCase):
         cfg = module.resolve_config(base_url="https://example.test/", token="mg_x")
         self.assertEqual(cfg["base_url"], "https://example.test")
 
+    def test_missing_token_raises_with_instructions(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "absent.json"
+            with self.assertRaises(module.DesignIngestError) as ctx:
+                module.resolve_config(base_url="https://example.test", config_path=path)
+            message = str(ctx.exception)
+            self.assertIn("MASTERGO_TOKEN", message)
+            self.assertIn(".d2c/config.json", message)
+
+    def test_malformed_config_json_raises(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "config.json"
+            path.write_text("{not valid json", encoding="utf-8")
+            with self.assertRaises(module.DesignIngestError) as ctx:
+                module.resolve_config(config_path=path)
+            self.assertIn(str(path), str(ctx.exception))
+
 
 class FetchLayerTests(unittest.TestCase):
     def test_calls_both_endpoints_with_auth_header(self):
@@ -120,6 +137,44 @@ class FetchLayerTests(unittest.TestCase):
         with self.assertRaises(module.DesignIngestError) as ctx:
             module.fetch_layer(cfg, "9", "1:2", opener=fake_opener, require_nodes=True)
         self.assertIn("画板", str(ctx.exception))
+
+    def test_composite_layer_id_survives_into_request_url(self):
+        calls = []
+
+        def fake_opener(request):
+            calls.append(request.full_url)
+            if "/mcp/dsl" in request.full_url:
+                return json.dumps({"styles": {}, "nodes": [], "components": []}).encode()
+            return b"[]"
+
+        cfg = {"base_url": "https://example.test", "token": "mg_x"}
+        module.fetch_layer(cfg, "9", "1336:93031/16:05920", opener=fake_opener)
+
+        self.assertIn("layerId=1336%3A93031%2F16%3A05920", calls[0])
+        self.assertIn("layerId=1336%3A93031%2F16%3A05920", calls[1])
+
+    def test_api_error_code_raises_design_ingest_error(self):
+        def fake_opener(request):
+            if "/mcp/dsl" in request.full_url:
+                return json.dumps({
+                    "code": "10005",
+                    "message": "❌ 获取layer数据失败, 参数错误",
+                }).encode()
+            return b"[]"
+
+        cfg = {"base_url": "https://example.test", "token": "mg_x"}
+        with self.assertRaises(module.DesignIngestError) as ctx:
+            module.fetch_layer(cfg, "9", "1:2", opener=fake_opener)
+        self.assertIn("10005", str(ctx.exception))
+
+    def test_non_json_response_raises_with_prefix(self):
+        def fake_opener(request):
+            return b"<!DOCTYPE html><html><body>Bad Gateway</body></html>"
+
+        cfg = {"base_url": "https://example.test", "token": "mg_x"}
+        with self.assertRaises(module.DesignIngestError) as ctx:
+            module.fetch_layer(cfg, "9", "1:2", opener=fake_opener)
+        self.assertIn("<!DOCTYPE html", str(ctx.exception))
 
 
 if __name__ == "__main__":
