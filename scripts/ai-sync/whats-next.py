@@ -157,6 +157,8 @@ def tier(r) -> int:
     has_prd = bool(r["active_prd"])
     if r.get("lifecycle") == "completed":
         return 4                      # ✅ 已完成未归档：留档可见，但不再催下一步
+    if r.get("lifecycle") == "paused":
+        return 2                      # 🟡 显式暂停：不因近期碰过文件被算成在做
 
     if active and has_prd:
         return 0                      # 🔴 在做（PRD 进行中）
