@@ -76,6 +76,16 @@ if [ -n "$STALE4" ]; then MISS=1; note_fail "4 节骨架把 §四 写死成「�
 echo "▶ 检查 8：原型示意判定正则跨副本一致（源侧校验器 / 云侧校验器 / push 计数器；精确比对走 python）"
 if python3 scripts/check-prototype-regex-drift.py | sed 's/^/  /'; then :; else note_fail "原型示意判定正则漂移（详见上方输出；唯一源=2026-07-02 计划附录 A）"; fi
 
+echo "▶ 检查 9b：防质疑句规则单源 + pm-agent 内化在位"
+grep -q "防质疑句（2026-10-07" .claude/skills/ai-pm/references/pm-judgment-card.md || note_fail "判断卡 §七闸 0 缺防质疑句事实源段"
+grep -q "防质疑句" .claude/agents/pm-agent.md || note_fail "pm-agent 缺防质疑句内化"
+
+echo "▶ 检查 9c：PRD 文字润色强制步骤在位（单源=phase-5，引用=ai-pm-prd 步骤4.4）"
+grep -q "## PRD 文字润色（强制" .claude/skills/ai-pm/phases/phase-5-prd.md || note_fail "phase-5 缺「PRD 文字润色」强制节"
+grep -q "humanizer-pm" .claude/skills/ai-pm/phases/phase-5-prd.md || note_fail "phase-5 润色节未接 humanizer-pm"
+grep -q "步骤4.4：文字润色" .claude/skills/ai-pm-prd/SKILL.md || note_fail "ai-pm-prd 缺步骤4.4 文字润色指针"
+test -f .claude/skills/humanizer-pm/SKILL.md || note_fail "humanizer-pm skill 不存在"
+
 echo "▶ 检查 9：填充废话三反模式锚点在位（单源=判断卡 §七闸 0，内化=pm-agent 直觉+⓪quater，引用=driver 7bis）"
 grep -q "三类填充废话同属本闸" .claude/skills/ai-pm/references/pm-judgment-card.md || note_fail "判断卡 §七闸 0 缺三反模式事实源段"
 grep -q "填充废话反射" .claude/agents/pm-agent.md || note_fail "pm-agent 缺「填充废话反射」直觉内化"

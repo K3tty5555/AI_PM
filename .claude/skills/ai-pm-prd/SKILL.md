@@ -111,6 +111,10 @@ mkdir -p {项目目录}/05-prd/
 
 生成 `05-PRD-v1.0.md` 并创建 `README.md`（说明目录用途）。
 
+### 步骤4.4：文字润色（强制，导出 / push 前）
+
+PRD 写完、过完判断卡 checklist 后，按 `.claude/skills/ai-pm/phases/phase-5-prd.md`「PRD 文字润色」节执行：先按判断卡闸 0 删重述 / 防质疑句，再调 `humanizer-pm` 改说法，表格单元格一样过。规则单源在 phase-5，此处不复制。
+
 ### 步骤4.5a：流程图生成方式
 
 PRD 中包含 Mermaid 代码块时，生成方式取决于执行环境：
