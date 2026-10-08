@@ -68,9 +68,17 @@ def _git_tracked(root: Path) -> list[str]:
 
 
 def _walk_dir(root: Path, rel: str) -> list[str]:
-    """收集目录下所有普通文件（跳过符号链接）。"""
+    """收集目录下所有普通文件（跳过符号链接）。
+
+    目录不存在时打到 stderr 而不是静默返回空——PRIVATE_EXTRA 拼错一个字母
+    就等于静默少打一整块资源，方向正是"少了还以为 OK"。
+    """
     base = root / rel
     if not base.exists():
+        print(f"⚠️  {rel} 不存在，已跳过（PRIVATE_EXTRA 是否拼错？）", file=sys.stderr)
+        return []
+    if not base.is_dir():
+        print(f"⚠️  {rel} 不是目录，已跳过", file=sys.stderr)
         return []
     found = []
     for p in base.rglob("*"):
@@ -84,8 +92,25 @@ def _blocked(rel: str) -> bool:
     return any(rel.startswith(b) or rel == b.rstrip("/") for b in NEVER_INCLUDE)
 
 
+def _packable(root: Path, rel: str) -> bool:
+    """该路径是否真会进包：普通文件、非符号链接、工作区里存在。
+
+    git ls-files 会把 mode 120000 的符号链接一并列出来（跨平台共享配置很常见），
+    不在这里剔掉的话，meta/versions.json 记的 file_count 会比 tar 实际条目多，
+    下游按 file_count 校验就会误判。
+    """
+    p = root / rel
+    return p.is_file() and not p.is_symlink()
+
+
 def collect_files(root: Path, kind: str) -> list[str]:
-    """收集要打包的文件清单。kind ∈ {public, private}。"""
+    """收集要打包的文件清单。kind ∈ {public, private}。
+
+    返回的每一项都保证进包（见 _packable），因此 len() 即 meta/versions.json 的 file_count。
+    kind 非法时抛 ValueError——静默降级成 public 会让拼错一个字母的"私有包"少打一万多个文件。
+    """
+    if kind not in ("public", "private"):
+        raise ValueError(f"未知 kind: {kind!r}（只支持 'public' / 'private'）")
     files = _git_tracked(root)
     if kind == "private":
         for extra in PRIVATE_EXTRA:
@@ -94,10 +119,11 @@ def collect_files(root: Path, kind: str) -> list[str]:
             elif (root / extra).is_file():
                 files.append(extra)
     deduped = sorted(set(files))
+    # 安全线跑在过滤之前：tracked 但工作区已删的路径也照样拦截。
     blocked = [f for f in deduped if _blocked(f)]
     if blocked:
-        raise SystemExit(f"⛔ 安全线拦截：以下文件不得进任何包：{blocked[:5]}")
-    return deduped
+        raise SystemExit(f"⛔ 安全线拦截：共 {len(blocked)} 条，前 5 条：{blocked[:5]}")
+    return [f for f in deduped if _packable(root, f)]
 
 
 def build_package(root: Path, kind: str, out: Path, version: str) -> Path:
@@ -116,10 +142,9 @@ def build_package(root: Path, kind: str, out: Path, version: str) -> Path:
 
     with tarfile.open(target, "w:gz") as tf:
         for rel in files:
-            src = root / rel
-            if not src.is_file() or src.is_symlink():
-                continue
-            tf.add(src, arcname=f"tree/{rel}")
+            # collect_files 已保证每一项都能进包，这里不再静默跳过——
+            # 否则 file_count 与实际条目又会分叉（见 _packable）。
+            tf.add(root / rel, arcname=f"tree/{rel}")
         for name, content in (("meta/versions.json", json.dumps(versions_meta, ensure_ascii=False, indent=2)),
                               ("meta/changelog.md", changelog)):
             data = content.encode("utf-8")
