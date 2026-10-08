@@ -131,7 +131,10 @@ def collect_files(root: Path, kind: str) -> list[str]:
 
 # 受管路径前缀（与 .claude/skills/ai-pm-update/references/managed-scope.md 一致）
 MANAGED_PREFIX = (
-    ".claude/",
+    ".claude/skills/",
+    ".claude/agents/",
+    ".claude/hooks/",
+    ".claude/settings.json",
     "CLAUDE.md",
     "templates/",
     "scripts/",
@@ -148,6 +151,13 @@ def _is_managed(rel: str) -> bool:
     if rel.startswith(("templates/knowledge-base/", "templates/persona/")):
         return rel.endswith("/.gitkeep") or rel in (
             "templates/knowledge-base/README.md", "templates/persona/README.md")
+    if rel.startswith((
+        ".claude/skills/xfchat-wiki/", ".claude/skills/tpd_cli/",
+        ".claude/skills/d2c/", ".claude/skills/d2c-analyze/",
+        ".claude/skills/d2c-codegen/", ".claude/skills/d2c-fetch/",
+        ".claude/skills/d2c-setup/",
+    )):
+        return False
     return rel in MANAGED_PREFIX or rel.startswith(
         tuple(prefix for prefix in MANAGED_PREFIX if prefix.endswith("/"))
     )
@@ -203,7 +213,9 @@ def collect_history(root: Path) -> dict:
         rel = path_text.split("\t")[-1]
         # Historical files receive the same safety boundary as today's tree.
         # A once-tracked local settings file must not reappear inside history/.
-        if not _is_managed(rel) or _blocked(rel) or rel.endswith("settings.local.json"):
+        if (not _is_managed(rel) or _blocked(rel)
+                or rel.endswith("settings.local.json")
+                or rel == ".claude/hooks/.knowledge-capture.enabled"):
             continue
         kind = "binary" if Path(rel).suffix.lower() in _BINARY_EXT else "text"
         entries = index.setdefault(rel, [])

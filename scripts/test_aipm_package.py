@@ -151,6 +151,8 @@ class TestHistory(unittest.TestCase):
         self.assertIn("CLAUDE.md", keys, "索引缺 CLAUDE.md")
         self.assertNotIn(".claude/skills/settings.local.json", keys,
                          "历史上追踪过的本机配置不能通过 history/ 混入分发包")
+        self.assertFalse(any(k.startswith(".claude/agent-team/") for k in keys),
+                         "受管白名单外的历史 agent-team 不能混入 history")
         self.assertFalse(any(k.startswith("templates/knowledge-base/") and k.endswith(".md")
                              and k != "templates/knowledge-base/README.md" for k in keys),
                          "知识库卡片属于数据资产，不走受管文件的 history")
@@ -302,7 +304,7 @@ class TestVerify(unittest.TestCase):
                 for n, data in (("meta/versions.json", b"{}"),
                                 ("meta/changelog.md", b"# log"),
                                 ("tree/CLAUDE.md", b"ok"),
-                                ("history/index.json", b'{"CLAUDE.md":[{"blob":"missing00000"}]}')):
+                                ("history/index.json", b'{"CLAUDE.md":[{"blob":"abcdef012345"}]}')):
                     info = tarfile.TarInfo(n)
                     info.size = len(data)
                     tf.addfile(info, io.BytesIO(data))

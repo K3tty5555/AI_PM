@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import tarfile
 from pathlib import Path
@@ -74,7 +75,7 @@ def verify(tar_path: Path, kind: str) -> list[str]:
                     problems.append(f"禁止路径混入：{n}")
 
         for r in REQUIRED:
-            if not any(n.endswith(r) for n in names):
+            if r not in names:
                 problems.append(f"缺少必需文件：{r}")
 
         if not any(n.startswith("tree/") for n in names):
@@ -91,14 +92,16 @@ def verify(tar_path: Path, kind: str) -> list[str]:
                         raise ValueError(f"索引条目格式错误：{path!r}")
                     for entry in entries:
                         blob = entry["blob"]
-                        if not isinstance(blob, str) or blob not in blob_names:
+                        if not isinstance(blob, str) or not re.fullmatch(r"[0-9a-f]{12}", blob):
+                            raise ValueError(f"非法 blob 标识：{blob!r}")
+                        if blob not in blob_names:
                             problems.append(f"history 索引指向缺失 blob：{path} → {blob}")
             except (AttributeError, KeyError, TypeError, ValueError, UnicodeDecodeError) as exc:
                 problems.append(f"history/index.json 格式错误：{exc}")
 
         # 包自报的 kind 与校验声明必须一致：私有包被当公共包发出去，
         # 是这套工具里后果最重的一种错，值得一条独立判据。
-        meta_name = next((n for n in names if n.endswith("meta/versions.json")), None)
+        meta_name = "meta/versions.json" if "meta/versions.json" in names else None
         if meta_name is not None:
             try:
                 meta = json.loads(tf.extractfile(meta_name).read().decode("utf-8"))
