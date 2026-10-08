@@ -38,7 +38,7 @@ FORBIDDEN = [
 # 噪声项：vendor / 私有 skill 内真实存在的系统文件，提示但不计入退出码
 WARN_ONLY = [".DS_Store"]
 
-REQUIRED = ["meta/versions.json", "meta/changelog.md"]
+REQUIRED = ["meta/versions.json", "meta/changelog.md", "history/index.json"]
 
 # 体积上界（MB）
 MAX_MB = {"public": 60, "private": 400}
@@ -79,6 +79,22 @@ def verify(tar_path: Path, kind: str) -> list[str]:
 
         if not any(n.startswith("tree/") for n in names):
             problems.append("缺少 tree/ 内容")
+
+        if "history/index.json" in names:
+            try:
+                index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
+                if not isinstance(index, dict):
+                    raise ValueError("索引不是对象")
+                blob_names = {n.removeprefix("history/") for n in names if n.startswith("history/")}
+                for path, entries in index.items():
+                    if not isinstance(path, str) or not isinstance(entries, list):
+                        raise ValueError(f"索引条目格式错误：{path!r}")
+                    for entry in entries:
+                        blob = entry["blob"]
+                        if not isinstance(blob, str) or blob not in blob_names:
+                            problems.append(f"history 索引指向缺失 blob：{path} → {blob}")
+            except (AttributeError, KeyError, TypeError, ValueError, UnicodeDecodeError) as exc:
+                problems.append(f"history/index.json 格式错误：{exc}")
 
         # 包自报的 kind 与校验声明必须一致：私有包被当公共包发出去，
         # 是这套工具里后果最重的一种错，值得一条独立判据。

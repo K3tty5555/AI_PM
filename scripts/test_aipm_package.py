@@ -130,6 +130,95 @@ class TestBuild(unittest.TestCase):
             self.assertEqual(bad, [], f"对话记录进了包：{bad[:3]}")
 
 
+class TestHistory(unittest.TestCase):
+    @staticmethod
+    def _commit(repo: Path, message: str) -> None:
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True)
+        subprocess.run([
+            "git", "-C", str(repo), "-c", "user.name=Test", "-c", "user.email=test@example.test",
+            "-c", "core.hooksPath=/dev/null", "commit", "-qm", message,
+        ], check=True, capture_output=True)
+
+    def test_history_index_covers_managed_paths(self):
+        """索引必须含受管路径的历史，且不含非受管路径。"""
+        index = module.collect_history(ROOT)
+        self.assertTrue(index, "history 索引为空")
+        keys = list(index)
+        managed = (".claude/", ".codex/hooks.json", "scripts/", "templates/",
+                   "CLAUDE.md", ".gitignore")
+        self.assertTrue(all(k.startswith(managed) for k in keys),
+                        f"索引含非受管路径：{[k for k in keys if not k.startswith(managed)][:3]}")
+        self.assertIn("CLAUDE.md", keys, "索引缺 CLAUDE.md")
+        self.assertNotIn(".claude/skills/settings.local.json", keys,
+                         "历史上追踪过的本机配置不能通过 history/ 混入分发包")
+        self.assertFalse(any(k.startswith("templates/knowledge-base/") and k.endswith(".md")
+                             and k != "templates/knowledge-base/README.md" for k in keys),
+                         "知识库卡片属于数据资产，不走受管文件的 history")
+        for k, entries in list(index.items())[:5]:
+            self.assertTrue(entries, f"{k} 无历史条目")
+            self.assertIn("version", entries[0])
+            self.assertIn("blob", entries[0])
+
+    def test_history_in_package(self):
+        """包内必须有 history/ 与 history/index.json。"""
+        with tempfile.TemporaryDirectory() as d:
+            out = module.build_package(ROOT, "public", Path(d), version="v-test")
+            with tarfile.open(out) as tf:
+                names = tf.getnames()
+                index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
+        self.assertTrue(index)
+        self.assertTrue(any(n.startswith("history/") and n != "history/index.json" for n in names),
+                        "history/ 只有索引没有内容")
+
+    def test_history_content_addressed(self):
+        """同一内容只写一份 blob，不同内容使用不同 blob 名。"""
+        index = module.collect_history(ROOT)
+        blobs = [e["blob"] for entries in index.values() for e in entries]
+        self.assertTrue(blobs)
+        self.assertTrue(all(len(b) == 12 for b in blobs), f"blob 名不是 12 位：{blobs[:3]}")
+        self.assertGreater(len(set(blobs)), 1, "历史索引没有可区分的内容 blob")
+
+        with tempfile.TemporaryDirectory() as d:
+            out = module.build_package(ROOT, "public", Path(d), version="v-test")
+            with tarfile.open(out) as tf:
+                names = [n for n in tf.getnames() if n.startswith("history/") and n != "history/index.json"]
+                packaged = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
+        self.assertEqual(len(names), len(set(names)), "同一内容在包内重复写入")
+        packaged_blobs = {e["blob"] for entries in packaged.values() for e in entries}
+        self.assertEqual(len(names), len(packaged_blobs), "包内 blob 数与包内索引不一致")
+
+    def test_public_history_filters_old_internal_content(self):
+        """当前文件干净，历史旧版含内部词时，公共包必须删旧 blob。"""
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            path = repo / "CLAUDE.md"
+            path.write_text("confidential old text\n", encoding="utf-8")
+            _init_repo(repo)
+            self._commit(repo, "old")
+            path.write_text("clean new text\n", encoding="utf-8")
+            self._commit(repo, "new")
+            self.assertEqual(len(module.collect_history(repo)["CLAUDE.md"]), 2)
+
+            with self.assertRaises(SystemExit):
+                module.build_package(repo, "public", repo / "dist", "v-test")
+            self.assertFalse((repo / "dist").exists(), "缺 denylist 时不得留下半成品")
+
+            denylist = repo / "scripts" / ".share-denylist"
+            denylist.parent.mkdir()
+            denylist.write_text("confidential\n", encoding="utf-8")
+            out = module.build_package(repo, "public", repo / "dist", "v-test")
+            with tarfile.open(out) as tf:
+                index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
+                self.assertEqual(len(index["CLAUDE.md"]), 1)
+                self.assertEqual(tf.extractfile("history/" + index["CLAUDE.md"][0]["blob"]).read(),
+                                 b"clean new text\n")
+
+            private = module.build_package(repo, "private", repo / "dist", "v-private")
+            with tarfile.open(private) as tf:
+                index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
+            self.assertEqual(len(index["CLAUDE.md"]), 2)
+
+
 class TestVerify(unittest.TestCase):
     def _verify_module(self):
         p = ROOT / "scripts" / "aipm_package_verify.py"
@@ -142,10 +231,14 @@ class TestVerify(unittest.TestCase):
     @staticmethod
     def _tar_with(path: Path, names: list[str], kind: str = "public") -> Path:
         """造一个包；meta/versions.json 写合法 JSON，否则校验器会（正确地）报读不出。"""
+        if "history/index.json" not in names:
+            names = [*names, "history/index.json"]
         with tarfile.open(path, "w:gz") as tf:
             for n in names:
                 if n.endswith("meta/versions.json"):
                     data = json.dumps({"version": "v-test", "kind": kind}).encode("utf-8")
+                elif n == "history/index.json":
+                    data = b"{}"
                 else:
                     data = b"x"
                 info = tarfile.TarInfo(n)
@@ -190,6 +283,30 @@ class TestVerify(unittest.TestCase):
                 tf.addfile(info, io.BytesIO(b"x"))
             problems = v.verify(bad, "public")
         self.assertTrue(any("meta" in p for p in problems), problems)
+
+    def test_detects_missing_or_broken_history(self):
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            missing = Path(d) / "missing.tar.gz"
+            with tarfile.open(missing, "w:gz") as tf:
+                for n, data in (("meta/versions.json", b"{}"),
+                                ("meta/changelog.md", b"# log"),
+                                ("tree/CLAUDE.md", b"ok")):
+                    info = tarfile.TarInfo(n)
+                    info.size = len(data)
+                    tf.addfile(info, io.BytesIO(data))
+            self.assertTrue(any("history/index.json" in p for p in v.verify(missing, "public")))
+
+            broken = Path(d) / "broken.tar.gz"
+            with tarfile.open(broken, "w:gz") as tf:
+                for n, data in (("meta/versions.json", b"{}"),
+                                ("meta/changelog.md", b"# log"),
+                                ("tree/CLAUDE.md", b"ok"),
+                                ("history/index.json", b'{"CLAUDE.md":[{"blob":"missing00000"}]}')):
+                    info = tarfile.TarInfo(n)
+                    info.size = len(data)
+                    tf.addfile(info, io.BytesIO(data))
+            self.assertTrue(any("缺失 blob" in p for p in v.verify(broken, "public")))
 
     def test_detects_each_forbidden_rule(self):
         """每条禁止规则都要真的会响，别留摆设。"""

@@ -13,8 +13,11 @@
 from __future__ import annotations
 
 import argparse
+from functools import lru_cache
 import io
 import json
+import hashlib
+import re
 import subprocess
 import sys
 import tarfile
@@ -126,9 +129,173 @@ def collect_files(root: Path, kind: str) -> list[str]:
     return [f for f in deduped if _packable(root, f)]
 
 
+# 受管路径前缀（与 .claude/skills/ai-pm-update/references/managed-scope.md 一致）
+MANAGED_PREFIX = (
+    ".claude/",
+    "CLAUDE.md",
+    "templates/",
+    "scripts/",
+    ".gitignore",
+    ".codex/hooks.json",
+)
+_BINARY_EXT = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".docx", ".xlsx", ".zip"}
+
+
+def _is_managed(rel: str) -> bool:
+    """Return whether *rel* is an explicitly managed repository path."""
+    # Knowledge cards and persona content are data assets with their own merge
+    # route, even if an older commit happened to track them under templates/.
+    if rel.startswith(("templates/knowledge-base/", "templates/persona/")):
+        return rel.endswith("/.gitkeep") or rel in (
+            "templates/knowledge-base/README.md", "templates/persona/README.md")
+    return rel in MANAGED_PREFIX or rel.startswith(
+        tuple(prefix for prefix in MANAGED_PREFIX if prefix.endswith("/"))
+    )
+
+
+def collect_history(root: Path) -> dict:
+    """Collect the content-addressed history of managed files.
+
+    The index is ordered newest commit first, and each path only records a
+    version when its blob changed.  Blob bytes are written by ``write_history``
+    so callers can inspect the index without materialising the package.
+    """
+    index: dict[str, list[dict[str, str]]] = {}
+    head = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+        capture_output=True, text=True,
+    )
+    if head.returncode != 0:
+        # A newly initialised repository has no commits yet.  It can still be
+        # packaged (tree/ contains staged files), but has no historical base.
+        return index
+    # One raw history walk is substantially faster than one ls-tree process per
+    # commit (the repository has hundreds of commits).  The raw record contains
+    # the new blob for each changed path, which is exactly the content history
+    # the updater needs; unchanged versions are intentionally not duplicated.
+    out = subprocess.run(
+        [
+            "git", "-C", str(root), "-c", "core.quotepath=false",
+            "log", "--full-history", "--raw", "--no-renames", "--abbrev=40",
+            "--format=commit %H %ad", "--date=short", "--",
+            ".claude/", "CLAUDE.md", "templates/", "scripts/", ".gitignore",
+            ".codex/hooks.json",
+        ],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    rev = date = None
+    for line in out.splitlines():
+        if line.startswith("commit "):
+            _, rev, date = line.split(" ", 2)
+            continue
+        if not line.startswith(":") or "\t" not in line or rev is None:
+            continue
+        meta, path_text = line.split("\t", 1)
+        fields = meta.split()
+        if len(fields) < 5:
+            continue
+        new_blob, status = fields[3], fields[4]
+        if status.startswith("D") or new_blob == "0" * 40:
+            continue
+        # --no-renames means the path after the tab is the affected path.  A
+        # literal tab in a filename is not a valid tracked path in this repo;
+        # keep the final component defensive for unusual git output.
+        rel = path_text.split("\t")[-1]
+        # Historical files receive the same safety boundary as today's tree.
+        # A once-tracked local settings file must not reappear inside history/.
+        if not _is_managed(rel) or _blocked(rel) or rel.endswith("settings.local.json"):
+            continue
+        kind = "binary" if Path(rel).suffix.lower() in _BINARY_EXT else "text"
+        entries = index.setdefault(rel, [])
+        short = new_blob[:12]
+        if entries and entries[-1]["blob"] == short:
+            continue
+        entries.append({"version": rev[:7], "date": date or "", "blob": short, "kind": kind})
+    return index
+
+
+@lru_cache(maxsize=8192)
+def _read_history_blob(root: Path, blob: str) -> bytes:
+    return subprocess.run(
+        ["git", "-C", str(root), "cat-file", "-p", blob],
+        capture_output=True, check=True,
+    ).stdout
+
+
+def write_history(tf, root: Path, index: dict) -> None:
+    """Write the history index and each unique blob into an open tar file."""
+    written: set[str] = set()
+    for entries in index.values():
+        for entry in entries:
+            blob = entry["blob"]
+            if blob in written:
+                continue
+            data = _read_history_blob(root, blob)
+            actual = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\x00" + data).hexdigest()
+            if not actual.startswith(blob):
+                raise ValueError(f"历史 blob 校验失败：{blob}")
+            info = tarfile.TarInfo(f"history/{blob}")
+            info.size = len(data)
+            info.mtime = int(time.time())
+            tf.addfile(info, io.BytesIO(data))
+            written.add(blob)
+    payload = json.dumps(index, ensure_ascii=False, indent=2).encode("utf-8")
+    info = tarfile.TarInfo("history/index.json")
+    info.size = len(payload)
+    info.mtime = int(time.time())
+    tf.addfile(info, io.BytesIO(payload))
+
+
+@lru_cache(maxsize=8192)
+def _history_blob_is_public(root: Path, blob: str, rules: tuple[str, ...]) -> bool:
+    data = _read_history_blob(root, blob)
+    # Scan binary bytes too: UTF-8 fragments (metadata, embedded labels) can
+    # still contain internal names even when the asset cannot be line-merged.
+    text = data.decode("utf-8", "ignore")
+    return not any(re.search(rule, text, re.IGNORECASE) for rule in rules)
+
+
+def _public_history(root: Path, index: dict) -> dict:
+    """Exclude historical blobs with internal names from the public package.
+
+    Current tracked files are covered by check-share-readiness.sh, but old Git
+    blobs are otherwise invisible to that check.  The author's private denylist
+    is therefore required when a public package contains history.
+    """
+    if not index:
+        return index
+    denylist = root / "scripts" / ".share-denylist"
+    if not denylist.is_file():
+        raise SystemExit("⛔ 公共包 history 校验需要 scripts/.share-denylist；先配置分享清单")
+    rules = []
+    for line in denylist.read_text(encoding="utf-8").splitlines():
+        if line.strip() and not line.lstrip().startswith("#"):
+            rules.append(line)
+    if not rules:
+        raise SystemExit("⛔ 公共包 history 校验需要非空 scripts/.share-denylist")
+    patterns = [re.compile(rule, re.IGNORECASE) for rule in rules]
+    rule_key = tuple(rules)
+
+    result: dict[str, list[dict]] = {}
+    for rel, entries in index.items():
+        if any(pattern.search(rel) for pattern in patterns):
+            continue
+        kept = []
+        for entry in entries:
+            blob = entry["blob"]
+            if _history_blob_is_public(root, blob, rule_key):
+                kept.append(entry)
+        if kept:
+            result[rel] = kept
+    return result
+
+
 def build_package(root: Path, kind: str, out: Path, version: str) -> Path:
     """打包并返回产物路径。"""
     files = collect_files(root, kind)
+    history = collect_history(root)
+    if kind == "public":
+        history = _public_history(root, history)
     out.mkdir(parents=True, exist_ok=True)
     target = out / f"AI_PM-{kind}-{version}.tar.gz"
 
@@ -152,6 +319,7 @@ def build_package(root: Path, kind: str, out: Path, version: str) -> Path:
             info.size = len(data)
             info.mtime = int(time.time())
             tf.addfile(info, io.BytesIO(data))
+        write_history(tf, root, history)
     return target
 
 
