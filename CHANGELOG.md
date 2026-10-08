@@ -2,7 +2,7 @@
 
 ## v0.6.0  (2026-10-08)
 
-自 `v0.5.3` 起共 110 次改动。
+自 `v0.5.3` 起共 114 次改动。
 
 - 2026-06-09 `a7bbe40` feat(ai-pm-knowledge): 新增 chains 牵动链分类 + 接入 suggest 主动推送
 - 2026-06-09 `9b5caa0` feat(ai-pm): 新增 ai-pm-acceptance 验收技能 + 验收模板
@@ -114,4 +114,7 @@
 - 2026-10-08 `44dcb15` feat(update): 受管范围与三方合并协议
 - 2026-10-08 `8db4b6e` fix(update): 补齐判定表情形与显式白名单语义
 - 2026-10-08 `7b60302` fix(update): 契约测试改结构性断言，堵住假绿
-
+- 2026-10-08 `69f4c75` feat(package): 公共/私有双版打包器，按 git ls-files 收集
+- 2026-10-08 `75fa7e2` test(update): 升级产物往返/幂等/阴性三组自测
+- 2026-10-08 `fac5e60` feat(package): changelog 生成器与首版更新日志
+- 2026-10-08 `6ef8f84` fix(update): 幂等组改用基线推进版，补 base 推进硬约束
