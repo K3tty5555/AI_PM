@@ -38,7 +38,7 @@ allowed-tools: Read Write Edit Glob Grep Bash(mv) Bash(cp) Bash(mkdir) Bash(ls) 
 ### 阶段 1：识别
 
 1. 确认当前目录是一份 AI_PM：存在 `.claude/skills/ai-pm/SKILL.md` 与 `CLAUDE.md`。不满足就停下问用户要目录，不要就地猜。
-2. 识别用户当前版本：读包内 `meta/versions.json` 和 `history/index.json`。索引按受管路径列出 `version`、`blob`、`kind`；原件在 `history/<blob>`。把用户目录里**未改动过**的受管文件与包内历史原件比对，取命中最多的版本为 base。公共包会过滤含内部名称的旧原件；候选缺失时按下一条保守处理。用户指定了 `--from 旧版包路径` 时以该包为准。
+2. 识别用户当前版本：读包内 `meta/versions.json`、`history/index.json` 和 `history/revisions.json`。前者是新版标识；`index.json` 按受管路径列出 `blob`、`kind`，原件在 `history/<blob>`；`revisions.json` 按从新到旧列出每个候选提交的受管文件快照。把用户目录里**未改动过**的受管文件与快照逐版比对，取命中最多的版本为 base；同分取较新的版本。公共包会过滤含内部名称的旧原件，快照中相应文件也会缺席；候选缺失时按下一条保守处理。用户指定了 `--from 旧版包路径` 时以该包为准。
 3. **识别不出时不猜**：报告"版本未识别"，走保守路径——用户改过的文件一律保留、不参与合并，官方新增文件照常落。
 4. 检测用户改动过哪些受管文件（与 base 逐文件比对）。比对范围严格取受管清单，`git ls-files <路径>` 拿到什么就算什么；拿不到 git 就靠内容比对，别退化成"整个目录都算受管"。
 

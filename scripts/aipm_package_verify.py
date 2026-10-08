@@ -39,7 +39,8 @@ FORBIDDEN = [
 # 噪声项：vendor / 私有 skill 内真实存在的系统文件，提示但不计入退出码
 WARN_ONLY = [".DS_Store"]
 
-REQUIRED = ["meta/versions.json", "meta/changelog.md", "history/index.json"]
+REQUIRED = ["meta/versions.json", "meta/changelog.md", "history/index.json",
+            "history/revisions.json"]
 
 # 体积上界（MB）
 MAX_MB = {"public": 60, "private": 400}
@@ -81,6 +82,7 @@ def verify(tar_path: Path, kind: str) -> list[str]:
         if not any(n.startswith("tree/") for n in names):
             problems.append("缺少 tree/ 内容")
 
+        index = {}
         if "history/index.json" in names:
             try:
                 index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
@@ -98,6 +100,24 @@ def verify(tar_path: Path, kind: str) -> list[str]:
                             problems.append(f"history 索引指向缺失 blob：{path} → {blob}")
             except (AttributeError, KeyError, TypeError, ValueError, UnicodeDecodeError) as exc:
                 problems.append(f"history/index.json 格式错误：{exc}")
+
+        if "history/revisions.json" in names and "history/index.json" in names:
+            try:
+                revisions = json.loads(tf.extractfile("history/revisions.json").read().decode("utf-8"))
+                if revisions.get("schema_version") != 1 or not isinstance(revisions.get("revisions"), list):
+                    raise ValueError("缺少 schema_version=1 或 revisions 列表")
+                allowed_by_path = {
+                    path: {entry["blob"] for entry in entries}
+                    for path, entries in index.items()
+                }
+                for revision in revisions["revisions"]:
+                    if not isinstance(revision.get("version"), str) or not isinstance(revision.get("files"), dict):
+                        raise ValueError("版本快照结构错误")
+                    for path, blob in revision["files"].items():
+                        if blob not in allowed_by_path.get(path, set()):
+                            problems.append(f"版本快照引用未收录原件：{revision['version']} {path} → {blob}")
+            except (AttributeError, KeyError, TypeError, ValueError, UnicodeDecodeError) as exc:
+                problems.append(f"history/revisions.json 格式错误：{exc}")
 
         # 包自报的 kind 与校验声明必须一致：私有包被当公共包发出去，
         # 是这套工具里后果最重的一种错，值得一条独立判据。

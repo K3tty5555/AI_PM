@@ -168,7 +168,10 @@ class TestHistory(unittest.TestCase):
             with tarfile.open(out) as tf:
                 names = tf.getnames()
                 index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
+                revisions = json.loads(tf.extractfile("history/revisions.json").read().decode("utf-8"))
         self.assertTrue(index)
+        self.assertTrue(revisions["revisions"], "缺可用于版本打分的快照")
+        self.assertEqual(revisions["schema_version"], 1)
         self.assertTrue(any(n.startswith("history/") and n != "history/index.json" for n in names),
                         "history/ 只有索引没有内容")
 
@@ -183,7 +186,8 @@ class TestHistory(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             out = module.build_package(ROOT, "public", Path(d), version="v-test")
             with tarfile.open(out) as tf:
-                names = [n for n in tf.getnames() if n.startswith("history/") and n != "history/index.json"]
+                names = [n for n in tf.getnames() if n.startswith("history/")
+                         and n not in ("history/index.json", "history/revisions.json")]
                 packaged = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
         self.assertEqual(len(names), len(set(names)), "同一内容在包内重复写入")
         packaged_blobs = {e["blob"] for entries in packaged.values() for e in entries}
@@ -211,14 +215,34 @@ class TestHistory(unittest.TestCase):
             out = module.build_package(repo, "public", repo / "dist", "v-test")
             with tarfile.open(out) as tf:
                 index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
+                revisions = json.loads(tf.extractfile("history/revisions.json").read().decode("utf-8"))
                 self.assertEqual(len(index["CLAUDE.md"]), 1)
                 self.assertEqual(tf.extractfile("history/" + index["CLAUDE.md"][0]["blob"]).read(),
                                  b"clean new text\n")
+                allowed = {e["blob"] for e in index["CLAUDE.md"]}
+                self.assertTrue(all(snapshot["files"].get("CLAUDE.md") in allowed
+                                    for snapshot in revisions["revisions"] if "CLAUDE.md" in snapshot["files"]))
 
             private = module.build_package(repo, "private", repo / "dist", "v-private")
             with tarfile.open(private) as tf:
                 index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
             self.assertEqual(len(index["CLAUDE.md"]), 2)
+
+    def test_revisions_retain_unchanged_files_for_base_scoring(self):
+        """一次提交只改一个文件时，快照仍须给出另一个文件的当时版本。"""
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d)
+            (repo / "CLAUDE.md").write_text("first\n", encoding="utf-8")
+            _init_repo(repo)
+            self._commit(repo, "first")
+            (repo / ".gitignore").write_text("dist/\n", encoding="utf-8")
+            self._commit(repo, "second")
+            index = module.collect_history(repo)
+            revisions = module.collect_revisions(repo, index)
+            self.assertEqual(len(revisions), 2)
+            self.assertEqual(revisions[0]["files"]["CLAUDE.md"], index["CLAUDE.md"][0]["blob"])
+            self.assertIn(".gitignore", revisions[0]["files"])
+            self.assertNotIn(".gitignore", revisions[1]["files"])
 
 
 class TestVerify(unittest.TestCase):
@@ -235,12 +259,16 @@ class TestVerify(unittest.TestCase):
         """造一个包；meta/versions.json 写合法 JSON，否则校验器会（正确地）报读不出。"""
         if "history/index.json" not in names:
             names = [*names, "history/index.json"]
+        if "history/revisions.json" not in names:
+            names = [*names, "history/revisions.json"]
         with tarfile.open(path, "w:gz") as tf:
             for n in names:
                 if n.endswith("meta/versions.json"):
                     data = json.dumps({"version": "v-test", "kind": kind}).encode("utf-8")
                 elif n == "history/index.json":
                     data = b"{}"
+                elif n == "history/revisions.json":
+                    data = b'{"schema_version":1,"revisions":[]}'
                 else:
                     data = b"x"
                 info = tarfile.TarInfo(n)
@@ -309,6 +337,18 @@ class TestVerify(unittest.TestCase):
                     info.size = len(data)
                     tf.addfile(info, io.BytesIO(data))
             self.assertTrue(any("缺失 blob" in p for p in v.verify(broken, "public")))
+
+            bad_revision = Path(d) / "bad-revision.tar.gz"
+            with tarfile.open(bad_revision, "w:gz") as tf:
+                for n, data in (("meta/versions.json", b"{}"),
+                                ("meta/changelog.md", b"# log"),
+                                ("tree/CLAUDE.md", b"ok"),
+                                ("history/index.json", b"{}"),
+                                ("history/revisions.json", b'{"schema_version":1,"revisions":[{"version":"abc1234","files":{"CLAUDE.md":"abcdef012345"}}]}')):
+                    info = tarfile.TarInfo(n)
+                    info.size = len(data)
+                    tf.addfile(info, io.BytesIO(data))
+            self.assertTrue(any("未收录原件" in p for p in v.verify(bad_revision, "public")))
 
     def test_detects_each_forbidden_rule(self):
         """每条禁止规则都要真的会响，别留摆设。"""

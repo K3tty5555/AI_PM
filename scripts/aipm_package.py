@@ -234,6 +234,46 @@ def _read_history_blob(root: Path, blob: str) -> bytes:
     ).stdout
 
 
+def collect_revisions(root: Path, index: dict) -> list[dict]:
+    """Build per-commit snapshots for version scoring from an allowed index.
+
+    ``index`` may already have public-history exclusions applied.  A snapshot
+    only references blobs that remain in that index, so the snapshot cannot
+    resurrect a filtered historical original.
+    """
+    allowed = {path: {entry["blob"] for entry in entries} for path, entries in index.items()}
+    if not allowed:
+        return []
+    candidate_versions = {entry["version"] for entries in index.values() for entry in entries}
+    revs = subprocess.run(
+        ["git", "-C", str(root), "rev-list", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.splitlines()
+    snapshots = []
+    for rev in revs:
+        short = rev[:7]
+        if short not in candidate_versions:
+            continue
+        raw = subprocess.run(
+            ["git", "-C", str(root), "ls-tree", "-r", "-z", "--full-tree", rev],
+            capture_output=True, check=True,
+        ).stdout
+        files = {}
+        for item in raw.split(b"\x00"):
+            if not item:
+                continue
+            meta, _, path_bytes = item.partition(b"\t")
+            parts = meta.split()
+            if len(parts) < 3 or parts[1] != b"blob":
+                continue
+            path = path_bytes.decode("utf-8", "replace")
+            blob = parts[2].decode()[:12]
+            if blob in allowed.get(path, set()):
+                files[path] = blob
+        snapshots.append({"version": short, "files": files})
+    return snapshots
+
+
 def write_history(tf, root: Path, index: dict) -> None:
     """Write the history index and each unique blob into an open tar file."""
     written: set[str] = set()
@@ -256,6 +296,14 @@ def write_history(tf, root: Path, index: dict) -> None:
     info.size = len(payload)
     info.mtime = int(time.time())
     tf.addfile(info, io.BytesIO(payload))
+    revisions = json.dumps(
+        {"schema_version": 1, "revisions": collect_revisions(root, index)},
+        ensure_ascii=False, separators=(",", ":"),
+    ).encode("utf-8")
+    info = tarfile.TarInfo("history/revisions.json")
+    info.size = len(revisions)
+    info.mtime = int(time.time())
+    tf.addfile(info, io.BytesIO(revisions))
 
 
 @lru_cache(maxsize=8192)
