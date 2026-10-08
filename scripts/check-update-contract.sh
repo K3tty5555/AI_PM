@@ -68,4 +68,27 @@ grep -qF "未在受管清单中列出的路径一律不受管" "$SCOPE" 2>/dev/n
 grep -qF "该文件是否 tracked" "$SCOPE" 2>/dev/null && note_ok "分类键为 tracked 在位" || note_fail "缺「分类的键是是否 tracked」表述"
 grep -qF "由打包器 \`PRIVATE_EXTRA\` 携带的数据资产不在其列" <<< "$NEVER_TOUCH" && note_ok "「永不触碰」段内含数据资产排除条" || note_fail "「永不触碰」段内缺数据资产排除条（数据资产会撞上 templates/ 与 output/ 两条）"
 
+echo "▶ 检查 4：报告格式含五类动作与对账行"
+# 断言限定在表格/章节区块内——全文子串匹配会被散文里复述的同名字串喂饱（假绿）。
+RPT=".claude/skills/ai-pm-update/references/report-format.md"
+RPT_FIELDS=( "path" "kind" "base" "reason" )
+
+RPT_TABLE="$(extract_table '^| 字段 | 取值 |' "$RPT")"
+for f in "${RPT_FIELDS[@]}"; do
+  grep -qF -- "| \`$f\` |" <<< "$RPT_TABLE" || note_fail "报告格式字段表缺字段：$f"
+done
+for k in "overwrite" "create" "delete" "conflict" "preserve"; do
+  grep -qF -- "\`$k\`" <<< "$RPT_TABLE" || note_fail "报告格式字段表缺动作类型：$k"
+done
+RPT_ROWS=$(data_rows "$RPT_TABLE")
+if [ "$RPT_ROWS" -eq "${#RPT_FIELDS[@]}" ]; then
+  note_ok "报告格式字段表 ${RPT_ROWS} 行，与断言数组等长"
+else
+  note_fail "报告格式字段表 ${RPT_ROWS} 行，断言数组 ${#RPT_FIELDS[@]} 项——表与断言已漂移"
+fi
+
+RECON="$(extract_section '对账行（机械可判定）' "$RPT")"
+grep -qF "未裁决" <<< "$RECON" || note_fail "对账行章节缺「未裁决」字段"
+[ -f "$RPT" ] && note_ok "报告格式文件存在"
+
 exit $FAIL
