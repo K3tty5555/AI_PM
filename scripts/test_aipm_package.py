@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import subprocess
 import tarfile
@@ -127,6 +128,153 @@ class TestBuild(unittest.TestCase):
             # 是产出这些记录的同步工具（794 B 脚本），本来就该随仓库分发。
             bad = [n for n in names if ".ai-shared/conversations" in n]
             self.assertEqual(bad, [], f"对话记录进了包：{bad[:3]}")
+
+
+class TestVerify(unittest.TestCase):
+    def _verify_module(self):
+        p = ROOT / "scripts" / "aipm_package_verify.py"
+        s = importlib.util.spec_from_file_location("aipm_package_verify", p)
+        m = importlib.util.module_from_spec(s)
+        assert s.loader
+        s.loader.exec_module(m)
+        return m
+
+    @staticmethod
+    def _tar_with(path: Path, names: list[str], kind: str = "public") -> Path:
+        """造一个包；meta/versions.json 写合法 JSON，否则校验器会（正确地）报读不出。"""
+        with tarfile.open(path, "w:gz") as tf:
+            for n in names:
+                if n.endswith("meta/versions.json"):
+                    data = json.dumps({"version": "v-test", "kind": kind}).encode("utf-8")
+                else:
+                    data = b"x"
+                info = tarfile.TarInfo(n)
+                info.size = len(data)
+                tf.addfile(info, io.BytesIO(data))
+        return path
+
+    def test_clean_package_passes(self):
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            out = module.build_package(ROOT, "public", Path(d), version="v-test")
+            problems = v.verify(out, "public")
+        self.assertEqual(problems, [], f"干净包被误报：{problems}")
+
+    def test_clean_private_package_passes(self):
+        """私有包同理：误杀私有包 = 校验器不可用。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            out = module.build_package(ROOT, "private", Path(d), version="v-test")
+            problems = v.verify(out, "private")
+        self.assertEqual(problems, [], f"干净私有包被误报：{problems}")
+
+    def test_detects_sensitive_path(self):
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "bad.tar.gz"
+            with tarfile.open(bad, "w:gz") as tf:
+                info = tarfile.TarInfo("tree/.ai-shared/conversations/raw/x.jsonl")
+                data = b"secret"
+                info.size = len(data)
+                tf.addfile(info, io.BytesIO(data))
+            problems = v.verify(bad, "public")
+        self.assertTrue(any("conversations" in p for p in problems), problems)
+
+    def test_detects_missing_meta(self):
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "bad.tar.gz"
+            with tarfile.open(bad, "w:gz") as tf:
+                info = tarfile.TarInfo("tree/CLAUDE.md")
+                info.size = 1
+                tf.addfile(info, io.BytesIO(b"x"))
+            problems = v.verify(bad, "public")
+        self.assertTrue(any("meta" in p for p in problems), problems)
+
+    def test_detects_each_forbidden_rule(self):
+        """每条禁止规则都要真的会响，别留摆设。"""
+        v = self._verify_module()
+        for frag in v.FORBIDDEN:
+            with tempfile.TemporaryDirectory() as d:
+                bad = self._tar_with(Path(d) / "bad.tar.gz", [
+                    "meta/versions.json", "meta/changelog.md",
+                    "tree/CLAUDE.md", f"tree/{frag}x",
+                ])
+                problems = v.verify(bad, "public")
+            self.assertTrue(problems, f"禁止路径 {frag} 未被识别")
+
+    def test_legit_assets_not_flagged(self):
+        """回归：Task 4 实测踩过的三类误杀，逐条钉住。"""
+        v = self._verify_module()
+        legit = [
+            "tree/templates/prd-styles/default/style-config.json",
+            "tree/tsconfig.json",
+            "tree/output/assets/AI_PM知识库蒸馏-20260902/content-full/docs/01.md",
+            "tree/vendor/foo/.DS_Store",
+            "tree/scripts/ai-sync/snapshot-claude-conversations.sh",
+            "tree/scripts/ai-sync/snapshot-codex-conversations.sh",
+        ]
+        with tempfile.TemporaryDirectory() as d:
+            tar = self._tar_with(Path(d) / "ok.tar.gz",
+                                 ["meta/versions.json", "meta/changelog.md"] + legit)
+            problems = v.verify(tar, "public")
+        self.assertEqual(problems, [], f"合法资产被误杀：{problems}")
+
+    def test_ds_store_is_warn_only(self):
+        """噪声项只提示、不进退出码。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            tar = self._tar_with(Path(d) / "n.tar.gz", [
+                "meta/versions.json", "meta/changelog.md",
+                "tree/CLAUDE.md", "tree/vendor/x/.DS_Store",
+            ])
+            self.assertEqual(v.verify(tar, "public"), [], ".DS_Store 不该计入退出码")
+            self.assertTrue(v.collect_warnings(tar), ".DS_Store 应给出提示")
+
+    def test_detects_root_docs_dir(self):
+        """tree/docs/ 只拦仓库根 docs/。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            bad = self._tar_with(Path(d) / "bad.tar.gz", [
+                "meta/versions.json", "meta/changelog.md",
+                "tree/CLAUDE.md", "tree/docs/internal/secret.md",
+            ])
+            self.assertTrue(v.verify(bad, "public"))
+
+    def test_detects_oversize(self):
+        """体积上界要真的会响（造一个声明超过阈值的包）。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            tar = self._tar_with(Path(d) / "big.tar.gz",
+                                 ["meta/versions.json", "meta/changelog.md", "tree/CLAUDE.md"])
+            orig = v.MAX_MB
+            v.MAX_MB = {"public": 0.0000001}
+            try:
+                problems = v.verify(tar, "public")
+            finally:
+                v.MAX_MB = orig
+            self.assertTrue(any("体积" in p for p in problems), problems)
+
+    def test_meta_kind_mismatch_flagged(self):
+        """私有包被当成公共包校验必须报警。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            out = module.build_package(ROOT, "private", Path(d), version="v-test")
+            problems = v.verify(out, "public")
+            self.assertTrue(any("kind" in p for p in problems), problems)
+            self.assertEqual(v.verify(out, "private"), [])
+
+    def test_main_exit_code(self):
+        """CLI 退出码契约：0=通过，1=有问题；警告不影响退出码。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            out = module.build_package(ROOT, "public", Path(d), version="v-test")
+            self.assertEqual(v.main([str(out), "--kind", "public"]), 0)
+            bad = self._tar_with(Path(d) / "bad.tar.gz", [
+                "meta/versions.json", "meta/changelog.md",
+                "tree/.ai-shared/conversations/raw/x.jsonl",
+            ])
+            self.assertEqual(v.main([str(bad), "--kind", "public"]), 1)
 
 
 if __name__ == "__main__":
