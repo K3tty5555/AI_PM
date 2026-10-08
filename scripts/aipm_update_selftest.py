@@ -90,7 +90,8 @@ def check_idempotent() -> list[str]:
     """幂等：对同一官方新版重复升级，结果不再变化。
 
     注意：两遍的输入必须不同，否则断言恒真。
-    第一遍 merged1 = f(base, ours, theirs)；第二遍 merged2 = f(base, merged1, theirs)。
+    第一遍 merged1 = f(base, ours, theirs)；升级完成后基线推进到新版，故第二遍
+    merged2 = f(theirs, merged1, theirs)——不是 f(base, merged1, theirs)。
     """
     problems = []
     for path in SAMPLES:
@@ -100,8 +101,9 @@ def check_idempotent() -> list[str]:
             continue
         ours, _ = _inject_edits(base, 3)
         m1, _ = _merge3(base, ours, theirs)
-        # 第二遍：把第一遍的产物当作 ours 再合一次，官方侧不变
-        m2, _ = _merge3(base, m1, theirs)
+        # 第二遍：升级完成后基线已推进到 theirs，故以 theirs 为 base 再合一次。
+        # 若仍拿旧 base 当基线，官方新增块会被静默插入第二次（无冲突标记、产物已坏）。
+        m2, _ = _merge3(theirs, m1, theirs)
         if m1 != m2:
             problems.append(f"{path}: 合并不幂等（第二遍改变了结果）")
     return problems
