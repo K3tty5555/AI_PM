@@ -114,6 +114,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm config ui` | UI 设计规范管理 |
 | `/ai-pm config acceptance` | 验收台账模板管理（默认 9 列，可自设，用法同 config style）|
 | `/ai-pm [URL]` | 分析参考网页（Playwright MCP 抓取） |
+| `/ai-pm update` | AI_PM 自身版本升级（三方合并保留用户改造，支持 `--dry-run` / `rollback`） |
 
 ### `sharing` 命令分派
 
