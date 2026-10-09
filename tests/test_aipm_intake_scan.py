@@ -1,6 +1,6 @@
 # tests/test_aipm_intake_scan.py
-"""intake 扫描器测试：排除表 / 分类 / 哈希去重 / 凭证 / sanitize / 簇聚合 / 仓库根排除 / 报告。"""
-import importlib.util, json, os, shutil, tempfile
+"""intake 扫描器测试：排除表 / 分类 / 哈希去重 / 凭证 / sanitize / 项目根识别 / 内容标题 / 仓库根排除 / 报告。"""
+import importlib.util, json, os, shutil, sys, tempfile, threading, time, zipfile
 from types import SimpleNamespace
 from pathlib import Path
 import unittest
@@ -36,7 +36,9 @@ class TestScan(unittest.TestCase):
     def test_classification(self):
         self.assertTrue(any("PRD-V1.md" in p for p in self.files_of("md")))
         self.assertTrue(any("index.html" in p for p in self.files_of("html")))
-        self.assertTrue(any("家庭照片.png" in f["path"] for f in self.manifest["unclassified"]))
+        # schema v2：unclassified 只存「按扩展名计数 + 总数」，不逐条
+        self.assertEqual(self.manifest["unclassified"],
+                         {"total": 5, "by_ext": {"(无扩展名)": 2, ".png": 2, ".yaml": 1}})
 
     def test_duplicates_detected_by_hash(self):
         dups = self.manifest["duplicates"]
@@ -50,11 +52,21 @@ class TestScan(unittest.TestCase):
         return next(f for c in self.manifest["clusters"] for f in c["files"] if f["path"] == rel)
 
     def test_hidden_file_probed_and_marked(self):
-        """C2-1：隐藏文件永不迁移，但仍探测凭证进 credential_hits。"""
+        """C2-1：隐藏文件永不迁移，但仍探测凭证进 credential_hits。
+        schema v2：未归类的 .env/.zsh_history 不进簇，只在 credential_hits；已归类的隐藏文件进簇带 hidden。"""
         self.assertIn(".zsh_history", self.manifest["credential_hits"])
-        self.assertTrue(self.entry(".zsh_history")["hidden"])
-        self.assertTrue(self.entry(".env")["hidden"])
+        self.assertIn(".env", self.manifest["credential_hits"])
+        all_paths = {f["path"] for c in self.manifest["clusters"] for f in c["files"]}
+        self.assertNotIn(".env", all_paths)
         self.assertFalse(self.entry("项目A/需求/PRD-V1.md")["hidden"])
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d) / "r"; (r / "p").mkdir(parents=True)
+            (r / "p/a.md").write_text("# a", encoding="utf-8")
+            (r / "p/.草稿.md").write_text("# 草稿", encoding="utf-8")
+            m = module.scan(r, Path(d) / "_i", extra_skill_dirs=())
+            ents = {f["path"]: f for c in m["clusters"] for f in c["files"]}
+            self.assertTrue(ents["p/.草稿.md"]["hidden"])
+            self.assertFalse(module.will_migrate(ents["p/.草稿.md"]))
 
     def test_content_probe_yaml(self):
         """C2-3：config.yaml 里的 token 也要探到。"""
@@ -209,8 +221,10 @@ class TestHomeUsability(unittest.TestCase):
         self.put("p/m1.md", "migrate"); self.put("p/m2.md", "migrate")                # 真候选
         m = self.scan()
         ents = {f["path"]: f for c in m["clusters"] for f in c["files"]}
-        for rel in ("p/big1.md", "p/big2.md", "p/a.png", "p/b.png", "p/k1.md", "p/k2.md", "p/.h1", "p/.h2"):
+        for rel in ("p/big1.md", "p/big2.md", "p/k1.md", "p/k2.md"):
             self.assertNotIn("sha256", ents[rel], f"{rel} 不会迁移，不该哈希")
+        for rel in ("p/a.png", "p/b.png", "p/.h1", "p/.h2"):  # schema v2：未归类不进簇（更不会哈希）
+            self.assertNotIn(rel, ents)
         self.assertIn("sha256", ents["p/m1.md"])
         self.assertEqual([sorted(g["paths"]) for g in m["duplicates"]], [["p/m1.md", "p/m2.md"]])
 
@@ -242,19 +256,121 @@ class TestHomeUsability(unittest.TestCase):
         self.assertFalse(module._is_dataless(SimpleNamespace()), "非 macOS 无 st_flags")
 
 
-class TestAdaptiveClusters(unittest.TestCase):
-    """C1：全盘扫描时一级目录（Documents）是杂物堆，必须自适应切到「项目B」这一层。"""
+# ---------- 构造工具（stdlib zipfile 现场造 docx/pptx，不依赖 fixture 文件） ----------
+
+W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+P_NS = ('xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+        'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"')
+XML_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+
+
+def put(root: Path, rel: str, data="x") -> Path:
+    f = root / rel
+    f.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(data, bytes):
+        f.write_bytes(data)
+    else:
+        f.write_text(data, encoding="utf-8")
+    return f
+
+
+def make_docx(path: Path, paras, pad_bytes=0, raw_document=None):
+    """paras: 每段一个 run 文本列表（文本可含已转义的 XML 实体）；None = 自闭合空段。
+    run 之间插一个 <w:tab/>，防「<w:t[^>]*> 把 <w:tab/> 当文本节点」这类宽松正则。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = []
+    for runs in paras:
+        if runs is None:
+            body.append('<w:p w:rsidR="00A1B2C3"/>')
+            continue
+        rs = '<w:r><w:tab/></w:r>'.join(f'<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">{t}</w:t></w:r>'
+                                         for t in runs)
+        body.append(f'<w:p w:rsidR="00A1"><w:pPr><w:pStyle w:val="Title"/></w:pPr>{rs}</w:p>')
+    filler = ""
+    if pad_bytes:
+        unit = '<w:p><w:r><w:t>填充正文填充正文填充正文填充正文</w:t></w:r></w:p>'
+        filler = unit * (pad_bytes // len(unit.encode("utf-8")) + 1)
+    xml = raw_document or f'{XML_HEAD}<w:document {W_NS}><w:body>{"".join(body)}{filler}</w:body></w:document>'
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", "<Types/>")
+        z.writestr("word/document.xml", xml)
+
+
+def sp(text, ph=None):
+    nv = f'<p:nvPr><p:ph type="{ph}" idx="0"/></p:nvPr>' if ph else "<p:nvPr/>"
+    return (f'<p:sp><p:nvSpPr><p:cNvPr id="2" name="形状"/><p:cNvSpPr/>{nv}</p:nvSpPr><p:spPr/>'
+            f'<p:txBody><a:bodyPr/><a:p><a:pPr/><a:r><a:rPr lang="zh-CN"/><a:t>{text}</a:t></a:r></a:p></p:txBody></p:sp>')
+
+
+def make_pptx(path: Path, slides: dict, order: list):
+    """slides: {zip 内路径: slide xml 片段(sp 拼接)}；order: [(r:id, Target)] 即 sldIdLst 顺序。
+    rels 按 order 反序写，且 sldMasterIdLst 里先放一个 rId1，专抓「取第一个 r:id」的实现。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pres = (f'{XML_HEAD}<p:presentation {P_NS}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/>'
+            '</p:sldMasterIdLst><p:sldIdLst>'
+            + "".join(f'<p:sldId id="{256 + i}" r:id="{rid}"/>' for i, (rid, _) in enumerate(order))
+            + '</p:sldIdLst></p:presentation>')
+    rels = ('<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="x/slideMaster" Target="slideMasters/slideMaster1.xml"/>'
+            + "".join(f'<Relationship Id="{rid}" Type="x/slide" Target="{t}"/>' for rid, t in reversed(order))
+            + '</Relationships>')
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", "<Types/>")
+        z.writestr("ppt/presentation.xml", pres)
+        z.writestr("ppt/_rels/presentation.xml.rels", rels)
+        z.writestr("ppt/slideMasters/slideMaster1.xml", f'<p:sldMaster {P_NS}>{sp("母版标题", "title")}</p:sldMaster>')
+        for name, body in slides.items():
+            z.writestr(name, f'{XML_HEAD}<p:sld {P_NS}><p:cSld><p:spTree><p:nvGrpSpPr/><p:grpSpPr/>{body}'
+                             '</p:spTree></p:cSld></p:sld>')
+
+
+class TreeCase(unittest.TestCase):
+    """在 tmp 里现场造目录树、扫描、按簇断言。"""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
-        self.home = Path(self.tmp.name) / "home"
-        shutil.copytree(HOME_LIKE, self.home)
-        for i in range(5):  # 杂物 > 阈值 3，且无子目录 → 不再切、也不标 big
-            (self.home / "Documents/杂物" / f"n{i}.txt").write_text(f"杂物{i}", encoding="utf-8")
-        (self.home / "Documents/散落.md").write_text("Documents 层的散文件", encoding="utf-8")
+        self.r = Path(self.tmp.name) / "r"
+        self.r.mkdir()
+        self.n = 0
+
+    def add(self, *rels):
+        for rel in rels:
+            self.n += 1
+            if rel.endswith(".docx"):
+                make_docx(self.r / rel, [[f"文档{self.n}"]])
+            elif rel.endswith((".png", ".xlsx")):
+                put(self.r, rel, f"bin{self.n}".encode())
+            else:
+                put(self.r, rel, f"# 文件{self.n}\n")
 
     def scan(self, **kw):
-        return module.scan(self.home, Path(self.tmp.name) / "_intake", extra_skill_dirs=(), big_cluster=3, **kw)
+        out = Path(self.tmp.name) / f"_i{self.n}"
+        self.n += 1
+        return module.scan(self.r, out, extra_skill_dirs=(), projects_dir=Path(self.tmp.name) / "projects", **kw)
+
+    @staticmethod
+    def layout(m):
+        return {c["source_dirs"][0]: sorted(f["path"] for f in c["files"]) for c in m["clusters"]}
+
+    @staticmethod
+    def by_dir(m):
+        return {c["source_dirs"][0]: c for c in m["clusters"]}
+
+    def report(self, m):
+        return next(Path(self.tmp.name).glob(f"_i*/{m['intake_id']}/report.md")).read_text(encoding="utf-8")
+
+
+class TestHomeLikeClusters(TreeCase):
+    """改写自 C1 自适应切簇（§9.4）：不再按文件数阈值/深度上限，按内容认项目根。"""
+
+    def setUp(self):
+        super().setUp()
+        shutil.rmtree(self.r)
+        shutil.copytree(HOME_LIKE, self.r)
+        for i in range(5):
+            (self.r / "Documents/杂物" / f"n{i}.txt").write_text(f"杂物{i}", encoding="utf-8")
+        (self.r / "Documents/散落.md").write_text("Documents 层的散文件", encoding="utf-8")
 
     def test_fixture_intact(self):
         for rel in ("Documents/项目B/需求/PRD.md", "Documents/项目B/原型/index.html", "Documents/杂物/readme.txt"):
@@ -262,37 +378,467 @@ class TestAdaptiveClusters(unittest.TestCase):
 
     def test_project_subdir_becomes_own_cluster(self):
         m = self.scan()
-        by_dir = {c["source_dirs"][0]: c for c in m["clusters"] if not c.get("loose")}
-        self.assertIn("Documents/项目B", by_dir, f"簇: {sorted(by_dir)}")
-        c = by_dir["Documents/项目B"]
-        self.assertEqual(sorted(f["path"] for f in c["files"]),
-                         ["Documents/项目B/原型/index.html", "Documents/项目B/需求/PRD.md"])
-        self.assertFalse(c["big"])
-        self.assertEqual(c["suggested_name"], "项目B")
-        self.assertNotIn("Documents", by_dir, "切分后不应再有整个 Documents 的大簇")
-        self.assertFalse(by_dir["Documents/杂物"]["big"], "无子目录可切的平铺目录不标 big")
+        self.assertEqual(self.layout(m), {
+            "Documents": ["Documents/散落.md"],
+            "Documents/杂物": sorted(["Documents/杂物/readme.txt"] + [f"Documents/杂物/n{i}.txt" for i in range(5)]),
+            "Documents/项目B": ["Documents/项目B/原型/index.html", "Documents/项目B/需求/PRD.md"],
+        })
+        c = self.by_dir(m)
+        self.assertFalse(c["Documents/项目B"]["loose"])
+        self.assertEqual(c["Documents/项目B"]["suggested_name"], "项目B")
+        self.assertTrue(c["Documents"]["loose"], "容器自身直放产物单独成散文件簇")
+        self.assertIn("容器兼项目", c["Documents"]["notes"])
+        self.assertTrue(all("big" not in x for x in m["clusters"]), "schema v2 移除 big")
 
     def test_loose_files_get_own_cluster(self):
-        m = self.scan()
-        loose = [c for c in m["clusters"] if c.get("loose") and c["source_dirs"][0] == "Documents"]
-        self.assertEqual(len(loose), 1)
-        self.assertEqual([f["path"] for f in loose[0]["files"]], ["Documents/散落.md"])
+        """改写自旧 test_loose_files_get_own_cluster：容器直放文件单独成 loose 簇（v2 另标「容器兼项目」）。"""
+        loose = [c for c in self.scan()["clusters"] if c["loose"]]
+        self.assertEqual([(c["source_dirs"][0], [f["path"] for f in c["files"]]) for c in loose],
+                         [("Documents", ["Documents/散落.md"])])
 
-    def test_depth_cap_marks_big(self):
-        deep = self.home / "Deep/a/b/c/d"
+    def test_no_depth_cap(self):
+        deep = self.r / "Deep/a/b/c/d"
         deep.mkdir(parents=True)
         for i in range(5):
             (deep / f"f{i}.md").write_text(f"深{i}", encoding="utf-8")
         m = self.scan()
-        deep_clusters = [c for c in m["clusters"] if c["source_dirs"][0].startswith("Deep")]
-        self.assertEqual([c["source_dirs"][0] for c in deep_clusters], ["Deep/a/b/c"],
-                         "相对扫描根 4 层封顶")
-        self.assertTrue(deep_clusters[0]["big"], "封顶仍超阈值且含子目录 → big")
+        self.assertEqual([k for k in self.layout(m) if k.startswith("Deep")], ["Deep/a/b/c/d"],
+                         "不设深度上限：项目根在第 5 层就认第 5 层")
 
-    def test_small_top_dir_not_split(self):
-        m = module.scan(self.home, Path(self.tmp.name) / "_intake2", extra_skill_dirs=())
-        dirs = [c["source_dirs"][0] for c in m["clusters"]]
-        self.assertEqual(dirs, ["Documents"], "默认阈值 200 下小目录不切")
+    def test_big_cluster_param_accepted_but_ignored(self):
+        """改写自旧 test_small_top_dir_not_split：阈值语义已废，big_cluster 形参只为兼容旧调用。"""
+        self.assertEqual(self.layout(self.scan(big_cluster=3)), self.layout(self.scan()))
+
+
+class TestProjectRoots(TreeCase):
+    """§1.3 / §9.1 项目根识别：断言具体簇划分。"""
+
+    def test_basic_documents_tree(self):
+        self.add("Documents/工作/2025/项目A/需求/x.docx", "Documents/工作/2025/项目A/原型/index.html",
+                 "Documents/工作/2025/项目B/方案.md", "Documents/工作/周报.xlsx",
+                 "Documents/杂物/a.png", "Documents/杂物/b.png")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {
+            "Documents/工作": ["Documents/工作/周报.xlsx"],
+            "Documents/工作/2025/项目A": ["Documents/工作/2025/项目A/原型/index.html",
+                                       "Documents/工作/2025/项目A/需求/x.docx"],
+            "Documents/工作/2025/项目B": ["Documents/工作/2025/项目B/方案.md"],
+        })
+        c = self.by_dir(m)
+        self.assertTrue(c["Documents/工作"]["loose"])
+        self.assertIn("容器兼项目", c["Documents/工作"]["notes"])
+        self.assertFalse(c["Documents/工作/2025/项目A"]["loose"])
+        self.assertEqual(c["Documents/工作/2025/项目A"]["suggested_name"], "项目A")
+        top = m["no_product_dirs"]["top"]
+        self.assertIn({"dir": "Documents/杂物", "files": 2}, top)
+        self.assertIn("Documents/杂物", self.report(m).split("## 无产物目录", 1)[1])
+
+    def test_part_word_dir_with_project_below_is_container(self):
+        self.add("Documents/文档/项目A/需求/a.md", "Documents/文档/项目A/方案.md", "Documents/文档/说明.md")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {
+            "Documents/文档": ["Documents/文档/说明.md"],
+            "Documents/文档/项目A": ["Documents/文档/项目A/方案.md", "Documents/文档/项目A/需求/a.md"]},
+            "「文档」下有项目根 → 按容器处理，不并入 Documents")
+        self.assertTrue(self.by_dir(m)["Documents/文档"]["loose"])
+
+    def test_version_dirs_with_products_are_separate_projects(self):
+        self.add("产品/V1/a.md", "产品/V1/b.html", "产品/V2/a.md", "产品/V2/c.html")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {"产品/V1": ["产品/V1/a.md", "产品/V1/b.html"],
+                                          "产品/V2": ["产品/V2/a.md", "产品/V2/c.html"]})
+        self.assertEqual(sorted(c["suggested_name"] for c in m["clusters"]), ["产品-V1", "产品-V2"])
+
+    def test_version_dirs_under_part_dir_merge(self):
+        self.add("项目C/原型/v1/a.html", "项目C/原型/v2.1/b.html", "项目C/需求.md")
+        self.assertEqual(self.layout(self.scan()), {
+            "项目C": ["项目C/原型/v1/a.html", "项目C/原型/v2.1/b.html", "项目C/需求.md"]})
+
+    def test_version_dirs_not_merged_when_parent_has_products_or_mixed_siblings(self):
+        """§1.3②：父目录自身有直放产物、或有产物的兄弟不全是版本目录 → 版本目录按普通目录处理。"""
+        self.add("项目D/原型/总览.html", "项目D/原型/V1/a.html", "项目D/原型/V1/b.html",
+                 "项目F/原型/V1/a.html", "项目F/原型/V1/b.html", "项目F/原型/旧稿/c.html", "项目F/原型/旧稿/d.html")
+        self.assertEqual(self.layout(self.scan()), {
+            "项目D/原型": ["项目D/原型/总览.html"],
+            "项目D/原型/V1": ["项目D/原型/V1/a.html", "项目D/原型/V1/b.html"],
+            "项目F/原型/V1": ["项目F/原型/V1/a.html", "项目F/原型/V1/b.html"],
+            "项目F/原型/旧稿": ["项目F/原型/旧稿/c.html", "项目F/原型/旧稿/d.html"]})
+
+    def test_version_regex_negatives(self):
+        self.add("项目E/原型/Vision/a.html", "项目E/原型/V1abc/b.html", "项目E/原型/Vision/a2.html",
+                 "项目E/原型/V1abc/b2.html")
+        self.assertEqual(sorted(self.layout(self.scan())), ["项目E/原型/V1abc", "项目E/原型/Vision"])
+
+    def test_part_word_matching(self):
+        for name in ("需求", "01_需求", "02 原型", "3.设计", "04-资料", "05、竞品", "Docs", "DESIGN", "prototype"):
+            self.assertTrue(module._is_part_dir(name), name)
+        for name in ("需求文档", "设计院方案", "docs2", "01_", "2025", "项目A"):
+            self.assertFalse(module._is_part_dir(name), name)
+        for name in ("V1", "v2", "V1.0", "v2.10.3"):
+            self.assertTrue(module._is_version_dir(name), name)
+        for name in ("Vision", "V1abc", "2025", "V", "V1.", "版本V1"):
+            self.assertFalse(module._is_version_dir(name), name)
+
+    def test_numbered_part_hit_and_wordy_name_miss(self):
+        self.add("项目G/01_需求/a.md", "项目G/02_原型/b.html", "项目G/需求文档/c.md", "项目G/需求文档/d.md")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {
+            "项目G": ["项目G/01_需求/a.md", "项目G/02_原型/b.html"],
+            "项目G/需求文档": ["项目G/需求文档/c.md", "项目G/需求文档/d.md"]})
+        self.assertIn("容器兼项目", self.by_dir(m)["项目G"]["notes"])
+
+    def test_top_level_part_word_not_merged_into_scan_root(self):
+        self.add("调研/a.md", "调研/b.md", "根.md")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {"(根目录散文件)": ["根.md"], "调研": ["调研/a.md", "调研/b.md"]})
+        self.assertTrue(self.by_dir(m)["(根目录散文件)"]["loose"])
+
+    def test_siblings_all_parts(self):
+        self.add("2025/需求/a.md", "2025/原型/b.html")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {"2025": ["2025/原型/b.html", "2025/需求/a.md"]})
+        self.assertIn("兄弟全是部件", self.by_dir(m)["2025"]["notes"])
+        self.assertIn("兄弟全是部件", self.report(m))
+
+    def test_container_also_project(self):
+        self.add("项目A/README.md", "项目A/子项目1/需求/a.md", "项目A/子项目1/b.md")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {"项目A": ["项目A/README.md"],
+                                          "项目A/子项目1": ["项目A/子项目1/b.md", "项目A/子项目1/需求/a.md"]})
+        c = self.by_dir(m)
+        self.assertTrue(c["项目A"]["loose"])
+        self.assertFalse(c["项目A/子项目1"]["loose"])
+        self.assertIn("容器兼项目", c["项目A"]["notes"])
+        self.assertIn("容器兼项目", self.report(m))
+
+    def test_small_leaf_merges_into_parent_project(self):
+        self.add("项目H/PRD.md", "项目H/会议纪要/一次.md", "项目H2/PRD.md", "项目H2/专题/a.md", "项目H2/专题/b.md")
+        self.assertEqual(self.layout(self.scan()), {
+            "项目H": ["项目H/PRD.md", "项目H/会议纪要/一次.md"],
+            "项目H2": ["项目H2/PRD.md"],
+            "项目H2/专题": ["项目H2/专题/a.md", "项目H2/专题/b.md"]})
+
+    def test_duplicate_names_get_parent_prefix(self):
+        self.add("2024/项目A/a.md", "2025/项目A/b.md", "项目Z/a.md", "项目Z/项目Z/b.md", "项目Z/项目Z/c.md")
+        names = {c["source_dirs"][0]: c["suggested_name"] for c in self.scan()["clusters"]}
+        self.assertEqual(names, {"2024/项目A": "2024-项目A", "2025/项目A": "2025-项目A",
+                                 "项目Z": "项目Z", "项目Z/项目Z": "项目Z-项目Z"})
+        self.assertEqual(len(set(names.values())), len(names))
+
+    def test_engineering_markers_code_repo(self):
+        self.add("repo1/.git/HEAD", "repo1/docs/设计.md", "repo1/README.md",
+                 "pkg/package.json", "pkg/说明.md", "pkg/子模块/方案.md", "pkg/子模块/方案2.md", "普通/a.md")
+        m = self.scan()
+        flags = {c["source_dirs"][0]: c["code_repo"] for c in m["clusters"]}
+        self.assertEqual(flags, {"repo1": True, "pkg": True, "pkg/子模块": True, "普通": False})
+        sec = self.report(m).split("## 代码仓库内文档", 1)[1]
+        self.assertIn("repo1", sec)
+        self.assertNotIn("普通", sec)
+
+    def test_unclassified_and_flagged_only_dirs_not_clusters(self):
+        self.add("图片/a.png", "图片/b.png")
+        put(self.r, "密/k.md", f"api_key = {'A' * 24}")
+        put(self.r, "隐/.x.md", "# 隐")
+        m = self.scan()
+        self.assertEqual(m["clusters"], [])
+        self.assertIn("密/k.md", m["credential_hits"])
+
+    def test_score_orders_report(self):
+        self.add("小/a.md", "大/a.md", "大/b.html", "大/c.docx")
+        m = self.scan()
+        c = self.by_dir(m)
+        self.assertGreater(c["大"]["score"], c["小"]["score"])
+        rep = self.report(m)
+        self.assertLess(rep.index("**大**"), rep.index("**小**"))
+
+    def test_report_folds_beyond_30(self):
+        for i in range(32):
+            self.add(f"p{i:02d}/a.md")
+        m = self.scan()
+        self.assertEqual(len(m["clusters"]), 32, "manifest 保留全部簇")
+        rep = self.report(m)
+        self.assertIn("其余小簇 2 个", rep)
+        self.assertEqual(rep.count("（c0"), 30)
+
+
+class TestDeepTrees(TreeCase):
+    """§1.1：迭代自底向上，禁止递归；循环符号链接不挂起。"""
+
+    def test_1100_level_dirs_no_recursion_error(self):
+        fd = os.open(self.r, os.O_RDONLY)
+        try:
+            for _ in range(1100):
+                os.mkdir("d", dir_fd=fd)
+                nfd = os.open("d", os.O_RDONLY, dir_fd=fd); os.close(fd); fd = nfd
+            wfd = os.open("底.md", os.O_WRONLY | os.O_CREAT, 0o644, dir_fd=fd)
+            os.write(wfd, "# 底".encode()); os.close(wfd)
+        finally:
+            os.close(fd)
+        self.addCleanup(self._flatten_chain, self.r / "d")  # stdlib rmtree 自己是递归的，先逐层拆掉
+        self.add("正常/a.md")
+        m = self.scan()  # 超 PATH_MAX 的深处计 skipped，不得抛 RecursionError
+        self.assertIn("正常", self.layout(m))
+
+    @staticmethod
+    def _flatten_chain(top: Path):
+        tmp = top.parent / "_flat"
+        while (top / "d").is_dir():  # 每轮把第二层提到顶层，路径始终很短
+            os.rename(top / "d", tmp); os.rmdir(top); os.rename(tmp, top)
+        shutil.rmtree(top)
+
+    def test_deep_tree_under_low_recursion_limit(self):
+        """真正卡「递归实现」：400 层（不超 PATH_MAX）+ 压低递归上限，递归实现必抛 RecursionError。"""
+        put(self.r, "/".join(["d"] * 400) + "/底.md", "# 底")
+        put(self.r, "/".join(["d"] * 400) + "/底2.md", "# 底2")
+        old = sys.getrecursionlimit()
+        depth = 0
+        f = sys._getframe()
+        while f:
+            depth += 1; f = f.f_back
+        sys.setrecursionlimit(depth + 150)
+        try:
+            m = self.scan()
+        finally:
+            sys.setrecursionlimit(old)
+        self.assertEqual(list(self.layout(m)), ["/".join(["d"] * 400)])
+
+    def test_build_clusters_1500_levels_synthetic(self):
+        rel = "/".join(["d"] * 1500)
+        raw = [{"path": f"{rel}/{n}.md", "ext": ".md", "klass": "md", "size": 1, "mtime": "2026-01-01T00:00:00",
+                "credential_hit": False, "hidden": False, "oversize": False, "dataless": False} for n in ("a", "b")]
+        clusters, _ = module._build_clusters(raw, set())
+        self.assertEqual([c["source_dirs"][0] for c in clusters], [rel])
+
+    def test_build_clusters_1500_level_part_chain_merges_iteratively(self):
+        """1500 层部件目录链逐层并入 → owner 链长 1500；递归的归属查找会 RecursionError。"""
+        rel = "p/" + "/".join(["需求"] * 1500)
+        raw = [{"path": p, "ext": ".md", "klass": "md", "size": 1, "mtime": "2026-01-01T00:00:00",
+                "credential_hit": False, "hidden": False, "oversize": False, "dataless": False}
+               for p in (f"{rel}/a.md", "p/b.md")]
+        clusters, _ = module._build_clusters(raw, set())
+        self.assertEqual([(c["source_dirs"][0], len(c["files"])) for c in clusters], [("p", 2)])
+
+    def test_symlink_loop_does_not_hang(self):
+        self.add("环/a.md", "环/b.md")
+        (self.r / "环/回环").symlink_to(self.r / "环", target_is_directory=True)
+        (self.r / "环/上").symlink_to(self.r, target_is_directory=True)
+        box = {}
+        t = threading.Thread(target=lambda: box.setdefault("m", self.scan()), daemon=True)
+        t.start(); t.join(30)
+        self.assertFalse(t.is_alive(), "循环符号链接导致挂起")
+        self.assertEqual(self.layout(box["m"]), {"环": ["环/a.md", "环/b.md"]})
+
+
+class TestTitles(TreeCase):
+    """§2 / §9.2：每种格式断言确切标题字符串。"""
+
+    def titles(self, m):
+        return {t["path"]: t["title"] for c in m["clusters"] for t in c["titles"]}
+
+    def test_exact_titles_per_format(self):
+        put(self.r, "t_md/a.md", "---\ntitle: 前言\n---\n\n正文先于标题\n## 需求文档标题 ##\n# 第二个标题\n")
+        put(self.r, "t_md2/a.md", "\n\n   第一行文字  \n第二行\n")
+        put(self.r, "t_txt/a.txt", "\n会议纪要 10月\n内容\n")
+        put(self.r, "t_html/index.html", "<html><head><meta charset='utf-8'><TITLE lang=zh>原型 &amp; 演示</TITLE></head></html>")
+        make_docx(self.r / "t_docx/a.docx", [None, ["  "], ["第一", "段", "A&amp;B &#x4E2D;&#25991;"], ["第二段"]])
+        make_docx(self.r / "t_big/a.docx", [["大文档标题"]], pad_bytes=3 << 20)
+        make_pptx(self.r / "t_ppt/a.pptx",
+                  {"ppt/slides/slide1.xml": sp("按文件名排第一", "ctrTitle"),
+                   "ppt/slides/slide2.xml": sp("正文先出现", "body") + sp("真正的第一页", "title")},
+                  [("rId9", "slides/slide2.xml"), ("rId8", "/ppt/slides/slide1.xml")])
+        make_pptx(self.r / "t_ppt2/a.pptx",
+                  {"ppt/slides/slide1.xml": sp("没有标题占位的第一段") + sp("第二段")},
+                  [("rId2", "slides/slide1.xml")])
+        put(self.r, "t_gbk/a.md", "# 中文标题ＧＢＫ\n正文".encode("gbk"))
+        m = self.scan()
+        with zipfile.ZipFile(self.r / "t_big/a.docx") as z:
+            self.assertGreater(z.getinfo("word/document.xml").file_size, 2 << 20, "构造须超 2MB 才测得到截断")
+        self.assertEqual(self.titles(m), {
+            "t_md/a.md": "需求文档标题",
+            "t_md2/a.md": "第一行文字",
+            "t_txt/a.txt": "会议纪要 10月",
+            "t_html/index.html": "原型 & 演示",
+            "t_docx/a.docx": "第一段A&B 中文",
+            "t_big/a.docx": "大文档标题",
+            "t_ppt/a.pptx": "真正的第一页",
+            "t_ppt2/a.pptx": "没有标题占位的第一段",
+            "t_gbk/a.md": "中文标题ＧＢＫ",
+        })
+        self.assertEqual(m["titles_fallback"], 0)
+
+    def test_filename_fallbacks_counted_not_skipped(self):
+        ole = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1" + b"\x00" * 504
+        put(self.r, "f/老格式.doc", ole)
+        put(self.r, "f/加密.docx", ole)
+        put(self.r, "f/坏包.docx", b"PK\x03\x04" + b"\x00" * 60)
+        put(self.r, "f/周报.xlsx", b"PK\x03\x04xlsx")
+        put(self.r, "g/报告.pdf", b"%PDF-1.4 \xff\xfe")
+        bomb = ('<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol">'
+                + "".join(f'<!ENTITY lol{i} "{("&lol" + str(i - 1) + ";") * 10 if i > 1 else "&lol;" * 10}">'
+                          for i in range(1, 10))
+                + f']><w:document {W_NS}><w:body><w:p><w:r><w:t>&lol9;</w:t></w:r></w:p></w:body></w:document>')
+        make_docx(self.r / "g/炸弹.docx", [], raw_document=bomb)
+        t0 = time.monotonic()
+        m = self.scan()
+        self.assertLess(time.monotonic() - t0, 10)
+        self.assertEqual(self.titles(m), {"f/老格式.doc": "老格式.doc", "f/加密.docx": "加密.docx",
+                                          "f/坏包.docx": "坏包.docx", "f/周报.xlsx": "周报.xlsx",
+                                          "g/报告.pdf": "报告.pdf", "g/炸弹.docx": "炸弹.docx"})
+        self.assertEqual(m["titles_fallback"], 6)
+        self.assertEqual(m["scope"]["skipped_unreadable"], 0, "标题兜底不计不可读")
+
+    def test_adversarial_inputs_bounded(self):
+        """恶意构造（未闭合标签成片、超长 # 行）不能让正则回溯成平方级把扫描卡死。"""
+        unclosed = f"{XML_HEAD}<w:document {W_NS}><w:body>" + "<w:p><w:r><w:t>" * 60000
+        make_docx(self.r / "a1/坏段落.docx", [], raw_document=unclosed)
+        make_pptx(self.r / "a2/坏幻灯.pptx", {"ppt/slides/slide1.xml": "<p:sp><a:p><a:t>" * 60000},
+                  [("rId2", "slides/slide1.xml")])
+        put(self.r, "a3/index.html", "<title>" * 150000)
+        put(self.r, "a4/a.md", "# " + " " * 300000 + "#" * 300000 + "x\n")
+        put(self.r, "a5/a.txt", "&#" + "9" * 500000 + ";\n")
+        t0 = time.monotonic()
+        m = self.scan()
+        self.assertLess(time.monotonic() - t0, 20)
+        titles = self.titles(m)
+        self.assertEqual(titles["a1/坏段落.docx"], "坏段落.docx")
+        self.assertEqual(titles["a3/index.html"], "index.html")
+        self.assertEqual(len(titles["a4/a.md"]), 80)
+
+    def test_undecodable_text_falls_back_to_filename(self):
+        """§2.4：utf-8 → gb18030 都解不了 → 文件名，计 titles_fallback、不计不可读。"""
+        put(self.r, "u/乱码.txt", b"\xff\xfe\xff\x80\x80\xff\n")
+        put(self.r, "u/乱码.md", b"# \xff\xff\xff\n")
+        m = self.scan()
+        self.assertEqual(self.titles(m), {"u/乱码.txt": "乱码.txt", "u/乱码.md": "乱码.md"})
+        self.assertEqual(m["titles_fallback"], 2)
+        self.assertEqual(m["scope"]["skipped_unreadable"], 0)
+
+    def test_no_xml_etree(self):
+        """§2.2：本机 expat 无 billion laughs 防护，标题抽取绝不能走 xml.etree/minidom/expat。"""
+        src = (ROOT / "scripts/aipm_intake_scan.py").read_text(encoding="utf-8")
+        code = "\n".join(l.split("#", 1)[0] for l in src.splitlines())  # 只看代码，不看注释
+        for banned in ("xml.etree", "ElementTree", "minidom", "xml.dom", "expat", "xml.sax", "lxml"):
+            self.assertNotIn(banned, code)
+
+    def test_zip_members_read_bounded_not_trusting_file_size(self):
+        """§2.2：成员一律 zf.open(name).read(LIMIT+1)；不信 ZipInfo.file_size、不整读成员。"""
+        make_docx(self.r / "b/a.docx", [["有界读取"]], pad_bytes=3 << 20)
+        make_pptx(self.r / "b/a.pptx", {"ppt/slides/slide1.xml": sp("幻灯标题", "title")},
+                  [("rId2", "slides/slide1.xml")])
+        sizes = []
+        orig_read = zipfile.ZipExtFile.read
+        def spy_read(self_f, n=-1):
+            sizes.append(n)
+            return orig_read(self_f, n)
+        zipfile.ZipExtFile.read = spy_read
+        self.addCleanup(setattr, zipfile.ZipExtFile, "read", orig_read)
+        orig_zread = zipfile.ZipFile.read
+        def no_whole_read(*a, **k):
+            raise AssertionError("不得 ZipFile.read 整读成员")
+        zipfile.ZipFile.read = no_whole_read
+        self.addCleanup(setattr, zipfile.ZipFile, "read", orig_zread)
+        m = self.scan()
+        self.assertEqual(self.titles(m), {"b/a.docx": "有界读取", "b/a.pptx": "幻灯标题"})
+        self.assertTrue(sizes)
+        self.assertTrue(all(n == module.TITLE_READ_LIMIT + 1 for n in sizes), sizes)
+
+    def test_zip_member_cap(self):
+        p = self.r / "z/多成员.docx"; p.parent.mkdir(parents=True)
+        with zipfile.ZipFile(p, "w") as z:
+            z.writestr("word/document.xml", f"<w:document {W_NS}><w:body><w:p><w:r><w:t>不该读到</w:t></w:r></w:p></w:body></w:document>")
+            for i in range(2001):
+                z.writestr(f"x/{i}", "")
+        self.assertEqual(self.titles(self.scan()), {"z/多成员.docx": "多成员.docx"})
+
+    def test_credential_hidden_dataless_never_titled(self):
+        put(self.r, "项目K/需求.md", "# 正常标题")
+        put(self.r, "项目K/密钥.md", f"# 机密标题甲\napi_key = {'A' * 24}\n")
+        make_docx(self.r / "项目K/credentials.docx", [["机密标题乙"]])
+        put(self.r, "项目K/.隐藏.md", "# 机密标题丙")
+        put(self.r, "项目K/云端.md", "# 机密标题丁")
+        put(self.r, "项目K/泄露.txt", f"sk-{'Ab1' * 10}\n")  # 标题文本本身像密钥 → 内容探测已拦
+        orig = module._stat
+        def fake(entry):
+            st = orig(entry)
+            if entry.name != "云端.md":
+                return st
+            return SimpleNamespace(st_size=st.st_size, st_mtime=st.st_mtime, st_flags=0x40000000)
+        module._stat = fake
+        self.addCleanup(setattr, module, "_stat", orig)
+        m = self.scan()
+        c = self.by_dir(m)["项目K"]
+        self.assertEqual([t["title"] for t in c["titles"]], ["正常标题"])
+        dumped = json.dumps(m["clusters"], ensure_ascii=False) + self.report(m)
+        for leak in ("机密标题甲", "机密标题乙", "机密标题丙", "机密标题丁", "Ab1Ab1"):
+            self.assertNotIn(leak, dumped)
+
+    def test_title_sanitized(self):
+        put(self.r, "s1/a.md", "# 第一*重点*_强调_ [链接](u) `码` | 表 <b>\x07尾‮巴 #\n")
+        put(self.r, "s2/index.html", "<title>第一行\r\n第二行\t\x00完</title>")
+        put(self.r, "s3/a.md", "# " + "长" * 100)
+        m = self.scan()
+        self.assertEqual(self.titles(m), {"s1/a.md": "第一*重点*_强调_ [链接](u) `码` | 表 <b>尾巴",
+                                          "s2/index.html": "第一行 第二行 完",
+                                          "s3/a.md": "长" * 80})
+        rep = self.report(m)
+        self.assertIn(r"第一\*重点\*\_强调\_ \[链接\](u) \`码\` \| 表 \<b\>尾巴", rep)
+        self.assertNotIn("第一*重点*", rep)
+        self.assertIn("第一行 第二行 完", rep)
+
+    def test_cluster_titles_cap_5_newest_first(self):
+        for i in range(1, 8):
+            f = put(self.r, f"多/f{i}.md", f"# 标题{i}")
+            os.utime(f, (1_700_000_000 + i * 100, 1_700_000_000 + i * 100))
+        self.assertEqual([t["title"] for t in self.by_dir(self.scan())["多"]["titles"]],
+                         ["标题7", "标题6", "标题5", "标题4", "标题3"])
+
+    def test_md_read_once_for_probe_and_title(self):
+        put(self.r, "一/a.md", "# 只读一次")
+        reads = []  # Path.read_bytes/read_text 都经 Path.open，盯 open 即可
+        orig_open = Path.open
+        def spy_open(self_p, *a, **k):
+            reads.append(self_p.name)
+            return orig_open(self_p, *a, **k)
+        Path.open = spy_open
+        self.addCleanup(setattr, Path, "open", orig_open)
+        m = self.scan()
+        self.assertEqual(self.titles(m), {"一/a.md": "只读一次"})
+        self.assertEqual(reads.count("a.md"), 1, reads)
+
+
+class TestManifestV2(TreeCase):
+    """D1↔D2 接口契约：schema_version 2 / scan_rules / no_product_dirs / titles_fallback / 簇字段。"""
+
+    def test_top_level_and_cluster_fields(self):
+        self.add("项目A/需求/a.md", "项目A/b.png", "杂/x.png", "杂/y.png", "杂/z.png")
+        m = self.scan()
+        self.assertEqual(m["schema_version"], 2)
+        rules = m["scan_rules"]
+        self.assertEqual(rules["part_dir_words"], list(module.PART_DIR_WORDS))
+        self.assertIn("需求", rules["part_dir_words"])
+        self.assertEqual(rules["version_dir_regex"], module.VERSION_DIR_RE.pattern)
+        self.assertIn(".git", rules["engineering_markers"])
+        self.assertEqual(m["no_product_dirs"], {"top": [{"dir": "杂", "files": 3}], "total_dirs": 1, "total_files": 3})
+        self.assertEqual(m["titles_fallback"], 0)
+        self.assertEqual(m["unclassified"], {"total": 4, "by_ext": {".png": 4}})
+        c = m["clusters"][0]
+        self.assertEqual(set(c), {"cluster_id", "source_dirs", "suggested_name", "loose", "code_repo", "notes",
+                                  "files", "newest_mtime", "titles", "score"})
+        self.assertEqual(c["files"][0]["path"], "项目A/需求/a.md")
+        for k in ("hidden", "credential_hit", "dataless", "oversize"):
+            self.assertIn(k, c["files"][0])
+        on_disk = next(Path(self.tmp.name).glob(f"_i*/{m['intake_id']}/manifest.json")).read_text(encoding="utf-8")
+        self.assertNotIn('"_title"', on_disk, "内部临时键不得落盘")
+
+    def test_no_product_dirs_top10(self):
+        for i in range(12):
+            for j in range(i + 1):
+                self.add(f"空{i:02d}/{j}.png")
+        m = self.scan()
+        npd = m["no_product_dirs"]
+        self.assertEqual(npd["total_dirs"], 12)
+        self.assertEqual(npd["total_files"], sum(range(1, 13)))
+        self.assertEqual([d["dir"] for d in npd["top"]], [f"空{i:02d}" for i in range(11, 1, -1)])
 
 
 if __name__ == "__main__":
