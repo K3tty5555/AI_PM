@@ -19,6 +19,30 @@ module = importlib.util.module_from_spec(_spec)
 assert _spec.loader
 _spec.loader.exec_module(module)
 
+# 这两项是作者本机的私有输入，随 .gitignore 存在、不随仓分发。分发环境里缺席
+# 时必须显式跳过——不跳的话 build_package(ROOT, "public") 会撞 _public_history
+# 的安全线（SystemExit），clone 出去整套回归直接红，而那是环境缺席、不是代码坏。
+_DENYLIST = ROOT / "scripts" / ".share-denylist"
+_PRIVATE_SKILLS = (".claude/skills/xfchat-wiki", ".claude/skills/tpd_cli", ".claude/skills/d2c")
+
+HAS_DENYLIST = _DENYLIST.is_file()
+HAS_PRIVATE_SKILLS = any((ROOT / rel).is_dir() for rel in _PRIVATE_SKILLS)
+
+_DENYLIST_REASON = (
+    "未分发本机私有 scripts/.share-denylist（gitignore，仅作者本机）；"
+    "公共包历史过滤逻辑已由 test_public_history_filters_old_internal_content 自带隔离仓覆盖"
+)
+_PRIVATE_REASON = "未分发私有 skill（xfchat-wiki/tpd_cli/d2c*），私有版增量无从比较"
+
+
+def setUpModule() -> None:
+    """私有输入缺席时报 N/A 而不是静默通过（run_check 据此透出 ➖，见 regression-suite 约定）。"""
+    if not HAS_DENYLIST:
+        print(f"N/A: {_DENYLIST_REASON}；依赖它的用例已跳过")
+    if not HAS_PRIVATE_SKILLS:
+        print(f"N/A: {_PRIVATE_REASON}；依赖它的用例已跳过")
+
+
 
 def _init_repo(path: Path) -> None:
     """在临时目录里建一个最小 git 仓（不碰主仓、不联网）。
@@ -49,6 +73,7 @@ class TestCollect(unittest.TestCase):
         bad = [f for f in files if f.startswith("output/")]
         self.assertEqual(bad, [], f"output/ 混入公共包：{bad[:3]}")
 
+    @unittest.skipUnless(HAS_PRIVATE_SKILLS, _PRIVATE_REASON)
     def test_private_adds_private_skills(self):
         pub = set(module.collect_files(ROOT, "public"))
         pri = set(module.collect_files(ROOT, "private"))
@@ -109,6 +134,7 @@ class TestSymlinkExclusion(unittest.TestCase):
 
 
 class TestBuild(unittest.TestCase):
+    @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_tar_contains_meta(self):
         with tempfile.TemporaryDirectory() as d:
             out = module.build_package(ROOT, "public", Path(d), version="v0.6.0-test")
@@ -118,6 +144,7 @@ class TestBuild(unittest.TestCase):
             self.assertTrue(any(n.endswith("meta/versions.json") for n in names))
             self.assertTrue(any(n.endswith("meta/changelog.md") for n in names))
 
+    @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_tar_excludes_conversations(self):
         with tempfile.TemporaryDirectory() as d:
             out = module.build_package(ROOT, "public", Path(d), version="v0.6.0-test")
@@ -161,6 +188,7 @@ class TestHistory(unittest.TestCase):
             self.assertIn("version", entries[0])
             self.assertIn("blob", entries[0])
 
+    @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_history_in_package(self):
         """包内必须有 history/ 与 history/index.json。"""
         with tempfile.TemporaryDirectory() as d:
@@ -175,6 +203,7 @@ class TestHistory(unittest.TestCase):
         self.assertTrue(any(n.startswith("history/") and n != "history/index.json" for n in names),
                         "history/ 只有索引没有内容")
 
+    @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_history_content_addressed(self):
         """同一内容只写一份 blob，不同内容使用不同 blob 名。"""
         index = module.collect_history(ROOT)
@@ -276,6 +305,7 @@ class TestVerify(unittest.TestCase):
                 tf.addfile(info, io.BytesIO(data))
         return path
 
+    @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_clean_package_passes(self):
         v = self._verify_module()
         with tempfile.TemporaryDirectory() as d:
@@ -423,6 +453,7 @@ class TestVerify(unittest.TestCase):
             self.assertTrue(any("kind" in p for p in problems), problems)
             self.assertEqual(v.verify(out, "private"), [])
 
+    @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_main_exit_code(self):
         """CLI 退出码契约：0=通过，1=有问题；警告不影响退出码。"""
         v = self._verify_module()
