@@ -72,17 +72,17 @@ class TestApplyProject(unittest.TestCase):
         self.assertEqual(errors, [], f"status 违约: {errors}")
 
     def test_credentials_hidden_unclassified_not_copied(self):
-        """C2：凭证命中/隐藏/未归类一律不进项目目录，且留 skip 痕。"""
+        """C2：凭证命中/隐藏/未归类一律不进项目目录。
+        scan schema v2：未归类文件（.env/.zsh_history/png/yaml）扫描阶段就不进簇（只在 credential_hits /
+        unclassified 计数里），扫描根因此也没有散文件簇——apply 根本拿不到它们。"""
         module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
                            active_prd="需求/PRD-V1.md", repo=self.repo)
-        root_c = next(c for c in self.manifest["clusters"] if c["source_dirs"] == ["(根目录散文件)"])
-        module.cmd_project(str(self.mpath), [root_c["cluster_id"]], "散文件", repo=self.repo)
         names = {p.name for p in (self.repo / "output/projects").rglob("*") if p.is_file()}
         for leaked in ("config.yaml", "截图.png", ".zsh_history", ".env", "家庭照片.png"):
             self.assertNotIn(leaked, names)
-        recs = [json.loads(l) for l in (self.mpath.parent / "migrated.jsonl").read_text(encoding="utf-8").splitlines()]
-        skipped = {Path(r["source_abs"]).name for r in recs if r["action"] == "skip"}
-        self.assertTrue({"config.yaml", "截图.png", ".zsh_history", ".env", "家庭照片.png"} <= skipped, skipped)
+        in_clusters = {Path(f["path"]).name for c in self.manifest["clusters"] for f in c["files"]}
+        self.assertFalse({"config.yaml", "截图.png", ".zsh_history", ".env", "家庭照片.png"} & in_clusters)
+        self.assertTrue({".env", ".zsh_history", "项目A/config.yaml"} <= set(self.manifest["credential_hits"]))
 
     def test_idempotent_rerun_after_done(self):
         module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
@@ -281,9 +281,16 @@ class TestApplyFinish(unittest.TestCase):
 
     def test_skip_dedup_on_resume(self):
         """Skip 去重：对含凭证文件的簇立项一次、中断后续传重跑，finish 的「跳」计数不增加。"""
+        # scan schema v2：messy 里的凭证文件（.env/.zsh_history/config.yaml）都是未归类、不进簇，
+        # 这里补一个凭证命中的 md（与 TestStageDecide 同法）造出「含凭证文件的簇」
+        src = self.work / "src"
+        shutil.copytree(MESSY, src)
+        (src / "项目A/需求/密钥说明.md").write_text(f"key: sk-{'A1b2' * 6}\n", encoding="utf-8")
+        self.manifest = scan_mod.scan(src, self.work / "_intake_cred", extra_skill_dirs=())
+        self.mpath = self.work / "_intake_cred" / self.manifest["intake_id"] / "manifest.json"
         cred_cluster = next((c for c in self.manifest["clusters"]
                              if any(f.get("credential_hit") for f in c["files"])), None)
-        self.assertIsNotNone(cred_cluster, "fixture 必须含凭证簇（.env / .zsh_history / config.yaml）")
+        self.assertIsNotNone(cred_cluster, "必须含凭证簇（项目A/需求/密钥说明.md）")
         cluster_id = cred_cluster["cluster_id"]
         name = module.sanitize_name("_".join(cred_cluster["source_dirs"]))
 
