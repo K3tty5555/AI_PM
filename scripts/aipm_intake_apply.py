@@ -8,7 +8,7 @@
 """
 from __future__ import annotations
 import argparse, datetime, hashlib, json, re, shutil, subprocess, sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -50,6 +50,10 @@ def cmd_project(mpath: str, cluster_ids: list[str], name: str,
     # I6：入口设防——名字必须已 sanitize（防 ../ 逃逸与非法字符目录名）
     if name != sanitize_name(name):
         raise SystemExit(f"项目名未过 sanitize: {name!r}（应为 {sanitize_name(name)!r}）")
+    # I2：active_prd 校验放在最前（任何副作用之前）
+    if active_prd:
+        if ".." in PurePosixPath(active_prd).parts or not ACTIVE_PRD_RE.match(active_prd):
+            raise SystemExit(f"active_prd 违反契约: {active_prd}")
     if any(e["name"] == name and e.get("done") for e in m["executed_projects"]):
         return "已完成，跳过"
     clusters = [c for c in m["clusters"] if c["cluster_id"] in cluster_ids]
@@ -98,9 +102,7 @@ def cmd_project(mpath: str, cluster_ids: list[str], name: str,
                 raise SystemExit(f"目标已存在且内容不同: {target}（源 {src}）——停项人工裁决")
             shutil.copy2(src, target)
             _migrated_line(mdir, str(src), target.relative_to(proj).as_posix(), _sha256(target), "confirm", "copy")
-    if active_prd:
-        if ".." in active_prd or not ACTIVE_PRD_RE.match(active_prd):  # I6：拒路径穿越
-            raise SystemExit(f"active_prd 违反契约: {active_prd}")
+    if active_prd:  # 校验已在函数开头，此处仅设置值
         st = _load(proj / "_status.json"); st["active_prd"] = active_prd
         _save(proj / "_status.json", st)
     # S1：--project 是路径语义，传完整路径；重入报「已有 baseline」按已完成处理（I4）
@@ -148,6 +150,7 @@ def cmd_finish(mpath: str) -> str:
     mpath = Path(mpath); m = _load(mpath)
     m["stage"] = "done"; _save(mpath, m)
     migrated = skipped = 0
+    seen_skip = set()  # I1 skip 去重：按 source_abs 去重
     jl = mpath.parent / "migrated.jsonl"
     if jl.exists():
         for line in jl.read_text(encoding="utf-8").splitlines():
@@ -156,8 +159,15 @@ def cmd_finish(mpath: str) -> str:
                 if rec.get("action") in ("copy", "install-skill"):
                     migrated += 1
                 elif rec.get("action") == "skip":
-                    skipped += 1
-    pending = len(m["clusters"]) - len(m["executed_projects"])
+                    src = rec.get("source_abs")
+                    if src not in seen_skip:
+                        skipped += 1
+                        seen_skip.add(src)
+    # I1：已执行簇 = 所有 executed_projects 的 cluster_ids 并集，pending = 总簇数 - 并集大小
+    executed_cluster_ids = set()
+    for e in m["executed_projects"]:
+        executed_cluster_ids.update(e.get("cluster_ids", []))
+    pending = len(m["clusters"]) - len(executed_cluster_ids)
     return (f"intake 完成：迁 {migrated} / 跳 {skipped} / 未处理簇 {pending}；"
             f"原文件未动，后续修改不会自动同步")
 

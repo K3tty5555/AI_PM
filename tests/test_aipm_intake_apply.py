@@ -98,6 +98,80 @@ class TestApplyProject(unittest.TestCase):
             module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
                                active_prd="../x.md", repo=self.repo)
 
+    def test_active_prd_validation_before_side_effects(self):
+        """I2：active_prd 校验在任何副作用之前，拒绝后项目目录不存在。"""
+        with self.assertRaises(SystemExit):
+            module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                               active_prd="../x.md", repo=self.repo)
+        # 验证目录未被创建
+        proj = self.repo / "output/projects/项目A"
+        self.assertFalse(proj.exists(), "active_prd 校验失败后，项目目录不应被创建")
+
+    def test_active_prd_legal_relative_path(self):
+        """I2：合法的相对路径如 a..b.md 应被接受。"""
+        # 创建包含 a..b.md 的簇（修改 fixture）
+        module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                           active_prd="需求/a..b.md", repo=self.repo)
+        proj = self.repo / "output/projects/项目A"
+        status = json.loads((proj / "_status.json").read_text(encoding="utf-8"))
+        self.assertEqual(status["active_prd"], "需求/a..b.md")
+
+
+class TestApplyFinish(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.work = Path(self.tmp.name)
+        self.repo = _fake_repo(self.work)
+        self.manifest = scan_mod.scan(MESSY, self.work / "_intake", extra_skill_dirs=())
+        self.mpath = self.work / "_intake" / self.manifest["intake_id"] / "manifest.json"
+
+    def test_finish_pending_clusters_after_multi_merge(self):
+        """I1：两簇合并立项后，cmd_finish 输出含「未处理簇 N」，N = 总簇数 - 2。"""
+        cluster_ids = [c["cluster_id"] for c in self.manifest["clusters"][:2]]
+        module.cmd_project(str(self.mpath), cluster_ids, "项目A", repo=self.repo)
+        out = module.cmd_finish(str(self.mpath))
+        total_clusters = len(self.manifest["clusters"])
+        expected_pending = total_clusters - 2  # 2 簇已合并成 1 项目
+        self.assertIn(f"未处理簇 {expected_pending}", out,
+                      f"期望「未处理簇 {expected_pending}」，实际输出: {out}")
+
+    def test_skip_dedup_on_resume(self):
+        """Skip 去重：对含凭证文件的簇立项一次、中断后续传重跑，finish 的「跳」计数不增加。"""
+        # 找含凭证文件的簇（如有）或根目录散文件簇
+        cred_cluster = next((c for c in self.manifest["clusters"]
+                             if any(f.get("credential_hit") for f in c["files"])), None)
+        if not cred_cluster:
+            self.skipTest("Fixture 中无凭证文件簇")
+        cluster_id = cred_cluster["cluster_id"]
+        name = module.sanitize_name("_".join(cred_cluster["source_dirs"]))
+
+        # 第一次立项
+        module.cmd_project(str(self.mpath), [cluster_id], name, repo=self.repo)
+
+        # 模拟中断：清空 executed_projects
+        m = json.loads(Path(self.mpath).read_text(encoding="utf-8"))
+        skip_count_after_first = 0
+        mdir = self.mpath.parent
+        if (mdir / "migrated.jsonl").exists():
+            for line in (mdir / "migrated.jsonl").read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    rec = json.loads(line)
+                    if rec.get("action") == "skip":
+                        skip_count_after_first += 1
+        m["executed_projects"] = []
+        Path(self.mpath).write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+
+        # 续传重跑
+        module.cmd_project(str(self.mpath), [cluster_id], name, repo=self.repo)
+
+        # 检查 finish 输出中的「跳」数与第一次相同
+        out = module.cmd_finish(str(self.mpath))
+        import re as regex
+        skip_match = regex.search(r"跳 (\d+)", out)
+        skip_count_final = int(skip_match.group(1)) if skip_match else 0
+        self.assertEqual(skip_count_final, skip_count_after_first,
+                         f"续传后「跳」计数不应增加：第一次{skip_count_after_first}，续传后{skip_count_final}")
+
 
 class TestApplySkill(unittest.TestCase):
     def setUp(self):
