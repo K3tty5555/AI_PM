@@ -81,8 +81,13 @@ duplicates[]: {size,sha256,paths[]}
 project_name_conflicts[]: 建议名撞 output/projects/ 已有项目
 decisions_file: "decisions.jsonl"——确认决策不进 manifest，走 apply decide 逐行追加到同目录
   {ts,path,action: confirm|rename|exclude|skip|install-skill,final_name}；同一路径以最后一条为准
-executed_projects[]: {cluster_ids[],name,copied:true,ts,done?:true,verified_at?}——project 写 copied，
-  verify（契约 + validate）通过才写 done
+  —— exclude 的 path 只能是候选清单（全部簇 files 并集）里的文件；旧版目录前缀记录读取时忽略并告警
+  —— 整簇决策 {ts,path:null,cluster_id,action: skip-cluster|confirm}；confirm 撤销 skip-cluster
+executed_projects[]: {name,cluster_ids[],includes[],files[],reason,copied:true,ts,allow_dup?[],done?:true,
+  verified_at?}——cluster_ids/includes 规范化去重排序后作重跑比对键；files 是实际归属该项目的候选路径；
+  project 写 copied，verify（契约 + validate）通过才写 done
+migrated.jsonl（同目录，apply 追加）：{ts,source_abs,target_rel,sha256,decision,action: copy|skip|install-skill,
+  project?,renamed_from?,allow_dup?,dup_of?}——project 字段是「一个文件只归一个项目」的判据
 """
 
 

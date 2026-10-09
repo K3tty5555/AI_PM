@@ -73,7 +73,12 @@ class RoundtripTests(unittest.TestCase):
                 json.dumps(baseline, ensure_ascii=False, indent=1), encoding="utf-8")
             self.assertEqual(aipm_core.validate_baseline(baseline)[0], [], "注入后 baseline 必须零错误")
             self.assertIn("通过", apply_mod.cmd_verify(str(mpath), "项目A", repo=repo))
-            self.assertIn(f"未处理簇 {len(manifest['clusters']) - 1}", apply_mod.cmd_finish(str(mpath)))
+            # D2（§5）：按文件对账——项目A 三个候选全迁，其余簇未决定
+            fin = apply_mod.cmd_finish(str(mpath))
+            n_cand = sum(len(c["files"]) for c in manifest["clusters"])
+            self.assertIn(f"迁 3 / 不迁 0 / 未决定 {n_cand - 3}", fin)
+            self.assertIn(f"未处理簇 {len(manifest['clusters']) - 1}", fin)
+            self.assertIn("已 copy 未 verify 的项目 0 个", fin)
             # R13：spec 执行第 6 步——假仓自己的 status_migrate --validate（schema 层检查）
             r = subprocess.run([sys.executable, str(repo / "scripts/status_migrate.py"), "--validate"],
                                capture_output=True, text=True, cwd=str(repo))
