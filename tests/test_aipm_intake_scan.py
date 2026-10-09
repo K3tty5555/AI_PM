@@ -464,10 +464,50 @@ class TestProjectRoots(TreeCase):
             "项目F/原型/V1": ["项目F/原型/V1/a.html", "项目F/原型/V1/b.html"],
             "项目F/原型/旧稿": ["项目F/原型/旧稿/c.html", "项目F/原型/旧稿/d.html"]})
 
+    def test_version_dirs_under_non_part_parent_stay_separate(self):
+        """Ruling 23：单独卡 Ruling 19 第三条件——父目录无直放产物、有产物的兄弟全是版本目录，
+        但父目录不是部件目录（工作/产品）→ V1/V2 各自成项目；同结构换成部件目录（工作/原型）→ 并入。"""
+        self.add("工作/产品/V1/a.md", "工作/产品/V1/b.html", "工作/产品/V2/a.md", "工作/产品/V2/c.html",
+                 "工作/原型/V1/x.html", "工作/原型/V2/y.html")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {
+            "工作": ["工作/原型/V1/x.html", "工作/原型/V2/y.html"],
+            "工作/产品/V1": ["工作/产品/V1/a.md", "工作/产品/V1/b.html"],
+            "工作/产品/V2": ["工作/产品/V2/a.md", "工作/产品/V2/c.html"]})
+
+    def test_part_dir_subfolders_merge_back_into_parent_project(self):
+        """Ruling 20：部件目录下按月/按主题分的子目录不切成独立项目，并回部件的父项目（含多层嵌套）。"""
+        self.add("项目A/需求/10月/PRD.md", "项目A/需求/11月/PRD.md",
+                 "工作/项目C/需求/登录/a.md", "工作/项目C/需求/支付/b.md", "工作/项目C/原型/index.html",
+                 "项目D/资料/2025/10月/a.md", "项目D/资料/2025/11月/b.md")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {
+            "项目A": ["项目A/需求/10月/PRD.md", "项目A/需求/11月/PRD.md"],
+            "工作/项目C": sorted(["工作/项目C/原型/index.html", "工作/项目C/需求/支付/b.md",
+                                "工作/项目C/需求/登录/a.md"]),
+            "项目D": ["项目D/资料/2025/10月/a.md", "项目D/资料/2025/11月/b.md"]})
+        c = self.by_dir(m)
+        self.assertEqual(c["项目A"]["suggested_name"], "项目A")
+        self.assertIn("部件目录下子目录已并回", c["项目A"]["notes"])
+        self.assertIn("部件目录下子目录已并回", c["项目D"]["notes"])
+
+    def test_ordinary_container_subprojects_stay_separate(self):
+        """Ruling 20 反例：普通容器（非部件目录）下的子项目仍各自成簇；扫描根直下的部件目录也不并回。"""
+        self.add("项目B/10月/PRD.md", "项目B/11月/PRD.md", "调研/甲/a.md", "调研/乙/b.md")
+        m = self.scan()
+        self.assertEqual(self.layout(m), {
+            "项目B/10月": ["项目B/10月/PRD.md"], "项目B/11月": ["项目B/11月/PRD.md"],
+            "调研/乙": ["调研/乙/b.md"], "调研/甲": ["调研/甲/a.md"]})
+        self.assertTrue(all("部件目录下子目录已并回" not in c["notes"] for c in m["clusters"]))
+
     def test_version_regex_negatives(self):
+        """D2 改写（Ruling 20 后部件目录下的普通子目录会并回，旧写法分不出正则对错）：
+        与真版本目录 V1 并列——Vision/V1abc 若被误认成版本目录，「兄弟全是版本」成立会整体并入 项目E；
+        正确识别时 V1 是版本目录、不扁平，部件不做并回，三者各自成项目。"""
         self.add("项目E/原型/Vision/a.html", "项目E/原型/V1abc/b.html", "项目E/原型/Vision/a2.html",
-                 "项目E/原型/V1abc/b2.html")
-        self.assertEqual(sorted(self.layout(self.scan())), ["项目E/原型/V1abc", "项目E/原型/Vision"])
+                 "项目E/原型/V1abc/b2.html", "项目E/原型/V1/c.html", "项目E/原型/V1/c2.html")
+        self.assertEqual(sorted(self.layout(self.scan())),
+                         ["项目E/原型/V1", "项目E/原型/V1abc", "项目E/原型/Vision"])
 
     def test_part_word_matching(self):
         for name in ("需求", "01_需求", "02 原型", "3.设计", "04-资料", "05、竞品", "Docs", "DESIGN", "prototype"):
