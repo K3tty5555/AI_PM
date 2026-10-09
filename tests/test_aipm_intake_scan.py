@@ -1,6 +1,6 @@
 # tests/test_aipm_intake_scan.py
 """intake 扫描器测试：排除表 / 分类 / 哈希去重 / 凭证 / sanitize / 簇聚合 / 仓库根排除 / 报告。"""
-import importlib.util, json, tempfile
+import importlib.util, json, shutil, tempfile
 from pathlib import Path
 import unittest
 
@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location("aipm_intake_scan", ROOT / "scripts/aipm_intake_scan.py")
 module = importlib.util.module_from_spec(_spec); assert _spec.loader; _spec.loader.exec_module(module)
 MESSY = ROOT / "tests/fixtures/intake/messy"
+HOME_LIKE = ROOT / "tests/fixtures/intake/home_like"
 
 
 class TestScan(unittest.TestCase):
@@ -75,6 +76,59 @@ class TestScan(unittest.TestCase):
         self.assertIn("未归类", text)
         self.assertIn("prompt", text)                 # R18：能力资产清单进报告
         self.assertIn("复制总量", text)                # R18：总量预估进报告
+
+
+class TestAdaptiveClusters(unittest.TestCase):
+    """C1：全盘扫描时一级目录（Documents）是杂物堆，必须自适应切到「项目B」这一层。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name) / "home"
+        shutil.copytree(HOME_LIKE, self.home)
+        for i in range(5):  # 杂物 > 阈值 3，且无子目录 → 不再切、也不标 big
+            (self.home / "Documents/杂物" / f"n{i}.txt").write_text(f"杂物{i}", encoding="utf-8")
+        (self.home / "Documents/散落.md").write_text("Documents 层的散文件", encoding="utf-8")
+
+    def scan(self, **kw):
+        return module.scan(self.home, Path(self.tmp.name) / "_intake", extra_skill_dirs=(), big_cluster=3, **kw)
+
+    def test_fixture_intact(self):
+        for rel in ("Documents/项目B/需求/PRD.md", "Documents/项目B/原型/index.html", "Documents/杂物/readme.txt"):
+            self.assertTrue((HOME_LIKE / rel).is_file(), f"fixture 缺 {rel}")
+
+    def test_project_subdir_becomes_own_cluster(self):
+        m = self.scan()
+        by_dir = {c["source_dirs"][0]: c for c in m["clusters"] if not c.get("loose")}
+        self.assertIn("Documents/项目B", by_dir, f"簇: {sorted(by_dir)}")
+        c = by_dir["Documents/项目B"]
+        self.assertEqual(sorted(f["path"] for f in c["files"]),
+                         ["Documents/项目B/原型/index.html", "Documents/项目B/需求/PRD.md"])
+        self.assertFalse(c["big"])
+        self.assertEqual(c["suggested_name"], "项目B")
+        self.assertNotIn("Documents", by_dir, "切分后不应再有整个 Documents 的大簇")
+        self.assertFalse(by_dir["Documents/杂物"]["big"], "无子目录可切的平铺目录不标 big")
+
+    def test_loose_files_get_own_cluster(self):
+        m = self.scan()
+        loose = [c for c in m["clusters"] if c.get("loose") and c["source_dirs"][0] == "Documents"]
+        self.assertEqual(len(loose), 1)
+        self.assertEqual([f["path"] for f in loose[0]["files"]], ["Documents/散落.md"])
+
+    def test_depth_cap_marks_big(self):
+        deep = self.home / "Deep/a/b/c/d"
+        deep.mkdir(parents=True)
+        for i in range(5):
+            (deep / f"f{i}.md").write_text(f"深{i}", encoding="utf-8")
+        m = self.scan()
+        deep_clusters = [c for c in m["clusters"] if c["source_dirs"][0].startswith("Deep")]
+        self.assertEqual([c["source_dirs"][0] for c in deep_clusters], ["Deep/a/b/c"],
+                         "相对扫描根 4 层封顶")
+        self.assertTrue(deep_clusters[0]["big"], "封顶仍超阈值且含子目录 → big")
+
+    def test_small_top_dir_not_split(self):
+        m = module.scan(self.home, Path(self.tmp.name) / "_intake2", extra_skill_dirs=())
+        dirs = [c["source_dirs"][0] for c in m["clusters"]]
+        self.assertEqual(dirs, ["Documents"], "默认阈值 200 下小目录不切")
 
 
 if __name__ == "__main__":

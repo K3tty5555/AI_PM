@@ -1,5 +1,5 @@
 """intake 执行器测试：顺序（骨架+初始status→复制→active_prd→bootstrap）/三分支幂等/同名子路径/装载四道闸。"""
-import importlib.util, json, sys, tempfile, unittest
+import importlib.util, json, shutil, sys, tempfile, unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,6 +11,7 @@ _sc = importlib.util.spec_from_file_location("aipm_intake_scan", ROOT / "scripts
 scan_mod = importlib.util.module_from_spec(_sc); assert _sc.loader; _sc.loader.exec_module(scan_mod)
 
 MESSY = ROOT / "tests/fixtures/intake/messy"
+HOME_LIKE = ROOT / "tests/fixtures/intake/home_like"
 
 
 def _fake_repo(work: Path) -> Path:
@@ -115,6 +116,32 @@ class TestApplyProject(unittest.TestCase):
         proj = self.repo / "output/projects/项目A"
         status = json.loads((proj / "_status.json").read_text(encoding="utf-8"))
         self.assertEqual(status["active_prd"], "需求/a..b.md")
+
+
+class TestApplyHomeLike(unittest.TestCase):
+    """C1：全盘扫描切出 Documents/项目B 后，能单独立项且不夹带杂物。"""
+
+    def test_project_from_multi_segment_cluster(self):
+        with tempfile.TemporaryDirectory() as d:
+            work = Path(d)
+            repo = _fake_repo(work)
+            home = work / "home"
+            shutil.copytree(HOME_LIKE, home)
+            for i in range(5):
+                (home / "Documents/杂物" / f"n{i}.txt").write_text(f"杂物{i}", encoding="utf-8")
+            m = scan_mod.scan(home, work / "_intake", extra_skill_dirs=(), big_cluster=3)
+            mpath = work / "_intake" / m["intake_id"] / "manifest.json"
+            cid = next(c["cluster_id"] for c in m["clusters"]
+                       if c["source_dirs"][0] == "Documents/项目B" and not c.get("loose"))
+            module.cmd_project(str(mpath), [cid], "项目B", active_prd="需求/PRD.md", repo=repo)
+            proj = repo / "output/projects/项目B"
+            self.assertTrue((proj / "05-prd/需求/PRD.md").is_file(), "多段前缀须正确剥离")
+            self.assertTrue((proj / "06-prototype/_imported/原型/index.html").is_file())
+            copied = sorted(p.relative_to(proj).as_posix() for p in proj.rglob("*")
+                            if p.is_file() and p.parts[len(proj.parts)] in
+                            ("05-prd", "06-prototype", "07-references", "08-reviews", "09-analytics"))
+            self.assertEqual(copied, ["05-prd/需求/PRD.md", "06-prototype/_imported/原型/index.html"])
+            self.assertFalse(any("杂物" in p.as_posix() for p in proj.rglob("*")))
 
 
 class TestApplyFinish(unittest.TestCase):

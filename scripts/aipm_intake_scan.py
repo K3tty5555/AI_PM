@@ -21,13 +21,16 @@ KLASS_BY_EXT = {".md": "md", ".markdown": "md", ".html": "html", ".htm": "html",
                 ".docx": "docx", ".doc": "docx", ".xlsx": "data", ".xls": "data", ".csv": "data",
                 ".pptx": "ppt", ".ppt": "ppt"}
 ILLEGAL_NAME_RE = re.compile(r'[\\/:*?"<>|]+')  # 连续非法字符合并为一个 -
-BIG_CLUSTER = 200  # 超过此数的簇在 report 标注「内部可能含多个项目」
+BIG_CLUSTER = 200  # 簇文件数超过此值且含子目录 → 按直接子目录下切（C1 自适应切簇）
+MAX_CLUSTER_DEPTH = 4  # 相对扫描根最多切到第 4 层；封顶仍超阈值才标 big
+ROOT_LOOSE_LABEL = "(根目录散文件)"  # 扫描根直放文件的簇名（不用 "."：sanitize 后会指向 projects 目录本身）
 
 SCHEMA = """
 manifest 字段（Task 2 apply 按此消费）：
 stage: scan|confirm|exec|done（confirm/exec 由 SKILL.md 在进入对应阶段时置位）
 scope: {scanned_dirs[], excluded{原因:计数}, total_files, skipped_unreadable}
-clusters[]: {cluster_id, source_dirs[], files[{path,ext,size,sha256?,klass,credential_hit,oversize,mtime}], newest_mtime, big:bool}
+clusters[]: {cluster_id, source_dirs[], suggested_name, loose:bool, files[{path,ext,size,sha256?,klass,credential_hit,oversize,mtime}], newest_mtime, big:bool}
+  —— source_dirs[0] 是多段相对前缀（自适应切簇）；loose=True 表示只含该目录直放的散文件
   —— path 为扫描根下相对路径；credential_hit/oversize 的文件执行时默认跳过
 skill_candidates[]: {path,name,frontmatter_ok,collisions[],status: installable|rename|skip}
 prompt_assets[]: {path,note}
@@ -126,7 +129,54 @@ def _skill_collisions(name: str, extra_skill_dirs=None) -> list[str]:
     return hits
 
 
-def scan(root: Path, out_root: Path, extra_skill_dirs=None) -> dict:
+def _build_clusters(raw: list[dict], big_cluster: int) -> list[dict]:
+    """自适应切簇（C1）：先按一级目录归簇；文件数 > big_cluster 且含子目录的簇，按直接子目录递归下切，
+    直到 ≤ 阈值或相对扫描根 MAX_CLUSTER_DEPTH 层。每层目录里的散文件单独成簇（loose=True），
+    source_dirs[0] 就是该目录的相对路径（多段，如 Documents/项目B）；apply 按此前缀剥离保留子路径。"""
+    out: list[dict] = []
+
+    def emit(prefix: str, files: list[dict], loose: bool, big: bool) -> None:
+        last = prefix.rsplit("/", 1)[-1]
+        out.append({"source_dirs": [prefix], "files": files, "loose": loose, "big": big,
+                    "suggested_name": sanitize_name(last),
+                    "newest_mtime": max(f["mtime"] for f in files)})
+
+    def split(prefix: str, files: list[dict]) -> None:
+        depth = prefix.count("/") + 1
+        n = len(prefix) + 1
+        direct = [f for f in files if "/" not in f["path"][n:]]
+        has_sub = len(direct) < len(files)
+        if len(files) <= big_cluster or not has_sub or depth >= MAX_CLUSTER_DEPTH:
+            emit(prefix, files, False, len(files) > big_cluster and has_sub)
+            return
+        if direct:
+            emit(prefix, direct, True, False)
+        subs: dict[str, list[dict]] = {}
+        for f in files:
+            rest = f["path"][n:]
+            if "/" in rest:
+                subs.setdefault(prefix + "/" + rest.split("/", 1)[0], []).append(f)
+        for sub in sorted(subs):
+            split(sub, subs[sub])
+
+    tops: dict[str, list[dict]] = {}
+    root_loose = []
+    for e in raw:
+        if "/" in e["path"]:
+            tops.setdefault(e["path"].split("/", 1)[0], []).append(e)
+        else:
+            root_loose.append(e)
+    if root_loose:
+        emit(ROOT_LOOSE_LABEL, root_loose, True, False)
+    for top in sorted(tops):
+        split(top, tops[top])
+    out.sort(key=lambda c: (c["source_dirs"][0], not c["loose"]))
+    for i, c in enumerate(out, 1):
+        c["cluster_id"] = f"c{i:03d}"
+    return out
+
+
+def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = BIG_CLUSTER) -> dict:
     root = root.expanduser().resolve()
     excluded: dict[str, int] = {}
     raw, skipped = [], 0
@@ -168,16 +218,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None) -> dict:
             by_hash.setdefault(e["sha256"], []).append(e["path"])
         dup_groups += [{"size": size, "sha256": h, "paths": ps} for h, ps in by_hash.items() if len(ps) > 1]
 
-    # 簇聚合：按一级子目录归簇（根直放文件单独一簇）；巨型簇打标（R19：语义聚类时建议下钻）
-    clusters: dict[str, list[dict]] = {}
-    for e in raw:
-        top = e["path"].split("/", 1)[0] if "/" in e["path"] else "(根目录散文件)"
-        clusters.setdefault(top, []).append(e)
-    cluster_list = []
-    for i, (top, files) in enumerate(sorted(clusters.items()), 1):
-        cluster_list.append({"cluster_id": f"c{i:03d}", "source_dirs": [top], "files": files,
-                             "newest_mtime": max(f["mtime"] for f in files),
-                             "big": len(files) > BIG_CLUSTER})
+    cluster_list = _build_clusters(raw, big_cluster)
 
     # skill 候选与 prompt 资产（含 frontmatter 头判定）
     skill_candidates, prompt_assets = [], []
@@ -199,8 +240,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None) -> dict:
 
     projects = ROOT / "output/projects"
     existing = {p.name for p in projects.glob("*") if p.is_dir()} if projects.is_dir() else set()
-    conflicts = sorted({sanitize_name(c["source_dirs"][0]) for c in cluster_list
-                        if sanitize_name(c["source_dirs"][0]) in existing})
+    conflicts = sorted({c["suggested_name"] for c in cluster_list if c["suggested_name"] in existing})
 
     copy_bytes = sum(f["size"] for c in cluster_list for f in c["files"]
                      if not f["credential_hit"] and not f["oversize"])
@@ -251,8 +291,9 @@ def _write_report(intake_dir: Path, m: dict, root: Path, n_files: int, skipped: 
         klasses: dict[str, int] = {}
         for f in c["files"]:
             klasses[f["klass"]] = klasses.get(f["klass"], 0) + 1
-        big = " ⚠️巨型簇：内部可能含多个项目，聚类时建议按二级目录下钻" if c["big"] else ""
-        lines.append(f"- **{c['source_dirs'][0]}**（{c['cluster_id']}）：{len(c['files'])} 文件 {klasses}，最新 {c['newest_mtime'][:10]}{big}")
+        big = " ⚠️巨型簇：切到深度上限仍超阈值，内部可能含多个项目，抽样时注意区分" if c["big"] else ""
+        tag = "（散文件）" if c.get("loose") else ""
+        lines.append(f"- **{c['source_dirs'][0]}**{tag}（{c['cluster_id']}，建议名 {c['suggested_name']}）：{len(c['files'])} 文件 {klasses}，最新 {c['newest_mtime'][:10]}{big}")
     lines += ["", f"## skill 候选（{len(m['skill_candidates'])}）", ""]
     lines += ([f"- {s['name']}：{s['status']}" + (f"，撞名 {s['collisions']}" if s["collisions"] else "")
                for s in m["skill_candidates"]] or ["-（无）"])
