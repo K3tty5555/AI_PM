@@ -15,7 +15,7 @@ allowed-tools: Read Write Edit Glob Grep Bash(ls) Bash(python3) Bash(cp) Bash(mk
 
 ### ① 盘点
 - 启动先跑 `python3 scripts/aipm_intake_scan.py unfinished`，有未完成 intake 先问用户续跑还是重开
-- `python3 scripts/aipm_intake_scan.py --root <路径或~>`，拿 manifest 路径与簇数
+- `python3 scripts/aipm_intake_scan.py scan --root <路径或~>`，拿 manifest 路径与簇数
 - **语义聚类**：只读簇摘要 + 抽样文件头，不逐文件读（全盘底账可能上万条）。
   巨型簇（report 标 ⚠️）先按二级目录下钻再聚类；判断哪几簇是同一个项目（合并展示，
   执行时 --cluster-id 传多个）、哪份 md 最像 PRD（active_prd 候选）
