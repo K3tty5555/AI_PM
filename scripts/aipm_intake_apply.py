@@ -114,7 +114,10 @@ def cmd_project(mpath: str, cluster_ids: list[str], name: str,
                 raise SystemExit(f"目标已存在且内容不同: {target}（源 {src}）——停项人工裁决")
             shutil.copy2(src, target)
             _migrated_line(mdir, str(src), target.relative_to(proj).as_posix(), _sha256(target), "confirm", "copy")
-    if active_prd:  # 校验已在函数开头，此处仅设置值
+    if active_prd:  # 格式校验已在函数开头；这里核存在性（I2）
+        if not (proj / "05-prd" / active_prd).is_file():
+            have = sorted(x.relative_to(proj / "05-prd").as_posix() for x in (proj / "05-prd").rglob("*.md"))
+            raise SystemExit(f"active_prd 不存在: 05-prd/{active_prd}——05-prd 下实际有: {have or '（无 md）'}")
         st = _load(proj / "_status.json"); st["active_prd"] = active_prd
         _save(proj / "_status.json", st)
     # S1：--project 是路径语义，传完整路径；重入报「已有 baseline」按已完成处理（I4）
@@ -143,7 +146,7 @@ def cmd_skill(repo: Path, src_dir: Path, name: str) -> str:
     target = repo / ".claude/skills" / name
     if target.exists():
         raise SystemExit(f"目标已存在: {target}——列为人工合并候选，绝不就地覆盖")
-    shutil.copytree(src_dir, target)
+    shutil.copytree(src_dir, target, symlinks=True)  # 不跟随 symlink：外部 skill 里的链接不能把目录外内容带进来
     reg["capabilities"].append({"id": name, "skill": name, "availability": "optional-private",
                                 "modes": [], "phase_effect": {"kind": "none"},
                                 "artifacts": ["external-skill"], "side_effects": ["read-project", "write-local"],
@@ -155,6 +158,28 @@ def cmd_skill(repo: Path, src_dir: Path, name: str) -> str:
     if line not in text:
         gi.write_text(text.rstrip("\n") + "\n" + line + "\n", encoding="utf-8")
     return f"skill {name} 已装载（registry + gitignore 已同步）"
+
+
+def cmd_skill_from_manifest(mpath: str, cand_path: str, name: str, repo: Path | None = None) -> str:
+    """I1：--path 只认 manifest.skill_candidates[].path（SKILL.md 文件路径），取 parent 作源目录。
+    三道边界：必须是候选、resolve 后在 manifest.root 之下、源目录确有 SKILL.md。"""
+    mpath = Path(mpath); m = _load(mpath)
+    cand = next((c for c in m.get("skill_candidates", []) if c.get("path") == cand_path), None)
+    if cand is None:
+        raise SystemExit(f"--path 不在 manifest.skill_candidates 里: {cand_path}")
+    if not cand.get("frontmatter_ok"):
+        raise SystemExit(f"候选 frontmatter 不合规，不装载: {cand_path}")
+    root = Path(m["root"]).resolve()
+    skill_md = (root / cand_path).resolve()
+    try:
+        skill_md.relative_to(root)
+    except ValueError:
+        raise SystemExit(f"--path 越出扫描根 {root}: {cand_path}")
+    if skill_md.name != "SKILL.md" or not skill_md.is_file():
+        raise SystemExit(f"源目录缺 SKILL.md: {skill_md.parent}")
+    out = cmd_skill(repo or ROOT, skill_md.parent, name)
+    _migrated_line(mpath.parent, str(skill_md.parent), f".claude/skills/{name}/", "", "confirm", "install-skill")
+    return out
 
 
 def cmd_finish(mpath: str) -> str:
@@ -191,16 +216,15 @@ def main() -> int:
     p1.add_argument("--cluster-id", action="append", required=True)  # S2：可重复，多簇合并
     p1.add_argument("--name", required=True); p1.add_argument("--active-prd", default=None)
     p2 = sub.add_parser("skill"); p2.add_argument("--manifest", required=True)
-    p2.add_argument("--path", required=True); p2.add_argument("--name", required=True)
+    p2.add_argument("--path", required=True, help="manifest.skill_candidates[].path 原值（xxx/SKILL.md）")
+    p2.add_argument("--name", required=True)
+    p2.add_argument("--repo", default=str(ROOT), help=argparse.SUPPRESS)  # 测试注入假仓
     p3 = sub.add_parser("finish"); p3.add_argument("--manifest", required=True)
     args = ap.parse_args()
     if args.cmd == "project":
         print(cmd_project(args.manifest, args.cluster_id, args.name, args.active_prd))
     elif args.cmd == "skill":
-        m = _load(args.manifest)
-        print(cmd_skill(ROOT, Path(m["root"]) / args.path, args.name))
-        _migrated_line(Path(args.manifest).parent, args.path,
-                       f".claude/skills/{args.name}/", "", "confirm", "install-skill")
+        print(cmd_skill_from_manifest(args.manifest, args.path, args.name, Path(args.repo)))
     else:
         print(cmd_finish(args.manifest))
     return 0

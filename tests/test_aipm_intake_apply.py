@@ -1,5 +1,5 @@
 """intake 执行器测试：顺序（骨架+初始status→复制→active_prd→bootstrap）/三分支幂等/同名子路径/装载四道闸。"""
-import importlib.util, json, shutil, sys, tempfile, unittest
+import importlib.util, json, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -122,13 +122,27 @@ class TestApplyProject(unittest.TestCase):
         self.assertFalse(proj.exists(), "active_prd 校验失败后，项目目录不应被创建")
 
     def test_active_prd_legal_relative_path(self):
-        """I2：合法的相对路径如 a..b.md 应被接受。"""
-        # 创建包含 a..b.md 的簇（修改 fixture）
-        module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
-                           active_prd="需求/a..b.md", repo=self.repo)
+        """I2：合法的相对路径如 a..b.md 应被接受（文件真实存在）。"""
+        src = self.work / "messy_copy"
+        shutil.copytree(MESSY, src)
+        (src / "项目A/需求/a..b.md").write_text("# a..b\n", encoding="utf-8")
+        m = scan_mod.scan(src, self.work / "_intake2", extra_skill_dirs=())
+        mpath = self.work / "_intake2" / m["intake_id"] / "manifest.json"
+        cid = next(c["cluster_id"] for c in m["clusters"] if c["source_dirs"] == ["项目A"])
+        module.cmd_project(str(mpath), [cid], "项目A", active_prd="需求/a..b.md", repo=self.repo)
         proj = self.repo / "output/projects/项目A"
         status = json.loads((proj / "_status.json").read_text(encoding="utf-8"))
         self.assertEqual(status["active_prd"], "需求/a..b.md")
+
+    def test_active_prd_must_exist_after_copy(self):
+        """I2：active_prd 指向复制后不存在的文件 → 停项，并列出 05-prd 下实际有的 md。"""
+        with self.assertRaises(SystemExit) as cm:
+            module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                               active_prd="需求/不存在.md", repo=self.repo)
+        self.assertIn("需求/PRD-V1.md", str(cm.exception))
+        status = json.loads((self.repo / "output/projects/项目A/_status.json").read_text(encoding="utf-8"))
+        self.assertIsNone(status["active_prd"])
+        self.assertEqual(json.loads(self.mpath.read_text(encoding="utf-8"))["executed_projects"], [])
 
 
 class TestApplyHomeLike(unittest.TestCase):
@@ -256,6 +270,66 @@ class TestApplySkill(unittest.TestCase):
                                    "capabilities": [{"id": "helper", "skill": "helper"}]}), encoding="utf-8")
         with self.assertRaises(SystemExit):
             module.cmd_skill(self.repo, self.work / "helper", "helper")
+
+
+class TestApplySkillCLI(unittest.TestCase):
+    """I1：skill 子命令 --path 取 manifest 候选值（SKILL.md 路径），越界/非候选一律拒。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.work = Path(self.tmp.name)
+        self.repo = self.work / "repo"
+        (self.repo / ".claude/skills").mkdir(parents=True)
+        (self.repo / "templates/configs").mkdir(parents=True)
+        (self.repo / "templates/configs/capability-registry.json").write_text(
+            json.dumps({"schema_version": 1, "modes": [], "capabilities": []}), encoding="utf-8")
+        (self.repo / ".gitignore").write_text("output/\n", encoding="utf-8")
+        self.src = self.work / "src"
+        shutil.copytree(MESSY, self.src)
+        (self.work / "secret.txt").write_text("外部机密", encoding="utf-8")
+        (self.src / "my-helper/link.txt").symlink_to(self.work / "secret.txt")
+        self.m = scan_mod.scan(self.src, self.work / "_intake", extra_skill_dirs=())
+        self.mpath = self.work / "_intake" / self.m["intake_id"] / "manifest.json"
+
+    def run_cli(self, path, name="my-helper"):
+        return subprocess.run([sys.executable, str(ROOT / "scripts/aipm_intake_apply.py"), "skill",
+                               "--manifest", str(self.mpath), "--path", path, "--name", name,
+                               "--repo", str(self.repo)], capture_output=True, text=True)
+
+    def test_install_candidate_via_cli(self):
+        r = self.run_cli("my-helper/SKILL.md")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        target = self.repo / ".claude/skills/my-helper"
+        self.assertTrue((target / "SKILL.md").is_file())
+        self.assertTrue((target / "link.txt").is_symlink(), "copytree 不得跟随 symlink")
+        rec = json.loads((self.mpath.parent / "migrated.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+        self.assertEqual(rec["action"], "install-skill")
+        self.assertEqual(rec["source_abs"], str((self.src / "my-helper").resolve()))
+
+    def test_traversal_rejected(self):
+        r = self.run_cli("../src/my-helper/SKILL.md")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("不在 manifest.skill_candidates", r.stderr)
+        self.assertFalse((self.repo / ".claude/skills/my-helper").exists())
+
+    def test_non_candidate_rejected(self):
+        r = self.run_cli("项目A/需求/PRD-V1.md", name="x")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("不在 manifest.skill_candidates", r.stderr)
+        self.assertFalse((self.repo / ".claude/skills/x").exists())
+
+    def test_candidate_outside_root_rejected(self):
+        """候选清单被篡改也挡得住：resolve 后必须在 manifest.root 之下。"""
+        outside = self.work / "outside"; outside.mkdir()
+        (outside / "SKILL.md").write_text("---\ndescription: x\n---\n", encoding="utf-8")
+        m = json.loads(self.mpath.read_text(encoding="utf-8"))
+        m["skill_candidates"].append({"path": "../outside/SKILL.md", "name": "outside", "frontmatter_ok": True,
+                                      "collisions": [], "status": "installable"})
+        self.mpath.write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+        r = self.run_cli("../outside/SKILL.md", name="outside")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("越出扫描根", r.stderr)
+        self.assertFalse((self.repo / ".claude/skills/outside").exists())
 
 
 if __name__ == "__main__":
