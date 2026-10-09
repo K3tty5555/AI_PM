@@ -369,6 +369,23 @@ class TestStageDecide(unittest.TestCase):
         self.assertEqual((rec["action"], rec["final_name"]), ("rename", "新名"))
 
 
+class TestSkipReason(unittest.TestCase):
+    def test_never_migrate_even_if_confirmed(self):
+        """dataless/hidden/unreadable/unclassified 无例外；凭证/超大只有逐文件 confirm 才纳入。"""
+        conf = lambda p: {p: {"path": p, "action": "confirm"}}
+        for key in ("dataless", "hidden", "unreadable"):
+            f = {"path": "a.md", "klass": "md", key: True}
+            self.assertEqual(module._skip_reason(f, conf("a.md")), key)
+        self.assertEqual(module._skip_reason({"path": "a.png", "klass": "unclassified"}, conf("a.png")), "unclassified")
+        cred = {"path": "k.md", "klass": "md", "credential_hit": True}
+        self.assertEqual(module._skip_reason(cred, {}), "credential_hit")
+        self.assertIsNone(module._skip_reason(cred, conf("k.md")))
+        self.assertEqual(module._skip_reason({"path": "d/x.md", "klass": "md"},
+                                             {"d": {"path": "d", "action": "exclude"}}), "exclude")
+        self.assertIsNone(module._skip_reason({"path": "dd/x.md", "klass": "md"},
+                                              {"d": {"path": "d", "action": "exclude"}}), "前缀须按目录边界")
+
+
 class TestApplySkill(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)

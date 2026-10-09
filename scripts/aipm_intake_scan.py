@@ -5,13 +5,18 @@
 归属判断留给 Claude（读簇摘要+抽样，见 ai-pm-intake/SKILL.md）。
 """
 from __future__ import annotations
-import argparse, datetime, hashlib, json, re, sys, time
+import argparse, datetime, hashlib, json, os, re, sys, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 # 排除表（spec §2）。目录名级；隐藏目录一律排除。隐藏文件照扫（.env/.zsh_history 要做凭证探测），
 # 但标 hidden=true、永不迁移（C2-1）
-EXCLUDE_DIR_NAMES = {"node_modules", ".git", "dist", "build", "__pycache__", ".venv", "venv", ".Trash"}
+EXCLUDE_DIR_NAMES = {"node_modules", ".git", "dist", "build", "__pycache__", ".venv", "venv", ".Trash",
+                     # I5：真实 macOS 主目录里的环境/依赖/构建产物
+                     "miniconda3", "anaconda3", "site-packages", "target", "Pods", "vendor", ".cache"}
+# I5：macOS 包目录（Finder 里看着是一个文件，里面是成千上万的内部文件）
+EXCLUDE_DIR_SUFFIXES = (".photoslibrary", ".app", ".bundle", ".framework", ".xcodeproj")
+SF_DATALESS = 0x40000000  # macOS st_flags：iCloud「优化存储」只留占位、内容在云端，读一下就触发下载
 EXCLUDE_HOME_PARTS = {"Library", "Applications", "Movies", "Music"}  # 仅扫描根=主目录时生效
 JUNK_FILE_RE = re.compile(r"^(\.DS_Store|Thumbs\.db)$|^~\$")
 CRED_NAME_RE = re.compile(r"(^\.env$|^\.env\.[^.]+$|credentials|id_rsa|\.pem$|^\.netrc$|^\.npmrc$"
@@ -38,12 +43,13 @@ stage: scan|confirm|exec|done（confirm/exec 走 apply stage 子命令置位；d
 scope: {scanned_dirs[], excluded{原因:计数}, total_files, skipped_unreadable}
 clusters[]: {cluster_id, source_dirs[], suggested_name, loose:bool, files[{path,ext,size,sha256?,klass,credential_hit,oversize,mtime}], newest_mtime, big:bool}
   —— source_dirs[0] 是多段相对前缀（自适应切簇）；loose=True 表示只含该目录直放的散文件
-  —— path 为扫描根下相对路径；可选 hidden/unreadable/dataless 标记。
+  —— path 为扫描根下相对路径；可选 hidden/unreadable/dataless 标记。sha256 只对会迁移的候选算
   —— 执行默认跳过：credential_hit/oversize（用户逐个 decide confirm 该文件路径才例外纳入）、
      hidden/unreadable/dataless/klass=unclassified（一律跳过，无例外）
 skill_candidates[]: {path,name,frontmatter_ok,collisions[],status: installable|rename|skip}
 prompt_assets[]: {path,note}
 unclassified[]: {path,ext,size}
+dataless[]: iCloud 云端未下载的占位文件路径（不读内容，apply 跳过）
 duplicates[]: {size,sha256,paths[]}
 project_name_conflicts[]: 建议名撞 output/projects/ 已有项目
 decisions_file: "decisions.jsonl"——确认决策不进 manifest，走 apply decide 逐行追加到同目录
@@ -64,47 +70,68 @@ def sanitize_name(name: str) -> str:
     return s[:40] or "未命名项目"
 
 
+def _stat(entry: os.DirEntry) -> os.stat_result:
+    """单点取 stat（DirEntry 已缓存，不跟随 symlink）；独立成函数便于测试注入 st_flags。"""
+    return entry.stat(follow_symlinks=False)
+
+
+def _is_dataless(st) -> bool:
+    """iCloud 占位文件判定；非 macOS 无 st_flags → False。"""
+    return bool(getattr(st, "st_flags", 0) & SF_DATALESS)
+
+
+def _dir_exclusion(e: os.DirEntry, root: Path, is_home: bool) -> str | None:
+    if e.name in EXCLUDE_DIR_NAMES:
+        return e.name
+    if e.name.startswith("."):
+        return "隐藏目录"
+    suffix = next((sfx for sfx in EXCLUDE_DIR_SUFFIXES if e.name.endswith(sfx)), None)
+    if suffix:
+        return suffix
+    if is_home and Path(e.path).parent == root and e.name in EXCLUDE_HOME_PARTS:
+        return e.name
+    if is_aipm_repo(Path(e.path)):
+        return "aipm-repo"
+    return None
+
+
 def _iter_files(root: Path, excluded: dict[str, int]):
-    """scandir 递归：不跟随 symlink；排除表计数；不可读计 skipped 不中断；每 5000 文件打进度行。"""
-    stack, n = [root], 0
+    """os.scandir 递归（I5：DirEntry 的 is_dir/is_file/is_symlink/stat 复用缓存）：不跟随 symlink；
+    排除表计数；不可读与坏 symlink 计 skipped 不中断；每 5000 文件打进度行。"""
+    is_home = root == Path.home().resolve()
+    stack, n = [str(root)], 0
     while stack:
         d = stack.pop()
         try:
-            entries = list(d.iterdir())
+            with os.scandir(d) as it:
+                entries = list(it)
         except OSError:
-            yield {"_skipped_dir": str(d)}
+            yield {"_skipped_dir": d}
             continue
         for e in entries:
             try:
                 if e.is_symlink():
-                    if not e.exists():  # 坏 symlink：计 skipped（C3）；好 symlink 不跟随、静默略过
-                        yield {"_skipped_dir": str(e)}
+                    if not os.path.exists(e.path):  # 坏 symlink：计 skipped（C3）；好 symlink 不跟随、静默略过
+                        yield {"_skipped_dir": e.path}
                     continue
-                if e.is_dir():
-                    reason = None
-                    if e.name in EXCLUDE_DIR_NAMES:
-                        reason = e.name
-                    elif e.name.startswith("."):
-                        reason = "隐藏目录"
-                    elif root == Path.home().resolve() and e.parent == root and e.name in EXCLUDE_HOME_PARTS:
-                        reason = e.name
-                    elif is_aipm_repo(e):
-                        reason = "aipm-repo"
+                if e.is_dir(follow_symlinks=False):
+                    reason = _dir_exclusion(e, root, is_home)
                     if reason:
                         excluded[reason] = excluded.get(reason, 0) + 1
                         continue
-                    stack.append(e)
-                elif e.is_file():
+                    stack.append(e.path)
+                elif e.is_file(follow_symlinks=False):
                     if JUNK_FILE_RE.match(e.name):
                         excluded["垃圾文件"] = excluded.get("垃圾文件", 0) + 1
                         continue
                     n += 1
                     if n % 5000 == 0:
                         print(f"…已枚举 {n} 文件", file=sys.stderr)
-                    st = e.stat()  # stat 缓存：一次取，别调三次
-                    yield {"path": e, "size": st.st_size, "mtime": st.st_mtime}
+                    st = _stat(e)
+                    yield {"path": Path(e.path), "size": st.st_size, "mtime": st.st_mtime,
+                           "dataless": _is_dataless(st)}
             except OSError:
-                yield {"_skipped_dir": str(e)}
+                yield {"_skipped_dir": e.path}
 
 
 def _sha256(p: Path) -> str:
@@ -212,7 +239,9 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
                  "hidden": p.name.startswith("."),
                  "oversize": item["size"] > 50 << 20,
                  "mtime": datetime.datetime.fromtimestamp(item["mtime"]).isoformat(timespec="seconds")}
-        if not entry["credential_hit"] and ext in CONTENT_PROBE_EXTS and entry["size"] < (2 << 20):
+        if item.get("dataless"):  # I5：云端占位不读内容（不探测、不哈希），apply 跳过
+            entry["dataless"] = True
+        elif not entry["credential_hit"] and ext in CONTENT_PROBE_EXTS and entry["size"] < (2 << 20):
             try:
                 text = p.read_text(encoding="utf-8", errors="ignore")
                 entry["credential_hit"] = any(r.search(text) for r in CRED_CONTENT_RES)
@@ -221,10 +250,11 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
                 skipped += 1
         raw.append(entry)
 
-    # 去重：同 size 分组才哈希；size=0 的空文件直接成组不哈希（真实 home 空文件成百上千）
+    # 去重：只对「会迁移的候选」做（I5：超大/凭证/隐藏/未归类/云端占位/不可读都不哈希，
+    # 全盘扫描时这几类占了绝大多数字节）；同 size 分组才哈希；size=0 的空文件直接成组不哈希
     by_size: dict[int, list[dict]] = {}
     for e in raw:
-        if not e.get("unreadable"):
+        if will_migrate(e):
             by_size.setdefault(e["size"], []).append(e)
     dup_groups = []
     for size, group in by_size.items():
@@ -252,7 +282,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
     for c in cluster_list:
         for f in c["files"]:
             p = root / f["path"]
-            if f.get("unreadable"):
+            if f.get("unreadable") or f.get("dataless"):
                 continue
             if p.name == "SKILL.md":
                 name = p.parent.name
@@ -291,6 +321,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
         "prompt_assets": prompt_assets,
         "unclassified": [e for e in raw if e["klass"] == "unclassified"],
         "duplicates": dup_groups, "project_name_conflicts": conflicts,
+        "dataless": [e["path"] for e in raw if e.get("dataless")],
         "decisions_file": "decisions.jsonl", "executed_projects": [],
     }
     intake_dir = _mkdir_numbered(out_root, manifest["intake_id"])  # 同秒撞名：加序号重试（spec §3）
@@ -337,6 +368,8 @@ def _write_report(intake_dir: Path, m: dict, root: Path, n_files: int, skipped: 
     lines += ([f"- {a['path']}：{a['note']}" for a in m["prompt_assets"]] or ["-（无）"])
     lines += ["", f"## 未归类（{len(m['unclassified'])}，默认不迁移）", ""]
     lines += ([f"- {u['path']}" for u in m["unclassified"][:20]] or ["-（无）"])
+    lines += ["", f"## 云端未下载文件（{len(m['dataless'])}，iCloud 占位，未读取、不迁移；需要的话先在 Finder 里下载再重扫）", ""]
+    lines += ([f"- {p}" for p in m["dataless"][:50]] or ["-（无）"])
     lines += ["", "## 凭证命中（默认跳过，显式确认才迁）", "", cred_lines,
               "", f"## 重复文件组（{len(m['duplicates'])}）", ""]
     (intake_dir / "report.md").write_text("\n".join(lines), encoding="utf-8")

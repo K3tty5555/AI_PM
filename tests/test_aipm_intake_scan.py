@@ -1,6 +1,7 @@
 # tests/test_aipm_intake_scan.py
 """intake 扫描器测试：排除表 / 分类 / 哈希去重 / 凭证 / sanitize / 簇聚合 / 仓库根排除 / 报告。"""
 import importlib.util, json, os, shutil, tempfile
+from types import SimpleNamespace
 from pathlib import Path
 import unittest
 
@@ -134,6 +135,80 @@ class TestUnreadable(unittest.TestCase):
             ents = {f["path"]: f for c in m["clusters"] for f in c["files"]}
             self.assertTrue(ents["p/b.html"].get("unreadable"))
             self.assertEqual(m["duplicates"], [])
+
+
+class TestHomeUsability(unittest.TestCase):
+    """I5：真实 macOS 主目录可用性——排除表、只对会迁移的候选算哈希、iCloud dataless 不读内容。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.r = Path(self.tmp.name) / "r"
+        self.r.mkdir()
+
+    def put(self, rel, text="x"):
+        f = self.r / rel; f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(text, encoding="utf-8")
+        return f
+
+    def scan(self):
+        return module.scan(self.r, Path(self.tmp.name) / "_i", extra_skill_dirs=())
+
+    def paths(self, m):
+        return sorted(f["path"] for c in m["clusters"] for f in c["files"])
+
+    def test_name_and_suffix_exclusions(self):
+        for rel in ("X.app/a.md", "照片图库.photoslibrary/b.md", "Foo.bundle/c.md", "Bar.framework/d.md",
+                    "Proj.xcodeproj/e.md", "miniconda3/f.md", "anaconda3/g.md", "py/lib/site-packages/h.md",
+                    "rs/target/i.md", "ios/Pods/j.md", "php/vendor/k.md", ".cache/l.md", "keep/ok.md"):
+            self.put(rel)
+        m = self.scan()
+        self.assertEqual(self.paths(m), ["keep/ok.md"])
+        ex = m["scope"]["excluded"]
+        for k in (".app", ".photoslibrary", "miniconda3", "site-packages", "target", "Pods", "vendor"):
+            self.assertIn(k, ex, ex)
+
+    def test_dedup_hashes_only_migratable(self):
+        (self.r / "p").mkdir()
+        for name in ("big1.md", "big2.md"):  # 稀疏文件：秒建 51MB 双胞胎（oversize）
+            with (self.r / "p" / name).open("wb") as fh:
+                fh.truncate(51 << 20)
+        self.put("p/a.png", "same-png"); self.put("p/b.png", "same-png")              # unclassified
+        self.put("p/k1.md", f"sk-{'Z9' * 12}"); self.put("p/k2.md", f"sk-{'Z9' * 12}")  # credential
+        self.put("p/.h1", "hidden!"); self.put("p/.h2", "hidden!")                     # hidden
+        self.put("p/m1.md", "migrate"); self.put("p/m2.md", "migrate")                # 真候选
+        m = self.scan()
+        ents = {f["path"]: f for c in m["clusters"] for f in c["files"]}
+        for rel in ("p/big1.md", "p/big2.md", "p/a.png", "p/b.png", "p/k1.md", "p/k2.md", "p/.h1", "p/.h2"):
+            self.assertNotIn("sha256", ents[rel], f"{rel} 不会迁移，不该哈希")
+        self.assertIn("sha256", ents["p/m1.md"])
+        self.assertEqual([sorted(g["paths"]) for g in m["duplicates"]], [["p/m1.md", "p/m2.md"]])
+
+    def test_dataless_not_read(self):
+        secret = f"token = {'Q' * 24}"
+        self.put("p/cloud.md", secret); self.put("p/local.md", secret.replace("token", "plain"))
+        orig = module._stat
+        def fake(entry):
+            st = orig(entry)
+            if entry.name != "cloud.md":
+                return st
+            return SimpleNamespace(st_size=st.st_size, st_mtime=st.st_mtime, st_flags=0x40000000)
+        module._stat = fake
+        self.addCleanup(setattr, module, "_stat", orig)
+        m = self.scan()
+        cloud = next(f for c in m["clusters"] for f in c["files"] if f["path"] == "p/cloud.md")
+        self.assertTrue(cloud["dataless"])
+        self.assertFalse(cloud["credential_hit"], "dataless 不读内容 → 不做内容探测")
+        self.assertNotIn("sha256", cloud)
+        self.assertFalse(module.will_migrate(cloud))
+        self.assertIn("p/cloud.md", m["dataless"])
+        report = (Path(self.tmp.name) / "_i" / m["intake_id"] / "report.md").read_text(encoding="utf-8")
+        self.assertIn("云端未下载文件", report)
+        self.assertIn("p/cloud.md", report)
+
+    def test_is_dataless_flag(self):
+        self.assertTrue(module._is_dataless(SimpleNamespace(st_flags=0x40000000 | 0x20)))
+        self.assertFalse(module._is_dataless(SimpleNamespace(st_flags=0x20)))
+        self.assertFalse(module._is_dataless(SimpleNamespace()), "非 macOS 无 st_flags")
 
 
 class TestAdaptiveClusters(unittest.TestCase):
