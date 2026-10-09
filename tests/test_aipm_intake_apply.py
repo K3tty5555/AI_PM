@@ -25,7 +25,27 @@ def _fake_repo(work: Path) -> Path:
     (repo / "templates/configs").mkdir(parents=True)
     (repo / "templates/configs/capability-registry.json").write_text(
         '{"schema_version":1,"modes":[],"capabilities":[]}', encoding="utf-8")
+    # verify 要跑假仓自己的 status_migrate --validate，它按脚本位置解析这两份
+    for rel in ("templates/project-index/status.schema.json", "templates/configs/workflow-phases.json"):
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_bytes((ROOT / rel).read_bytes())
     return repo
+
+
+def _inject_claims(proj: Path, prd_rel: str) -> None:
+    """模拟 Claude 的 claims 提炼（字段结构与 SKILL.md「claims 提炼」节一致）。"""
+    bp = proj / "01-baseline-manifest.json"
+    b = json.loads(bp.read_text(encoding="utf-8"))
+    b["claims"] = [{"claim_id": "scope.current", "kind": "current-fact", "statement": "已有 PRD",
+                    "risk": "medium", "state": "active", "source_ids": ["source.prd"], "aliases": []}]
+    b["sources"] = [{"source_id": "source.prd", "kind": "current-product",
+                     "path_or_remote_id": prd_rel, "observed_at": "2026-10-09", "authority": "confirmed"}]
+    bp.write_text(json.dumps(b, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def _entry(mpath: Path, name: str) -> dict:
+    return next(e for e in json.loads(Path(mpath).read_text(encoding="utf-8"))["executed_projects"]
+                if e["name"] == name)
 
 
 class TestApplyProject(unittest.TestCase):
@@ -67,9 +87,58 @@ class TestApplyProject(unittest.TestCase):
     def test_idempotent_rerun_after_done(self):
         module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
                            active_prd="需求/PRD-V1.md", repo=self.repo)
+        _inject_claims(self.repo / "output/projects/项目A", "05-prd/需求/PRD-V1.md")
+        module.cmd_verify(str(self.mpath), "项目A", repo=self.repo)
         out = module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
                                  active_prd="需求/PRD-V1.md", repo=self.repo)
         self.assertIn("已完成，跳过", out)
+
+    def test_project_marks_copied_not_done(self):
+        """I3：project 只写 copied，done 留给 verify。"""
+        module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                           active_prd="需求/PRD-V1.md", repo=self.repo)
+        e = _entry(self.mpath, "项目A")
+        self.assertTrue(e["copied"])
+        self.assertNotIn("done", e)
+        out = module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                                 active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertIn("已复制，待补 claims 后跑 verify", out)
+
+    def test_verify_gates_done_on_claims(self):
+        """I3：未补 claims → verify 失败不写 done；补上 → 通过写 done；之后 project 跳过。"""
+        module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                           active_prd="需求/PRD-V1.md", repo=self.repo)
+        with self.assertRaises(SystemExit) as cm:
+            module.cmd_verify(str(self.mpath), "项目A", repo=self.repo)
+        self.assertIn("claims 为空", str(cm.exception))
+        self.assertNotIn("done", _entry(self.mpath, "项目A"))
+        _inject_claims(self.repo / "output/projects/项目A", "05-prd/需求/PRD-V1.md")
+        out = module.cmd_verify(str(self.mpath), "项目A", repo=self.repo)
+        self.assertIn("通过", out)
+        self.assertTrue(_entry(self.mpath, "项目A")["done"])
+        again = module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                                   active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertIn("已完成，跳过", again)
+
+    def test_verify_cli_nonzero_on_failure(self):
+        module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                           active_prd="需求/PRD-V1.md", repo=self.repo)
+        r = subprocess.run([sys.executable, str(ROOT / "scripts/aipm_intake_apply.py"), "verify",
+                            "--manifest", str(self.mpath), "--name", "项目A", "--repo", str(self.repo)],
+                           capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("claims", r.stderr)
+
+    def test_done_name_with_different_clusters_aborts(self):
+        """顺手修：同名已 done 但这次 cluster_ids 不同 → 报错并列出已登记的 cluster_ids。"""
+        cid = self.cluster_a["cluster_id"]
+        module.cmd_project(str(self.mpath), [cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        _inject_claims(self.repo / "output/projects/项目A", "05-prd/需求/PRD-V1.md")
+        module.cmd_verify(str(self.mpath), "项目A", repo=self.repo)
+        other = next(c["cluster_id"] for c in self.manifest["clusters"] if c["cluster_id"] != cid)
+        with self.assertRaises(SystemExit) as cm:
+            module.cmd_project(str(self.mpath), [cid, other], "项目A", repo=self.repo)
+        self.assertIn(cid, str(cm.exception))
 
     def test_interrupted_rerun_resumes(self):
         """I4：done 前中断（目录半成品、manifest 无 done 记录）→ 重走续传，不报「目标已存在」。"""
@@ -141,7 +210,7 @@ class TestApplyProject(unittest.TestCase):
                                active_prd="需求/不存在.md", repo=self.repo)
         self.assertIn("需求/PRD-V1.md", str(cm.exception))
         status = json.loads((self.repo / "output/projects/项目A/_status.json").read_text(encoding="utf-8"))
-        self.assertIsNone(status["active_prd"])
+        self.assertNotIn("active_prd", status)
         self.assertEqual(json.loads(self.mpath.read_text(encoding="utf-8"))["executed_projects"], [])
 
 
@@ -187,6 +256,10 @@ class TestApplyFinish(unittest.TestCase):
         """I1：两簇合并立项后，cmd_finish 输出含「未处理簇 N」，N = 总簇数 - 2。"""
         cluster_ids = [c["cluster_id"] for c in self.manifest["clusters"][:2]]
         module.cmd_project(str(self.mpath), cluster_ids, "项目A", repo=self.repo)
+        out0 = module.cmd_finish(str(self.mpath))
+        self.assertIn(f"未处理簇 {len(self.manifest['clusters'])}", out0, "只复制未 verify 的不算已处理")
+        _inject_claims(self.repo / "output/projects/项目A", "README.md")
+        module.cmd_verify(str(self.mpath), "项目A", repo=self.repo)
         out = module.cmd_finish(str(self.mpath))
         total_clusters = len(self.manifest["clusters"])
         expected_pending = total_clusters - 2  # 2 簇已合并成 1 项目
@@ -229,6 +302,71 @@ class TestApplyFinish(unittest.TestCase):
         skip_count_final = int(skip_match.group(1)) if skip_match else 0
         self.assertEqual(skip_count_final, skip_count_after_first,
                          f"续传后「跳」计数不应增加：第一次{skip_count_after_first}，续传后{skip_count_final}")
+
+
+class TestStageDecide(unittest.TestCase):
+    """I4：manifest 不靠手工 Edit——stage 改阶段、decide 追加 decisions.jsonl，project 消费 exclude。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.work = Path(self.tmp.name)
+        self.repo = _fake_repo(self.work)
+        self.src = self.work / "src"
+        shutil.copytree(MESSY, self.src)
+        (self.src / "项目A/需求/密钥说明.md").write_text(f"key: sk-{'A1b2' * 6}\n", encoding="utf-8")
+        self.m = scan_mod.scan(self.src, self.work / "_intake", extra_skill_dirs=())
+        self.mpath = self.work / "_intake" / self.m["intake_id"] / "manifest.json"
+        self.cid = next(c["cluster_id"] for c in self.m["clusters"] if c["source_dirs"] == ["项目A"])
+        self.proj = self.repo / "output/projects/项目A"
+
+    def cli(self, *args):
+        return subprocess.run([sys.executable, str(ROOT / "scripts/aipm_intake_apply.py"), *args,
+                               "--manifest", str(self.mpath)], capture_output=True, text=True)
+
+    def test_stage_rewrites_manifest(self):
+        r = self.cli("stage", "--to", "confirm")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(self.mpath.read_text(encoding="utf-8"))["stage"], "confirm")
+        module.cmd_stage(str(self.mpath), "exec")
+        self.assertEqual(json.loads(self.mpath.read_text(encoding="utf-8"))["stage"], "exec")
+
+    def test_decide_exclude_file_and_dir(self):
+        r = self.cli("decide", "--path", "项目A/需求/备份.md", "--action", "exclude")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        module.cmd_decide(str(self.mpath), "项目A/原型", "exclude")
+        lines = (self.mpath.parent / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 2)
+        self.assertIn("ts", json.loads(lines[0]))
+        module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertTrue((self.proj / "05-prd/需求/PRD-V1.md").is_file())
+        self.assertFalse((self.proj / "05-prd/需求/备份.md").exists())
+        self.assertFalse((self.proj / "06-prototype/_imported/原型/index.html").exists())
+        recs = [json.loads(l) for l in (self.mpath.parent / "migrated.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertTrue(any(r["action"] == "skip" and r["decision"] == "exclude"
+                            and r["source_abs"].endswith("备份.md") for r in recs))
+
+    def test_credential_file_needs_explicit_confirm(self):
+        """spec §3：凭证命中默认跳过，用户逐个显式 confirm 该文件才纳入。"""
+        self.assertIn("项目A/需求/密钥说明.md", self.m["credential_hits"])
+        module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertFalse((self.proj / "05-prd/需求/密钥说明.md").exists())
+        shutil.rmtree(self.proj)
+        m = json.loads(self.mpath.read_text(encoding="utf-8")); m["executed_projects"] = []
+        self.mpath.write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+        module.cmd_decide(str(self.mpath), "项目A/需求/密钥说明.md", "confirm")
+        module.cmd_decide(str(self.mpath), "项目A/config.yaml", "confirm")  # 未归类：confirm 也不迁
+        module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertTrue((self.proj / "05-prd/需求/密钥说明.md").is_file())
+        self.assertFalse(any(p.name == "config.yaml" for p in self.proj.rglob("*")))
+
+    def test_decide_rename_validation(self):
+        with self.assertRaises(SystemExit):
+            module.cmd_decide(str(self.mpath), "项目A", "rename")
+        with self.assertRaises(SystemExit):
+            module.cmd_decide(str(self.mpath), "项目A", "rename", final_name="带:冒号")
+        module.cmd_decide(str(self.mpath), "项目A", "rename", final_name="新名")
+        rec = json.loads((self.mpath.parent / "decisions.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+        self.assertEqual((rec["action"], rec["final_name"]), ("rename", "新名"))
 
 
 class TestApplySkill(unittest.TestCase):

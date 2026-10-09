@@ -34,7 +34,7 @@ ROOT_LOOSE_LABEL = "(根目录散文件)"  # 扫描根直放文件的簇名（�
 
 SCHEMA = """
 manifest 字段（Task 2 apply 按此消费）：
-stage: scan|confirm|exec|done（confirm/exec 由 SKILL.md 在进入对应阶段时置位）
+stage: scan|confirm|exec|done（confirm/exec 走 apply stage 子命令置位；done 由 finish 置位）
 scope: {scanned_dirs[], excluded{原因:计数}, total_files, skipped_unreadable}
 clusters[]: {cluster_id, source_dirs[], suggested_name, loose:bool, files[{path,ext,size,sha256?,klass,credential_hit,oversize,mtime}], newest_mtime, big:bool}
   —— source_dirs[0] 是多段相对前缀（自适应切簇）；loose=True 表示只含该目录直放的散文件
@@ -46,8 +46,10 @@ prompt_assets[]: {path,note}
 unclassified[]: {path,ext,size}
 duplicates[]: {size,sha256,paths[]}
 project_name_conflicts[]: 建议名撞 output/projects/ 已有项目
-decisions[]: {path,action: confirm|rename|exclude|skip|install-skill,final_name,ts}（确认阶段逐项追加）
-executed_projects[]: {cluster_ids[],name,done:true,ts}
+decisions_file: "decisions.jsonl"——确认决策不进 manifest，走 apply decide 逐行追加到同目录
+  {ts,path,action: confirm|rename|exclude|skip|install-skill,final_name}；同一路径以最后一条为准
+executed_projects[]: {cluster_ids[],name,copied:true,ts,done?:true,verified_at?}——project 写 copied，
+  verify（契约 + validate）通过才写 done
 """
 
 
@@ -289,7 +291,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
         "prompt_assets": prompt_assets,
         "unclassified": [e for e in raw if e["klass"] == "unclassified"],
         "duplicates": dup_groups, "project_name_conflicts": conflicts,
-        "decisions": [], "executed_projects": [],
+        "decisions_file": "decisions.jsonl", "executed_projects": [],
     }
     intake_dir = _mkdir_numbered(out_root, manifest["intake_id"])  # 同秒撞名：加序号重试（spec §3）
     manifest["credential_hits"] = [f["path"] for c in cluster_list for f in c["files"] if f["credential_hit"]]
