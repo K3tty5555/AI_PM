@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from status_migrate import infer_lifecycle  # noqa: E402
-from aipm_intake_scan import sanitize_name  # noqa: E402  单源：sanitize 只在 scan 定义
+from aipm_intake_scan import sanitize_name, will_migrate  # noqa: E402  单源：sanitize/迁移口径只在 scan 定义
 
 # 上游单源 = .claude/skills/ai-pm/SKILL.md「输出容器与项目目录结构」目录树（2026-10 快照）。
 # 改骨架先改那里再同步这里，别单边加目录（R24）。
@@ -21,7 +21,8 @@ SKELETON_DIRS = ["01-requirement-draft", "02-analysis-report", "03-competitor-re
                  "04-user-stories", "05-prd", "06-prototype", "07-references", "08-reviews",
                  "_memory", "_logs"]
 KLASS_TARGET = {"md": "05-prd", "html": "06-prototype/_imported", "docx": "05-prd",
-                "data": "09-analytics", "ppt": "08-reviews", "unclassified": "07-references/intake-raw"}
+                "data": "09-analytics", "ppt": "08-reviews", "doc": "07-references/intake-raw"}
+# klass=unclassified（图片/安装包/二进制）不在表里：默认不迁移（C2-2，与 report「默认不迁移」一致）
 ACTIVE_PRD_RE = re.compile(r"^(?!05-prd/).+\.md$")
 
 
@@ -41,6 +42,16 @@ def _migrated_line(mdir: Path, source_abs: str, target_rel: str, sha: str, decis
            "target_rel": target_rel, "sha256": sha, "decision": decision, "action": action}
     with (mdir / "migrated.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+
+def _skip_reason(f: dict) -> str | None:
+    """返回跳过原因；None = 迁移。口径单源 = scan.will_migrate。"""
+    if will_migrate(f):
+        return None
+    for key in ("hidden", "unreadable", "dataless", "credential_hit", "oversize"):
+        if f.get(key):
+            return key
+    return "unclassified"
 
 
 def cmd_project(mpath: str, cluster_ids: list[str], name: str,
@@ -86,14 +97,15 @@ def cmd_project(mpath: str, cluster_ids: list[str], name: str,
     root = Path(m["root"])
     for c in clusters:
         for f in c["files"]:
-            if f.get("credential_hit") or f.get("oversize"):
-                _migrated_line(mdir, str(root / f["path"]), "(跳过)", "", "credential/oversize", "skip")
+            reason = _skip_reason(f)
+            if reason:
+                _migrated_line(mdir, str(root / f["path"]), "(跳过)", "", reason, "skip")
                 continue
             # I5：保留簇内相对子路径，同名文件不互相覆盖
             rel = f["path"]
             top = c["source_dirs"][0]
             inner = rel[len(top) + 1:] if rel.startswith(top + "/") else Path(rel).name
-            target = proj / KLASS_TARGET.get(f["klass"], "07-references/intake-raw") / inner
+            target = proj / KLASS_TARGET[f["klass"]] / inner
             target.parent.mkdir(parents=True, exist_ok=True)
             src = root / f["path"]
             if target.exists():

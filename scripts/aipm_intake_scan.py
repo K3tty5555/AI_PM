@@ -9,17 +9,24 @@ import argparse, datetime, hashlib, json, re, sys, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-# 排除表（spec §2）。目录名级；隐藏目录一律排除（隐藏文件不排除——.env 必须扫到）
+# 排除表（spec §2）。目录名级；隐藏目录一律排除。隐藏文件照扫（.env/.zsh_history 要做凭证探测），
+# 但标 hidden=true、永不迁移（C2-1）
 EXCLUDE_DIR_NAMES = {"node_modules", ".git", "dist", "build", "__pycache__", ".venv", "venv", ".Trash"}
 EXCLUDE_HOME_PARTS = {"Library", "Applications", "Movies", "Music"}  # 仅扫描根=主目录时生效
 JUNK_FILE_RE = re.compile(r"^(\.DS_Store|Thumbs\.db)$|^~\$")
-CRED_NAME_RE = re.compile(r"(^\.env$|^\.env\.[^.]+$|credentials|id_rsa|\.pem$)", re.I)
+CRED_NAME_RE = re.compile(r"(^\.env$|^\.env\.[^.]+$|credentials|id_rsa|\.pem$|^\.netrc$|^\.npmrc$"
+                          r"|^\.pgpass$|^\.pypirc$|_history$|^\.git-credentials$)", re.I)
+# 内容探测面（C2-3）：文本类配置/脚本，均限 < 2MB
+CONTENT_PROBE_EXTS = {".md", ".txt", ".json", ".yaml", ".yml", ".toml", ".ini", ".conf", ".cfg", ".env",
+                      ".sh", ".zsh", ".bash", ".py", ".js", ".ts", ".properties", ".xml"}
 CRED_CONTENT_RES = [re.compile(p) for p in (
     r"sk-[A-Za-z0-9]{20,}", r"pat_[A-Za-z0-9]{10,}",
     r"(?i)(api[_-]?key|secret|token)\s*[:=]\s*['\"]?[A-Za-z0-9]{16,}")]
 KLASS_BY_EXT = {".md": "md", ".markdown": "md", ".html": "html", ".htm": "html",
                 ".docx": "docx", ".doc": "docx", ".xlsx": "data", ".xls": "data", ".csv": "data",
-                ".pptx": "ppt", ".ppt": "ppt"}
+                ".pptx": "ppt", ".ppt": "ppt",
+                # 已归属项目但类型不明的文档 → 07-references/intake-raw/（spec §4「拿不准的」）
+                ".txt": "doc", ".pdf": "doc", ".rtf": "doc"}
 ILLEGAL_NAME_RE = re.compile(r'[\\/:*?"<>|]+')  # 连续非法字符合并为一个 -
 BIG_CLUSTER = 200  # 簇文件数超过此值且含子目录 → 按直接子目录下切（C1 自适应切簇）
 MAX_CLUSTER_DEPTH = 4  # 相对扫描根最多切到第 4 层；封顶仍超阈值才标 big
@@ -31,7 +38,9 @@ stage: scan|confirm|exec|done（confirm/exec 由 SKILL.md 在进入对应阶段�
 scope: {scanned_dirs[], excluded{原因:计数}, total_files, skipped_unreadable}
 clusters[]: {cluster_id, source_dirs[], suggested_name, loose:bool, files[{path,ext,size,sha256?,klass,credential_hit,oversize,mtime}], newest_mtime, big:bool}
   —— source_dirs[0] 是多段相对前缀（自适应切簇）；loose=True 表示只含该目录直放的散文件
-  —— path 为扫描根下相对路径；credential_hit/oversize 的文件执行时默认跳过
+  —— path 为扫描根下相对路径；可选 hidden/unreadable/dataless 标记。
+  —— 执行默认跳过：credential_hit/oversize（用户逐个 decide confirm 该文件路径才例外纳入）、
+     hidden/unreadable/dataless/klass=unclassified（一律跳过，无例外）
 skill_candidates[]: {path,name,frontmatter_ok,collisions[],status: installable|rename|skip}
 prompt_assets[]: {path,note}
 unclassified[]: {path,ext,size}
@@ -66,6 +75,8 @@ def _iter_files(root: Path, excluded: dict[str, int]):
         for e in entries:
             try:
                 if e.is_symlink():
+                    if not e.exists():  # 坏 symlink：计 skipped（C3）；好 symlink 不跟随、静默略过
+                        yield {"_skipped_dir": str(e)}
                     continue
                 if e.is_dir():
                     reason = None
@@ -129,6 +140,12 @@ def _skill_collisions(name: str, extra_skill_dirs=None) -> list[str]:
     return hits
 
 
+def will_migrate(f: dict) -> bool:
+    """默认会被迁移的文件（apply 与 copy_bytes 预估共用口径）。凭证/超大可经用户逐个 confirm 例外纳入。"""
+    return not (f.get("credential_hit") or f.get("oversize") or f.get("hidden") or f.get("unreadable")
+                or f.get("dataless") or f.get("klass") == "unclassified")
+
+
 def _build_clusters(raw: list[dict], big_cluster: int) -> list[dict]:
     """自适应切簇（C1）：先按一级目录归簇；文件数 > big_cluster 且含子目录的簇，按直接子目录递归下切，
     直到 ≤ 阈值或相对扫描根 MAX_CLUSTER_DEPTH 层。每层目录里的散文件单独成簇（loose=True），
@@ -190,20 +207,23 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
         entry = {"path": rel, "ext": ext, "size": item["size"],
                  "klass": KLASS_BY_EXT.get(ext, "unclassified"),
                  "credential_hit": bool(CRED_NAME_RE.search(p.name)),
+                 "hidden": p.name.startswith("."),
                  "oversize": item["size"] > 50 << 20,
                  "mtime": datetime.datetime.fromtimestamp(item["mtime"]).isoformat(timespec="seconds")}
-        if not entry["credential_hit"] and ext in {".md", ".txt", ".json"} and entry["size"] < (2 << 20):
+        if not entry["credential_hit"] and ext in CONTENT_PROBE_EXTS and entry["size"] < (2 << 20):
             try:
                 text = p.read_text(encoding="utf-8", errors="ignore")
                 entry["credential_hit"] = any(r.search(text) for r in CRED_CONTENT_RES)
             except OSError:
-                pass
+                entry["unreadable"] = True
+                skipped += 1
         raw.append(entry)
 
     # 去重：同 size 分组才哈希；size=0 的空文件直接成组不哈希（真实 home 空文件成百上千）
     by_size: dict[int, list[dict]] = {}
     for e in raw:
-        by_size.setdefault(e["size"], []).append(e)
+        if not e.get("unreadable"):
+            by_size.setdefault(e["size"], []).append(e)
     dup_groups = []
     for size, group in by_size.items():
         if len(group) < 2:
@@ -212,10 +232,15 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
             dup_groups.append({"size": 0, "sha256": "", "paths": [e["path"] for e in group]})
             continue
         for e in group:
-            e["sha256"] = _sha256(root / e["path"])
+            try:
+                e["sha256"] = _sha256(root / e["path"])
+            except OSError:  # C3：不可读不中断，计 skipped，apply 跳过
+                e["unreadable"] = True
+                skipped += 1
         by_hash: dict[str, list[str]] = {}
         for e in group:
-            by_hash.setdefault(e["sha256"], []).append(e["path"])
+            if "sha256" in e:
+                by_hash.setdefault(e["sha256"], []).append(e["path"])
         dup_groups += [{"size": size, "sha256": h, "paths": ps} for h, ps in by_hash.items() if len(ps) > 1]
 
     cluster_list = _build_clusters(raw, big_cluster)
@@ -225,16 +250,26 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
     for c in cluster_list:
         for f in c["files"]:
             p = root / f["path"]
+            if f.get("unreadable"):
+                continue
             if p.name == "SKILL.md":
                 name = p.parent.name
-                front = p.read_text(encoding="utf-8", errors="ignore")
+                try:
+                    front = p.read_text(encoding="utf-8", errors="ignore")
+                except OSError:  # C3
+                    f["unreadable"] = True; skipped += 1
+                    continue
                 parts = front.split("---", 2)
                 ok = front.lstrip().startswith("---") and len(parts) >= 3 and "description:" in parts[1]
                 col = _skill_collisions(name, extra_skill_dirs)
                 skill_candidates.append({"path": f["path"], "name": name, "frontmatter_ok": ok,
                                          "collisions": col, "status": "skip" if not ok else ("rename" if col else "installable")})
             elif f["klass"] == "md" and f["size"] < (1 << 20):
-                head = p.read_text(encoding="utf-8", errors="ignore")[:600]
+                try:
+                    head = p.read_text(encoding="utf-8", errors="ignore")[:600]
+                except OSError:  # C3
+                    f["unreadable"] = True; skipped += 1
+                    continue
                 if re.search(r"你是一位|You are a|请按以下流程|#\s*系统提示词", head):
                     prompt_assets.append({"path": f["path"], "note": "疑似 prompt/规则文档"})
 
@@ -242,8 +277,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
     existing = {p.name for p in projects.glob("*") if p.is_dir()} if projects.is_dir() else set()
     conflicts = sorted({c["suggested_name"] for c in cluster_list if c["suggested_name"] in existing})
 
-    copy_bytes = sum(f["size"] for c in cluster_list for f in c["files"]
-                     if not f["credential_hit"] and not f["oversize"])
+    copy_bytes = sum(f["size"] for c in cluster_list for f in c["files"] if will_migrate(f))
     manifest = {
         "schema_version": 1, "intake_id": time.strftime("%Y%m%d-%H%M%S"),
         "root": str(root), "stage": "scan",

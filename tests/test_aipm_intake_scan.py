@@ -1,6 +1,6 @@
 # tests/test_aipm_intake_scan.py
 """intake 扫描器测试：排除表 / 分类 / 哈希去重 / 凭证 / sanitize / 簇聚合 / 仓库根排除 / 报告。"""
-import importlib.util, json, shutil, tempfile
+import importlib.util, json, os, shutil, tempfile
 from pathlib import Path
 import unittest
 
@@ -23,7 +23,8 @@ class TestScan(unittest.TestCase):
 
     def test_fixture_intact_then_exclusions(self):
         # fixture 完整性先行断言：任一被 gitignore 静默吞掉，下面的排除断言就是空转
-        for rel in ("node_modules/junk/x.js", ".env", ".DS_Store", "fake-aipm-repo/CLAUDE.md"):
+        for rel in ("node_modules/junk/x.js", ".env", ".DS_Store", "fake-aipm-repo/CLAUDE.md",
+                    ".zsh_history", "项目A/config.yaml", "项目A/截图.png"):
             self.assertTrue((MESSY / rel).exists(), f"fixture 缺 {rel}（检查 tests/.gitignore 白名单）")
         all_paths = [f["path"] for c in self.manifest["clusters"] for f in c["files"]]
         self.assertFalse(any("node_modules" in p for p in all_paths))
@@ -43,6 +44,40 @@ class TestScan(unittest.TestCase):
 
     def test_credential_default_skip(self):
         self.assertTrue(any(p.endswith(".env") for p in self.manifest["credential_hits"]))
+
+    def entry(self, rel):
+        return next(f for c in self.manifest["clusters"] for f in c["files"] if f["path"] == rel)
+
+    def test_hidden_file_probed_and_marked(self):
+        """C2-1：隐藏文件永不迁移，但仍探测凭证进 credential_hits。"""
+        self.assertIn(".zsh_history", self.manifest["credential_hits"])
+        self.assertTrue(self.entry(".zsh_history")["hidden"])
+        self.assertTrue(self.entry(".env")["hidden"])
+        self.assertFalse(self.entry("项目A/需求/PRD-V1.md")["hidden"])
+
+    def test_content_probe_yaml(self):
+        """C2-3：config.yaml 里的 token 也要探到。"""
+        self.assertIn("项目A/config.yaml", self.manifest["credential_hits"])
+
+    def test_cred_name_patterns(self):
+        """C2-4：常见凭证/历史文件名直接命中。"""
+        for n in (".netrc", ".npmrc", ".pgpass", ".pypirc", ".zsh_history", ".bash_history",
+                  ".git-credentials", ".env", ".env.local", "id_rsa"):
+            self.assertTrue(module.CRED_NAME_RE.search(n), n)
+        self.assertFalse(module.CRED_NAME_RE.search("history.md"))
+
+    def test_content_probe_extensions(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d) / "r"; (r / "p").mkdir(parents=True)
+            for ext in (".sh", ".toml", ".ini", ".py", ".properties", ".xml", ".conf"):
+                (r / "p" / f"x{ext}").write_text(f"secret = {'Q' * 24}{ext}\n", encoding="utf-8")
+            m = module.scan(r, Path(d) / "_i", extra_skill_dirs=())
+            self.assertEqual(len(m["credential_hits"]), 7, m["credential_hits"])
+
+    def test_doc_klass(self):
+        """C2-2：txt/pdf/rtf 是「类型不明的文档」klass=doc，不是 unclassified。"""
+        for ext in (".txt", ".pdf", ".rtf"):
+            self.assertEqual(module.KLASS_BY_EXT[ext], "doc")
 
     def test_skill_candidate_detected(self):
         cand = next(s for s in self.manifest["skill_candidates"] if s["name"] == "my-helper")
@@ -76,6 +111,29 @@ class TestScan(unittest.TestCase):
         self.assertIn("未归类", text)
         self.assertIn("prompt", text)                 # R18：能力资产清单进报告
         self.assertIn("复制总量", text)                # R18：总量预估进报告
+
+
+@unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root 无视 chmod 000")
+class TestUnreadable(unittest.TestCase):
+    """C3：不可读文件不能让整次扫描崩溃。"""
+
+    def test_unreadable_files_counted_not_raised(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d) / "r"
+            (r / "p").mkdir(parents=True); (r / "s").mkdir()
+            (r / "p" / "a.html").write_text("<p>same</p>", encoding="utf-8")
+            locked = r / "p" / "b.html"; locked.write_text("<p>diff</p>", encoding="utf-8")  # 同 size → 走哈希
+            skill = r / "s" / "SKILL.md"; skill.write_text("---\ndescription: x\n---\n", encoding="utf-8")
+            (r / "p" / "dangling.md").symlink_to(r / "nope.md")
+            locked.chmod(0); skill.chmod(0)
+            try:
+                m = module.scan(r, Path(d) / "_i", extra_skill_dirs=())
+            finally:
+                locked.chmod(0o644); skill.chmod(0o644)
+            self.assertGreaterEqual(m["scope"]["skipped_unreadable"], 3, m["scope"])
+            ents = {f["path"]: f for c in m["clusters"] for f in c["files"]}
+            self.assertTrue(ents["p/b.html"].get("unreadable"))
+            self.assertEqual(m["duplicates"], [])
 
 
 class TestAdaptiveClusters(unittest.TestCase):

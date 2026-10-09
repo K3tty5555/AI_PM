@@ -4,3 +4,4 @@
 !fixtures/intake/messy/.DS_Store
 !fixtures/intake/messy/.env
 !fixtures/intake/messy/node_modules/
+!fixtures/intake/messy/.zsh_history

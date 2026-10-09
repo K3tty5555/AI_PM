@@ -51,6 +51,19 @@ class TestApplyProject(unittest.TestCase):
         errors, _ = aipm_core.validate_status_artifacts(status, proj)
         self.assertEqual(errors, [], f"status 违约: {errors}")
 
+    def test_credentials_hidden_unclassified_not_copied(self):
+        """C2：凭证命中/隐藏/未归类一律不进项目目录，且留 skip 痕。"""
+        module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                           active_prd="需求/PRD-V1.md", repo=self.repo)
+        root_c = next(c for c in self.manifest["clusters"] if c["source_dirs"] == ["(根目录散文件)"])
+        module.cmd_project(str(self.mpath), [root_c["cluster_id"]], "散文件", repo=self.repo)
+        names = {p.name for p in (self.repo / "output/projects").rglob("*") if p.is_file()}
+        for leaked in ("config.yaml", "截图.png", ".zsh_history", ".env", "家庭照片.png"):
+            self.assertNotIn(leaked, names)
+        recs = [json.loads(l) for l in (self.mpath.parent / "migrated.jsonl").read_text(encoding="utf-8").splitlines()]
+        skipped = {Path(r["source_abs"]).name for r in recs if r["action"] == "skip"}
+        self.assertTrue({"config.yaml", "截图.png", ".zsh_history", ".env", "家庭照片.png"} <= skipped, skipped)
+
     def test_idempotent_rerun_after_done(self):
         module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
                            active_prd="需求/PRD-V1.md", repo=self.repo)
@@ -142,6 +155,10 @@ class TestApplyHomeLike(unittest.TestCase):
                             ("05-prd", "06-prototype", "07-references", "08-reviews", "09-analytics"))
             self.assertEqual(copied, ["05-prd/需求/PRD.md", "06-prototype/_imported/原型/index.html"])
             self.assertFalse(any("杂物" in p.as_posix() for p in proj.rglob("*")))
+            # C2-2：已归属项目、类型不明的文档（txt）进 07-references/intake-raw/
+            zid = next(c["cluster_id"] for c in m["clusters"] if c["source_dirs"][0] == "Documents/杂物")
+            module.cmd_project(str(mpath), [zid], "杂物", repo=repo)
+            self.assertTrue((repo / "output/projects/杂物/07-references/intake-raw/readme.txt").is_file())
 
 
 class TestApplyFinish(unittest.TestCase):
