@@ -14,7 +14,7 @@ class IntakeContractTests(unittest.TestCase):
         settings = (REPO / ".claude/settings.json").read_text(encoding="utf-8")
         self.assertIn("Skill(ai-pm-intake)", facade)
         self.assertIn('"Skill(ai-pm-intake)"', settings)
-        self.assertIn("`/ai-pm intake`", facade)
+        self.assertIn("`/ai-pm intake", facade)  # 前缀断言：命令表写作 `/ai-pm intake [路径]`
 
     def test_registry_entry_matches_disk_and_dispatch(self):
         registry = aipm_core.load_json(REPO / "templates/configs/capability-registry.json")

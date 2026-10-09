@@ -115,7 +115,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm config acceptance` | 验收台账模板管理（默认 9 列，可自设，用法同 config style）|
 | `/ai-pm [URL]` | 分析参考网页（Playwright MCP 抓取） |
 | `/ai-pm update` | AI_PM 自身版本升级（三方合并保留用户改造，支持 `--dry-run` / `rollback`） |
-| `/ai-pm intake` | 外部散乱文件整合：全盘扫描→确认→立项/skill 装载（小白零决策，缺省扫主目录） |
+| `/ai-pm intake [路径]` | 外部散乱文件整合：全盘扫描→确认→立项/skill 装载（小白零决策，缺省扫主目录） |
 
 ### `sharing` 命令分派
 
