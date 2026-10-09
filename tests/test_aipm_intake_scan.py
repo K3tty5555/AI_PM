@@ -715,10 +715,13 @@ class TestTitles(TreeCase):
 
     def test_no_xml_etree(self):
         """§2.2：本机 expat 无 billion laughs 防护，标题抽取绝不能走 xml.etree/minidom/expat。"""
-        src = (ROOT / "scripts/aipm_intake_scan.py").read_text(encoding="utf-8")
-        code = "\n".join(l.split("#", 1)[0] for l in src.splitlines())  # 只看代码，不看注释
-        for banned in ("xml.etree", "ElementTree", "minidom", "xml.dom", "expat", "xml.sax", "lxml"):
-            self.assertNotIn(banned, code)
+        # Ruling 24：抽取逻辑拆到 aipm_intake_titles，两份源码都查（只查 scan 的话守门对拆出去的代码空转）
+        for rel in ("scripts/aipm_intake_scan.py", "scripts/aipm_intake_titles.py"):
+            src = (ROOT / rel).read_text(encoding="utf-8")
+            code = "\n".join(l.split("#", 1)[0] for l in src.splitlines())  # 只看代码，不看注释
+            self.assertIn("zipfile" if rel.endswith("titles.py") else "aipm_intake_titles", code, rel)
+            for banned in ("xml.etree", "ElementTree", "minidom", "xml.dom", "expat", "xml.sax", "lxml"):
+                self.assertNotIn(banned, code, rel)
 
     def test_zip_members_read_bounded_not_trusting_file_size(self):
         """§2.2：成员一律 zf.open(name).read(LIMIT+1)；不信 ZipInfo.file_size、不整读成员。"""

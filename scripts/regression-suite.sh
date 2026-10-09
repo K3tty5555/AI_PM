@@ -184,6 +184,7 @@ PYEOF
       --include-untracked tests/test_ai_pm_update_contract.py \
       --include-untracked scripts/aipm_intake_scan.py \
       --include-untracked scripts/aipm_intake_apply.py \
+      --include-untracked scripts/aipm_intake_titles.py \
       --include-untracked tests/fixtures/intake \
       --include-untracked tests/test_aipm_intake_scan.py \
       --include-untracked tests/test_aipm_intake_apply.py \
