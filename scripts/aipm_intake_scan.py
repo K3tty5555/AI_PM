@@ -99,10 +99,12 @@ def _sha256(p: Path) -> str:
     return h.hexdigest()
 
 
-def _skill_collisions(name: str, extra_skill_dirs=()) -> list[str]:
-    """撞名检测面 = registry 条目 ∪ 项目级 .claude/skills/* ∪ 注入目录（默认含 ~/.claude/skills）。
+def _skill_collisions(name: str, extra_skill_dirs=None) -> list[str]:
+    """撞名检测面 = registry 条目 ∪ 项目级 .claude/skills/* ∪ 用户级 ~/.claude/skills ∪ 注入目录。
 
-    extra_skill_dirs 参数化是给测试用的：测试传 () 固定空集，不绑本机状态。
+    extra_skill_dirs=None（生产默认）：含用户级 ~/.claude/skills；
+    extra_skill_dirs=() （测试显式传空）：固定空注入面，不绑本机状态；
+    非空 tuple：注入目录 + 用户级（显式注入时同样要看用户级撞名）。
     """
     hits = []
     reg = ROOT / "templates/configs/capability-registry.json"
@@ -111,16 +113,20 @@ def _skill_collisions(name: str, extra_skill_dirs=()) -> list[str]:
         for cap in data.get("capabilities", []):
             if cap.get("skill") == name or f"/{name}" in (cap.get("legacy_commands") or []):
                 hits.append(f"registry:{cap.get('id')}")
-    dirs = [ROOT / ".claude/skills", *(Path(d) for d in extra_skill_dirs)]
-    if extra_skill_dirs != ():
-        dirs.append(Path.home() / ".claude/skills")
+    if extra_skill_dirs is None:
+        dirs = [ROOT / ".claude/skills", Path.home() / ".claude/skills"]
+    elif extra_skill_dirs == ():
+        dirs = [ROOT / ".claude/skills"]
+    else:
+        dirs = [ROOT / ".claude/skills", *(Path(d) for d in extra_skill_dirs),
+                Path.home() / ".claude/skills"]
     for base in dirs:
         if (base / name).is_dir():
             hits.append(f"disk:{base}")
     return hits
 
 
-def scan(root: Path, out_root: Path, extra_skill_dirs=()) -> dict:
+def scan(root: Path, out_root: Path, extra_skill_dirs=None) -> dict:
     root = root.expanduser().resolve()
     excluded: dict[str, int] = {}
     raw, skipped = [], 0
