@@ -318,6 +318,65 @@
       "legacy_commands": ["/tutorial-center-update"]
     },
     {
+      "id": "ai-pm-update",
+      "skill": "ai-pm-update",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["update-plan", "update-report"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm update"]
+    },
+    {
+      "id": "d2c",
+      "skill": "d2c",
+      "availability": "optional-private",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["design-source"],
+      "side_effects": ["read-project", "write-local", "network-read"],
+      "legacy_commands": ["/d2c"]
+    },
+    {
+      "id": "d2c-analyze",
+      "skill": "d2c-analyze",
+      "availability": "optional-private",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["design-analysis"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/d2c-analyze"]
+    },
+    {
+      "id": "d2c-codegen",
+      "skill": "d2c-codegen",
+      "availability": "optional-private",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["design-code"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/d2c-codegen"]
+    },
+    {
+      "id": "d2c-fetch",
+      "skill": "d2c-fetch",
+      "availability": "optional-private",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["design-source"],
+      "side_effects": ["network-read", "write-local"],
+      "legacy_commands": ["/d2c-fetch"]
+    },
+    {
+      "id": "d2c-setup",
+      "skill": "d2c-setup",
+      "availability": "optional-private",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["design-connection"],
+      "side_effects": ["write-local"],
+      "legacy_commands": ["/d2c-setup"]
+    },
+    {
       "id": "tpd-adapter",
       "skill": "tpd_cli",
       "availability": "optional-private",

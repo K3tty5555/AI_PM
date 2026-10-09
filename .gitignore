@@ -204,6 +204,9 @@ AI_PM/
 # Hook runtime artifacts (knowledge-capture)
 # -----------------------------------------------------------------------------
 .claude/logs/
+
+# 打包产物（作者侧分发用）
+/dist/
 .claude/hooks/.knowledge-capture.enabled
 .claude/settings.json.bak*
 scripts/.regression-baseline.local

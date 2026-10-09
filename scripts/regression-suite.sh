@@ -67,7 +67,11 @@ run_check "视觉包设计稿来源门禁" python3 -m unittest scripts.test_visu
 run_check "视觉包版本与规格鲜度门禁" python3 -m unittest scripts.test_visual_anchor_freshness
 run_check "经验分享文章工具自测" python3 -m unittest tests.test_ai_pm_sharing_tools
 run_check "经验分享文章契约自测" python3 -m unittest tests.test_ai_pm_sharing_contract
+run_check "升级契约（受管范围/合并协议/报告格式）" bash scripts/check-update-contract.sh
+run_check "打包器与校验器" python3 -m unittest scripts.test_aipm_package
+run_check "升级产物自测（往返/幂等/阴性）" python3 scripts/aipm_update_selftest.py --selftest
 run_check "演讲材料路由与骨架契约自测" python3 -m unittest tests.test_ai_pm_deck_contract
+run_check "升级命令路由与注册表契约自测" python3 -m unittest tests.test_ai_pm_update_contract
 run_check "output 容器注册单源自测" python3 scripts/check-output-container-registry.py
 run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500
 run_check "云文档 pull 离线自测（纯三方算法+复合键回写端到端）" python3 scripts/prd_pull.py --selftest
@@ -173,7 +177,8 @@ PYEOF
       --include-untracked scripts/aipm_system_retrospective.py \
       --include-untracked scripts/ai-sync/conversation-coverage.py \
       --include-untracked tests/fixtures/nextgen \
-      --include-untracked tests/test_aipm_nextgen_contracts.py
+      --include-untracked tests/test_aipm_nextgen_contracts.py \
+      --include-untracked tests/test_ai_pm_update_contract.py
 fi
 
 echo ""
