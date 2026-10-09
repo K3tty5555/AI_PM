@@ -144,6 +144,16 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 
 主控只负责路由和项目解析；三项能力的契约、退出码和写入边界分别由对应 skill 负责，不在这里复制实现步骤。
 
+### `update` 命令分派
+
+当首个参数为 `update`：
+
+1. 不解析当前项目，不读取 `_status.json`。升级对象是 AI_PM 自身，不是某个项目。
+2. 使用 `Skill(ai-pm-update)`，将 `update` 后的原始参数完整传入（`--dry-run` / `rollback` / `--from`）。
+3. 直接返回子 Skill 的识别结果、计划书/对账行与落盘路径。
+
+不要在主控中复制三方合并流程；受管范围、逐文件判定和报告格式由 `ai-pm-update` 负责。
+
 ---
 
 ## 首次初始化（`/ai-pm init`）
