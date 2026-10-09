@@ -20,7 +20,8 @@
       "Skill(ai-pm-reconcile)",
       "Skill(ai-pm-impact)",
       "Skill(ai-pm-retrospective)",
-      "Skill(ai-pm-update)"
+      "Skill(ai-pm-update)",
+      "Skill(ai-pm-intake)"
     ]
   },
   "hooks": {

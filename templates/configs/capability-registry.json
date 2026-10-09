@@ -327,6 +327,15 @@
       "legacy_commands": ["/ai-pm update"]
     },
     {
+      "id": "intake",
+      "skill": "ai-pm-intake",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["intake-manifest", "intake-report"],
+      "side_effects": ["read-project", "write-local"],
+      "legacy_commands": ["/ai-pm intake"]
+    },
+    {
       "id": "d2c",
       "skill": "d2c",
       "availability": "optional-private",

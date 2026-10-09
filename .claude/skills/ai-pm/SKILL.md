@@ -115,6 +115,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm config acceptance` | 验收台账模板管理（默认 9 列，可自设，用法同 config style）|
 | `/ai-pm [URL]` | 分析参考网页（Playwright MCP 抓取） |
 | `/ai-pm update` | AI_PM 自身版本升级（三方合并保留用户改造，支持 `--dry-run` / `rollback`） |
+| `/ai-pm intake [路径]` | 外部散乱文件整合：全盘扫描→确认→立项/skill 装载（小白零决策，缺省扫主目录） |
 
 ### `sharing` 命令分派
 
@@ -153,6 +154,16 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 3. 直接返回子 Skill 的识别结果、计划书/对账行与落盘路径。
 
 不要在主控中复制三方合并流程；受管范围、逐文件判定和报告格式由 `ai-pm-update` 负责。
+
+### `intake` 命令分派
+
+当首个参数为 `intake`：
+
+1. 不解析当前项目，不读取 `_status.json`。整合对象是用户磁盘上的散乱文件，不是 AI_PM 项目。
+2. 使用 `Skill(ai-pm-intake)`，将 `intake` 后的原始参数完整传入（路径可缺省=全盘扫主目录）。
+3. 直接返回盘点报告路径、确认结论与落盘对账行。
+
+不要在主控中复制扫描/聚类流程；三阶段契约、安全线和执行顺序由 `ai-pm-intake` 负责。
 
 ---
 
