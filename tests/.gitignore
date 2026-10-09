@@ -1,0 +1,6 @@
+# intake fixtures 白名单：根 .gitignore 吞掉 .env/.DS_Store/node_modules，
+# 测试要断言扫描器对它们的排除逻辑，必须让 fixture 入库。
+# pattern 相对本目录（嵌套 gitignore 规则），写 tests/ 前缀反而匹配不到。
+!fixtures/intake/messy/.DS_Store
+!fixtures/intake/messy/.env
+!fixtures/intake/messy/node_modules/

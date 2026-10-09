@@ -7,7 +7,7 @@
 |---|---|---|
 | 核心内容 | `projects/`、`assets/`、`sharing/` | 分别存放项目流程、产品级长期资产和独立分享内容 |
 | 工具产出 | `weekly/`、`priority/`、`strategy-sandbox/` | 只由对应 Skill 创建，不进入正式项目列表 |
-| 本机归档与维护 | `_prd-corpus/`、`_archive/`、`backups/`、`.kc_scratch/` | 不进入项目列表，不作为正式项目交付 |
+| 本机归档与维护 | `_prd-corpus/`、`_archive/`、`backups/`、`.kc_scratch/`、`_intake/` | 不进入项目列表，不作为正式项目交付；`_intake/` 存放 intake 盘点/草稿/审计产物，保留最近 5 次 |
 <!-- output-container-registry:end -->
 
 ## 使用规则
