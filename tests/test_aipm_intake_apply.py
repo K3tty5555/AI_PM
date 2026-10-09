@@ -39,7 +39,7 @@ def _inject_claims(proj: Path, prd_rel: str) -> None:
     b["claims"] = [{"claim_id": "scope.current", "kind": "current-fact", "statement": "已有 PRD",
                     "risk": "medium", "state": "active", "source_ids": ["source.prd"], "aliases": []}]
     b["sources"] = [{"source_id": "source.prd", "kind": "current-product",
-                     "path_or_remote_id": prd_rel, "observed_at": "2026-10-09", "authority": "confirmed"}]
+                     "path_or_remote_id": prd_rel, "observed_at": "2026-10-09", "authority": "candidate"}]
     bp.write_text(json.dumps(b, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
@@ -168,6 +168,19 @@ class TestApplyProject(unittest.TestCase):
         with self.assertRaises(SystemExit):
             module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A", repo=self.repo)
 
+    def test_name_conflict_foreign_status_untouched(self):
+        """顺手修：目标有 _status.json 但 notes 无 intake 标记（别人的项目）→ 拒绝且原目录一字不动。"""
+        proj = self.repo / "output/projects/项目A"; proj.mkdir()
+        (proj / "_status.json").write_text(json.dumps({"project": "项目A", "notes": "人工建的"},
+                                                      ensure_ascii=False), encoding="utf-8")
+        (proj / "README.md").write_text("原有内容", encoding="utf-8")
+        before = {p.relative_to(proj).as_posix(): p.read_bytes() for p in proj.rglob("*") if p.is_file()}
+        with self.assertRaises(SystemExit):
+            module.cmd_project(str(self.mpath), [self.cluster_a["cluster_id"]], "项目A",
+                               active_prd="需求/PRD-V1.md", repo=self.repo)
+        after = {p.relative_to(proj).as_posix(): p.read_bytes() for p in proj.rglob("*")}
+        self.assertEqual(after, before)
+
     def test_unsanitized_name_rejected(self):
         """I6：执行器入口设防，未 sanitize 的名字/路径直接拒。"""
         with self.assertRaises(SystemExit):
@@ -268,11 +281,9 @@ class TestApplyFinish(unittest.TestCase):
 
     def test_skip_dedup_on_resume(self):
         """Skip 去重：对含凭证文件的簇立项一次、中断后续传重跑，finish 的「跳」计数不增加。"""
-        # 找含凭证文件的簇（如有）或根目录散文件簇
         cred_cluster = next((c for c in self.manifest["clusters"]
                              if any(f.get("credential_hit") for f in c["files"])), None)
-        if not cred_cluster:
-            self.skipTest("Fixture 中无凭证文件簇")
+        self.assertIsNotNone(cred_cluster, "fixture 必须含凭证簇（.env / .zsh_history / config.yaml）")
         cluster_id = cred_cluster["cluster_id"]
         name = module.sanitize_name("_".join(cred_cluster["source_dirs"]))
 

@@ -112,6 +112,37 @@ class TestScan(unittest.TestCase):
         self.assertIn("未归类", text)
         self.assertIn("prompt", text)                 # R18：能力资产清单进报告
         self.assertIn("复制总量", text)                # R18：总量预估进报告
+        # 顺手修：重复文件组列明细（每组列路径）
+        dup_paths = self.manifest["duplicates"][0]["paths"]
+        for dp in dup_paths:
+            self.assertIn(dp, text.split("## 重复文件组", 1)[1])
+
+    def test_same_second_retry_keeps_id_consistent(self):
+        """顺手修：同秒重试后 intake_id 与实际目录名一致。"""
+        orig = module.time
+        module.time = SimpleNamespace(strftime=lambda fmt: "20261009-120000")
+        self.addCleanup(setattr, module, "time", orig)
+        out = Path(self.tmp.name) / "same"
+        a = module.scan(MESSY, out, extra_skill_dirs=())
+        b = module.scan(MESSY, out, extra_skill_dirs=())
+        self.assertEqual(a["intake_id"], "20261009-120000")
+        self.assertEqual(b["intake_id"], "20261009-120000-2")
+        on_disk = json.loads((out / b["intake_id"] / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(on_disk["intake_id"], "20261009-120000-2")
+
+    def test_report_lists_conflicts_and_oversize(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d) / "r"; (r / "项目A").mkdir(parents=True)
+            (r / "项目A/a.md").write_text("a", encoding="utf-8")
+            with (r / "项目A/录屏.docx").open("wb") as fh:
+                fh.truncate(51 << 20)
+            projects = Path(d) / "projects"; (projects / "项目A").mkdir(parents=True)
+            m = module.scan(r, Path(d) / "_i", extra_skill_dirs=(), projects_dir=projects)
+            self.assertEqual(m["project_name_conflicts"], ["项目A"])
+            text = (Path(d) / "_i" / m["intake_id"] / "report.md").read_text(encoding="utf-8")
+            self.assertIn("## 项目名撞存量", text)
+            self.assertIn("- 项目A", text.split("## 项目名撞存量", 1)[1])
+            self.assertIn("项目A/录屏.docx", text.split("## 超大文件", 1)[1])
 
 
 @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root 无视 chmod 000")

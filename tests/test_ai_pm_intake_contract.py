@@ -33,6 +33,15 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("不自动合并", text)
         self.assertIn("stage", text)  # stage 置位职责在 skill 层
 
+    def test_skill_uses_subcommands_not_manual_edit(self):
+        """I4/I6：确认走 stage/decide，执行走 project → 补 claims → verify → finish。"""
+        text = (REPO / ".claude/skills/ai-pm-intake/SKILL.md").read_text(encoding="utf-8")
+        for needle in ("stage --manifest", "decide --manifest", "verify --manifest", "finish --manifest"):
+            self.assertIn(needle, text)
+        self.assertNotIn("Edit manifest", text)
+        order = [text.index(k) for k in ("project --manifest", "claims 提炼", "verify --manifest", "finish --manifest")]
+        self.assertEqual(order, sorted(order), "执行节顺序必须是 project → claims → verify → finish")
+
     def test_container_registered(self):
         reg = (REPO / ".claude/skills/ai-pm/references/output-containers.md").read_text(encoding="utf-8")
         self.assertIn("`_intake/`", reg)

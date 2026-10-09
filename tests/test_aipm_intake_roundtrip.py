@@ -1,7 +1,7 @@
 # tests/test_aipm_intake_roundtrip.py
 """端到端：假乱目录 → scan → apply（多簇）→ 结构/active_prd/baseline 断言 →
 注入 claims（模拟 Claude 步骤）→ gate 过 → 假仓 status_migrate --validate。"""
-import importlib.util, json, subprocess, sys, tempfile, unittest
+import importlib.util, json, re, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,17 +56,24 @@ class RoundtripTests(unittest.TestCase):
             self.assertEqual(baseline["claims"], [])
             gate_hit = lambda errs: any("claims 为空" in e for e in errs)
             self.assertTrue(gate_hit(aipm_core.validate_baseline(baseline)[0]), "import 类型空 claims 应被 gate 拦")
-            baseline["claims"] = [{
-                "claim_id": "scope.current", "kind": "current-fact", "statement": "项目A 已有 PRD V1",
-                "risk": "medium", "state": "active",
-                "source_ids": ["source.prd"], "aliases": []}]
-            baseline["sources"] = [{
-                "source_id": "source.prd", "kind": "current-product",
-                "path_or_remote_id": "05-prd/需求/PRD-V1.md", "observed_at": "2026-10-09",
-                "authority": "confirmed"}]
+            # 注入的就是 SKILL.md「claims 提炼」节的最小示例原文（文档与 gate 不可能漂移）
+            skill_doc = (ROOT / ".claude/skills/ai-pm-intake/SKILL.md").read_text(encoding="utf-8")
+            m_json = re.search(r"```json\n(.*?)```", skill_doc, re.S)
+            self.assertIsNotNone(m_json, "SKILL.md 缺 claims 最小示例")
+            example = json.loads(m_json.group(1))
+            self.assertEqual(set(example["claims"][0]), {"claim_id", "kind", "statement", "risk", "state",
+                                                          "source_ids", "aliases"})
+            self.assertEqual(set(example["sources"][0]), {"source_id", "kind", "path_or_remote_id",
+                                                           "observed_at", "authority"})
+            baseline["claims"], baseline["sources"] = example["claims"], example["sources"]
+            # verify 先于 claims：必须失败且不写 done
+            with self.assertRaises(SystemExit):
+                apply_mod.cmd_verify(str(mpath), "项目A", repo=repo)
             (proj / "01-baseline-manifest.json").write_text(
                 json.dumps(baseline, ensure_ascii=False, indent=1), encoding="utf-8")
-            self.assertFalse(gate_hit(aipm_core.validate_baseline(baseline)[0]), "注入 claims 后 gate 仍拦")
+            self.assertEqual(aipm_core.validate_baseline(baseline)[0], [], "注入后 baseline 必须零错误")
+            self.assertIn("通过", apply_mod.cmd_verify(str(mpath), "项目A", repo=repo))
+            self.assertIn(f"未处理簇 {len(manifest['clusters']) - 1}", apply_mod.cmd_finish(str(mpath)))
             # R13：spec 执行第 6 步——假仓自己的 status_migrate --validate（schema 层检查）
             r = subprocess.run([sys.executable, str(repo / "scripts/status_migrate.py"), "--validate"],
                                capture_output=True, text=True, cwd=str(repo))

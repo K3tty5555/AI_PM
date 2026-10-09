@@ -222,7 +222,9 @@ def _build_clusters(raw: list[dict], big_cluster: int) -> list[dict]:
     return out
 
 
-def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = BIG_CLUSTER) -> dict:
+def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = BIG_CLUSTER,
+         projects_dir: Path | None = None) -> dict:
+    """projects_dir：撞名查重面，默认本仓 output/projects（测试注入临时目录，不绑本机存量）。"""
     root = root.expanduser().resolve()
     excluded: dict[str, int] = {}
     raw, skipped = [], 0
@@ -305,7 +307,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
                 if re.search(r"你是一位|You are a|请按以下流程|#\s*系统提示词", head):
                     prompt_assets.append({"path": f["path"], "note": "疑似 prompt/规则文档"})
 
-    projects = ROOT / "output/projects"
+    projects = projects_dir if projects_dir is not None else ROOT / "output/projects"
     existing = {p.name for p in projects.glob("*") if p.is_dir()} if projects.is_dir() else set()
     conflicts = sorted({c["suggested_name"] for c in cluster_list if c["suggested_name"] in existing})
 
@@ -325,6 +327,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int = B
         "decisions_file": "decisions.jsonl", "executed_projects": [],
     }
     intake_dir = _mkdir_numbered(out_root, manifest["intake_id"])  # 同秒撞名：加序号重试（spec §3）
+    manifest["intake_id"] = intake_dir.name  # 重试后以实际目录名为准，CLI 打印路径才对得上
     manifest["credential_hits"] = [f["path"] for c in cluster_list for f in c["files"] if f["credential_hit"]]
     (intake_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
     _write_report(intake_dir, manifest, root, len(raw), skipped, copy_bytes)
@@ -370,8 +373,19 @@ def _write_report(intake_dir: Path, m: dict, root: Path, n_files: int, skipped: 
     lines += ([f"- {u['path']}" for u in m["unclassified"][:20]] or ["-（无）"])
     lines += ["", f"## 云端未下载文件（{len(m['dataless'])}，iCloud 占位，未读取、不迁移；需要的话先在 Finder 里下载再重扫）", ""]
     lines += ([f"- {p}" for p in m["dataless"][:50]] or ["-（无）"])
-    lines += ["", "## 凭证命中（默认跳过，显式确认才迁）", "", cred_lines,
-              "", f"## 重复文件组（{len(m['duplicates'])}）", ""]
+    lines += ["", "## 凭证命中（默认跳过，显式确认才迁）", "", cred_lines]
+    oversize = [f for c in m["clusters"] for f in c["files"] if f.get("oversize")]
+    lines += ["", f"## 超大文件（{len(oversize)}，>50MB 默认不迁移，逐个确认才纳入）", ""]
+    lines += ([f"- {f['path']}（{f['size'] / (1 << 20):.0f} MB）" for f in oversize[:50]] or ["-（无）"])
+    conflicts = m["project_name_conflicts"]
+    lines += ["", f"## 项目名撞存量（{len(conflicts)}，确认时须改名，绝不覆盖）", ""]
+    lines += ([f"- {n}" for n in conflicts] or ["-（无）"])
+    dups = m["duplicates"]
+    lines += ["", f"## 重复文件组（{len(dups)}，只报告不自动合并；最多列 20 组）", ""]
+    for i, g in enumerate(dups[:20], 1):
+        lines.append(f"- 组 {i}（{g['size']} B）：" + "；".join(g["paths"]))
+    if not dups:
+        lines.append("-（无）")
     (intake_dir / "report.md").write_text("\n".join(lines), encoding="utf-8")
 
 
