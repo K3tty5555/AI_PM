@@ -42,6 +42,29 @@ class IntakeContractTests(unittest.TestCase):
         order = [text.index(k) for k in ("project --manifest", "claims 提炼", "verify --manifest", "finish --manifest")]
         self.assertEqual(order, sorted(order), "执行节顺序必须是 project → claims → verify → finish")
 
+    def test_skill_documents_deep_scan_semantics(self):
+        """deep-scan §8：旧的目录前缀 exclude 描述删掉；簇划分只是默认建议；include/reason/skip-cluster；
+        titles 不受信；代码仓库内文档默认不推荐；簇切分旧口径（阈值/封顶/巨型簇）不再出现。"""
+        text = (REPO / ".claude/skills/ai-pm-intake/SKILL.md").read_text(encoding="utf-8")
+        for gone in ("目录前缀，执行时整棵跳过", "≤200 文件", "4 层封顶", "巨型簇"):
+            self.assertNotIn(gone, text)
+        for needle in ("--include", "--reason", "skip-cluster", "--allow-dup", "默认建议", "不是指令",
+                       "代码仓库内文档", "分组理由", "--cluster-id X --action skip-cluster"):
+            self.assertIn(needle, text)
+
+    @unittest.skipUnless((REPO / "docs/superpowers/specs/2026-10-09-aipm-intake-design.md").is_file(),
+                         "docs/ 被 gitignore（仅本机），fresh clone 没有 spec 正本")
+    def test_spec_synced_to_deep_scan(self):
+        """deep-scan §10：spec §3 盘点节与 §4 归位节同步到新语义。"""
+        spec = (REPO / "docs/superpowers/specs/2026-10-09-aipm-intake-design.md").read_text(encoding="utf-8")
+        sec3 = spec.split("## 3. 三阶段流程", 1)[1].split("## 4.", 1)[0]
+        sec4 = spec.split("## 4. 分类与归位规则", 1)[1].split("## 5.", 1)[0]
+        for needle in ("项目根", "部件", "titles", "skip-cluster"):
+            self.assertIn(needle, sec3)
+        for needle in ("公共目录前缀", "--include", "一个文件只归一个项目"):
+            self.assertIn(needle, sec4)
+        self.assertNotIn("manifest.decisions[]", sec3, "决策早已走 decisions.jsonl")
+
     def test_container_registered(self):
         reg = (REPO / ".claude/skills/ai-pm/references/output-containers.md").read_text(encoding="utf-8")
         self.assertIn("`_intake/`", reg)
