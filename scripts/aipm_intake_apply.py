@@ -28,7 +28,7 @@ KLASS_TARGET = {"md": "05-prd", "html": "06-prototype/_imported", "docx": "05-pr
                 "data": "09-analytics", "ppt": "08-reviews", "doc": "07-references/intake-raw"}
 # klass=unclassified（图片/安装包/二进制）不在表里：默认不迁移（C2-2，与 report「默认不迁移」一致）
 ACTIVE_PRD_RE = re.compile(r"^(?!05-prd/).+\.md$")
-DECIDE_ACTIONS = ("confirm", "rename", "exclude", "skip", "install-skill", "skip-cluster")
+DECIDE_ACTIONS = ("confirm", "exclude", "skip", "install-skill", "skip-cluster")
 CLUSTER_ACTIONS = ("skip-cluster", "confirm")  # --cluster-id 可配的动作；confirm = 撤销该簇的 skip-cluster
 
 
@@ -91,11 +91,14 @@ def _legacy_warning(ignored: list[str]) -> str:
 
 def _skip_reason(f: dict, decisions: dict[str, dict], cluster_skipped: bool = False) -> str | None:
     """返回跳过原因；None = 迁移。默认口径单源 = scan.will_migrate。
-    exclude 只做文件路径精确匹配（§4，目录前缀分支已删）；所属簇被 skip-cluster → 跳；
-    凭证/超大只有用户对该文件逐个 confirm 才纳入；hidden/unreadable/dataless/unclassified 无例外。"""
+    exclude 与文件级 skip 都只做文件路径精确匹配（§4，目录前缀分支已删；Ruling 27）；
+    所属簇被 skip-cluster → 跳；凭证/超大只有用户对该文件逐个 confirm 才纳入；
+    hidden/unreadable/dataless/unclassified 无例外。"""
     path = f["path"]
     if decisions.get(path, {}).get("action") == "exclude":
         return "exclude"
+    if decisions.get(path, {}).get("action") == "skip":
+        return "skip"
     if cluster_skipped:
         return "skip-cluster"
     for key in ("hidden", "unreadable", "dataless"):
@@ -207,7 +210,13 @@ def cmd_project(mpath: str, cluster_ids: list[str] | None, name: str,
                              f"本次 cluster_ids={cids} includes={incs} 不一致——换个项目名或人工处理")
         if prior.get("done"):
             return "已完成，跳过"
-        return f"已复制，待补 claims 后跑 verify：{name}"
+        # Ruling 28：不改行为，消除静默——copied 后才 exclude/skip 的已复制文件逐条点名（只复制不移动，撤销须人工移除）
+        withdrawn = sorted(p for p, r in _decisions(mdir).items()
+                           if r.get("action") in ("exclude", "skip") and p in set(prior.get("files", [])))
+        note = "" if not withdrawn else (
+            "\n⚠️ 注意：这些文件已被复制，后续 exclude/skip 不会撤销（只复制不移动），"
+            "需人工从项目目录移除：" + "、".join(withdrawn))
+        return f"已复制，待补 claims 后跑 verify：{name}" + note
     if (len(cids) > 1 or incs) and not (reason or "").strip():
         raise SystemExit("多簇合并或使用 --include 时必须给 --reason \"<分组理由>\"（写入 executed_projects 供审计）")
     by_id = {c["cluster_id"]: c for c in m["clusters"]}
@@ -373,20 +382,17 @@ def cmd_stage(mpath: str, to: str) -> str:
     return f"stage → {to}"
 
 
-def cmd_decide(mpath: str, path: str | None, action: str, final_name: str | None = None,
+def cmd_decide(mpath: str, path: str | None, action: str,
                cluster_id: str | None = None) -> str:
     """I4：每确认一项立即追加一行 decisions.jsonl（中断不丢；同一路径/同一簇以最后一条为准）。
     §4：exclude 只收候选清单里的文件路径（目录前缀/不存在的路径拒绝，整簇不迁用 skip-cluster）；
     skip-cluster 只认 --cluster-id；confirm 也可对 --cluster-id 用，表示撤销该簇的 skip-cluster。
-    其余（confirm 文件 / rename / skip / install-skill）路径语义不变，不做候选校验。"""
+    其余（confirm 文件 / skip / install-skill）路径语义不变，不做候选校验。
+    rename 已废（Ruling 27）：改名在执行时用 project --name；旧 decisions.jsonl 里的 rename 行读取无副作用。"""
     if action not in DECIDE_ACTIONS:
         raise SystemExit(f"action 非法: {action}")
     if (path is None) == (cluster_id is None):
         raise SystemExit("--path 与 --cluster-id 必须且只能给一个")
-    if action == "rename" and not final_name:
-        raise SystemExit("rename 必须给 --final-name")
-    if final_name is not None and final_name != sanitize_name(final_name):
-        raise SystemExit(f"final_name 未过 sanitize: {final_name!r}（应为 {sanitize_name(final_name)!r}）")
     m = _load(Path(mpath))
     if cluster_id is not None:
         if action not in CLUSTER_ACTIONS:
@@ -399,13 +405,13 @@ def cmd_decide(mpath: str, path: str | None, action: str, final_name: str | None
         raise SystemExit(f"exclude 只接受候选清单里的文件路径: {path}——"
                          f"目录前缀不再整棵跳过；整簇不迁用 --cluster-id X --action skip-cluster")
     rec = {"ts": datetime.datetime.now().isoformat(timespec="seconds"), "path": path,
-           "action": action, "final_name": final_name}
+           "action": action}
     if cluster_id is not None:
         rec["cluster_id"] = cluster_id
     with (Path(mpath).parent / "decisions.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     what = path if path is not None else f"簇 {cluster_id}"
-    return f"已记录：{action} {what}" + (f" → {final_name}" if final_name else "")
+    return f"已记录：{action} {what}"
 
 
 def cmd_skill(repo: Path, src_dir: Path, name: str) -> str:
@@ -515,7 +521,6 @@ def main() -> int:
     p6.add_argument("--path", default=None, help="文件路径（exclude 只收候选清单里的文件）")
     p6.add_argument("--cluster-id", default=None, help="整簇决策：skip-cluster（不迁）/ confirm（撤销）")
     p6.add_argument("--action", required=True, choices=DECIDE_ACTIONS)
-    p6.add_argument("--final-name", default=None)
     for sp in (p1, p4):
         sp.add_argument("--repo", default=str(ROOT), help=argparse.SUPPRESS)  # 测试注入假仓
     args = ap.parse_args()
@@ -524,7 +529,7 @@ def main() -> int:
     elif args.cmd == "stage":
         print(cmd_stage(args.manifest, args.to))
     elif args.cmd == "decide":
-        print(cmd_decide(args.manifest, args.path, args.action, args.final_name, args.cluster_id))
+        print(cmd_decide(args.manifest, args.path, args.action, args.cluster_id))
     elif args.cmd == "project":
         print(cmd_project(args.manifest, args.cluster_id, args.name, args.active_prd, Path(args.repo),
                           includes=args.include, reason=args.reason, allow_dup=args.allow_dup))

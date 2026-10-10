@@ -391,14 +391,45 @@ class TestStageDecide(unittest.TestCase):
         self.assertTrue((self.proj / "05-prd/需求/密钥说明.md").is_file())
         self.assertFalse(any(p.name == "config.yaml" for p in self.proj.rglob("*")))
 
-    def test_decide_rename_validation(self):
-        with self.assertRaises(SystemExit):
+    def test_decide_skip_consumed_by_project(self):
+        """Ruling 27：文件级 decide skip 落地——project 不复制该文件、migrated 记 skip、finish「不迁」含它。"""
+        module.cmd_decide(str(self.mpath), "项目A/需求/备份.md", "skip")
+        module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertFalse((self.proj / "05-prd/需求/备份.md").exists())
+        self.assertTrue((self.proj / "05-prd/需求/PRD-V1.md").is_file())
+        recs = [json.loads(l) for l in (self.mpath.parent / "migrated.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertTrue(any(r["action"] == "skip" and r["decision"] == "skip"
+                            and r["source_abs"].endswith("备份.md") for r in recs))
+        self.assertIn("迁 2 / 不迁 2 / 未决定 4", module.cmd_finish(str(self.mpath)))
+
+    def test_copied_shortcircuit_lists_late_exclude_skip(self):
+        """Ruling 28：copied 短路不改行为，但 exclude/skip 命中已复制文件时返回消息逐条点名。"""
+        module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        out = module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertIn("已复制，待补 claims 后跑 verify", out)
+        self.assertNotIn("不会撤销", out)  # 无交集：不带提示
+        module.cmd_decide(str(self.mpath), "项目A/需求/PRD-V1.md", "exclude")
+        module.cmd_decide(str(self.mpath), "项目A/需求/密钥说明.md", "skip")  # 未被复制（凭证拦截）：不点名
+        out = module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertIn("不会撤销", out)
+        self.assertIn("项目A/需求/PRD-V1.md", out)
+        self.assertNotIn("密钥说明", out)
+
+    def test_decide_rename_removed_and_legacy_rows_inert(self):
+        """Ruling 27：rename 已废（改名在执行时用 --name）——decide 收到 rename 按非法动作报错、不落盘；
+        旧 decisions.jsonl 里已存在的 rename 行读取无副作用（不抛错、文件照常复制）。"""
+        with self.assertRaises(SystemExit) as cm:
             module.cmd_decide(str(self.mpath), "项目A", "rename")
-        with self.assertRaises(SystemExit):
-            module.cmd_decide(str(self.mpath), "项目A", "rename", final_name="带:冒号")
-        module.cmd_decide(str(self.mpath), "项目A", "rename", final_name="新名")
-        rec = json.loads((self.mpath.parent / "decisions.jsonl").read_text(encoding="utf-8").splitlines()[-1])
-        self.assertEqual((rec["action"], rec["final_name"]), ("rename", "新名"))
+        self.assertIn("action 非法", str(cm.exception))
+        r = self.cli("decide", "--path", "项目A", "--action", "rename")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertFalse((self.mpath.parent / "decisions.jsonl").exists())
+        with (self.mpath.parent / "decisions.jsonl").open("a", encoding="utf-8") as fh:  # 旧版写下的 rename 行
+            fh.write(json.dumps({"ts": "2026-10-09T10:00:00", "path": "项目A/需求/备份.md",
+                                 "action": "rename", "final_name": "新名"}, ensure_ascii=False) + "\n")
+        module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertTrue((self.proj / "05-prd/需求/备份.md").is_file())
+        self.assertIn("迁 3 / 不迁 1 / 未决定 4", module.cmd_finish(str(self.mpath)))
 
 
 class TestSkipReason(unittest.TestCase):
@@ -415,6 +446,9 @@ class TestSkipReason(unittest.TestCase):
         # D2 改写（§4）：_skip_reason 删掉目录前缀分支，只认文件路径精确匹配
         self.assertEqual(module._skip_reason({"path": "d/x.md", "klass": "md"},
                                              {"d/x.md": {"path": "d/x.md", "action": "exclude"}}), "exclude")
+        # Ruling 27：文件级 skip 与 exclude 同为文件路径精确匹配
+        self.assertEqual(module._skip_reason({"path": "d/x.md", "klass": "md"},
+                                             {"d/x.md": {"path": "d/x.md", "action": "skip"}}), "skip")
         self.assertIsNone(module._skip_reason({"path": "d/x.md", "klass": "md"},
                                               {"d": {"path": "d", "action": "exclude"}}), "目录前缀不再整棵跳过")
         self.assertIsNone(module._skip_reason({"path": "dd/x.md", "klass": "md"},
@@ -806,11 +840,10 @@ class TestExcludeSemantics(IntakeTreeCase):
 
     def test_confirm_and_install_skill_paths_not_validated(self):
         for path, action in (("随便/不在清单.md", "confirm"), (f"{A}/需求/密钥.md", "confirm"),
-                             ("某处/helper/SKILL.md", "install-skill"), ("Documents", "skip"),
-                             ("Documents", "rename")):
-            module.cmd_decide(str(self.mpath), path, action, final_name="新名" if action == "rename" else None)
+                             ("某处/helper/SKILL.md", "install-skill"), ("Documents", "skip")):
+            module.cmd_decide(str(self.mpath), path, action)
         self.assertEqual([d["action"] for d in self.decisions()],
-                         ["confirm", "confirm", "install-skill", "skip", "rename"])
+                         ["confirm", "confirm", "install-skill", "skip"])
 
     def test_skip_cluster(self):
         c = self.cid(f"{A}/会议")

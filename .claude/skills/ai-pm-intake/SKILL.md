@@ -31,9 +31,9 @@ allowed-tools: Read Write Edit Glob Grep Bash(ls) Bash(python3) Bash(cp) Bash(mk
 ### ② 确认（一次只问一件事）
 - **进入本阶段先跑** `python3 scripts/aipm_intake_apply.py stage --manifest M --to confirm`
 - 逐项目：建议名/文件数/摘要/建议 lifecycle/active_prd 候选/复制总量（report 里的估算）；
-  可确认/改名/剔除/跳过。合并了多簇或用了 `--include` 的，**向用户说明分组理由**（这句理由执行时就是 `--reason`）
+  可确认/剔除/跳过（改名在执行时用 `--name` 给新名，确认轮不记改名）。合并了多簇或用了 `--include` 的，**向用户说明分组理由**（这句理由执行时就是 `--reason`）
 - **每确认一项立即落盘**（中断不丢；不手工改 manifest）：
-  `python3 scripts/aipm_intake_apply.py decide --manifest M --path <路径> --action confirm|rename|exclude|skip|install-skill [--final-name 名]`
+  `python3 scripts/aipm_intake_apply.py decide --manifest M --path <路径> --action confirm|exclude|skip|install-skill`
   —— 追加到同目录 `decisions.jsonl`，同一路径以最后一条为准。
   - **剔除单个文件**：`--path <文件路径> --action exclude`，只收候选清单（全部簇 files）里的文件路径；
     给目录或不存在的路径会被拒绝（旧版「目录前缀整棵跳过」已废：它会把散文件簇下面的子项目一起吞掉）
