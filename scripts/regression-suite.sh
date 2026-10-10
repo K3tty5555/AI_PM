@@ -72,6 +72,9 @@ run_check "打包器与校验器" python3 -m unittest scripts.test_aipm_package
 run_check "升级产物自测（往返/幂等/阴性）" python3 scripts/aipm_update_selftest.py --selftest
 run_check "演讲材料路由与骨架契约自测" python3 -m unittest tests.test_ai_pm_deck_contract
 run_check "升级命令路由与注册表契约自测" python3 -m unittest tests.test_ai_pm_update_contract
+run_check "intake 扫描与执行器" python3 -m unittest tests.test_aipm_intake_scan tests.test_aipm_intake_apply
+run_check "intake 命令路由与注册表契约自测" python3 -m unittest tests.test_ai_pm_intake_contract
+run_check "intake 执行往返端到端（含 claims gate 与假仓 validate）" python3 -m unittest tests.test_aipm_intake_roundtrip
 run_check "output 容器注册单源自测" python3 scripts/check-output-container-registry.py
 run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500
 run_check "云文档 pull 离线自测（纯三方算法+复合键回写端到端）" python3 scripts/prd_pull.py --selftest
@@ -178,7 +181,15 @@ PYEOF
       --include-untracked scripts/ai-sync/conversation-coverage.py \
       --include-untracked tests/fixtures/nextgen \
       --include-untracked tests/test_aipm_nextgen_contracts.py \
-      --include-untracked tests/test_ai_pm_update_contract.py
+      --include-untracked tests/test_ai_pm_update_contract.py \
+      --include-untracked scripts/aipm_intake_scan.py \
+      --include-untracked scripts/aipm_intake_apply.py \
+      --include-untracked scripts/aipm_intake_titles.py \
+      --include-untracked tests/fixtures/intake \
+      --include-untracked tests/test_aipm_intake_scan.py \
+      --include-untracked tests/test_aipm_intake_apply.py \
+      --include-untracked tests/test_ai_pm_intake_contract.py \
+      --include-untracked tests/test_aipm_intake_roundtrip.py
 fi
 
 echo ""

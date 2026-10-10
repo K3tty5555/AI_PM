@@ -65,6 +65,8 @@ README.md                  项目介绍
 | `/ai-pm driver [PRD]` | PM 风格 lint（评审前体检），pm-agent 的命令糖衣 |
 | `/ai-pm acceptance [PRD]` | 产品验收（对照 PRD 在测试环境逐条核实，出提单台账） |
 | `/ai-pm release-docs [PRD\|项目]` | 上线文档套件（更新公告 + 操作手册，可发飞书；去版本号） |
+| `/ai-pm update` | AI_PM 自身版本升级（三方合并保留用户改造，支持 `--dry-run` / `rollback`） |
+| `/ai-pm intake [路径]` | 外部散乱文件整合（全盘扫描→确认→立项/skill 装载） |
 
 ## PRD 写作专项（PM Agent 4 层体系）
 
