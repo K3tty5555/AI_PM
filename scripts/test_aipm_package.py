@@ -80,6 +80,23 @@ class TestCollect(unittest.TestCase):
         self.assertTrue(pub.issubset(pri), "私有版必须包含公共版全部文件")
         self.assertGreater(len(pri), len(pub))
 
+    def test_collect_dir_skips_nested_git(self):
+        """回归（2026-10-10）：私有 skill 若是 git clone，.git 目录（内部仓库历史）
+        绝不能进分发包——分发形态见不得 git 元数据。同名邻居 .gitignore 必须保留。"""
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            skill = root / "private-skill"
+            (skill / ".git" / "objects").mkdir(parents=True)
+            (skill / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+            (skill / ".git").mkdir(exist_ok=True)
+            (skill / ".git" / "config").write_text("[core]\n", encoding="utf-8")
+            (skill / ".gitignore").write_text("x\n", encoding="utf-8")
+            (skill / "SKILL.md").write_text("---\nname: x\n---\n", encoding="utf-8")
+            (skill / "sub").mkdir()
+            (skill / "sub" / ".git").write_text("gitdir: ../.git\n", encoding="utf-8")  # worktree 指针文件同样跳过
+            got = module._walk_dir(root, "private-skill")
+            self.assertEqual(sorted(got), ["private-skill/.gitignore", "private-skill/SKILL.md"])
+
 
 class TestKindValidation(unittest.TestCase):
     def test_invalid_kind_raises(self):
@@ -332,6 +349,17 @@ class TestVerify(unittest.TestCase):
                 tf.addfile(info, io.BytesIO(data))
             problems = v.verify(bad, "public")
         self.assertTrue(any("conversations" in p for p in problems), problems)
+
+    def test_detects_nested_git_repo(self):
+        """安全线（2026-10-10）：包内不得混入 /.git/ 路径（嵌套仓库历史）。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            bad = self._tar_with(Path(d) / "g.tar.gz", [
+                "meta/versions.json", "meta/changelog.md",
+                "tree/CLAUDE.md", "tree/.claude/skills/tpd_cli/.git/HEAD",
+            ], kind="private")
+            problems = v.verify(bad, "private")
+        self.assertTrue(any(".git" in p for p in problems), problems)
 
     def test_detects_missing_meta(self):
         v = self._verify_module()

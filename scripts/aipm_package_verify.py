@@ -34,6 +34,7 @@ FORBIDDEN = [
     ".d2c/config.json",
     "output/projects/",
     "tree/docs/",
+    "/.git/",  # 嵌套 git 仓库（内部提交历史）绝不能混进任何分发包（2026-10-10）
 ]
 
 # 噪声项：vendor / 私有 skill 内真实存在的系统文件，提示但不计入退出码

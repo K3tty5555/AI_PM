@@ -207,7 +207,7 @@ Claude ↔ Codex 上下文交换桥接目录；**子目录追踪矩阵单源 = `
 ```bash
 bash scripts/regression-suite.sh --fast|--full   # 回归总入口：改判断卡/模板/校验器/agent 后必跑 --full（语料五分类基线）
 bash scripts/check-share-readiness.sh --strict   # 分享就绪自检：内部名/敏感目录/source-project 一次过，退出码可做 gate
-# 兜底手查：
+# 兜底手查（git ls-files 仅开发仓可用；分发安装形态下报 not a git repository，属正常）：
 git ls-files | xargs grep -l "公司名|内部关键词" 2>/dev/null
 git ls-files | cat   # 检查文件名本身是否含公司名
 ```
@@ -234,6 +234,7 @@ git ls-files | cat   # 检查文件名本身是否含公司名
 ## 禁止事项
 
 - 不自动 git commit/push，除非用户明确要求
+- **分发安装形态（AI_PM 目录内无 `.git`）下禁止一切 git 写操作**（init / add / commit / push）：该形态是用户个人资料密集区（`output/` 项目产物、会话记录、知识库卡片、persona），`.gitignore` 仅是兜底不是防线。自检命令里的 `git ls-files` 为开发仓专用，分发环境执行报「not a git repository」属正常
 - 不跳过 git hooks（--no-verify）
 - 不在 output/ 以外的地方生成项目文件
 - **禁止说「我记住了/我会记住/已记录」等记忆声明，除非同一条回复里已执行 Write 工具将内容写入 `memory/` 目录。** 口头承诺 ≠ 记忆，未写文件等于未记。

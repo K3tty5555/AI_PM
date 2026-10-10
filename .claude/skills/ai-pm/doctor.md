@@ -6,9 +6,9 @@
 
 ## 功能
 
-扫描所有技能文件，检查 31 项一致性指标，输出健康报告。
+扫描所有技能文件，检查 32 项一致性指标，输出健康报告。
 
-## 检查项（9 类共 31 项）
+## 检查项（10 类共 32 项）
 
 ### 命令路由一致性（3 项）
 
@@ -67,6 +67,10 @@
 29. **项目基线与产物契约**：检查 `baseline-manifest.schema.json`、`prototype-source-manifest.schema.json`、`impact-record.schema.json` 和扩展后的 `status.schema.json` 均存在且可解析；运行 `python3 scripts/aipm_contracts.py selftest`。
 30. **只读对账与影响判断边界**：分别运行 `python3 scripts/aipm_reconcile.py --selftest` 和 `python3 scripts/aipm_impact.py selftest`。对账前后字节必须一致；无证据的 continue / adjust / stop 必须被阻断。
 31. **系统复盘时间覆盖**：分别运行 `python3 scripts/ai-sync/conversation-coverage.py --selftest` 和 `python3 scripts/aipm_system_retrospective.py --selftest`。月份缺失必须明确报 coverage gap，不能用文件 mtime 伪装覆盖。
+
+### 分发形态守卫（1 项）
+
+32. **嵌套 git 仓库检测**（仅分发安装形态执行；根目录有 `.git` 的开发仓跳过本项）：检查 AI_PM 根目录与 `.claude/skills/` 各子目录下是否存在 `.git` 目录或 `.git` 文件（gitdir 指针），命令参考：`test -d .git && echo 开发仓形态 || find .claude/skills -maxdepth 2 -name ".git" 2>/dev/null`。发现任何嵌套 `.git` → ❌ 错误：分发形态是用户个人资料密集区，git 写操作（init/add/commit/push）会把 `output/` 项目产物、会话记录、知识库、persona 带进历史，`.gitignore` 仅是兜底；若为 2026-10-10 之前打的私有包遗留的 `tpd_cli` 嵌套 `.git`（含内部仓库完整历史），提示用户可直接删除该目录，不影响 skill 使用。
 
 ## 执行方式
 

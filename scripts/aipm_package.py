@@ -87,7 +87,13 @@ def _walk_dir(root: Path, rel: str) -> list[str]:
     for p in base.rglob("*"):
         if p.is_symlink() or not p.is_file():
             continue
-        found.append(p.relative_to(root).as_posix())
+        rel = p.relative_to(root)
+        # 分发形态不带 git 元数据：私有 skill 若是 git clone，其 .git 目录是内部仓库
+        # 完整历史，混进包等于把嵌套 git 仓库发到用户机器上（2026-10-10 实测踩过）。
+        # .git 文件（worktree 指针）一并跳过；.gitignore/.github 等同名邻居不受影响。
+        if ".git" in rel.parts:
+            continue
+        found.append(rel.as_posix())
     return found
 
 
