@@ -361,6 +361,75 @@ class TestVerify(unittest.TestCase):
             problems = v.verify(bad, "private")
         self.assertTrue(any(".git" in p for p in problems), problems)
 
+    def test_detects_path_traversal_and_malformed_meta(self):
+        """校验器不得接受会穿越解包目录的路径，也不得被坏 meta 弄崩。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            bad = self._tar_with(Path(d) / "bad.tar.gz", [
+                "meta/versions.json", "meta/changelog.md", "tree/CLAUDE.md",
+                "tree/../../escape.txt",
+            ])
+            problems = v.verify(bad, "public")
+            self.assertTrue(any("非法路径" in p for p in problems), problems)
+
+            malformed = self._tar_with(Path(d) / "malformed.tar.gz", [
+                "meta/versions.json", "meta/changelog.md", "tree/CLAUDE.md",
+            ])
+            # 替换为合法 tar 中的 JSON 数组；verify 应返回问题清单而不是抛 AttributeError。
+            with tarfile.open(malformed, "r:gz") as old:
+                members = [(m.name, old.extractfile(m).read() if m.isfile() else b"")
+                           for m in old.getmembers()]
+            with tarfile.open(malformed, "w:gz") as new:
+                for name, data in members:
+                    if name == "meta/versions.json":
+                        data = b"[]"
+                    info = tarfile.TarInfo(name); info.size = len(data)
+                    new.addfile(info, io.BytesIO(data))
+            problems = v.verify(malformed, "public")
+            self.assertTrue(any("顶层必须是对象" in p for p in problems), problems)
+
+    def test_detects_file_count_and_blob_corruption(self):
+        """元数据和历史内容都必须对得上实际 tar。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "bad.tar.gz"
+            index = b'{"CLAUDE.md":[{"blob":"abcdef012345"}]}'
+            entries = {
+                "meta/versions.json": b'{"kind":"public","file_count":99}',
+                "meta/changelog.md": b"log", "tree/CLAUDE.md": b"ok",
+                "history/index.json": index,
+                "history/revisions.json": b'{"schema_version":1,"revisions":[]}',
+                "history/abcdef012345": b"wrong",
+            }
+            with tarfile.open(bad, "w:gz") as tf:
+                for name, data in entries.items():
+                    info = tarfile.TarInfo(name); info.size = len(data)
+                    tf.addfile(info, io.BytesIO(data))
+            problems = v.verify(bad, "public")
+            self.assertTrue(any("file_count 不符" in p for p in problems), problems)
+            self.assertTrue(any("blob 内容校验失败" in p for p in problems), problems)
+
+    def test_rejects_tree_symlink_and_duplicate_path(self):
+        """解包前拒绝 tree/ 中的链接和重复成员，避免覆盖/逃逸。"""
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "bad.tar.gz"
+            with tarfile.open(bad, "w:gz") as tf:
+                for name, data in (("meta/versions.json", b'{"kind":"public","file_count":1}'),
+                                    ("meta/changelog.md", b"log"),
+                                    ("history/index.json", b"{}"),
+                                    ("history/revisions.json", b'{"schema_version":1,"revisions":[]}'),
+                                    ("tree/CLAUDE.md", b"ok"),
+                                    ("tree/CLAUDE.md", b"changed")):
+                    info = tarfile.TarInfo(name); info.size = len(data)
+                    tf.addfile(info, io.BytesIO(data))
+                link = tarfile.TarInfo("tree/link")
+                link.type = tarfile.SYMTYPE; link.linkname = "../../escape"
+                tf.addfile(link)
+            problems = v.verify(bad, "public")
+            self.assertTrue(any("重复路径" in p for p in problems), problems)
+            self.assertTrue(any("非普通文件" in p for p in problems), problems)
+
     def test_detects_missing_meta(self):
         v = self._verify_module()
         with tempfile.TemporaryDirectory() as d:

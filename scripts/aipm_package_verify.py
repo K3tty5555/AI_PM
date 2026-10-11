@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -69,12 +70,25 @@ def verify(tar_path: Path, kind: str) -> list[str]:
     """
     problems: list[str] = []
     with tarfile.open(tar_path) as tf:
-        names = tf.getnames()
+        members = tf.getmembers()
+        names = [m.name for m in members]
+        if len(names) != len(set(names)):
+            problems.append("包内存在重复路径")
 
         for n in names:
+            # tarfile 会接受绝对路径和 ..；即使当前校验器只读，继续把这种
+            # 包交给解包方也可能造成路径穿越。分发包路径必须是相对的普通路径。
+            parts = Path(n).parts
+            if Path(n).is_absolute() or ".." in parts:
+                problems.append(f"非法路径：{n}")
             for f in FORBIDDEN:
                 if f in n:
                     problems.append(f"禁止路径混入：{n}")
+            if any(part == ".git" for part in parts):
+                problems.append(f"禁止路径混入：{n}")
+        for member in members:
+            if member.name.startswith("tree/") and not member.isreg():
+                problems.append(f"tree/ 含非普通文件：{member.name}")
 
         for r in REQUIRED:
             if r not in names:
@@ -99,6 +113,13 @@ def verify(tar_path: Path, kind: str) -> list[str]:
                             raise ValueError(f"非法 blob 标识：{blob!r}")
                         if blob not in blob_names:
                             problems.append(f"history 索引指向缺失 blob：{path} → {blob}")
+                        else:
+                            data = tf.extractfile(f"history/{blob}").read()
+                            actual = hashlib.sha1(
+                                b"blob " + str(len(data)).encode() + b"\x00" + data
+                            ).hexdigest()
+                            if not actual.startswith(blob):
+                                problems.append(f"history blob 内容校验失败：{path} → {blob}")
             except (AttributeError, KeyError, TypeError, ValueError, UnicodeDecodeError) as exc:
                 problems.append(f"history/index.json 格式错误：{exc}")
 
@@ -129,9 +150,19 @@ def verify(tar_path: Path, kind: str) -> list[str]:
             except (AttributeError, ValueError, UnicodeDecodeError):
                 problems.append(f"meta/versions.json 读不出合法 JSON：{meta_name}")
             else:
-                if meta.get("kind") not in (None, kind):
+                if not isinstance(meta, dict):
+                    problems.append("meta/versions.json 格式错误：顶层必须是对象")
+                elif meta.get("kind") not in (None, kind):
                     problems.append(
                         f"kind 不符：包内 meta 声明 {meta.get('kind')!r}，校验按 {kind!r}")
+                if isinstance(meta, dict) and "file_count" in meta:
+                    if not isinstance(meta["file_count"], int) or meta["file_count"] < 0:
+                        problems.append("meta/versions.json 格式错误：file_count 必须是非负整数")
+                    tree_files = [m.name for m in members
+                                  if m.name.startswith("tree/") and m.isreg()]
+                    if meta["file_count"] != len(tree_files):
+                        problems.append(
+                            f"file_count 不符：包内声明 {meta['file_count']}，实际 tree 文件 {len(tree_files)}")
 
     size_mb = tar_path.stat().st_size / 1024 / 1024
     limit = MAX_MB.get(kind, MAX_MB_DEFAULT)
