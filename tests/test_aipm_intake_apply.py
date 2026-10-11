@@ -403,6 +403,26 @@ class TestStageDecide(unittest.TestCase):
                             and r["source_abs"].endswith("备份.md") for r in recs))
         self.assertIn("迁 2 / 不迁 2 / 未决定 4", module.cmd_finish(str(self.mpath)))
 
+    def test_decide_noncandidate_path_warns(self):
+        """confirm/skip 按设计 §4 不拒绝，但路径不在候选清单时必须明说「不会生效」，不能静默。"""
+        out = module.cmd_decide(str(self.mpath), "项目A/需求/密钥说明.md", "confirm")
+        self.assertNotIn("不在候选清单", out)
+        for path, action in (("项目A/需求/密钥说明.mdd", "confirm"), ("项目A/需求/备分.md", "skip")):
+            out = module.cmd_decide(str(self.mpath), path, action)
+            self.assertIn("不在候选清单", out)
+            self.assertIn(path, out)
+        lines = (self.mpath.parent / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 3, "照常落盘，只多一句提醒")
+
+    def test_half_written_decision_line_does_not_break_import(self):
+        """追加中途崩溃留下半行：下一条决策不能粘在半行上丢掉，project 也不能因此整体退出。"""
+        with (self.mpath.parent / "decisions.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write('{"ts": "2026-10-11T10:00:00", "path": "项目A/需求/PR')
+        module.cmd_decide(str(self.mpath), "项目A/需求/备份.md", "skip")
+        module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)
+        self.assertTrue((self.proj / "05-prd/需求/PRD-V1.md").is_file())
+        self.assertFalse((self.proj / "05-prd/需求/备份.md").exists(), "半行之后的 skip 决策必须生效")
+
     def test_copied_shortcircuit_lists_late_exclude_skip(self):
         """Ruling 28：copied 短路不改行为，但 exclude/skip 命中已复制文件时返回消息逐条点名。"""
         module.cmd_project(str(self.mpath), [self.cid], "项目A", active_prd="需求/PRD-V1.md", repo=self.repo)

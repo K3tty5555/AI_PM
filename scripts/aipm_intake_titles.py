@@ -19,6 +19,7 @@ _DTD_RE = re.compile(rb"<!(?i:doctype|entity)")
 # 线性时间约束：标签用 <[^<>]*>（遇下一个 < 就停，恶意的未闭合标签不会回溯成平方级），段落/文本靠状态机走；
 # 不写 (.*?)</x> 这类跨标签懒匹配。属性只在 ≤2KB 的单个标签串里取。
 _MD_HEADING_RE = re.compile(r"^[ \t]{0,3}#{1,6}[ \t]*(\S[^\n]*)", re.M)
+_FENCE_RE = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})(.*)$")
 _TAG_RE = re.compile(r"<[^<>]*>")
 _ATTR_TAG_MAX = 2048
 _XML_ENTITY_RE = re.compile(r"&(lt|gt|amp|quot|apos|#[0-9]{1,8}|#x[0-9a-fA-F]{1,6});")
@@ -63,12 +64,28 @@ def _decode(data: bytes, truncated: bool) -> str | None:
     return None
 
 
+def _strip_code(text: str) -> str:
+    """去掉围栏代码块（``` / ~~~，未闭合则到文末）和 #! 行：里面的 # 是注释，不是标题。"""
+    out, fence = [], None
+    for line in text.splitlines():
+        m = _FENCE_RE.match(line)
+        if fence is None:
+            if m:
+                fence = m.group(1)
+            elif not line.startswith("#!"):
+                out.append(line)
+        elif m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) and not m.group(2).strip():
+            fence = None
+    return "\n".join(out)
+
+
 def _text_title(text: str) -> str:
-    """md/txt：跳过 YAML front matter；首个 # 标题，无则首个非空行。"""
+    """md/txt：跳过 YAML front matter 与代码块；首个 # 标题，无则首个非空行。"""
     if text.startswith("---"):
         m = re.match(r"---[^\n]*\n.*?\n---[ \t]*(?:\n|$)", text, re.S)
         if m:
             text = text[m.end():]
+    text = _strip_code(text)
     m = _MD_HEADING_RE.search(text)
     if m:
         h = m.group(1).rstrip()  # rstrip 线性；先剥收尾 ### 再截断，否则截断会改变语义
@@ -256,9 +273,13 @@ def _pptx_title(p: Path) -> str:
     raise _TitleFail("no text")
 
 
+_ASCII_LOWER = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")
+
+
 def _html_title(text: str) -> str:
-    """<title> 用 find 线性定位（不用跨标签懒匹配）；只认 <title> / <title 属性>。"""
-    low = text.lower()
+    """<title> 用 find 线性定位（不用跨标签懒匹配）；只认 <title> / <title 属性>。
+    只折叠 ASCII 大小写：str.lower() 会把 İ 变成两个字符，拿它的下标切原文会错位。"""
+    low = text.translate(_ASCII_LOWER)
     i = low.find("<title")
     while i >= 0 and low[i + 6:i + 7] not in (">", " ", "\t", "\n", "\r"):
         i = low.find("<title", i + 1)

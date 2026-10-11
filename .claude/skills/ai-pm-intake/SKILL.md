@@ -15,7 +15,7 @@ allowed-tools: Read Write Edit Glob Grep Bash(ls) Bash(python3) Bash(cp) Bash(mk
 
 ### ① 盘点
 - 启动先跑 `python3 scripts/aipm_intake_scan.py unfinished`，有未完成 intake 先问用户续跑还是重开
-- `python3 scripts/aipm_intake_scan.py scan --root <路径或~>`，拿 manifest 路径与簇数
+- `python3 scripts/aipm_intake_scan.py scan --root <路径或~>`，拿 manifest 路径与簇数；用户没给路径就用 `--root ~`（全盘扫主目录）
 - **语义聚类**：只读簇摘要 + 抽样文件头，不逐文件读（全盘底账可能上万条）。
   脚本按内容认项目根（递归到底，不设深度上限）：`source_dirs[0]` 是项目根的多段相对前缀
   （如 `Documents/项目B`），`suggested_name` 是建议项目名（重名已补父目录名），`loose=true` 表示容器目录自身的散文件，
