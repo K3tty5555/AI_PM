@@ -39,7 +39,7 @@ KLASS_BY_EXT = {".md": "md", ".markdown": "md", ".html": "html", ".htm": "html",
                 ".pptx": "ppt", ".ppt": "ppt",
                 # 已归属项目但类型不明的文档 → 07-references/intake-raw/（spec §4「拿不准的」）
                 ".txt": "doc", ".pdf": "doc", ".rtf": "doc"}
-ILLEGAL_NAME_RE = re.compile(r'[\\/:*?"<>|]+')  # 连续非法字符合并为一个 -
+ILLEGAL_NAME_RE = re.compile(r'[\\/:*?"<>|\x00-\x1f\x7f]+')  # 连续非法字符（含换行等控制字符）合并为一个 -
 ROOT_LOOSE_LABEL = "(根目录散文件)"  # 扫描根直放文件的簇名（不用 "."：sanitize 后会指向 projects 目录本身）
 
 # —— 项目根识别（deep-scan 设计 §1）：按内容认项目根，不设文件数阈值与深度上限 ——
@@ -81,7 +81,7 @@ dataless[]: iCloud 云端未下载的占位文件路径（不读内容，apply �
 duplicates[]: {size,sha256,paths[]}
 project_name_conflicts[]: 建议名撞 output/projects/ 已有项目
 decisions_file: "decisions.jsonl"——确认决策不进 manifest，走 apply decide 逐行追加到同目录
-  {ts,path,action: confirm|rename|exclude|skip|install-skill,final_name}；同一路径以最后一条为准
+  {ts,path,action: confirm|exclude|skip|install-skill}；同一路径以最后一条为准（旧版 rename 行读取无副作用）
   —— exclude 的 path 只能是候选清单（全部簇 files 并集）里的文件；旧版目录前缀记录读取时忽略并告警
   —— 整簇决策 {ts,path:null,cluster_id,action: skip-cluster|confirm}；confirm 撤销 skip-cluster
 executed_projects[]: {name,cluster_ids[],includes[],files[],reason,copied:true,ts,allow_dup?[],done?:true,
@@ -621,7 +621,18 @@ def _mkdir_numbered(out_root: Path, base_id: str) -> Path:
             return candidate
         except FileExistsError:
             candidate = out_root / f"{base_id}-{i}"
-    raise SystemExit("intake 时间戳目录冲突过多，重试later")
+    raise SystemExit("intake 时间戳目录冲突过多，过一会儿再试")
+
+
+def _code(s: str) -> str:
+    """报告里的路径/目录名是不受信数据：控制字符转成可见的 \\n、\\x07，再包成行内代码，
+    目录名里的换行、# 和 * 都改不了报告结构。"""
+    s = "".join({"\n": "\\n", "\r": "\\r", "\t": "\\t"}.get(ch) or
+                (f"\\x{ord(ch):02x}" if ord(ch) < 32 or ord(ch) == 0x7f else ch) for ch in s)
+    if "`" not in s:
+        return f"`{s}`"
+    fence = "`" * (max(len(r) for r in re.findall(r"`+", s)) + 1)
+    return f"{fence} {s} {fence}"
 
 
 def _cluster_lines(c: dict) -> list[str]:
@@ -630,16 +641,16 @@ def _cluster_lines(c: dict) -> list[str]:
         klasses[f["klass"]] = klasses.get(f["klass"], 0) + 1
     tag = "（散文件）" if c.get("loose") else ""
     note = f"；标注：{'、'.join(c['notes'])}" if c.get("notes") else ""
-    out = [f"- **{c['source_dirs'][0]}**{tag}（{c['cluster_id']}，建议名 {c['suggested_name']}）：{len(c['files'])} 文件 "
+    out = [f"- **{_code(c['source_dirs'][0])}**{tag}（{c['cluster_id']}，建议名 {_code(c['suggested_name'])}）：{len(c['files'])} 文件 "
            f"{klasses}，最新 {c['newest_mtime'][:10]}，得分 {c['score']}{note}"]
     for t in c.get("titles", []):
         src = "" if t["source"] == "content" else "（文件名）"
-        out.append(f"  - {_md_escape(t['title'])}{src} ← {_md_escape(Path(t['path']).name)}")
+        out.append(f"  - {_md_escape(t['title'])}{src} ← {_code(Path(t['path']).name)}")
     return out
 
 
 def _write_report(intake_dir: Path, m: dict, root: Path, n_files: int, skipped: int, copy_bytes: int) -> None:
-    cred_lines = "\n".join(f"- {p}" for p in m["credential_hits"]) or "-（无）"
+    cred_lines = "\n".join(f"- {_code(p)}" for p in m["credential_hits"]) or "-（无）"
     excl = "、".join(f"{k}×{v}" for k, v in m["scope"]["excluded"].items()) or "无"
     ranked = sorted(m["clusters"], key=lambda c: (-c["score"], c["source_dirs"][0]))
     normal = [c for c in ranked if not c.get("code_repo")]
@@ -647,7 +658,7 @@ def _write_report(intake_dir: Path, m: dict, root: Path, n_files: int, skipped: 
     lines = [
         "# intake 盘点报告", "",
         "## 扫描范围", "",
-        f"- 扫描根：`{root}`；命中文件 {n_files}；不可读跳过 {skipped}；标题用文件名兜底 {m['titles_fallback']}",
+        f"- 扫描根：{_code(str(root))}；命中文件 {n_files}；不可读跳过 {skipped}；标题用文件名兜底 {m['titles_fallback']}",
         f"- 排除：{excl}",
         f"- **复制总量预估：{copy_bytes / (1 << 20):.1f} MB**（执行前确认才开跑；原文件不动，目标盘需有余量）", "",
         f"## 疑似项目（{len(normal)} 簇，按 产物数×类型多样度×新近度 排序，详列前 {REPORT_TOP_CLUSTERS}）", "",
@@ -669,29 +680,29 @@ def _write_report(intake_dir: Path, m: dict, root: Path, n_files: int, skipped: 
         lines.append("-（无）")
     npd = m["no_product_dirs"]
     lines += ["", f"## 无产物目录（{npd['total_dirs']} 个，共 {npd['total_files']} 文件；不成簇，列文件数前 10）", ""]
-    lines += ([f"- {d['dir']}：{d['files']} 文件" for d in npd["top"]] or ["-（无）"])
+    lines += ([f"- {_code(d['dir'])}：{d['files']} 文件" for d in npd["top"]] or ["-（无）"])
     lines += ["", f"## skill 候选（{len(m['skill_candidates'])}）", ""]
-    lines += ([f"- {s['name']}：{s['status']}" + (f"，撞名 {s['collisions']}" if s["collisions"] else "")
+    lines += ([f"- {_code(s['name'])}：{s['status']}" + (f"，撞名 {s['collisions']}" if s["collisions"] else "")
                for s in m["skill_candidates"]] or ["-（无）"])
     lines += ["", f"## prompt/规则资产（{len(m['prompt_assets'])}）", ""]
-    lines += ([f"- {a['path']}：{a['note']}" for a in m["prompt_assets"]] or ["-（无）"])
+    lines += ([f"- {_code(a['path'])}：{a['note']}" for a in m["prompt_assets"]] or ["-（无）"])
     unc = m["unclassified"]
     lines += ["", f"## 未归类（{unc['total']}，默认不迁移，只按扩展名计数）", ""]
     lines += (["- " + "、".join(f"{k}×{v}" for k, v in sorted(unc["by_ext"].items(), key=lambda kv: (-kv[1], kv[0])))]
               if unc["by_ext"] else ["-（无）"])
     lines += ["", f"## 云端未下载文件（{len(m['dataless'])}，iCloud 占位，未读取、不迁移；需要的话先在 Finder 里下载再重扫）", ""]
-    lines += ([f"- {p}" for p in m["dataless"][:50]] or ["-（无）"])
+    lines += ([f"- {_code(p)}" for p in m["dataless"][:50]] or ["-（无）"])
     lines += ["", "## 凭证命中（默认跳过，显式确认才迁）", "", cred_lines]
     oversize = [f for c in m["clusters"] for f in c["files"] if f.get("oversize")]
     lines += ["", f"## 超大文件（{len(oversize)}，>50MB 默认不迁移，逐个确认才纳入）", ""]
-    lines += ([f"- {f['path']}（{f['size'] / (1 << 20):.0f} MB）" for f in oversize[:50]] or ["-（无）"])
+    lines += ([f"- {_code(f['path'])}（{f['size'] / (1 << 20):.0f} MB）" for f in oversize[:50]] or ["-（无）"])
     conflicts = m["project_name_conflicts"]
     lines += ["", f"## 项目名撞存量（{len(conflicts)}，确认时须改名，绝不覆盖）", ""]
-    lines += ([f"- {n}" for n in conflicts] or ["-（无）"])
+    lines += ([f"- {_code(n)}" for n in conflicts] or ["-（无）"])
     dups = m["duplicates"]
     lines += ["", f"## 重复文件组（{len(dups)}，只报告不自动合并；最多列 20 组）", ""]
     for i, g in enumerate(dups[:20], 1):
-        lines.append(f"- 组 {i}（{g['size']} B）：" + "；".join(g["paths"]))
+        lines.append(f"- 组 {i}（{g['size']} B）：" + "；".join(_code(x) for x in g["paths"]))
     if not dups:
         lines.append("-（无）")
     (intake_dir / "report.md").write_text("\n".join(lines), encoding="utf-8")

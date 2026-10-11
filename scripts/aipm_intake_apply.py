@@ -52,14 +52,38 @@ def _migrated_line(mdir: Path, source_abs: str, target_rel: str, sha: str, decis
     rec = {"ts": datetime.datetime.now().isoformat(timespec="seconds"), "source_abs": source_abs,
            "target_rel": target_rel, "sha256": sha, "decision": decision, "action": action}
     rec.update({k: v for k, v in extra.items() if v is not None})
-    with (mdir / "migrated.jsonl").open("a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    _append_jsonl(mdir / "migrated.jsonl", rec)
+
+
+def _append_jsonl(p: Path, rec: dict) -> None:
+    """追加一行。上次追加中途崩溃留下没换行的半行时先补换行，新记录不能粘在半行上一起作废。"""
+    with p.open("a+b") as f:
+        f.seek(0, 2)
+        if f.tell():
+            f.seek(-1, 2)
+            if f.read(1) != b"\n":
+                f.write(b"\n")
+        f.write((json.dumps(rec, ensure_ascii=False) + "\n").encode("utf-8"))
 
 
 def _read_jsonl(p: Path) -> list[dict]:
+    """坏行（崩溃留下的半行）跳过并在 stderr 点名，不让整个导入退出；其余行照常生效。"""
     if not p.exists():
         return []
-    return [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line.strip()]
+    out = []
+    for n, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            rec = None
+        if isinstance(rec, dict):
+            out.append(rec)
+        else:
+            print(f"⚠️ {p.name} 第 {n} 行不是完整记录（多半是上次写到一半中断），已跳过: {line[:80]}",
+                  file=sys.stderr)
+    return out
 
 
 def _decisions(mdir: Path) -> dict[str, dict]:
@@ -390,7 +414,8 @@ def cmd_decide(mpath: str, path: str | None, action: str,
     """I4：每确认一项立即追加一行 decisions.jsonl（中断不丢；同一路径/同一簇以最后一条为准）。
     §4：exclude 只收候选清单里的文件路径（目录前缀/不存在的路径拒绝，整簇不迁用 skip-cluster）；
     skip-cluster 只认 --cluster-id；confirm 也可对 --cluster-id 用，表示撤销该簇的 skip-cluster。
-    其余（confirm 文件 / skip / install-skill）路径语义不变，不做候选校验。
+    其余（confirm 文件 / skip / install-skill）照常落盘、不拒绝（设计 §4「不误伤」）；
+    但 confirm/skip 的路径不在候选清单时会提醒「不会生效」——打错字不能静默失效。
     rename 已废（Ruling 27）：改名在执行时用 project --name；旧 decisions.jsonl 里的 rename 行读取无副作用。"""
     if action not in DECIDE_ACTIONS:
         raise SystemExit(f"action 非法: {action}")
@@ -411,10 +436,13 @@ def cmd_decide(mpath: str, path: str | None, action: str,
            "action": action}
     if cluster_id is not None:
         rec["cluster_id"] = cluster_id
-    with (Path(mpath).parent / "decisions.jsonl").open("a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    _append_jsonl(Path(mpath).parent / "decisions.jsonl", rec)
     what = path if path is not None else f"簇 {cluster_id}"
-    return f"已记录：{action} {what}"
+    warn = ""
+    if path is not None and action in ("confirm", "skip") and path not in _candidates(m):
+        warn = (f"\n⚠️ {path} 不在候选清单里，这条 {action} 不会影响任何文件——"
+                f"多半是路径打错了，照 report.md / manifest 里的原路径重下一次")
+    return f"已记录：{action} {what}{warn}"
 
 
 def _lock_path(repo: Path) -> Path:
