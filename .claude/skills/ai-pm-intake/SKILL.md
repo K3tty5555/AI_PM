@@ -77,7 +77,10 @@ allowed-tools: Read Write Edit Glob Grep Bash(ls) Bash(python3) Bash(cp) Bash(mk
   `status_migrate --validate` 该项目那一行都过，才记 done；不过会打印原因、非零退出，按原因修完再跑。
   重跑 project：done 的跳过；copied 未 done 的提示「已复制，待补 claims 后跑 verify」
 - skill：`python3 scripts/aipm_intake_apply.py skill --manifest M --path <skill_candidates[].path 原值，即 xxx/SKILL.md> --name 名`
-  （不在候选清单里、越出扫描根的路径一律拒绝）
+  （不在候选清单里、越出扫描根的路径一律拒绝）。外部 skill 只登记到本机注册表
+  `templates/configs/capability-registry.local.json`（gitignore、不进包、升级不碰），**不写公共注册表和 `.gitignore`**——
+  外部 skill 名可能带内部代号，写进入库文件一 `git add -A` 就泄漏；开发仓的 ignore 行写 `.git/info/exclude`。
+  撤销登记：先删 skill 目录，再跑 `python3 scripts/aipm_intake_apply.py unregister --name 名`
 - knowledge 草稿：把 prompt_assets 蒸馏成候选卡片写到 `output/_intake/{ts}/knowledge-drafts/`，
   收尾指引逐条走 /ai-pm-knowledge add，绝不直接写 templates/knowledge-base/
 - 收尾：`python3 scripts/aipm_intake_apply.py finish --manifest M` 拿按文件的对账行（迁 / 不迁 / 未决定，
@@ -86,7 +89,8 @@ allowed-tools: Read Write Edit Glob Grep Bash(ls) Bash(python3) Bash(cp) Bash(mk
 ## 红线
 - 原文件只复制不移动不改名；凭证命中/超大文件默认跳过，隐藏文件/未归类/云端占位一律不迁；不跟随符号链接
 - 一个文件只归一个项目；AI 灵活分组也不能越过上面这些红线
-- 项目名/skill 名撞存量一律停下问，绝不覆盖；名字必须过 sanitize（apply 会拒绝未 sanitize 的）
+- 项目名/skill 名撞存量一律停下问，绝不覆盖；名字必须过 sanitize（apply 会拒绝未 sanitize 的）；
+  skill 名只能用字母、数字和 `. _ -`（要能原样写进 ignore 规则）
 - 全盘扫描报告开头必须先讲「扫了什么、没扫什么」；执行前必须让用户看过复制总量估算
 - `06-prototype/_imported/` 与 `07-references/intake-raw/` 会被 bootstrap 登记进台账
   （artifacts/sources 可见），但**不作为迭代布局基线**（无确认记录，基线取最新已确认版）

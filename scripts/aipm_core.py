@@ -7,12 +7,16 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Any, Iterable
 
 
 ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY_REGISTRY = ROOT / "templates" / "configs" / "capability-registry.json"
+# 本机注册表（Ruling 13）：intake 装载的外部 skill 只登记在这里。gitignore、不进包、update 永不触碰；
+# 跟着安装目录走（一机可能装多份 AI_PM），所以不放 ~/.ai-pm。
+LOCAL_REGISTRY_NAME = "capability-registry.local.json"
 SKILLS_DIR = ROOT / ".claude" / "skills"
 
 MODE_IDS = {"explore", "decide", "prd", "prototype", "review", "operate"}
@@ -30,6 +34,8 @@ ARTIFACT_STATUSES = {"current", "stale", "archived", "missing"}
 SIDE_EFFECTS = {"read-project", "write-local", "network-read", "write-cloud", "external-write"}
 LOCAL_TEXT_SUFFIXES = {".md", ".html", ".htm", ".txt", ".json", ".csv"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+# 外部 skill 名：要能原样写进 gitignore 规则（无通配/空白/换行），也要能当目录名
+SKILL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -100,8 +106,10 @@ def _duplicates(values: Iterable[str]) -> set[str]:
 
 
 def validate_capability_registry(
-    data: dict[str, Any], skills_dir: Path = SKILLS_DIR
+    data: dict[str, Any], skills_dir: Path = SKILLS_DIR, disk_skills: Iterable[str] | None = None
 ) -> tuple[list[str], list[str]]:
+    """disk_skills：判「尚未登记」用的 skill 名集合；不传就扫 skills_dir。契约测试传入库的 skill，
+    这样作者机上装过的外部 skill 不会让测试变红。"""
     errors: list[str] = []
     warnings: list[str] = []
     if data.get("schema_version") != 1:
@@ -195,11 +203,108 @@ def validate_capability_registry(
             )
 
     registered_skills = {c.get("skill") for c in capabilities if isinstance(c, dict)}
-    disk_skills = {p.parent.name for p in skills_dir.glob("*/SKILL.md")}
-    missing_registration = sorted(disk_skills - registered_skills)
+    if disk_skills is None:
+        disk_skills = {p.parent.name for p in skills_dir.glob("*/SKILL.md")}
+    missing_registration = sorted(set(disk_skills) - registered_skills)
     if missing_registration:
         warnings.append(f"磁盘 skill 尚未登记: {missing_registration}")
     return errors, warnings
+
+
+def local_registry_path(root: Path = ROOT) -> Path:
+    return root / "templates" / "configs" / LOCAL_REGISTRY_NAME
+
+
+def tracked_skill_names(root: Path = ROOT) -> set[str] | None:
+    """入库的 skill 名；不是 git 仓库（分发安装）返回 None。"""
+    if not (root / ".git").exists():
+        return None  # 先判：root 若在别的 git 仓库里面，git 会拿到父仓的文件
+    try:
+        out = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--", ".claude/skills/*/SKILL.md"],
+                             capture_output=True, text=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return {Path(item).parent.name for item in out.split("\0") if item}
+
+
+def registry_name_hits(data: dict[str, Any], name: str) -> list[str]:
+    """name 撞上的条目 id（比 id / skill / legacy_commands 里的 /name，不区分大小写：macOS 文件系统不分）。"""
+    key = name.casefold()
+    hits = []
+    for cap in data.get("capabilities") or []:
+        if not isinstance(cap, dict):
+            continue
+        names = {str(cap.get("id", "")).casefold(), str(cap.get("skill", "")).casefold()}
+        commands = {str(c).casefold() for c in cap.get("legacy_commands") or []}
+        if key in names or f"/{key}" in commands:
+            hits.append(str(cap.get("id")))
+    return hits
+
+
+def _local_entry_problem(cap: Any) -> str | None:
+    if not isinstance(cap, dict):
+        return "条目必须是 object"
+    skill = cap.get("skill")
+    if not isinstance(skill, str) or not SKILL_NAME_RE.match(skill):
+        return f"skill 名不合规: {skill!r}"
+    if cap.get("id") != skill:
+        return f"{skill}: id 必须与 skill 同名"
+    if cap.get("availability") != "optional-private":
+        return f"{skill}: availability 必须是 optional-private"
+    if cap.get("modes") != []:
+        return f"{skill}: modes 必须为空——外部 skill 不参与六模式路由"
+    return None
+
+
+def load_capability_registry(
+    root: Path = ROOT, include_local: bool = True
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    """公共注册表 + 本机注册表合并读取 → (merged, errors, warnings)。
+
+    公共表缺失/损坏照旧抛 ValueError。本机表的问题进 errors/warnings，有问题的部分不并入
+    （免得 validate 再报一遍）。与公共表重名只算 warning、公共条目优先：上游后来收编同名能力时
+    不该把 doctor 和后续 intake 永久卡红。
+    """
+    public = load_json(root / "templates" / "configs" / "capability-registry.json")
+    errors: list[str] = []
+    warnings: list[str] = []
+    leaked = [c.get("id") for c in public.get("capabilities") or []
+              if isinstance(c, dict) and "external-skill" in (c.get("artifacts") or [])]
+    if leaked:
+        errors.append(f"公共注册表含 external-skill 登记 {leaked}——外部 skill 只能登记在本机 {LOCAL_REGISTRY_NAME}")
+    merged = dict(public)
+    merged["capabilities"] = list(public.get("capabilities") or [])
+    local_path = local_registry_path(root)
+    if not include_local or not local_path.exists():
+        return merged, errors, warnings
+    try:
+        local = load_json(local_path)
+    except ValueError as exc:
+        errors.append(f"本机注册表无法读取，未并入: {exc}")
+        return merged, errors, warnings
+    if "modes" in local:
+        errors.append(f"本机注册表不得含 modes（外部 skill 不参与模式路由），未并入: {local_path}")
+        return merged, errors, warnings
+    if local.get("schema_version") != 1 or not isinstance(local.get("capabilities"), list):
+        errors.append(f"本机注册表 schema_version 必须为 1 且 capabilities 为数组，未并入: {local_path}")
+        return merged, errors, warnings
+    seen: set[str] = set()
+    for cap in local["capabilities"]:
+        problem = _local_entry_problem(cap)
+        if problem:
+            errors.append(f"本机注册表条目未并入（{local_path}）: {problem}")
+            continue
+        skill = cap["skill"]
+        if skill.casefold() in seen:
+            errors.append(f"本机注册表条目重复，未并入: {skill}")
+            continue
+        seen.add(skill.casefold())
+        if registry_name_hits(public, skill):
+            warnings.append(f"官方已收编同名能力 {skill}，本机登记未并入——改名重装，或 "
+                            f"`aipm_intake_apply.py unregister --name {skill}` 撤掉本机登记")
+            continue
+        merged["capabilities"].append(cap)
+    return merged, errors, warnings
 
 
 def validate_baseline(data: dict[str, Any]) -> tuple[list[str], list[str]]:

@@ -129,6 +129,25 @@ class TestSafetyLine(unittest.TestCase):
             self.assertIn("output/projects/leak.md", str(ctx.exception))
 
 
+    def test_local_registry_force_added_raises(self):
+        """本机注册表（外部 skill 名）被 git add -f 强行入库也进不了包：两种包都要拦。
+
+        没 tracked 的它本来就进不了清单，所以这里必须强行 add，否则测的是空集合。"""
+        for kind in ("public", "private"):
+            with tempfile.TemporaryDirectory() as d:
+                repo = Path(d)
+                (repo / "CLAUDE.md").write_text("ok\n", encoding="utf-8")
+                local = repo / "templates/configs/capability-registry.local.json"
+                local.parent.mkdir(parents=True)
+                local.write_text('{"schema_version":1,"capabilities":[]}', encoding="utf-8")
+                _init_repo(repo)
+                subprocess.run(["git", "-C", str(repo), "add", "-f", str(local)], check=True, capture_output=True)
+                self.assertIn("templates/configs/capability-registry.local.json", module._git_tracked(repo))
+                with self.assertRaises(SystemExit, msg=kind) as ctx:
+                    module.collect_files(repo, kind)
+                self.assertIn("capability-registry.local.json", str(ctx.exception))
+
+
 class TestSymlinkExclusion(unittest.TestCase):
     def test_symlink_excluded_and_count_matches(self):
         """tracked 符号链接不进包，file_count 必须等于 tar 里的 tree 条目数。"""
@@ -488,6 +507,14 @@ class TestVerify(unittest.TestCase):
                 ])
                 problems = v.verify(bad, "public")
             self.assertTrue(problems, f"禁止路径 {frag} 未被识别")
+
+    def test_local_registry_in_package_flagged(self):
+        v = self._verify_module()
+        with tempfile.TemporaryDirectory() as d:
+            bad = self._tar_with(Path(d) / "bad.tar.gz", [
+                "meta/versions.json", "meta/changelog.md", "tree/CLAUDE.md",
+                "tree/templates/configs/capability-registry.local.json"])
+            self.assertTrue(any("禁止路径" in p for p in v.verify(bad, "public")))
 
     def test_legit_assets_not_flagged(self):
         """回归：Task 4 实测踩过的三类误杀，逐条钉住。"""

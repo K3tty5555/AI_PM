@@ -18,7 +18,9 @@ class IntakeContractTests(unittest.TestCase):
 
     def test_registry_entry_matches_disk_and_dispatch(self):
         registry = aipm_core.load_json(REPO / "templates/configs/capability-registry.json")
-        errors, warnings = aipm_core.validate_capability_registry(registry)
+        # 只看入库 skill：作者机上 intake 装过的外部 skill 登记在本机注册表，不该让契约测试变红
+        errors, warnings = aipm_core.validate_capability_registry(
+            registry, disk_skills=aipm_core.tracked_skill_names(REPO))
         self.assertEqual(errors, [])
         self.assertFalse(any("尚未登记" in w for w in warnings))
         entry = next(c for c in registry["capabilities"] if c["id"] == "intake")

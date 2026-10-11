@@ -33,6 +33,7 @@ FORBIDDEN = [
     ".claude/settings.local.json",
     "settings.local.json",
     ".d2c/config.json",
+    "capability-registry.local.",  # 本机注册表（外部 skill 名，Ruling 13）
     "output/projects/",
     "tree/docs/",
     "/.git/",  # 嵌套 git 仓库（内部提交历史）绝不能混进任何分发包（2026-10-10）

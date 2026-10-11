@@ -63,14 +63,14 @@
 
 ### 工作台契约与证据闭环（4 项）
 
-28. **六模式能力注册表**：运行 `python3 scripts/aipm_contracts.py capabilities`。必须且只能有探索研究、决策分析、PRD、原型、评审验收、运营复盘六种 mode；mode 只做意图路由，不得写 lifecycle phase。
+28. **六模式能力注册表**：运行 `python3 scripts/aipm_contracts.py capabilities`（默认连同本机注册表一起校验，外部 skill 名默认只报条数，`--verbose` 列名；本机注册表坏了或与官方能力撞名会在这里报出来）。必须且只能有探索研究、决策分析、PRD、原型、评审验收、运营复盘六种 mode；mode 只做意图路由，不得写 lifecycle phase。
 29. **项目基线与产物契约**：检查 `baseline-manifest.schema.json`、`prototype-source-manifest.schema.json`、`impact-record.schema.json` 和扩展后的 `status.schema.json` 均存在且可解析；运行 `python3 scripts/aipm_contracts.py selftest`。
 30. **只读对账与影响判断边界**：分别运行 `python3 scripts/aipm_reconcile.py --selftest` 和 `python3 scripts/aipm_impact.py selftest`。对账前后字节必须一致；无证据的 continue / adjust / stop 必须被阻断。
 31. **系统复盘时间覆盖**：分别运行 `python3 scripts/ai-sync/conversation-coverage.py --selftest` 和 `python3 scripts/aipm_system_retrospective.py --selftest`。月份缺失必须明确报 coverage gap，不能用文件 mtime 伪装覆盖。
 
 ### 分发形态守卫（1 项）
 
-32. **嵌套 git 仓库检测**（仅分发安装形态执行；根目录有 `.git` 的开发仓跳过本项）：检查 AI_PM 根目录与 `.claude/skills/` 各子目录下是否存在 `.git` 目录或 `.git` 文件（gitdir 指针），命令参考：`test -d .git && echo 开发仓形态 || find .claude/skills -maxdepth 2 -name ".git" 2>/dev/null`。发现任何嵌套 `.git` → ❌ 错误：分发形态是用户个人资料密集区，git 写操作（init/add/commit/push）会把 `output/` 项目产物、会话记录、知识库、persona 带进历史，`.gitignore` 仅是兜底；若为 2026-10-10 之前打的私有包遗留的 `tpd_cli` 嵌套 `.git`（含内部仓库完整历史），提示用户可直接删除该目录，不影响 skill 使用。
+32. **嵌套 git 仓库检测**（仅分发安装形态执行；根目录有 `.git` 的开发仓跳过本项）：检查 AI_PM 根目录与 `.claude/skills/` 各子目录下是否存在 `.git` 目录或 `.git` 文件（gitdir 指针），命令参考：`test -e .git && echo 开发仓形态 || find .claude/skills -maxdepth 2 -name ".git" 2>/dev/null`。发现任何嵌套 `.git` → ❌ 错误：分发形态是用户个人资料密集区，git 写操作（init/add/commit/push）会把 `output/` 项目产物、会话记录、知识库、persona 带进历史，`.gitignore` 仅是兜底；若为 2026-10-10 之前打的私有包遗留的 `tpd_cli` 嵌套 `.git`（含内部仓库完整历史），提示用户可直接删除该目录，不影响 skill 使用。
 
 ## 执行方式
 

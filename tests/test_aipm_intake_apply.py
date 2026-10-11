@@ -1,5 +1,6 @@
 """intake 执行器测试：顺序（骨架+初始status→复制→active_prd→bootstrap）/三分支幂等/同名子路径/装载四道闸。"""
 import importlib.util, json, shutil, subprocess, sys, tempfile, unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -455,45 +456,214 @@ class TestSkipReason(unittest.TestCase):
                                               {"d": {"path": "d", "action": "exclude"}}))
 
 
+def _git(*args, cwd=None):
+    return subprocess.run(["git", "-c", "core.hooksPath=/dev/null", "-c", "init.defaultBranch=main", *args],
+                          cwd=cwd, check=True, capture_output=True, text=True).stdout
+
+
 class TestApplySkill(unittest.TestCase):
+    """Ruling 13：外部 skill 只登记到本机注册表；ignore 行开发仓写 info/exclude、分发安装不写。"""
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.work = Path(self.tmp.name)
         self.repo = self.work / "repo"
-        (self.repo / ".claude/skills").mkdir(parents=True)
-        (self.repo / "templates/configs").mkdir(parents=True)
-        (self.repo / "templates/configs/capability-registry.json").write_text(
-            json.dumps({"schema_version": 1, "modes": [], "capabilities": []}), encoding="utf-8")
-        (self.repo / ".gitignore").write_text("output/\n", encoding="utf-8")
+        self.make_repo(self.repo)
         (self.work / "helper").mkdir()
         (self.work / "helper/SKILL.md").write_text("---\nname: helper\ndescription: t\n---\n正文\n", encoding="utf-8")
 
-    def test_install_adds_registry_and_gitignore(self):
-        module.cmd_skill(self.repo, self.work / "helper", "helper")
-        self.assertTrue((self.repo / ".claude/skills/helper/SKILL.md").is_file())
-        gi = (self.repo / ".gitignore").read_text(encoding="utf-8")
-        self.assertIn(".claude/skills/helper/", gi)
-        reg = json.loads((self.repo / "templates/configs/capability-registry.json").read_text(encoding="utf-8"))
-        self.assertEqual(reg["capabilities"][0]["skill"], "helper")
-        self.assertEqual(reg["capabilities"][0]["availability"], "optional-private")
+    @staticmethod
+    def make_repo(repo: Path) -> None:
+        (repo / ".claude/skills").mkdir(parents=True)
+        (repo / ".claude/skills/.keep").write_text("", encoding="utf-8")
+        (repo / "templates/configs").mkdir(parents=True)
+        (repo / "templates/configs/capability-registry.json").write_text(
+            json.dumps({"schema_version": 1, "modes": [],
+                        "capabilities": [{"id": "core", "skill": "core", "legacy_commands": ["/core"]}]}),
+            encoding="utf-8")
+        # 本机注册表那行取自真实 .gitignore：顺带验证入库的规则真能盖住它
+        rules = [l for l in (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+                 if "capability-registry.local" in l and not l.startswith("#")]
+        assert rules, "真实 .gitignore 缺本机注册表规则"
+        (repo / ".gitignore").write_text("output/\n" + "\n".join(rules) + "\n", encoding="utf-8")
 
-    def test_install_idempotent_gitignore(self):
-        module.cmd_skill(self.repo, self.work / "helper", "helper")
-        gi = (self.repo / ".gitignore").read_text(encoding="utf-8")
-        self.assertEqual(gi.count(".claude/skills/helper/"), 1)
+    def public_bytes(self, repo=None):
+        return ((repo or self.repo) / "templates/configs/capability-registry.json").read_bytes()
+
+    def local(self, repo=None):
+        p = aipm_core.local_registry_path(repo or self.repo)
+        return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
+    def install(self, name="helper", repo=None):
+        return module.cmd_skill(repo or self.repo, self.work / "helper", name)
+
+    # —— 写到哪 ——
+    def test_dist_install_writes_overlay_only(self):
+        before_pub, before_gi = self.public_bytes(), (self.repo / ".gitignore").read_bytes()
+        self.install()
+        self.assertTrue((self.repo / ".claude/skills/helper/SKILL.md").is_file())
+        self.assertEqual(self.public_bytes(), before_pub, "公共注册表一个字节都不能变")
+        self.assertEqual((self.repo / ".gitignore").read_bytes(), before_gi, "分发安装不写 .gitignore")
+        self.assertFalse((self.repo / ".git").exists())
+        entry = self.local()["capabilities"][0]
+        self.assertEqual((entry["skill"], entry["availability"], entry["modes"]), ("helper", "optional-private", []))
+        self.assertIn("external-skill", entry["artifacts"])
+
+    def test_overlay_appends(self):
+        self.install()
+        shutil.copytree(self.work / "helper", self.work / "helper2")
+        module.cmd_skill(self.repo, self.work / "helper2", "helper2")
+        self.assertEqual([c["skill"] for c in self.local()["capabilities"]], ["helper", "helper2"])
+
+    def test_dev_repo_writes_info_exclude(self):
+        _git("init", "-q", str(self.repo))
+        before_gi = (self.repo / ".gitignore").read_bytes()
+        self.install()
+        self.assertEqual((self.repo / ".gitignore").read_bytes(), before_gi)
+        exclude = (self.repo / ".git/info/exclude").read_text(encoding="utf-8")
+        self.assertIn("/.claude/skills/helper/", exclude)
+        _git("-C", str(self.repo), "check-ignore", "-q", ".claude/skills/helper/SKILL.md")
+        status = _git("-C", str(self.repo), "status", "--porcelain", "--untracked-files=all")
+        self.assertNotIn("helper", status, "外部 skill 目录和本机注册表都不能出现在 git status 里")
+        self.assertNotIn("capability-registry.local", status)
+
+    def test_dev_repo_missing_info_dir_created(self):
+        _git("init", "-q", str(self.repo))
+        shutil.rmtree(self.repo / ".git/info")
+        self.install()
+        self.assertIn("/.claude/skills/helper/", (self.repo / ".git/info/exclude").read_text(encoding="utf-8"))
+
+    def test_worktree_exclude_goes_to_common_dir(self):
+        main = self.work / "main"
+        self.make_repo(main)
+        _git("init", "-q", str(main))
+        _git("-C", str(main), "add", "-A")
+        _git("-C", str(main), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init")
+        wt = self.work / "wt"
+        _git("-C", str(main), "worktree", "add", "-q", str(wt))
+        self.assertTrue((wt / ".git").is_file(), "worktree 的 .git 是指针文件")
+        before_gi = (wt / ".gitignore").read_bytes()
+        self.install(repo=wt)
+        self.assertEqual((wt / ".gitignore").read_bytes(), before_gi, "worktree 不能被当成分发安装写 .gitignore")
+        _git("-C", str(wt), "check-ignore", "-q", ".claude/skills/helper/SKILL.md")
+        self.assertIn("/.claude/skills/helper/", (main / ".git/info/exclude").read_text(encoding="utf-8"))
+
+    def test_nested_in_foreign_repo_refused(self):
+        """.git 存在但 git 认出的顶层不是本目录（坏 .git 落进父仓）→ 拒，不往别人的仓库写。"""
+        outer = self.work / "outer"
+        self.make_repo(outer)
+        _git("init", "-q", str(outer))
+        inner = outer / "inner"
+        self.make_repo(inner)
+        (inner / ".git").mkdir()  # 空目录，不是有效仓库
+        with self.assertRaises(SystemExit):
+            self.install(repo=inner)
+        self.assertFalse((inner / ".claude/skills/helper").exists())
+        self.assertNotIn("helper", (outer / ".git/info/exclude").read_text(encoding="utf-8"))
+
+    # —— 拒绝 ——
+    def test_bad_name_refused(self):
+        for bad in ("x\n!output", "My Skill[1]", ".hidden"):
+            with self.assertRaises(SystemExit):
+                self.install(bad)
+        self.assertEqual(sorted(p.name for p in (self.repo / ".claude/skills").iterdir()), [".keep"])
+
+    def test_public_collision_refused(self):
+        with self.assertRaises(SystemExit):
+            self.install("CORE")
+        self.assertIsNone(self.local())
 
     def test_existing_target_refuses(self):
         (self.repo / ".claude/skills/helper").mkdir()
         with self.assertRaises(SystemExit):
-            module.cmd_skill(self.repo, self.work / "helper", "helper")
+            self.install()
 
-    def test_registry_duplicate_refuses(self):
-        """R20：装载前复查 registry（运行间隙 registry 可能已被别处改过）。"""
-        reg = self.repo / "templates/configs/capability-registry.json"
-        reg.write_text(json.dumps({"schema_version": 1, "modes": [],
-                                   "capabilities": [{"id": "helper", "skill": "helper"}]}), encoding="utf-8")
+    def test_case_insensitive_disk_collision_refused(self):
+        (self.repo / ".claude/skills/Helper").mkdir()
         with self.assertRaises(SystemExit):
-            module.cmd_skill(self.repo, self.work / "helper", "helper")
+            self.install()
+        self.assertIsNone(self.local())
+
+    def test_broken_overlay_refused_zero_change(self):
+        p = aipm_core.local_registry_path(self.repo)
+        p.write_text("{broken", encoding="utf-8")
+        with self.assertRaises(SystemExit) as ctx:
+            self.install()
+        self.assertIn(str(p), str(ctx.exception))
+        self.assertEqual(p.read_text(encoding="utf-8"), "{broken")
+        self.assertFalse((self.repo / ".claude/skills/helper").exists())
+
+    def test_lock_held_refused(self):
+        lock = module._lock_path(self.repo)
+        lock.write_text("123", encoding="utf-8")
+        with self.assertRaises(SystemExit) as ctx:
+            self.install()
+        self.assertIn("另一个", str(ctx.exception))
+        self.assertFalse((self.repo / ".claude/skills/helper").exists())
+        self.assertTrue(lock.exists(), "别人的锁不能删")
+
+    def test_lock_released_after_install_and_failure(self):
+        self.install()
+        self.assertFalse(module._lock_path(self.repo).exists())
+        with self.assertRaises(SystemExit):
+            self.install()
+        self.assertFalse(module._lock_path(self.repo).exists())
+
+    # —— 半途失败回滚 ——
+    def test_copy_failure_rolls_back(self):
+        def boom(src, dst, **kw):
+            Path(dst).mkdir(parents=True); (Path(dst) / "half").write_text("x")
+            raise OSError("disk full")
+        with mock.patch.object(module.shutil, "copytree", side_effect=boom):
+            with self.assertRaises(SystemExit) as ctx:
+                self.install()
+        self.assertIn("回滚", str(ctx.exception))
+        self.assertFalse((self.repo / ".claude/skills/helper").exists())
+        self.assertIsNone(self.local())
+
+    def test_overlay_write_failure_rolls_back(self):
+        with mock.patch.object(module, "atomic_write_json", side_effect=OSError("ro")):
+            with self.assertRaises(SystemExit) as ctx:
+                self.install()
+        self.assertIn("回滚", str(ctx.exception))
+        self.assertFalse((self.repo / ".claude/skills/helper").exists())
+
+    def test_exclude_write_failure_lands_nothing(self):
+        _git("init", "-q", str(self.repo))
+        exclude = self.repo / ".git/info/exclude"
+        exclude.unlink(); exclude.mkdir()  # 写不进去
+        with self.assertRaises(SystemExit):
+            self.install()
+        self.assertFalse((self.repo / ".claude/skills/helper").exists())
+        self.assertIsNone(self.local())
+
+    # —— 反向孤儿 + unregister ——
+    def test_orphan_registration_allows_reinstall(self):
+        _git("init", "-q", str(self.repo))
+        self.install()
+        shutil.rmtree(self.repo / ".claude/skills/helper")
+        self.install()
+        self.assertEqual(len(self.local()["capabilities"]), 1, "复用原条目，不重复登记")
+        self.assertEqual((self.repo / ".git/info/exclude").read_text(encoding="utf-8").count("/.claude/skills/helper/"), 1)
+
+    def test_unregister_refuses_while_dir_present(self):
+        self.install()
+        with self.assertRaises(SystemExit):
+            module.cmd_unregister(self.repo, "helper")
+        self.assertEqual(len(self.local()["capabilities"]), 1)
+
+    def test_unregister_clears_entry_and_exclude(self):
+        _git("init", "-q", str(self.repo))
+        self.install()
+        shutil.rmtree(self.repo / ".claude/skills/helper")
+        module.cmd_unregister(self.repo, "helper")
+        self.assertEqual(self.local()["capabilities"], [])
+        self.assertNotIn("/.claude/skills/helper/", (self.repo / ".git/info/exclude").read_text(encoding="utf-8"))
+
+    def test_unregister_non_overlay_refused(self):
+        with self.assertRaises(SystemExit):
+            module.cmd_unregister(self.repo, "core")
+        self.assertEqual(json.loads(self.public_bytes())["capabilities"][0]["id"], "core")
 
 
 class TestApplySkillCLI(unittest.TestCase):
@@ -512,7 +682,7 @@ class TestApplySkillCLI(unittest.TestCase):
         shutil.copytree(MESSY, self.src)
         (self.work / "secret.txt").write_text("外部机密", encoding="utf-8")
         (self.src / "my-helper/link.txt").symlink_to(self.work / "secret.txt")
-        self.m = scan_mod.scan(self.src, self.work / "_intake", extra_skill_dirs=())
+        self.m = scan_mod.scan(self.src, self.work / "_intake", extra_skill_dirs=(), repo=self.repo)
         self.mpath = self.work / "_intake" / self.m["intake_id"] / "manifest.json"
 
     def run_cli(self, path, name="my-helper"):

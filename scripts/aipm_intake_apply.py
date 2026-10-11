@@ -11,13 +11,16 @@
 exclude 只收候选文件路径，整簇不迁走 decide --cluster-id X --action skip-cluster。
 """
 from __future__ import annotations
-import argparse, datetime, hashlib, json, re, shutil, subprocess, sys
+import argparse, datetime, hashlib, json, os, re, shutil, subprocess, sys
+from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from status_migrate import infer_lifecycle  # noqa: E402
 from aipm_intake_scan import sanitize_name, will_migrate  # noqa: E402  单源：sanitize/迁移口径只在 scan 定义
+from aipm_core import (  # noqa: E402
+    SKILL_NAME_RE, atomic_write_json, load_capability_registry, load_json, local_registry_path, registry_name_hits)
 
 # 上游单源 = .claude/skills/ai-pm/SKILL.md「输出容器与项目目录结构」目录树（2026-10 快照）。
 # 改骨架先改那里再同步这里，别单边加目录（R24）。
@@ -414,30 +417,142 @@ def cmd_decide(mpath: str, path: str | None, action: str,
     return f"已记录：{action} {what}"
 
 
+def _lock_path(repo: Path) -> Path:
+    return repo / "templates/configs/capability-registry.local.lock"
+
+
+@contextmanager
+def _registry_lock(repo: Path):
+    """同一份安装里两个会话同时装载会互相吞登记（读-改-写）；O_EXCL 锁住整个装载/卸载。"""
+    lock = _lock_path(repo)
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        raise SystemExit(f"另一个装载/卸载正在进行（锁文件 {lock}）——确认没有别的会话在跑，再删掉锁文件重试")
+    try:
+        os.write(fd, str(os.getpid()).encode()); os.close(fd)
+        yield
+    finally:
+        lock.unlink(missing_ok=True)
+
+
+def _git_exclude(repo: Path) -> Path | None:
+    """开发仓 → 返回 info/exclude 的真实路径；分发安装（没有 .git）→ None。
+
+    .git 用 exists() 判：worktree 里它是指针文件。路径用 git rev-parse --git-path 取，worktree 下落到
+    common dir（git 只读那份）。git 认出的顶层不是本目录（坏 .git、装在别人的仓库里）→ 拒，不往别人的仓库写。
+    只跑只读 git 命令，不违反分发形态的 git 写禁令。"""
+    if not (repo / ".git").exists():
+        return None
+    def rev_parse(*args: str) -> str:
+        r = subprocess.run(["git", "-C", str(repo), "rev-parse", *args], capture_output=True, text=True)
+        if r.returncode != 0:
+            raise SystemExit(f"{repo}/.git 存在但 git 读不了（{r.stderr.strip()}）——未做任何改动")
+        return r.stdout.strip()
+    top = Path(rev_parse("--show-toplevel")).resolve()
+    if top != repo.resolve():
+        raise SystemExit(f"git 认出的仓库顶层是 {top}，不是本安装目录 {repo}——不往别人的仓库写 ignore，未做任何改动")
+    exclude = Path(rev_parse("--git-path", "info/exclude"))
+    return exclude if exclude.is_absolute() else repo / exclude
+
+
+def _exclude_line(name: str) -> str:
+    return f"/.claude/skills/{name}/"
+
+
+def _load_local(repo: Path) -> dict:
+    path = local_registry_path(repo)
+    return load_json(path) if path.exists() else {"schema_version": 1, "capabilities": []}
+
+
 def cmd_skill(repo: Path, src_dir: Path, name: str) -> str:
-    """装载四道闸的机械部分：registry 复查 + 目录拒绝覆盖 + gitignore 追加（spec §5）。"""
-    if name != sanitize_name(name):
-        raise SystemExit(f"skill 名未过 sanitize: {name!r}")
+    """装载的机械部分（spec §5 + Ruling 13）：外部 skill 只登记到本机注册表，公共注册表和 .gitignore 不碰。
+
+    顺序：名字校验 → 拿锁 → 预检（注册表读得了才继续）→ 撞名 → 写 ignore（开发仓才写，幂等）→
+    copytree → 原子写本机注册表。复制或登记失败都删掉本次新建的目录。"""
+    if not SKILL_NAME_RE.match(name) or name != sanitize_name(name):
+        raise SystemExit(f"skill 名不合规: {name!r}——只能用字母、数字和 . _ -，首字符是字母或数字，"
+                         f"不超过 64 个字符；换个名字重装")
     repo = repo or ROOT
-    reg_path = repo / "templates/configs/capability-registry.json"
-    reg = _load(reg_path)
-    if any(c.get("skill") == name or c.get("id") == name for c in reg.get("capabilities", [])):
-        raise SystemExit(f"registry 已有 {name}——拒绝重复装载")  # R20：运行间隙复查
-    target = repo / ".claude/skills" / name
-    if target.exists():
-        raise SystemExit(f"目标已存在: {target}——列为人工合并候选，绝不就地覆盖")
-    shutil.copytree(src_dir, target, symlinks=True)  # 不跟随 symlink：外部 skill 里的链接不能把目录外内容带进来
-    reg["capabilities"].append({"id": name, "skill": name, "availability": "optional-private",
-                                "modes": [], "phase_effect": {"kind": "none"},
-                                "artifacts": ["external-skill"], "side_effects": ["read-project", "write-local"],
-                                "legacy_commands": [f"/{name}"]})
-    _save(reg_path, reg)
-    gi = repo / ".gitignore"
-    line = f".claude/skills/{name}/"
-    text = gi.read_text(encoding="utf-8") if gi.exists() else ""
-    if line not in text:
-        gi.write_text(text.rstrip("\n") + "\n" + line + "\n", encoding="utf-8")
-    return f"skill {name} 已装载（registry + gitignore 已同步）"
+    exclude = _git_exclude(repo)
+    local_path = local_registry_path(repo)
+    with _registry_lock(repo):
+        try:
+            public, _, _ = load_capability_registry(repo, include_local=False)
+            _, errors, _ = load_capability_registry(repo)
+        except ValueError as exc:
+            raise SystemExit(f"公共注册表读不了，未做任何改动: {exc}")
+        if errors:
+            raise SystemExit("注册表有问题，未做任何改动——先修好再装（本机注册表在 "
+                             f"{local_path}）：" + "；".join(errors))
+        if hits := registry_name_hits(public, name):
+            raise SystemExit(f"官方能力里已有同名 {hits}——换个名字重装")  # R20：运行间隙复查
+        local = _load_local(repo)
+        local_hits = [c for c in local["capabilities"] if registry_name_hits({"capabilities": [c]}, name)]
+        if any(c.get("skill") != name for c in local_hits):
+            raise SystemExit(f"本机已登记大小写不同的同名 skill {[c.get('skill') for c in local_hits]}——"
+                             f"换个名字，或先 unregister")
+        skills_dir = repo / ".claude/skills"
+        target = skills_dir / name
+        clash = [p.name for p in skills_dir.iterdir() if p.name.casefold() == name.casefold()] \
+            if skills_dir.is_dir() else []
+        if clash or target.exists():
+            raise SystemExit(f"目标已存在: {skills_dir / (clash[0] if clash else name)}——"
+                             f"列为人工合并候选，绝不就地覆盖")
+        if exclude is not None:  # 先写 ignore：目录落盘那一刻就已被忽略，git add -A 收不进去
+            try:
+                exclude.parent.mkdir(parents=True, exist_ok=True)
+                text = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
+                if _exclude_line(name) not in text.splitlines():
+                    with exclude.open("a", encoding="utf-8") as f:
+                        f.write(("" if not text or text.endswith("\n") else "\n") + _exclude_line(name) + "\n")
+            except OSError as exc:
+                raise SystemExit(f"写 {exclude} 失败，未做任何改动: {exc}")
+        try:
+            shutil.copytree(src_dir, target, symlinks=True)  # 不跟随 symlink：外部 skill 里的链接不能把目录外内容带进来
+        except (OSError, shutil.Error) as exc:
+            shutil.rmtree(target, ignore_errors=True)
+            raise SystemExit(f"复制失败，已回滚（删掉 {target}）: {exc}")
+        if not local_hits:  # 已登记、目录被删过（反向孤儿）→ 复用原条目
+            local["capabilities"].append({"id": name, "skill": name, "availability": "optional-private",
+                                          "modes": [], "phase_effect": {"kind": "none"},
+                                          "artifacts": ["external-skill"],
+                                          "side_effects": ["read-project", "write-local"],
+                                          "legacy_commands": [f"/{name}"]})
+            try:
+                atomic_write_json(local_path, local)
+            except OSError as exc:
+                shutil.rmtree(target, ignore_errors=True)
+                raise SystemExit(f"写本机注册表失败，已回滚（删掉 {target}）: {exc}")
+    where = "本机注册表 + .git/info/exclude" if exclude is not None else "本机注册表"
+    return f"skill {name} 已装载（登记在{where}；公共注册表和 .gitignore 未改动）"
+
+
+def cmd_unregister(repo: Path, name: str) -> str:
+    """撤销本机登记：删本机注册表条目 + 开发仓的 exclude 行。只认本机注册表里的外部 skill。
+    目录还在就拒绝——开发仓里 exclude 一撤，目录就会被 git add -A 收进去；删不删目录由用户决定。"""
+    repo = repo or ROOT
+    exclude = _git_exclude(repo)
+    local_path = local_registry_path(repo)
+    with _registry_lock(repo):
+        try:
+            local = _load_local(repo)
+        except ValueError as exc:
+            raise SystemExit(f"本机注册表读不了，未做任何改动: {exc}")
+        caps = local.get("capabilities") or []
+        keep = [c for c in caps if not (isinstance(c, dict) and c.get("skill") == name)]
+        if len(keep) == len(caps):
+            raise SystemExit(f"本机注册表里没有 {name}——unregister 只撤 intake 装载的外部 skill")
+        target = repo / ".claude/skills" / name
+        if target.exists():
+            raise SystemExit(f"目录还在: {target}——先删掉目录再撤登记（撤了 ignore 目录会暴露给 git）")
+        if exclude is not None and exclude.is_file():
+            lines = exclude.read_text(encoding="utf-8").splitlines(keepends=True)
+            exclude.write_text("".join(l for l in lines if l.rstrip("\n") != _exclude_line(name)), encoding="utf-8")
+        local["capabilities"] = keep
+        atomic_write_json(local_path, local)
+    return f"已撤销本机登记 {name}"
 
 
 def cmd_skill_from_manifest(mpath: str, cand_path: str, name: str, repo: Path | None = None) -> str:
@@ -512,6 +627,9 @@ def main() -> int:
     p2.add_argument("--path", required=True, help="manifest.skill_candidates[].path 原值（xxx/SKILL.md）")
     p2.add_argument("--name", required=True)
     p2.add_argument("--repo", default=str(ROOT), help=argparse.SUPPRESS)  # 测试注入假仓
+    p7 = sub.add_parser("unregister", help="撤销外部 skill 的本机登记（目录须先删掉）")
+    p7.add_argument("--name", required=True)
+    p7.add_argument("--repo", default=str(ROOT), help=argparse.SUPPRESS)  # 测试注入假仓
     p3 = sub.add_parser("finish"); p3.add_argument("--manifest", required=True)
     p4 = sub.add_parser("verify"); p4.add_argument("--manifest", required=True)
     p4.add_argument("--name", required=True)
@@ -535,6 +653,8 @@ def main() -> int:
                           includes=args.include, reason=args.reason, allow_dup=args.allow_dup))
     elif args.cmd == "skill":
         print(cmd_skill_from_manifest(args.manifest, args.path, args.name, Path(args.repo)))
+    elif args.cmd == "unregister":
+        print(cmd_unregister(Path(args.repo), args.name))
     else:
         print(cmd_finish(args.manifest))
     return 0

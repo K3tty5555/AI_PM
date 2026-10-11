@@ -74,6 +74,7 @@ run_check "演讲材料路由与骨架契约自测" python3 -m unittest tests.te
 run_check "升级命令路由与注册表契约自测" python3 -m unittest tests.test_ai_pm_update_contract
 run_check "intake 扫描与执行器" python3 -m unittest tests.test_aipm_intake_scan tests.test_aipm_intake_apply
 run_check "intake 命令路由与注册表契约自测" python3 -m unittest tests.test_ai_pm_intake_contract
+run_check "本机注册表 overlay（合并读取/重名降级/防回退/不列外部名）" python3 -m unittest tests.test_aipm_registry_overlay
 run_check "intake 执行往返端到端（含 claims gate 与假仓 validate）" python3 -m unittest tests.test_aipm_intake_roundtrip
 run_check "output 容器注册单源自测" python3 scripts/check-output-container-registry.py
 run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500
@@ -82,7 +83,7 @@ run_check "云文档共享层自测（指纹/删除判定/残留检查）" pytho
 run_check "云文档 publish 守门自测（存量缺基线阻断+adopt 零差异/有损闸）" python3 scripts/prd_publish.py --selftest
 run_check "publish 守门自测·私有插件禁用模拟（只测插件缺失，非完整分发环境）" env AIPM_DISABLE_PRIVATE_PLUGIN=1 python3 scripts/prd_publish.py --selftest
 run_check "状态契约子集校验自测（status_migrate --selftest）" python3 scripts/status_migrate.py --selftest
-run_check "六模式 capability 注册表（mode 不造第二套 phase）" python3 scripts/aipm_contracts.py capabilities
+run_check "六模式 capability 注册表（mode 不造第二套 phase；只校公共表，不受本机注册表影响）" python3 scripts/aipm_contracts.py capabilities --public-only
 run_check "下一版本 PRD / bootstrap 契约自测" python3 scripts/aipm_contracts.py selftest
 run_check "跨产物只读对账自测（残留/阴性/本地编辑）" python3 scripts/aipm_reconcile.py --selftest
 run_check "上线影响证据门禁自测" python3 scripts/aipm_impact.py selftest
@@ -189,7 +190,8 @@ PYEOF
       --include-untracked tests/test_aipm_intake_scan.py \
       --include-untracked tests/test_aipm_intake_apply.py \
       --include-untracked tests/test_ai_pm_intake_contract.py \
-      --include-untracked tests/test_aipm_intake_roundtrip.py
+      --include-untracked tests/test_aipm_intake_roundtrip.py \
+      --include-untracked tests/test_aipm_registry_overlay.py
 fi
 
 echo ""
