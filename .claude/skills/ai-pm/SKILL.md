@@ -38,7 +38,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 
 ### 六种工作模式（用户门面）
 
-> 机读单源：`templates/configs/capability-registry.json`。mode 只做意图路由；现有 phase、checkpoint 和 `_status.json.last_phase` 继续是项目生命周期唯一状态源。
+> 机读单源：`templates/configs/capability-registry.json`（intake 装载的外部 skill 另登记在本机 `capability-registry.local.json`，不参与模式路由）。mode 只做意图路由；现有 phase、checkpoint 和 `_status.json.last_phase` 继续是项目生命周期唯一状态源。
 
 | 模式 | 命令 | 路由规则 |
 |------|------|---------|

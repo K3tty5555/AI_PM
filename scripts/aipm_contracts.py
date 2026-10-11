@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from aipm_core import (
-    CAPABILITY_REGISTRY,
+    ROOT,
     atomic_write_json,
     discover_reconcilable_artifacts,
     load_json,
@@ -20,6 +20,8 @@ from aipm_core import (
     resolve_artifact_path,
     sha256_file,
     validate_baseline,
+    load_capability_registry,
+    tracked_skill_names,
     validate_capability_registry,
     validate_status_artifacts,
 )
@@ -276,6 +278,29 @@ def _print_result(name: str, errors: list[str], warnings: list[str]) -> int:
     return 1 if errors else 0
 
 
+def _capabilities(root: Path, public_only: bool, verbose: bool) -> int:
+    data, errors, warnings = load_capability_registry(root, include_local=not public_only)
+    disk = tracked_skill_names(root) if public_only else None
+    ve, vw = validate_capability_registry(data, root / ".claude" / "skills", disk_skills=disk)
+    errors += ve
+    warnings += vw
+    if public_only or verbose:
+        return _print_result("capability registry", errors, warnings)
+    # 默认不在输出里列外部 skill 名：这类日志常被贴进 PR / .ai-shared
+    local_names = {str(c.get("skill")) for c in data["capabilities"]
+                   if "external-skill" in (c.get("artifacts") or [])}
+    local_names |= {m.group(1) for w in warnings for m in [re.search(r"官方已收编同名能力 (\S+)", w)] if m}
+    hidden = [w for w in warnings if any(n in w for n in local_names)]
+    hidden_err = [e for e in errors if "本机注册表" in e]
+    shown = [w for w in warnings if w not in hidden]
+    if hidden:
+        shown.append(f"本机注册表相关提示 {len(hidden)} 条（--verbose 查看）")
+    shown_err = [e for e in errors if e not in hidden_err]
+    if hidden_err:
+        shown_err.append(f"本机注册表有 {len(hidden_err)} 处问题（--verbose 查看）")
+    return _print_result("capability registry", shown_err, shown)
+
+
 def selftest() -> int:
     from tempfile import TemporaryDirectory
 
@@ -304,7 +329,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("selftest")
-    sub.add_parser("capabilities")
+    cap_parser = sub.add_parser("capabilities")
+    cap_parser.add_argument("--public-only", action="store_true",
+                            help="只校验公共注册表、「尚未登记」只看入库 skill（回归套件用，不受本机状态影响）")
+    cap_parser.add_argument("--verbose", action="store_true", help="列出本机注册表相关提示里的 skill 名")
+    cap_parser.add_argument("--root", default=str(ROOT), help=argparse.SUPPRESS)  # 测试注入假仓
     status_parser = sub.add_parser("status")
     status_parser.add_argument("--project", required=True)
     baseline_parser = sub.add_parser("baseline")
@@ -329,8 +358,7 @@ def main() -> int:
         if args.command == "selftest":
             return selftest()
         if args.command == "capabilities":
-            errors, warnings = validate_capability_registry(load_json(CAPABILITY_REGISTRY))
-            return _print_result("capability registry", errors, warnings)
+            return _capabilities(Path(args.root), args.public_only, args.verbose)
         if args.command == "prd":
             path = Path(args.file).expanduser().resolve()
             return _print_result("PRD contract", *validate_prd(path, args.doctype))

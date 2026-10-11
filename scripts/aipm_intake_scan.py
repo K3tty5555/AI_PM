@@ -15,6 +15,7 @@ if str(Path(__file__).resolve().parent) not in sys.path:  # 测试按路径加�
 from aipm_intake_titles import (  # noqa: E402
     TITLE_READ_LIMIT, TEXT_TITLE_EXTS, raw_title,
     clean_title as _clean_title, md_escape as _md_escape, decode_text as _decode, text_title as _text_title)
+from aipm_core import load_capability_registry, registry_name_hits  # noqa: E402
 # 排除表（spec §2）。目录名级；隐藏目录一律排除。隐藏文件照扫（.env/.zsh_history 要做凭证探测），
 # 但标 hidden=true、永不迁移（C2-1）
 EXCLUDE_DIR_NAMES = {"node_modules", ".git", "dist", "build", "__pycache__", ".venv", "venv", ".Trash",
@@ -176,26 +177,31 @@ def _sha256(p: Path) -> str:
     return h.hexdigest()
 
 
-def _skill_collisions(name: str, extra_skill_dirs=None) -> list[str]:
-    """撞名检测面 = registry 条目 ∪ 项目级 .claude/skills/* ∪ 用户级 ~/.claude/skills ∪ 注入目录。
+def _merged_registry(repo: Path) -> dict:
+    """公共 + 本机注册表。撞名只是提示（apply 装载时还会复查），注册表读不了就当空表，不让扫描失败。"""
+    try:
+        return load_capability_registry(repo)[0]
+    except ValueError:
+        return {"capabilities": []}
+
+
+def _skill_collisions(name: str, extra_skill_dirs=None, repo: Path = ROOT, registry: dict | None = None) -> list[str]:
+    """撞名检测面 = 合并注册表（公共 + 本机）∪ 项目级 .claude/skills/* ∪ 用户级 ~/.claude/skills ∪ 注入目录。
 
     extra_skill_dirs=None（生产默认）：含用户级 ~/.claude/skills；
     extra_skill_dirs=() （测试显式传空）：固定空注入面，不绑本机状态；
     非空 tuple：注入目录 + 用户级（显式注入时同样要看用户级撞名）。
+    registry：scan() 读一次传进来；单独调用时现读。
     """
-    hits = []
-    reg = ROOT / "templates/configs/capability-registry.json"
-    if reg.is_file():
-        data = json.loads(reg.read_text(encoding="utf-8"))
-        for cap in data.get("capabilities", []):
-            if cap.get("skill") == name or f"/{name}" in (cap.get("legacy_commands") or []):
-                hits.append(f"registry:{cap.get('id')}")
+    if registry is None:
+        registry = _merged_registry(repo)
+    hits = [f"registry:{cap_id}" for cap_id in registry_name_hits(registry, name)]
     if extra_skill_dirs is None:
-        dirs = [ROOT / ".claude/skills", Path.home() / ".claude/skills"]
+        dirs = [repo / ".claude/skills", Path.home() / ".claude/skills"]
     elif extra_skill_dirs == ():
-        dirs = [ROOT / ".claude/skills"]
+        dirs = [repo / ".claude/skills"]
     else:
-        dirs = [ROOT / ".claude/skills", *(Path(d) for d in extra_skill_dirs),
+        dirs = [repo / ".claude/skills", *(Path(d) for d in extra_skill_dirs),
                 Path.home() / ".claude/skills"]
     for base in dirs:
         if (base / name).is_dir():
@@ -471,8 +477,9 @@ def _fill_titles(clusters: list[dict], root: Path) -> int:
 
 
 def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int | None = None,
-         projects_dir: Path | None = None) -> dict:
+         projects_dir: Path | None = None, repo: Path = ROOT) -> dict:
     """projects_dir：撞名查重面，默认本仓 output/projects（测试注入临时目录，不绑本机存量）。
+    repo：skill 撞名看哪份安装的注册表和 .claude/skills（测试注入假仓）。
     big_cluster：schema v1 的切簇阈值，v2 按内容认项目根后不再使用，保留形参只为兼容旧调用。"""
     root = root.expanduser().resolve()
     excluded: dict[str, int] = {}
@@ -543,6 +550,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int | N
 
     # skill 候选与 prompt 资产（含 frontmatter 头判定）；按路径序，结果确定
     skill_candidates, prompt_assets = [], []
+    registry = _merged_registry(repo)
     for f in sorted(raw, key=lambda e: e["path"]):
         if f["klass"] == "unclassified" or f.get("unreadable") or f.get("dataless"):
             continue
@@ -556,7 +564,7 @@ def scan(root: Path, out_root: Path, extra_skill_dirs=None, big_cluster: int | N
                 continue
             parts = front.split("---", 2)
             ok = front.lstrip().startswith("---") and len(parts) >= 3 and "description:" in parts[1]
-            col = _skill_collisions(name, extra_skill_dirs)
+            col = _skill_collisions(name, extra_skill_dirs, repo=repo, registry=registry)
             skill_candidates.append({"path": f["path"], "name": name, "frontmatter_ok": ok,
                                      "collisions": col, "status": "skip" if not ok else ("rename" if col else "installable")})
         elif f.get("_prompt"):

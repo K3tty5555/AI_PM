@@ -54,6 +54,7 @@ NEVER_INCLUDE = [
     "output/weekly/",
     ".claude/projects/",
     ".claude/settings.local.json",
+    "templates/configs/capability-registry.local",  # 本机注册表：外部 skill 名，跟着安装目录走（Ruling 13）
     ".d2c/",
     ".ai-shared/conversations/",
     ".ai-shared/memory-snapshots/",

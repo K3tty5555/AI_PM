@@ -50,7 +50,9 @@ class CapabilityAndBaselineTests(unittest.TestCase):
         registry = aipm_core.load_json(
             REPO / "templates/configs/capability-registry.json"
         )
-        errors, warnings = aipm_core.validate_capability_registry(registry)
+        # 只看入库 skill：作者机上 intake 装过的外部 skill 登记在本机注册表，不该让契约测试变红
+        errors, warnings = aipm_core.validate_capability_registry(
+            registry, disk_skills=aipm_core.tracked_skill_names(REPO))
         self.assertEqual(errors, [])
         self.assertFalse(any("尚未登记" in item for item in warnings))
         self.assertEqual(
