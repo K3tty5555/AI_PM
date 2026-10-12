@@ -683,7 +683,8 @@ class TestPrivateBundle(unittest.TestCase):
 
 
 class TestSessionStartVersion(unittest.TestCase):
-    """解压出来的安装（有 .aipm-dist/）开场报一句当前版本；开发仓（没有）不报。只用 sed，不依赖 python。"""
+    """解压出来的安装（有 .aipm-dist/）：开场把版本用 systemMessage 显示给用户，其余提示照旧交给 Claude。
+    开场脚本的纯文本输出只进 Claude 的上下文、用户看不见（官方 hooks 文档）。开发仓（没有 .aipm-dist/）输出不变。"""
 
     HOOK = ROOT / ".claude/hooks/session-start.sh"
 
@@ -693,20 +694,42 @@ class TestSessionStartVersion(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout
 
-    def test_reports_version_for_distribution_install(self):
+    @staticmethod
+    def _dist(d: Path, kind: str = "private") -> None:
+        (d / module.DIST).mkdir()
+        (d / module.DIST / "versions.json").write_text(json.dumps(
+            {"schema": 2, "version": "v9.8.7", "kind": kind}, indent=2), encoding="utf-8")
+
+    def test_version_shown_to_user_for_distribution_install(self):
         for kind, label in (("private", "私有版"), ("public", "公共版")):
             with tempfile.TemporaryDirectory() as d:
                 d = Path(d)
-                (d / module.DIST).mkdir()
-                (d / module.DIST / "versions.json").write_text(json.dumps(
-                    {"schema": 2, "version": "v9.8.7", "kind": kind}, indent=2), encoding="utf-8")
-                out = self._run(d)
-                self.assertIn(f"当前 AI_PM 版本：v9.8.7（{label}）", out)
-                self.assertIn("第一次用 AI_PM", out, "版本行不能挡住后面的首次使用提示")
+                self._dist(d, kind)
+                out = json.loads(self._run(d))
+                self.assertEqual(out["systemMessage"], f"📦 当前 AI_PM 版本：v9.8.7（{label}）")
+                ctx = out["hookSpecificOutput"]
+                self.assertEqual(ctx["hookEventName"], "SessionStart")
+                self.assertIn("第一次用 AI_PM", ctx["additionalContext"], "其余提示照旧交给 Claude")
+                self.assertIn("v9.8.7", ctx["additionalContext"])
 
-    def test_silent_without_dist(self):
+    def test_special_characters_keep_json_valid(self):
+        """项目名里有引号、反斜杠、制表符时，输出仍是合法 JSON，内容原样还原。"""
         with tempfile.TemporaryDirectory() as d:
-            self.assertNotIn("当前 AI_PM 版本", self._run(Path(d)))
+            d = Path(d)
+            self._dist(d)
+            name = '项"目\\x\t结尾'
+            proj = d / "output/projects" / name
+            proj.mkdir(parents=True)
+            (proj / "a.md").write_text("x", encoding="utf-8")
+            out = json.loads(self._run(d))
+            self.assertIn(f"检测到进行中的项目：{name}", out["hookSpecificOutput"]["additionalContext"])
+
+    def test_dev_repo_output_unchanged(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = self._run(Path(d))
+            self.assertFalse(out.lstrip().startswith("{"), "没有 .aipm-dist/ 时保持纯文本输出")
+            self.assertIn("第一次用 AI_PM", out)
+            self.assertNotIn("当前 AI_PM 版本", out)
 
 
 def _zinfo(name: str, mode: int = 0o100644, system: int = 3) -> zipfile.ZipInfo:

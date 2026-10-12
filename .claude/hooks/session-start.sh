@@ -8,15 +8,9 @@ ROOT="$(pwd)"
 # 改用 C locale 让 bash 纯字节透传；PYTHONUTF8=1 保证 python 输出仍是 UTF-8。
 export LC_ALL=C PYTHONUTF8=1
 
-# 解压 AI_PM.zip 得到的安装才有 .aipm-dist/：开场报一句当前版本，方便同事分清新旧包。
-# 用户机不一定有 python，只用 sed 取值。
-if [ -f "$ROOT/.aipm-dist/versions.json" ]; then
-  VER=$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$ROOT/.aipm-dist/versions.json" | head -1)
-  KIND=$(sed -n 's/^ *"kind": *"\([^"]*\)".*/\1/p' "$ROOT/.aipm-dist/versions.json" | head -1)
-  if [ "$KIND" = "private" ]; then KIND_LABEL="私有版"; else KIND_LABEL="公共版"; fi
-  [ -n "$VER" ] && echo "📦 当前 AI_PM 版本：$VER（$KIND_LABEL）"
-fi
 
+# 下面是原有的开场检查。包成函数：解压安装时要把全部输出收起来，改用 JSON 交出去（见文件末尾）。
+aipm_session_start() {
 if [ -x "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" ]; then
   "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" 2>/dev/null || true
 fi
@@ -119,3 +113,31 @@ if [ "$DAYS" -ge 7 ] && [ -x "$ROOT/scripts/knowledge-hook-weekly-report.sh" ]; 
   echo "═══════════════════════════════════"
   echo "$NOW" > "$LAST_REPORT"
 fi
+}
+
+# 解压 AI_PM.zip 得到的安装才有 .aipm-dist/：开场把当前版本显示给用户，方便同事分清新旧包。
+# 开场脚本的纯文本输出只进 Claude 的上下文、用户看不见（官方 hooks 文档）；要用户看得见必须输出 JSON 的 systemMessage，
+# 且 stdout 只能有这一个 JSON。用户机不一定有 python，取值和转义都只用 sed / tr / awk。
+VER=""
+if [ -f "$ROOT/.aipm-dist/versions.json" ]; then
+  VER=$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$ROOT/.aipm-dist/versions.json" | head -1)
+  KIND=$(sed -n 's/^ *"kind": *"\([^"]*\)".*/\1/p' "$ROOT/.aipm-dist/versions.json" | head -1)
+fi
+
+if [ -z "$VER" ]; then
+  aipm_session_start    # 开发仓：输出方式不变
+  exit 0
+fi
+
+if [ "$KIND" = "private" ]; then KIND_LABEL="私有版"; else KIND_LABEL="公共版"; fi
+VERSION_LINE="📦 当前 AI_PM 版本：$VER（$KIND_LABEL）"
+BODY=$(aipm_session_start)
+
+# 文本 → JSON 字符串内容：去掉换行和制表以外的控制字符，转义 \ " 和制表符，行与行之间拼成 \n
+json_str() {
+  tr -d '\000-\010\013-\037' | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e $'s/\t/\\\\t/g' \
+    | awk 'NR > 1 { printf "\\n" } { printf "%s", $0 }'
+}
+MSG=$(printf '%s' "$VERSION_LINE" | json_str)
+CTX=$(printf '%s\n%s' "$VERSION_LINE" "$BODY" | json_str)
+printf '{"systemMessage":"%s","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$MSG" "$CTX"
