@@ -35,11 +35,15 @@
 | `templates/` | **仅 tracked 的（约 56 个，快照值）**；其余未追踪文件是用户的个人知识库 / persona，不受管 |
 | `scripts/` | **仅 tracked 的（约 72 个，快照值）**；`.metrics-dict.md` / `.share-denylist` / `.prose-*` 等私有文件除外 |
 
-表中计数一律是**快照值、不是契约**：机器判定现取 `git ls-files <路径>`；数据资产未 tracked，走目录实读。
+表中计数一律是**快照值、不是契约**。用户机上没有 git，「tracked」以清单为准：本轮受管清单 = 新包 `.aipm-dist/manifest.json` 的路径 ∪ 当前安装 `base.json`（没有就用当前 `manifest.json`）的路径；后者用来认出官方已删除的文件。`git ls-files <路径>` 只作开发仓（有 `.git`）的备用来源。数据资产未 tracked，走目录实读。
 
 **「永不触碰」优先于本清单。** 清单给的是目录级范围，永不触碰给的是其中的具体排除项（如受管 `templates/` 但排除其未追踪文件、受管 `scripts/` 但排除 `.` 开头的私有文件、受管 `.gitignore` 但其规则覆盖的内容本身不受管）。两者相遇时以永不触碰为准。
 
 **本节不适用于数据资产。** 上面那句只管官方原件树。数据资产（知识库卡片、persona、携带的知识库归档）住在 `templates/knowledge-base/`、`templates/persona/`、`output/assets/`，字面上会撞上「`templates/` 下未追踪的文件」和「`output/`」两条。但它们是**分发物**，不是升级合并的对象：由打包器 `PRIVATE_EXTRA` 携带，按 `merge-protocol.md` 的知识库卡片节独立判定。既不归本清单管，也不受永不触碰管——永不触碰拦的是「升级时被覆盖 / 被删」，对分发物本就无从谈起。
+
+## `.aipm-dist/`
+
+分发安装才有的升级材料目录：`versions.json`（版本、kind、提交号、内容指纹）、`manifest.json`（本版每个被跟踪的受管文件的 blob）、`base.json`（每个受管文件上次合进来的官方 blob，升级后才有）、`changelog.md`、`README.md`、`history/`（只有刚解压的包里有）。它**不受管**，不参与三方合并，只按 SKILL「阶段 3：执行」的切换步骤整体替换。
 
 ## 永不触碰
 
@@ -66,4 +70,4 @@
 
 ## 备份范围
 
-升级前备份的内容 = 受管清单内的文件（不含 `output/`，它不参与升级）。落到 `~/.ai-pm/update/backups/<时间戳>/`。
+升级前备份的内容 = 受管清单内的文件（不含 `output/`，它不参与升级）。当前安装的 `.aipm-dist/` 不复制，切换时整体挪成备份目录里的 `aipm-dist.old/`。落到 `~/.ai-pm/update/backups/<时间戳>/`。

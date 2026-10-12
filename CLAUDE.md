@@ -28,6 +28,7 @@ cd AI_PM
 .claude/
 ├── agents/                自定义 sub-agent（含 pm-agent KettyWu 灵魂）
 └── skills/                技能集合（ai-pm 主控 / ai-pm-prd / ai-pm-driver / ...）
+.aipm-dist/                分发安装才有：升级材料（版本号/清单/历史原件），不是规则来源
 .ai-shared/                Claude ↔ Codex 协作桥接（见下方 .ai-shared 规范）
 output/                    本机产出（项目、长期资产、独立分享等；顶层注册表见下文）
 templates/                 模板库（PRD 风格、设计规范等，仅含通用示例）

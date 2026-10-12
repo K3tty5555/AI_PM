@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 import sys
 import unittest
@@ -46,6 +47,65 @@ class UpdateContractTests(unittest.TestCase):
                 (skill / "references" / ref).is_file(),
                 f"单一事实源缺失: references/{ref}",
             )
+
+    @staticmethod
+    def _section(text: str, heading: str) -> str:
+        """取「标题行 → 下一个 ## 或 ### 标题」之间的正文；标题不存在时返回空串（断言随即报红）。"""
+        start = text.find(heading + "\n")
+        if start < 0:
+            return ""
+        rest = text[start + len(heading) + 1:]
+        m = re.search(r"^#{2,3} ", rest, re.M)
+        return rest[:m.start()] if m else rest
+
+    def test_update_docs_use_new_package_layout(self):
+        skill_dir = REPO / ".claude/skills/ai-pm-update"
+        skill = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+        docs = skill + "\n".join(p.read_text(encoding="utf-8")
+                                 for p in sorted((skill_dir / "references").glob("*.md")))
+        for old in ("meta/versions.json", "--from", "tree/"):
+            self.assertNotIn(old, docs, f"升级说明残留旧包格式写法：{old}")
+        front = skill.split("\n---\n", 1)[0]
+        for tool in ("Bash(pwd)", "Bash(realpath)"):
+            self.assertIn(tool, front, f"allowed-tools 缺 {tool}")
+        expect = {
+            "### 阶段 0：先读新版规则": ("按新版规则执行", "/add-dir"),
+            "### 阶段 1：识别": ("-ef", "realpath", "content_digest", "probe_paths", "续跑", "疑似", "至少 4 个",
+                             "Read", "补 `/`", "to_commit", "manifest.json` 的路径 ∪"),
+            "### 阶段 3：执行": (".aipm-dist.new", "aipm-dist.old", "不推进", "复制成 `base.json`", "held",
+                             "to_commit"),
+            "### 阶段 4：报告": ("install_dir", "可以删掉", "M = 0 且 N = 0", "held"),
+            "## `rollback`": ("install_dir", "aipm-dist.old", '"action":"rollback"'),
+            "## 中断保护": (".aipm-dist.incomplete",),
+            "## `--dry-run`": ("阶段 0",),
+        }
+        for heading, keys in expect.items():
+            body = self._section(skill, heading)
+            self.assertTrue(body, f"缺章节：{heading}")
+            for key in keys:
+                self.assertIn(key, body, f"{heading} 缺：{key}")
+        stage1 = self._section(skill, "### 阶段 1：识别")
+        self.assertIn(".aipm-dist.incomplete", stage1)
+        self.assertLess(stage1.index(".aipm-dist.incomplete"), stage1.index("-ef"),
+                        "中断标记检查必须排在检查表之前")
+        # 覆盖检查必须排在「已经是这一版」「续跑」之前：否则被覆盖的安装会静默落进续跑
+        self.assertIn("已经是这一版", stage1)
+        self.assertLess(stage1.index("疑似"), stage1.index("已经是这一版"),
+                        "覆盖检查（疑似）必须排在「已经是这一版」之前")
+        self.assertNotIn("M = 0 时 N = 0", self._section(skill, "### 阶段 4：报告"))
+        report = (skill_dir / "references/report-format.md").read_text(encoding="utf-8")
+        audit = self._section(report, "## 审计留痕")
+        for key in ('"to_commit"', '"to_content_digest"', '"action":"rollback"'):
+            self.assertIn(key, audit, f"report-format 审计留痕缺：{key}")
+        rollback = self._section(skill, "## `rollback`")
+        for key in (".aipm-dist.incomplete", ".aipm-dist.new"):
+            self.assertIn(key, rollback, f"rollback 缺：{key}")
+        self.assertIn("history.jsonl", self._section(skill, "### 阶段 3：执行"))
+        self.assertNotIn("确认一句 base 已推进到新版", self._section(skill, "### 阶段 4：报告"))
+        facade = (REPO / ".claude/skills/ai-pm/SKILL.md").read_text(encoding="utf-8")
+        section = self._section(facade, "### `update` 命令分派")
+        self.assertNotIn("--from", section)
+        self.assertIn("<新包文件夹>", section)
 
 
 if __name__ == "__main__":
