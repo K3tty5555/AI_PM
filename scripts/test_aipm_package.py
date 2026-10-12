@@ -682,6 +682,33 @@ class TestPrivateBundle(unittest.TestCase):
             self.assertIn(".mcp.json", str(ctx.exception))
 
 
+class TestSessionStartVersion(unittest.TestCase):
+    """解压出来的安装（有 .aipm-dist/）开场报一句当前版本；开发仓（没有）不报。只用 sed，不依赖 python。"""
+
+    HOOK = ROOT / ".claude/hooks/session-start.sh"
+
+    def _run(self, d: Path) -> str:
+        env = {"PATH": "/usr/bin:/bin", "HOME": str(d), "AIPM_CLOUD_DOC_STATE_DIR": str(d / "state")}
+        r = subprocess.run(["bash", str(self.HOOK)], cwd=d, env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout
+
+    def test_reports_version_for_distribution_install(self):
+        for kind, label in (("private", "私有版"), ("public", "公共版")):
+            with tempfile.TemporaryDirectory() as d:
+                d = Path(d)
+                (d / module.DIST).mkdir()
+                (d / module.DIST / "versions.json").write_text(json.dumps(
+                    {"schema": 2, "version": "v9.8.7", "kind": kind}, indent=2), encoding="utf-8")
+                out = self._run(d)
+                self.assertIn(f"当前 AI_PM 版本：v9.8.7（{label}）", out)
+                self.assertIn("第一次用 AI_PM", out, "版本行不能挡住后面的首次使用提示")
+
+    def test_silent_without_dist(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertNotIn("当前 AI_PM 版本", self._run(Path(d)))
+
+
 def _zinfo(name: str, mode: int = 0o100644, system: int = 3) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
     info.compress_type = zipfile.ZIP_DEFLATED
