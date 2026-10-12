@@ -125,4 +125,26 @@ if [ -f "$RPT" ]; then
 fi
 [ -f "$RPT" ] && note_ok "报告格式文件存在"
 
+# 包格式（2026-10-12 改为平铺 AI_PM.zip + .aipm-dist/）：说明里不得残留旧格式；
+# 关键规则按章节锁（全文搜字会被散文复述喂饱，那是假绿）。
+UPD_SKILL=".claude/skills/ai-pm-update/SKILL.md"
+extract_h3() { sed -n "/^### $1\$/,/^##/p" "$2" 2>/dev/null | sed '1d'; }
+for old in "meta/versions.json" "--from" "tree/"; do
+  if grep -qF -- "$old" "$UPD_SKILL" .claude/skills/ai-pm-update/references/*.md; then
+    note_fail "升级说明残留旧包格式写法：$old"
+  fi
+done
+STAGE1="$(extract_h3 '阶段 1：识别' "$UPD_SKILL")"
+STAGE3="$(extract_h3 '阶段 3：执行' "$UPD_SKILL")"
+ROLLBACK="$(extract_section '`rollback`' "$UPD_SKILL")"
+for key in "-ef" "realpath" "续跑"; do
+  grep -qF -- "$key" <<< "$STAGE1" && note_ok "阶段 1 含：$key" || note_fail "阶段 1 缺：$key"
+done
+for key in ".aipm-dist.new" "aipm-dist.old" "不推进"; do
+  grep -qF -- "$key" <<< "$STAGE3" && note_ok "阶段 3 含：$key" || note_fail "阶段 3 缺：$key"
+done
+for key in "install_dir" "aipm-dist.old"; do
+  grep -qF -- "$key" <<< "$ROLLBACK" && note_ok "rollback 含：$key" || note_fail "rollback 缺：$key"
+done
+
 exit $FAIL

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 import sys
 import unittest
@@ -46,6 +47,45 @@ class UpdateContractTests(unittest.TestCase):
                 (skill / "references" / ref).is_file(),
                 f"单一事实源缺失: references/{ref}",
             )
+
+    @staticmethod
+    def _section(text: str, heading: str) -> str:
+        """取「标题行 → 下一个 ## 或 ### 标题」之间的正文；标题不存在时返回空串（断言随即报红）。"""
+        start = text.find(heading + "\n")
+        if start < 0:
+            return ""
+        rest = text[start + len(heading) + 1:]
+        m = re.search(r"^#{2,3} ", rest, re.M)
+        return rest[:m.start()] if m else rest
+
+    def test_update_docs_use_new_package_layout(self):
+        skill_dir = REPO / ".claude/skills/ai-pm-update"
+        skill = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+        docs = skill + "\n".join(p.read_text(encoding="utf-8")
+                                 for p in sorted((skill_dir / "references").glob("*.md")))
+        for old in ("meta/versions.json", "--from", "tree/"):
+            self.assertNotIn(old, docs, f"升级说明残留旧包格式写法：{old}")
+        front = skill.split("\n---\n", 1)[0]
+        for tool in ("Bash(pwd)", "Bash(realpath)"):
+            self.assertIn(tool, front, f"allowed-tools 缺 {tool}")
+        expect = {
+            "### 阶段 0：先读新版规则": ("按新版规则执行", "/add-dir"),
+            "### 阶段 1：识别": ("-ef", "realpath", "content_digest", "probe_paths", "续跑", "疑似", "至少 4 个",
+                             "Read"),
+            "### 阶段 3：执行": (".aipm-dist.new", "aipm-dist.old", "不推进", "复制成 `base.json`"),
+            "### 阶段 4：报告": ("install_dir", "可以删掉"),
+            "## `rollback`": ("install_dir", "aipm-dist.old"),
+            "## 中断保护": (".aipm-dist.incomplete",),
+        }
+        for heading, keys in expect.items():
+            body = self._section(skill, heading)
+            self.assertTrue(body, f"缺章节：{heading}")
+            for key in keys:
+                self.assertIn(key, body, f"{heading} 缺：{key}")
+        facade = (REPO / ".claude/skills/ai-pm/SKILL.md").read_text(encoding="utf-8")
+        section = self._section(facade, "### `update` 命令分派")
+        self.assertNotIn("--from", section)
+        self.assertIn("<新包文件夹>", section)
 
 
 if __name__ == "__main__":
