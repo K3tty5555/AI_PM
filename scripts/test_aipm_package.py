@@ -3,7 +3,9 @@
 """打包器单元测试。"""
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -62,6 +64,8 @@ def setUpModule() -> None:
         print(f"N/A: {_DENYLIST_REASON}；依赖它的用例已跳过")
     if not HAS_PRIVATE_SKILLS:
         print(f"N/A: {_PRIVATE_REASON}；依赖它的用例已跳过")
+    if not HAS_PRIVATE_INPUTS:
+        print(f"N/A: {_PRIVATE_INPUTS_REASON}；依赖它的用例已跳过")
 
 
 
@@ -747,7 +751,25 @@ class TestVerify(unittest.TestCase):
         bad.write_bytes(b"not a zip")
         self.assertFlag(self.v.verify(bad, "public"), "不是合法的 zip")
         self.assertFlag(self.v.verify(self.d / "nope.zip", "public"), "不是合法的 zip")
-        self.assertEqual(self.v.main([str(self.d / "nope.zip"), "--kind", "public"]), 1)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.v.main([str(self.d / "nope.zip"), "--kind", "public"]), 1)
+
+    def test_invalid_utf8_filename_does_not_raise(self):
+        """条目标了 UTF-8 但文件名字节不是合法 UTF-8：zipfile 打开时抛 UnicodeDecodeError，校验器不能跟着崩。"""
+        good = "templates/\u00e9zz.md".encode("utf-8")
+        bad = good.replace(b"\xc3\xa9", b"\xc3\x28")
+        path = _write_zip(self.d / "u.zip", _valid_entries(extra={good.decode("utf-8"): b"x"}))
+        raw = path.read_bytes()
+        self.assertEqual(raw.count(good), 2, "前提：本地头和中央目录各一份文件名")
+        path.write_bytes(raw.replace(good, bad))
+        self.assertFlag(self.v.verify(path, "public"), "不是合法的 zip")
+        self.assertEqual(self.v.collect_warnings(path), [])
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.v.main([str(path), "--kind", "public"]), 1)
+
+    def test_non_string_probe_path_is_a_problem(self):
+        self.assertFlag(self.check(_set_meta(_valid_entries(), probe_paths=[["x"]])),
+                        "probe_paths 里有非字符串条目")
 
     def test_each_forbidden_rule(self):
         for frag in self.v.FORBIDDEN:
@@ -899,9 +921,47 @@ class TestVerify(unittest.TestCase):
 
     def test_main_exit_code(self):
         ok = _write_zip(self.d / "ok.zip", _valid_entries())
-        self.assertEqual(self.v.main([str(ok), "--kind", "public"]), 0)
         bad = _write_zip(self.d / "bad.zip", _valid_entries(extra={".ai-shared/conversations/raw/x.jsonl": b"s"}))
-        self.assertEqual(self.v.main([str(bad), "--kind", "public"]), 1)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.v.main([str(ok), "--kind", "public"]), 0)
+            self.assertEqual(self.v.main([str(bad), "--kind", "public"]), 1)
+
+
+
+class TestDuplicatePaths(unittest.TestCase):
+    """打包前就拦住解压到大小写不敏感文件系统会互相覆盖的路径。"""
+
+    def test_case_and_unicode_duplicates(self):
+        nfd = unicodedata.normalize("NFD", "templates/é.md")
+        problems = module.duplicate_problems(["A.md", "a.md", "templates/é.md", nfd, "ok.md"])
+        self.assertEqual(len(problems), 2, problems)
+        self.assertTrue(all("重复路径" in p for p in problems), problems)
+        self.assertIn("A.md", problems[0])
+
+    def test_file_directory_clash(self):
+        problems = module.duplicate_problems(["Docs", "docs/x.md"])
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("文件与目录重名", problems[0])
+
+    def test_clean_list_has_no_problems(self):
+        self.assertEqual(module.duplicate_problems(["a/b.md", "a/c.md", "b.md"]), [])
+
+    def test_build_refuses_duplicates(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(module, "collect_files", return_value=["A.md", "a.md"]):
+            with self.assertRaises(SystemExit) as cm:
+                module.build_package(Path(tmp), "public", Path(tmp) / "out", "v", allow_dirty=True)
+        self.assertIn("A.md", str(cm.exception))
+        self.assertFalse((Path(tmp) / "out").exists())
+
+
+class TestSetUpModuleNotice(unittest.TestCase):
+    def test_private_inputs_missing_prints_na(self):
+        buf = io.StringIO()
+        with mock.patch.dict(globals(), {"HAS_PRIVATE_INPUTS": False, "HAS_PRIVATE_SKILLS": True,
+                                         "HAS_DENYLIST": True}), contextlib.redirect_stdout(buf):
+            setUpModule()
+        self.assertIn(f"N/A: {_PRIVATE_INPUTS_REASON}", buf.getvalue())
 
 
 if __name__ == "__main__":

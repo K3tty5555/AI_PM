@@ -21,6 +21,7 @@ import re
 import subprocess
 import sys
 import time
+import unicodedata
 import zipfile
 from pathlib import Path, PureWindowsPath
 
@@ -168,6 +169,31 @@ def path_problems(n: str) -> list[str]:
             break
     if len(n) > MAX_PATH_CHARS:
         problems.append(f"路径过长（{len(n)} > {MAX_PATH_CHARS} 字符，Windows 可能解压失败）：{n}")
+    return problems
+
+
+def _path_key(n: str) -> str:
+    return unicodedata.normalize("NFC", n.rstrip("/")).casefold()
+
+
+def duplicate_problems(paths: list[str]) -> list[str]:
+    """解压到大小写不敏感 / 归一化 Unicode 的文件系统（macOS、Windows）后会撞车的路径：
+    忽略大小写和 Unicode 写法后重复，或一个文件和某个目录同名。"""
+    problems: list[str] = []
+    seen: dict[str, str] = {}
+    dirs: dict[str, str] = {}
+    for n in paths:
+        key = _path_key(n)
+        if key in seen:
+            problems.append(f"重复路径（忽略大小写和 Unicode 写法后）：{seen[key]} 与 {n}")
+        else:
+            seen[key] = n
+        parts = n.rstrip("/").split("/")
+        for i in range(1, len(parts)):
+            dirs.setdefault(_path_key("/".join(parts[:i])), "/".join(parts[:i]))
+    for key, n in seen.items():
+        if key in dirs:
+            problems.append(f"文件与目录重名（忽略大小写后）：{n} 与 {dirs[key]}/")
     return problems
 
 
@@ -506,6 +532,9 @@ def build_package(root: Path, kind: str, out: Path, version: str, *,
     bad_paths = [p for f in files for p in path_problems(f)]
     if bad_paths:
         raise SystemExit(f"⛔ 有 {len(bad_paths)} 个路径在 Windows 上解压不了或越界，先改名：{bad_paths[:10]}")
+    clashes = duplicate_problems(files)
+    if clashes:
+        raise SystemExit(f"⛔ 有 {len(clashes)} 处路径在 macOS / Windows 上解压会互相覆盖，先改名：{clashes[:10]}")
     history = collect_history(root)
     if kind == "public":
         history = _public_history(root, history)

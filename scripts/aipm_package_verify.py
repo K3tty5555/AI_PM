@@ -20,7 +20,6 @@ import json
 import re
 import stat
 import sys
-import unicodedata
 import zipfile
 import zlib
 from pathlib import Path
@@ -78,8 +77,7 @@ MAX_TOTAL_MB = 2048
 _READ_ERRORS = (RuntimeError, NotImplementedError, zipfile.BadZipFile, zlib.error, OSError, EOFError)
 
 
-def _key(n: str) -> str:
-    return unicodedata.normalize("NFC", n.rstrip("/")).casefold()
+_key = _pkg._path_key  # 与打包器的 duplicate_problems 同一把归一化钥匙
 
 
 def forbidden_problems(n: str) -> list[str]:
@@ -117,7 +115,7 @@ def collect_warnings(zip_path: Path) -> list[str]:
     try:
         with zipfile.ZipFile(zip_path) as zf:
             names = zf.namelist()
-    except (zipfile.BadZipFile, OSError):
+    except Exception:  # noqa: BLE001 —— 打不开的包由 verify() 报，这里只管提示，绝不能崩
         return []
     return [f"噪声文件（不阻断）：{n}" for n in names for w in WARN_ONLY if w in n]
 
@@ -234,7 +232,9 @@ def _check_contents(zf: zipfile.ZipFile, files: dict, kind: str, problems: list[
             problems.append("versions.json 缺 probe_paths")
         else:
             for p in probes:
-                if p not in files:
+                if not isinstance(p, str):
+                    problems.append(f"probe_paths 里有非字符串条目：{p!r}")
+                elif p not in files:
                     problems.append(f"probe_paths 里的路径不在包里：{p}")
 
     manifest = _load_json(zf, files, f"{DIST}/manifest.json", problems)
@@ -304,7 +304,7 @@ def verify(zip_path: Path, kind: str) -> list[str]:
     problems: list[str] = []
     try:
         zf = zipfile.ZipFile(zip_path)
-    except (zipfile.BadZipFile, OSError) as exc:
+    except Exception as exc:  # noqa: BLE001 —— 坏文件名编码会抛 UnicodeDecodeError 等，一律当坏包报
         return [f"不是合法的 zip：{exc}"]
     with zf:
         files, readable = _scan_entries(zf, problems)
