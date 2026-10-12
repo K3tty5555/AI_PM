@@ -571,286 +571,268 @@ class TestGuards(unittest.TestCase):
             self.assertFalse(module.is_private_only(rel), rel)
 
 
-@unittest.skip("Task 3 按 zip 重写校验器后整类替换")
+def _zinfo(name: str, mode: int = 0o100644, system: int = 3) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = system
+    info.external_attr = mode << 16
+    return info
+
+
+def _valid_entries(kind: str = "public", extra: dict | None = None) -> dict[str, bytes]:
+    """一个自洽的最小合法包。extra 是额外的安装内容：会同步算进 file_count 和 content_digest，
+    这样每个用例只剩它要测的那一条问题，断言不会被「数目对不上」之类的噪声喂饱。"""
+    body = {"CLAUDE.md": b"# AI_PM\n", ".claude/skills/ai-pm/SKILL.md": b"---\nname: ai-pm\n---\n"}
+    manifest = {p: {"blob": module.git_blob_id(d), "exec": False} for p, d in body.items()}
+    if kind == "private":
+        for s in module.PRIVATE_SENTINELS:
+            body[s] = b"private\n"
+    body.update(extra or {})
+    blobs = {p: module.git_blob_id(d) for p, d in body.items()}
+    dist = module.DIST
+    entries = dict(body)
+    entries[".ignore"] = b"/.aipm-dist/\n"
+    entries[f"{dist}/versions.json"] = json.dumps({
+        "schema": 2, "version": "v-test", "kind": kind, "commit": "0" * 40,
+        "commit_time": "2026-01-01T00:00:00+08:00", "content_digest": module.content_digest(blobs),
+        "probe_paths": ["CLAUDE.md"], "built_at": "2026-01-01T00:00:00+0800",
+        "file_count": len(body)}).encode()
+    entries[f"{dist}/manifest.json"] = json.dumps(manifest).encode()
+    entries[f"{dist}/changelog.md"] = b"# log\n"
+    entries[f"{dist}/README.md"] = b"readme\n"
+    entries[f"{dist}/history/index.json"] = b"{}"
+    entries[f"{dist}/history/revisions.json"] = b'{"schema_version":1,"revisions":[]}'
+    return entries
+
+
+def _set_meta(entries: dict, **changes) -> dict:
+    name = f"{module.DIST}/versions.json"
+    entries[name] = json.dumps({**json.loads(entries[name]), **changes}).encode()
+    return entries
+
+
+def _write_zip(path: Path, entries: dict, extra: list | None = None, *,
+               encrypt: tuple = (), method: dict | None = None, stored: tuple = ()) -> Path:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # 重复成员用例会触发 zipfile 的 Duplicate name 警告
+        with zipfile.ZipFile(path, "w") as zf:
+            for name, data in entries.items():
+                info = _zinfo(name)
+                if name in stored:
+                    info.compress_type = zipfile.ZIP_STORED
+                zf.writestr(info, data)
+            for info, data in (extra or []):
+                zf.writestr(info, data)
+            # writestr 会把 flag_bits 清零、不认识的压缩方式直接报错：关闭前改中央目录里的字段，才造得出坏包
+            for name in encrypt:
+                zf.getinfo(name).flag_bits |= 0x1
+            for name, m in (method or {}).items():
+                zf.getinfo(name).compress_type = m
+    return path
+
+
+def _corrupt(path: Path, name: str) -> None:
+    """翻转某条目数据区的一个字节。"""
+    with zipfile.ZipFile(path) as zf:
+        offset = zf.getinfo(name).header_offset
+    raw = bytearray(path.read_bytes())
+    n_len, x_len = struct.unpack("<HH", raw[offset + 26:offset + 30])
+    raw[offset + 30 + n_len + x_len + 1] ^= 0xFF
+    path.write_bytes(bytes(raw))
+
+
 class TestVerify(unittest.TestCase):
-    def _verify_module(self):
+    def setUp(self):
         p = ROOT / "scripts" / "aipm_package_verify.py"
         s = importlib.util.spec_from_file_location("aipm_package_verify", p)
-        m = importlib.util.module_from_spec(s)
+        self.v = importlib.util.module_from_spec(s)
         assert s.loader
-        s.loader.exec_module(m)
-        return m
+        s.loader.exec_module(self.v)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.d = Path(self.tmp.name)
 
-    @staticmethod
-    def _tar_with(path: Path, names: list[str], kind: str = "public") -> Path:
-        """造一个包；meta/versions.json 写合法 JSON，否则校验器会（正确地）报读不出。"""
-        if "history/index.json" not in names:
-            names = [*names, "history/index.json"]
-        if "history/revisions.json" not in names:
-            names = [*names, "history/revisions.json"]
-        with tarfile.open(path, "w:gz") as tf:
-            for n in names:
-                if n.endswith("meta/versions.json"):
-                    data = json.dumps({"version": "v-test", "kind": kind}).encode("utf-8")
-                elif n == "history/index.json":
-                    data = b"{}"
-                elif n == "history/revisions.json":
-                    data = b'{"schema_version":1,"revisions":[]}'
-                else:
-                    data = b"x"
-                info = tarfile.TarInfo(n)
-                info.size = len(data)
-                tf.addfile(info, io.BytesIO(data))
-        return path
+    def check(self, entries, kind="public", **kw):
+        return self.v.verify(_write_zip(self.d / "p.zip", entries, **kw), kind)
+
+    def assertFlag(self, problems, needle):
+        self.assertTrue(any(needle in p for p in problems), problems)
+
+    def test_minimal_valid_passes(self):
+        self.assertEqual(self.check(_valid_entries("public")), [])
+        self.assertEqual(self.check(_valid_entries("private"), "private"), [])
 
     @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_clean_package_passes(self):
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            out = module.build_package(ROOT, "public", Path(d), version="v-test")
-            problems = v.verify(out, "public")
-        self.assertEqual(problems, [], f"干净包被误报：{problems}")
+        out = module.build_package(ROOT, "public", self.d / "pub", version="v-test", allow_dirty=True)
+        self.assertEqual(self.v.verify(out, "public"), [])
 
+    @unittest.skipUnless(HAS_PRIVATE_INPUTS, _PRIVATE_INPUTS_REASON)
     def test_clean_private_package_passes(self):
-        """私有包同理：误杀私有包 = 校验器不可用。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            out = module.build_package(ROOT, "private", Path(d), version="v-test")
-            problems = v.verify(out, "private")
-        self.assertEqual(problems, [], f"干净私有包被误报：{problems}")
+        out = module.build_package(ROOT, "private", self.d / "pri", version="v-test", allow_dirty=True)
+        self.assertEqual(self.v.verify(out, "private"), [])
+        self.assertFlag(self.v.verify(out, "public"), "kind")
 
-    def test_detects_sensitive_path(self):
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            bad = Path(d) / "bad.tar.gz"
-            with tarfile.open(bad, "w:gz") as tf:
-                info = tarfile.TarInfo("tree/.ai-shared/conversations/raw/x.jsonl")
-                data = b"secret"
-                info.size = len(data)
-                tf.addfile(info, io.BytesIO(data))
-            problems = v.verify(bad, "public")
-        self.assertTrue(any("conversations" in p for p in problems), problems)
+    def test_not_a_zip_and_missing_file(self):
+        bad = self.d / "bad.zip"
+        bad.write_bytes(b"not a zip")
+        self.assertFlag(self.v.verify(bad, "public"), "不是合法的 zip")
+        self.assertFlag(self.v.verify(self.d / "nope.zip", "public"), "不是合法的 zip")
+        self.assertEqual(self.v.main([str(self.d / "nope.zip"), "--kind", "public"]), 1)
 
-    def test_detects_nested_git_repo(self):
-        """安全线（2026-10-10）：包内不得混入 /.git/ 路径（嵌套仓库历史）。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            bad = self._tar_with(Path(d) / "g.tar.gz", [
-                "meta/versions.json", "meta/changelog.md",
-                "tree/CLAUDE.md", "tree/.claude/skills/tpd_cli/.git/HEAD",
-            ], kind="private")
-            problems = v.verify(bad, "private")
-        self.assertTrue(any(".git" in p for p in problems), problems)
+    def test_each_forbidden_rule(self):
+        for frag in self.v.FORBIDDEN:
+            name = "a/" + frag.lstrip("/") + "x"
+            self.assertFlag(self.check(_valid_entries(extra={name: b"x"})), "禁止路径")
 
-    def test_detects_path_traversal_and_malformed_meta(self):
-        """校验器不得接受会穿越解包目录的路径，也不得被坏 meta 弄崩。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            bad = self._tar_with(Path(d) / "bad.tar.gz", [
-                "meta/versions.json", "meta/changelog.md", "tree/CLAUDE.md",
-                "tree/../../escape.txt",
-            ])
-            problems = v.verify(bad, "public")
-            self.assertTrue(any("非法路径" in p for p in problems), problems)
+    def test_forbidden_ignores_case(self):
+        self.assertFlag(self.check(_valid_entries(extra={"a/.AI-SHARED/Conversations/x": b"x"})), "禁止路径")
 
-            malformed = self._tar_with(Path(d) / "malformed.tar.gz", [
-                "meta/versions.json", "meta/changelog.md", "tree/CLAUDE.md",
-            ])
-            # 替换为合法 tar 中的 JSON 数组；verify 应返回问题清单而不是抛 AttributeError。
-            with tarfile.open(malformed, "r:gz") as old:
-                members = [(m.name, old.extractfile(m).read() if m.isfile() else b"")
-                           for m in old.getmembers()]
-            with tarfile.open(malformed, "w:gz") as new:
-                for name, data in members:
-                    if name == "meta/versions.json":
-                        data = b"[]"
-                    info = tarfile.TarInfo(name); info.size = len(data)
-                    new.addfile(info, io.BytesIO(data))
-            problems = v.verify(malformed, "public")
-            self.assertTrue(any("顶层必须是对象" in p for p in problems), problems)
-
-    def test_detects_file_count_and_blob_corruption(self):
-        """元数据和历史内容都必须对得上实际 tar。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            bad = Path(d) / "bad.tar.gz"
-            index = b'{"CLAUDE.md":[{"blob":"abcdef012345"}]}'
-            entries = {
-                "meta/versions.json": b'{"kind":"public","file_count":99}',
-                "meta/changelog.md": b"log", "tree/CLAUDE.md": b"ok",
-                "history/index.json": index,
-                "history/revisions.json": b'{"schema_version":1,"revisions":[]}',
-                "history/abcdef012345": b"wrong",
-            }
-            with tarfile.open(bad, "w:gz") as tf:
-                for name, data in entries.items():
-                    info = tarfile.TarInfo(name); info.size = len(data)
-                    tf.addfile(info, io.BytesIO(data))
-            problems = v.verify(bad, "public")
-            self.assertTrue(any("file_count 不符" in p for p in problems), problems)
-            self.assertTrue(any("blob 内容校验失败" in p for p in problems), problems)
-
-    def test_rejects_tree_symlink_and_duplicate_path(self):
-        """解包前拒绝 tree/ 中的链接和重复成员，避免覆盖/逃逸。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            bad = Path(d) / "bad.tar.gz"
-            with tarfile.open(bad, "w:gz") as tf:
-                for name, data in (("meta/versions.json", b'{"kind":"public","file_count":1}'),
-                                    ("meta/changelog.md", b"log"),
-                                    ("history/index.json", b"{}"),
-                                    ("history/revisions.json", b'{"schema_version":1,"revisions":[]}'),
-                                    ("tree/CLAUDE.md", b"ok"),
-                                    ("tree/CLAUDE.md", b"changed")):
-                    info = tarfile.TarInfo(name); info.size = len(data)
-                    tf.addfile(info, io.BytesIO(data))
-                link = tarfile.TarInfo("tree/link")
-                link.type = tarfile.SYMTYPE; link.linkname = "../../escape"
-                tf.addfile(link)
-            problems = v.verify(bad, "public")
-            self.assertTrue(any("重复路径" in p for p in problems), problems)
-            self.assertTrue(any("非普通文件" in p for p in problems), problems)
-
-    def test_detects_missing_meta(self):
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            bad = Path(d) / "bad.tar.gz"
-            with tarfile.open(bad, "w:gz") as tf:
-                info = tarfile.TarInfo("tree/CLAUDE.md")
-                info.size = 1
-                tf.addfile(info, io.BytesIO(b"x"))
-            problems = v.verify(bad, "public")
-        self.assertTrue(any("meta" in p for p in problems), problems)
-
-    def test_detects_missing_or_broken_history(self):
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            missing = Path(d) / "missing.tar.gz"
-            with tarfile.open(missing, "w:gz") as tf:
-                for n, data in (("meta/versions.json", b"{}"),
-                                ("meta/changelog.md", b"# log"),
-                                ("tree/CLAUDE.md", b"ok")):
-                    info = tarfile.TarInfo(n)
-                    info.size = len(data)
-                    tf.addfile(info, io.BytesIO(data))
-            self.assertTrue(any("history/index.json" in p for p in v.verify(missing, "public")))
-
-            broken = Path(d) / "broken.tar.gz"
-            with tarfile.open(broken, "w:gz") as tf:
-                for n, data in (("meta/versions.json", b"{}"),
-                                ("meta/changelog.md", b"# log"),
-                                ("tree/CLAUDE.md", b"ok"),
-                                ("history/index.json", b'{"CLAUDE.md":[{"blob":"abcdef012345"}]}')):
-                    info = tarfile.TarInfo(n)
-                    info.size = len(data)
-                    tf.addfile(info, io.BytesIO(data))
-            self.assertTrue(any("缺失 blob" in p for p in v.verify(broken, "public")))
-
-            bad_revision = Path(d) / "bad-revision.tar.gz"
-            with tarfile.open(bad_revision, "w:gz") as tf:
-                for n, data in (("meta/versions.json", b"{}"),
-                                ("meta/changelog.md", b"# log"),
-                                ("tree/CLAUDE.md", b"ok"),
-                                ("history/index.json", b"{}"),
-                                ("history/revisions.json", b'{"schema_version":1,"revisions":[{"version":"abc1234","files":{"CLAUDE.md":"abcdef012345"}}]}')):
-                    info = tarfile.TarInfo(n)
-                    info.size = len(data)
-                    tf.addfile(info, io.BytesIO(data))
-            self.assertTrue(any("未收录原件" in p for p in v.verify(bad_revision, "public")))
-
-    def test_detects_each_forbidden_rule(self):
-        """每条禁止规则都要真的会响，别留摆设。"""
-        v = self._verify_module()
-        for frag in v.FORBIDDEN:
-            with tempfile.TemporaryDirectory() as d:
-                bad = self._tar_with(Path(d) / "bad.tar.gz", [
-                    "meta/versions.json", "meta/changelog.md",
-                    "tree/CLAUDE.md", f"tree/{frag}x",
-                ])
-                problems = v.verify(bad, "public")
-            self.assertTrue(problems, f"禁止路径 {frag} 未被识别")
-
-    def test_local_registry_in_package_flagged(self):
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            bad = self._tar_with(Path(d) / "bad.tar.gz", [
-                "meta/versions.json", "meta/changelog.md", "tree/CLAUDE.md",
-                "tree/templates/configs/capability-registry.local.json"])
-            self.assertTrue(any("禁止路径" in p for p in v.verify(bad, "public")))
+    def test_root_docs_only(self):
+        self.assertFlag(self.check(_valid_entries(extra={"docs/internal/secret.md": b"x"})), "禁止路径")
 
     def test_legit_assets_not_flagged(self):
-        """回归：Task 4 实测踩过的三类误杀，逐条钉住。"""
-        v = self._verify_module()
-        legit = [
-            "tree/templates/prd-styles/default/style-config.json",
-            "tree/tsconfig.json",
-            "tree/output/assets/AI_PM知识库蒸馏-20260902/content-full/docs/01.md",
-            "tree/vendor/foo/.DS_Store",
-            "tree/scripts/ai-sync/snapshot-claude-conversations.sh",
-            "tree/scripts/ai-sync/snapshot-codex-conversations.sh",
-        ]
-        with tempfile.TemporaryDirectory() as d:
-            tar = self._tar_with(Path(d) / "ok.tar.gz",
-                                 ["meta/versions.json", "meta/changelog.md"] + legit)
-            problems = v.verify(tar, "public")
-        self.assertEqual(problems, [], f"合法资产被误杀：{problems}")
+        """回归：真实踩过的误杀，逐条钉住（私有包里才合法的放 private）。"""
+        legit = {
+            "templates/prd-styles/default/style-config.json": b"{}",
+            "tsconfig.json": b"{}",
+            "output/assets/AI_PM知识库蒸馏-20260902/content-full/docs/01.md": b"x",
+            "scripts/ai-sync/snapshot-claude-conversations.sh": b"x",
+            "scripts/ai-sync/snapshot-codex-conversations.sh": b"x",
+        }
+        self.assertEqual(self.check(_valid_entries("private", extra=legit), "private"), [])
 
-    def test_ds_store_is_warn_only(self):
-        """噪声项只提示、不进退出码。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            tar = self._tar_with(Path(d) / "n.tar.gz", [
-                "meta/versions.json", "meta/changelog.md",
-                "tree/CLAUDE.md", "tree/vendor/x/.DS_Store",
-            ])
-            self.assertEqual(v.verify(tar, "public"), [], ".DS_Store 不该计入退出码")
-            self.assertTrue(v.collect_warnings(tar), ".DS_Store 应给出提示")
+    def test_nested_git(self):
+        self.assertFlag(self.check(_valid_entries(extra={".claude/skills/foo/.git/HEAD": b"ref"})), "禁止路径")
 
-    def test_detects_root_docs_dir(self):
-        """tree/docs/ 只拦仓库根 docs/。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            bad = self._tar_with(Path(d) / "bad.tar.gz", [
-                "meta/versions.json", "meta/changelog.md",
-                "tree/CLAUDE.md", "tree/docs/internal/secret.md",
-            ])
-            self.assertTrue(v.verify(bad, "public"))
+    def test_path_rules_applied(self):
+        self.assertFlag(self.check(_valid_entries(extra={"a/x?.md": b"x"})), "Windows")
+        self.assertFlag(self.check(_valid_entries(extra={"../escape.txt": b"x"})), "非法路径")
 
-    def test_detects_oversize(self):
-        """体积上界要真的会响（造一个声明超过阈值的包）。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            tar = self._tar_with(Path(d) / "big.tar.gz",
-                                 ["meta/versions.json", "meta/changelog.md", "tree/CLAUDE.md"])
-            orig = v.MAX_MB
-            v.MAX_MB = {"public": 0.0000001}
-            try:
-                problems = v.verify(tar, "public")
-            finally:
-                v.MAX_MB = orig
-            self.assertTrue(any("体积" in p for p in problems), problems)
+    def test_duplicates_ignore_case_unicode_and_dirs(self):
+        self.assertFlag(self.check(_valid_entries(extra={"A.md": b"1"}), extra=[(_zinfo("a.md"), b"2")]),
+                        "重复路径")
+        nfc, nfd = unicodedata.normalize("NFC", "é.md"), unicodedata.normalize("NFD", "é.md")
+        self.assertFlag(self.check(_valid_entries(extra={nfc: b"1"}), extra=[(_zinfo(nfd), b"2")]), "重复路径")
+        self.assertFlag(self.check(_valid_entries(extra={"a": b"1", "A/b.md": b"2"})), "文件与目录重名")
 
-    def test_meta_kind_mismatch_flagged(self):
-        """私有包被当成公共包校验必须报警。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            out = module.build_package(ROOT, "private", Path(d), version="v-test")
-            problems = v.verify(out, "public")
-            self.assertTrue(any("kind" in p for p in problems), problems)
-            self.assertEqual(v.verify(out, "private"), [])
+    def test_entry_type_rules(self):
+        self.assertFlag(self.check(_valid_entries(), extra=[(_zinfo("link", 0o120777), b"../x")]), "符号链接")
+        self.assertFlag(self.check(_valid_entries(), extra=[(_zinfo("win.md", system=0), b"x")]), "Unix 权限")
 
-    @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
+    def test_unreadable_entries_reported_not_raised(self):
+        """加密、不支持的压缩方式、数据损坏：都要变成问题条目，不能抛 Python 报错。"""
+        self.assertFlag(self.check(_valid_entries(), encrypt=("CLAUDE.md",)), "加密")
+        self.assertFlag(self.check(_valid_entries(), method={"CLAUDE.md": 99}), "不支持的压缩方式")
+        for stored in (("CLAUDE.md",), ()):
+            path = _write_zip(self.d / f"c{len(stored)}.zip", _valid_entries(extra={"big.md": b"Z" * 4000}),
+                              stored=stored)
+            _corrupt(path, "CLAUDE.md" if stored else "big.md")
+            problems = self.v.verify(path, "public")
+            self.assertTrue(any("CRC" in p or "读不出" in p for p in problems), problems)
+        # changelog 不会被内容核对读取：只有 testzip 抓得到它的损坏
+        path = _write_zip(self.d / "c_log.zip", _valid_entries(extra={"big.md": b"Z" * 4000}))
+        _corrupt(path, f"{module.DIST}/changelog.md")
+        self.assertFlag(self.v.verify(path, "public"), "CRC")
+
+    def test_size_caps(self):
+        with mock.patch.object(self.v, "MAX_FILE_MB", 0):
+            problems = self.check(_valid_entries())
+        self.assertFlag(problems, "单个文件")
+        self.assertFlag(problems, "跳过")
+        with mock.patch.object(self.v, "MAX_TOTAL_MB", 0):
+            self.assertFlag(self.check(_valid_entries()), "解压后总量")
+        with mock.patch.object(self.v, "MAX_MB", {"public": 0.0000001}):
+            self.assertFlag(self.check(_valid_entries()), "体积")
+
+    def test_dist_whitelist(self):
+        for name in (f"{module.DIST}/extra.txt", f"{module.DIST}/history/abc.blob",
+                     f"{module.DIST}/history/0123456789ab", ".AIPM-DIST/x.txt"):
+            e = _valid_entries()
+            e[name] = b"x"
+            self.assertFlag(self.check(e), "白名单外")
+
+    def test_missing_required(self):
+        for name in (".claude/skills/ai-pm/SKILL.md", "CLAUDE.md", ".ignore",
+                     f"{module.DIST}/manifest.json", f"{module.DIST}/history/index.json"):
+            e = _valid_entries()
+            del e[name]
+            self.assertFlag(self.check(e), f"缺少必需文件：{name}")
+
+    def test_ignore_content(self):
+        e = _valid_entries()
+        e[".ignore"] = b""
+        self.assertFlag(self.check(e), ".ignore")
+
+    def test_versions_rules(self):
+        e = _valid_entries()
+        e[f"{module.DIST}/versions.json"] = b"[]"
+        self.assertFlag(self.check(e), "顶层必须是对象")
+        for change, needle in (({"file_count": 99}, "file_count 不符"), ({"schema": 1}, "schema"),
+                               ({"kind": "private"}, "kind 不符"), ({"commit": None}, "commit"),
+                               ({"content_digest": "0" * 16}, "content_digest"),
+                               ({"probe_paths": ["ghost.md"]}, "probe_paths")):
+            self.assertFlag(self.check(_set_meta(_valid_entries(), **change)), needle)
+
+    def test_kind_content_rules(self):
+        self.assertFlag(self.check(_valid_entries(extra={".claude/skills/tpd_cli/SKILL.md": b"x"})),
+                        "公共包混入私有内容")
+        self.assertFlag(self.check(_valid_entries(extra={"Vendor/x.js": b"x"})), "公共包混入私有内容")
+        e = _valid_entries("private")
+        del e["scripts/.metrics-dict.md"]
+        self.assertFlag(self.check(e, "private"), "私有包缺关键文件")
+
+    def test_manifest_rules(self):
+        dist = module.DIST
+        e = _valid_entries()
+        e[f"{dist}/manifest.json"] = json.dumps({"scripts/ghost.py": {"blob": "0" * 12, "exec": False}}).encode()
+        self.assertFlag(self.check(e), "清单里的文件不在包里")
+        e = _valid_entries()
+        e[f"{dist}/manifest.json"] = json.dumps({"CLAUDE.md": {"blob": "0" * 12, "exec": False}}).encode()
+        self.assertFlag(self.check(e), "清单 blob 不符")
+        e = _valid_entries()
+        e[f"{dist}/manifest.json"] = json.dumps(
+            {"CLAUDE.md": {"blob": module.git_blob_id(b"# AI_PM\n"), "exec": True}}).encode()
+        self.assertFlag(self.check(e), "执行位")
+        e = _valid_entries(extra={"README.md": b"x"})
+        e[f"{dist}/manifest.json"] = json.dumps(
+            {"README.md": {"blob": module.git_blob_id(b"x"), "exec": False}}).encode()
+        self.assertFlag(self.check(e), "非受管")
+
+    def test_history_rules(self):
+        dist = module.DIST
+        e = _valid_entries()
+        e[f"{dist}/history/index.json"] = b'{"CLAUDE.md":[{"blob":"abcdef012345"}]}'
+        self.assertFlag(self.check(e), "缺失 blob")
+        e[f"{dist}/history/abcdef012345.blob"] = b"wrong"
+        self.assertFlag(self.check(e), "blob 内容校验失败")
+        e = _valid_entries()
+        e[f"{dist}/history/index.json"] = b'{"../x":[]}'
+        self.assertFlag(self.check(e), "非法路径")
+        e = _valid_entries()
+        e[f"{dist}/history/revisions.json"] = (
+            b'{"schema_version":1,"revisions":[{"version":"abc1234","files":{"CLAUDE.md":"abcdef012345"}}]}')
+        self.assertFlag(self.check(e), "未收录原件")
+
+    def test_public_history_private_path(self):
+        dist = module.DIST
+        blob = module.git_blob_id(b"secret")
+        e = _valid_entries()
+        e[f"{dist}/history/index.json"] = json.dumps(
+            {".claude/skills/tpd_cli/SKILL.md": [{"blob": blob}]}).encode()
+        e[f"{dist}/history/{blob}.blob"] = b"secret"
+        self.assertFlag(self.check(e), "公共包历史里混入私有路径")
+
+    def test_ds_store_warn_only(self):
+        path = _write_zip(self.d / "n.zip", _valid_entries(extra={"templates/x/.DS_Store": b"x"}))
+        self.assertEqual(self.v.verify(path, "public"), [])
+        self.assertTrue(self.v.collect_warnings(path))
+
     def test_main_exit_code(self):
-        """CLI 退出码契约：0=通过，1=有问题；警告不影响退出码。"""
-        v = self._verify_module()
-        with tempfile.TemporaryDirectory() as d:
-            out = module.build_package(ROOT, "public", Path(d), version="v-test")
-            self.assertEqual(v.main([str(out), "--kind", "public"]), 0)
-            bad = self._tar_with(Path(d) / "bad.tar.gz", [
-                "meta/versions.json", "meta/changelog.md",
-                "tree/.ai-shared/conversations/raw/x.jsonl",
-            ])
-            self.assertEqual(v.main([str(bad), "--kind", "public"]), 1)
+        ok = _write_zip(self.d / "ok.zip", _valid_entries())
+        self.assertEqual(self.v.main([str(ok), "--kind", "public"]), 0)
+        bad = _write_zip(self.d / "bad.zip", _valid_entries(extra={".ai-shared/conversations/raw/x.jsonl": b"s"}))
+        self.assertEqual(self.v.main([str(bad), "--kind", "public"]), 1)
 
 
 if __name__ == "__main__":
