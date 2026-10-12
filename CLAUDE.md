@@ -142,6 +142,7 @@ README.md                  项目介绍
 - PRD/PDF/DOCX 导出的中文字体仍使用 `PingFang SC`，不受设计规范选择影响
 - 数据分析 Excel 文件必须用 `openpyxl data_only=True`
 - **查业务数据（metric）/ 写 PRD 涉及业务实体前，先读本机事实字典 `scripts/.metrics-dict.md`**（口径/实体/权限线/能力边界，Stage4-B1）：命中直接用；未覆盖明确说「口径未覆盖」，先小探测再问用户，不硬拼；踩到新坑当场往字典补一行（入库模板 `scripts/.metrics-dict.example.md`，真实字典 gitignore 仅本机）
+  - 查数用 `metrics-query` 技能。本机没有 `~/.claude/skills/metrics-query/`、项目里有 `templates/personal-skills/metrics-query/`（私有包才带）时，先把这个文件夹整个拷到 `~/.claude/skills/`，再读拷过去的 SKILL.md 按步骤做（新装的技能可能要下次开会话才出现在技能列表里）；第一次用会引导填自己的 API Key。别直接用项目里那份安装件：它的密钥和自动更新都写在个人目录
 - **grep / 搜记忆或语料里的业务实体前，先 `python3 scripts/entity-expand.py "<词>" --grep` 把词扩成所有叫法再搜**（Stage4-B2 同物异名归一，字典表三）：治「同一功能/权限项有多个称呼」这类同一物不同叫法的漏检；扩不出就查原词（不报错）；发现新异名往字典表三补一行
 - Chart.js `indexAxis:'y'` 必须在 `options` 顶层，不能放在 `scales` 里
 - 项目阶段产物放 `output/projects/{项目名}/`，产品级长期资产放 `output/assets/{资产名}/`，独立经验文章放 `output/sharing/articles/`。`output/` 顶层容器的唯一完整注册表见 `.claude/skills/ai-pm/references/output-containers.md`；新增容器必须先登记

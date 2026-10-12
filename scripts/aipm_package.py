@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 from functools import lru_cache
 import json
+import os
 import hashlib
 import re
 import subprocess
@@ -63,11 +64,64 @@ PRIVATE_EXTRA = [
     "output/assets/AI_PM知识库蒸馏-20260902/",
     "output/assets/_inventory/",
 ]
+# 本机私有携带配置（gitignore，模板 scripts/.private-bundle.example.json）。
+# 含内部平台名的技能只能写在这里：写进本文件会随公开仓库发出去（check-share-readiness 会拦）。
+PRIVATE_BUNDLE_CONF = ROOT / "scripts" / ".private-bundle.json"
+
+
+def _load_private_bundle_conf(path: Path) -> tuple[dict[str, Path], tuple[str, ...]]:
+    """读本机私有携带配置 → (包内路径 → 来源目录, 额外的私有包关键文件)。没有配置文件返回空。"""
+    if not path.is_file():
+        return {}, ()
+    try:
+        conf = json.loads(path.read_text(encoding="utf-8"))
+        mapped = conf.get("mapped", {})
+        sentinels = conf.get("sentinels", [])
+        if not isinstance(mapped, dict) or not isinstance(sentinels, list):
+            raise ValueError("mapped 应为对象、sentinels 应为列表")
+        for key in mapped:
+            if not key.endswith("/") or key.startswith("/") or ".." in key.split("/"):
+                raise ValueError(f"mapped 的包内路径要是相对目录、以 / 结尾：{key!r}")
+    except (ValueError, AttributeError) as exc:
+        raise SystemExit(f"⛔ {path} 格式不对：{exc}")
+    return {k: Path(os.path.expanduser(v)) for k, v in mapped.items()}, tuple(sentinels)
+
+
+_LOCAL_MAPPED, _LOCAL_SENTINELS = _load_private_bundle_conf(PRIVATE_BUNDLE_CONF)
+
+# 私有版从本机个人目录拷进包的目录：包内路径 → 来源。正本留在个人目录，项目里不放副本。
+# 收包的同事多半不会自己装这些（用户 2026-10-12 拍板）。
+PRIVATE_MAPPED = {
+    **_LOCAL_MAPPED,
+    # metrics-query 天生装在个人目录（密钥写那里、也自动更新到那里）：包里只放安装件，
+    # 同事第一次查数据时由 Claude 拷到 ~/.claude/skills/（见 CLAUDE.md「查业务数据」）
+    "templates/personal-skills/metrics-query/": Path.home() / ".claude/skills/metrics-query",
+}
+# 拷映射目录时跳过：个人密钥（.env）、系统噪声
+_MAPPED_SKIP = re.compile(r"^(\.env(\..*)?|\.DS_Store)$")
+# 私有版由打包器生成的文件：包内路径 → 内容
+PRIVATE_GENERATED = {
+    # Playwright 走项目级 MCP，不走官方插件：插件要从 GitHub 装，公司网络常连不上。
+    # 用本机已装的 Chrome，免得再下载浏览器；跑过一次后 npx 缓存里有 playwright-core，依赖它的私有技能也能找到。
+    ".mcp.json": json.dumps({"mcpServers": {"playwright": {
+        "command": "npx", "args": ["-y", "@playwright/mcp@latest", "--browser", "chrome"]}}},
+        ensure_ascii=False, indent=2) + "\n",
+    "templates/personal-skills/README.md": (
+        "# 个人目录技能安装件\n\n"
+        "这里的技能要装在个人目录 `~/.claude/skills/` 才能正常用：它们把密钥存在那里，也会自动更新到那里。\n\n"
+        "第一次要用时，Claude 会把整个文件夹拷到 `~/.claude/skills/`（规则见根目录 CLAUDE.md「查业务数据」那条），"
+        "也可以自己手动拷。\n\n"
+        "- `metrics-query`：查业务数据。第一次用会引导你到数据平台申请自己的 API Key 再粘贴进来。\n"
+    ),
+}
 # 私有包必须带的关键文件：校验器据此确认「私有包没少打」
 PRIVATE_SENTINELS = (
     ".claude/skills/tpd_cli/SKILL.md",
     ".claude/skills/xfchat-wiki/SKILL.md",
     "scripts/.metrics-dict.md",
+    "templates/personal-skills/metrics-query/SKILL.md",
+    ".mcp.json",
+    *_LOCAL_SENTINELS,
 )
 # 这两个模板目录公共包里也有骨架（README.md / .gitkeep），里面的卡片才是私有
 _SKELETON_DIRS = ("templates/knowledge-base/", "templates/persona/")
@@ -77,7 +131,7 @@ def is_private_only(rel: str) -> bool:
     """公共包里绝不该出现的路径。校验器从这里导入，不另抄一份。
     忽略大小写：Mac / Windows 文件系统不分大小写，Vendor/ 解压后就是 vendor/。"""
     low = rel.lower()
-    for prefix in PRIVATE_EXTRA:
+    for prefix in [*PRIVATE_EXTRA, *PRIVATE_MAPPED, *PRIVATE_GENERATED]:
         p = prefix.lower()
         if p in _SKELETON_DIRS and low.startswith(p):
             return low.rsplit("/", 1)[-1] not in ("readme.md", ".gitkeep")
@@ -134,6 +188,23 @@ def _walk_dir(root: Path, rel: str) -> list[str]:
         if ".git" in rel.parts:
             continue
         found.append(rel.as_posix())
+    return found
+
+
+def _mapped_files() -> dict[str, Path]:
+    """私有版映射目录展开成 包内路径 → 来源文件。来源缺失直接失败（同 _walk_dir）。"""
+    found: dict[str, Path] = {}
+    for prefix, src in PRIVATE_MAPPED.items():
+        src = Path(src)
+        if not src.is_dir():
+            raise SystemExit(f"⛔ 私有版要带的 {prefix} 来源 {src} 不存在或不是目录（这台机器没装它？）")
+        for p in sorted(src.rglob("*")):
+            if p.is_symlink() or not p.is_file():
+                continue
+            rel = p.relative_to(src)
+            if ".git" in rel.parts or "__pycache__" in rel.parts or _MAPPED_SKIP.match(p.name):
+                continue
+            found[prefix + rel.as_posix()] = p
     return found
 
 
@@ -282,11 +353,15 @@ def collect_files(root: Path, kind: str) -> list[str]:
             else:
                 raise SystemExit(f"⛔ 私有版额外文件 {extra} 不存在")
     deduped = sorted(set(files))
+    extra = [*_mapped_files(), *PRIVATE_GENERATED] if kind == "private" else []
+    clash = sorted(set(extra) & set(deduped))
+    if clash:
+        raise SystemExit(f"⛔ 私有版要带进包的路径与仓库文件重名：{clash[:5]}（仓库里不能跟踪这些路径）")
     # 安全线跑在过滤之前：tracked 但工作区已删的路径也照样拦截。
-    blocked = [f for f in deduped if _blocked(f)]
+    blocked = [f for f in [*deduped, *extra] if _blocked(f)]
     if blocked:
         raise SystemExit(f"⛔ 安全线拦截：共 {len(blocked)} 条，前 5 条：{blocked[:5]}")
-    return [f for f in deduped if _packable(root, f)]
+    return sorted([f for f in deduped if _packable(root, f)] + extra)
 
 
 # 受管路径前缀（与 .claude/skills/ai-pm-update/references/managed-scope.md 一致）
@@ -543,6 +618,7 @@ def build_package(root: Path, kind: str, out: Path, version: str, *,
     date_time = _zip_time(commit_ts)
     changelog = ((root / "CHANGELOG.md").read_text(encoding="utf-8")
                  if (root / "CHANGELOG.md").is_file() else "# changelog\n\n（尚无记录）\n")
+    mapped = _mapped_files() if kind == "private" else {}
     out.mkdir(parents=True, exist_ok=True)
     part = target.with_name(target.name + ".part")
     manifest: dict[str, dict] = {}
@@ -550,8 +626,12 @@ def build_package(root: Path, kind: str, out: Path, version: str, *,
     try:
         with zipfile.ZipFile(part, "w") as zf:
             for rel in files:  # collect_files 已排序、已保证每项都能进包
-                data = (root / rel).read_bytes()
-                exe = _is_executable(root, rel, modes)
+                if kind == "private" and rel in PRIVATE_GENERATED:
+                    data, exe = PRIVATE_GENERATED[rel].encode("utf-8"), False
+                elif rel in mapped:
+                    data, exe = mapped[rel].read_bytes(), bool(mapped[rel].stat().st_mode & 0o111)
+                else:
+                    data, exe = (root / rel).read_bytes(), _is_executable(root, rel, modes)
                 _zip_add(zf, rel, data, exe, date_time)
                 blobs[rel] = git_blob_id(data)
                 if _is_managed(rel) and rel in modes:  # 只收被跟踪的受管文件：本机私有文件不受管

@@ -1,0 +1,9 @@
+{
+  "$comment": "本机私有携带配置模板。复制为 scripts/.private-bundle.json（已 gitignore）。mapped：私有包里要带、但正本在个人目录的技能，包内路径（相对、以 / 结尾）→ 本机来源目录；sentinels：私有包必须带的关键文件，校验器据此确认没少打。含内部名的条目只能写在本机文件里。",
+  "mapped": {
+    ".claude/skills/<internal-skill>/": "~/.claude/skills/<internal-skill>"
+  },
+  "sentinels": [
+    ".claude/skills/<internal-skill>/SKILL.md"
+  ]
+}
