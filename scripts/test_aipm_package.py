@@ -37,6 +37,18 @@ HAS_PRIVATE_SKILLS = any((ROOT / rel).is_dir() for rel in _PRIVATE_SKILLS)
 HAS_PRIVATE_INPUTS = all((ROOT / p.rstrip("/")).exists() for p in module.PRIVATE_EXTRA)
 _PRIVATE_INPUTS_REASON = "私有版额外路径不全（分发环境或他人机器），私有包打不出来"
 
+
+def _rg_executable() -> str | None:
+    """本机终端里的 rg 是转调 Claude 内置程序的 shell 函数，PATH 上没有：退回 CLAUDE_CODE_EXECPATH。"""
+    found = shutil.which("rg")
+    if found:
+        return found
+    exe = os.environ.get("CLAUDE_CODE_EXECPATH")
+    return exe if exe and Path(exe).is_file() else None
+
+
+RG = _rg_executable()
+
 _DENYLIST_REASON = (
     "未分发本机私有 scripts/.share-denylist（gitignore，仅作者本机）；"
     "公共包历史过滤逻辑已由 test_public_history_filters_old_internal_content 自带隔离仓覆盖"
@@ -639,6 +651,63 @@ def _corrupt(path: Path, name: str) -> None:
     n_len, x_len = struct.unpack("<HH", raw[offset + 26:offset + 30])
     raw[offset + 30 + n_len + x_len + 1] ^= 0xFF
     path.write_bytes(bytes(raw))
+
+
+class TestExtract(unittest.TestCase):
+    """真解压一次：根下直接是 AI_PM、执行位和中文名保留、历史原件搜不到。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        d = Path(self.tmp.name)
+        repo = d / "repo"
+        repo.mkdir()
+        (repo / "CLAUDE.md").write_text("OLD_ONLY_MARKER\n", encoding="utf-8")
+        skill = repo / ".claude/skills/ai-pm/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text("---\nname: ai-pm\n---\n", encoding="utf-8")
+        run = repo / "scripts/run.sh"
+        run.parent.mkdir()
+        run.write_text("#!/bin/bash\necho ok\n", encoding="utf-8")
+        run.chmod(0o755)
+        zh = repo / "templates/中文说明.md"
+        zh.parent.mkdir()
+        zh.write_text("中文\n", encoding="utf-8")
+        _init_repo(repo)
+        _commit(repo, "first")
+        (repo / "CLAUDE.md").write_text("new text\n", encoding="utf-8")
+        _commit(repo, "second")
+        (repo / "scripts/.share-denylist").write_text("never-matches-zzz\n", encoding="utf-8")
+        self.zip = module.build_package(repo, "public", d / "out", "v-test")
+        self.dest = d / "AI_PM"
+
+    def _assert_install(self):
+        self.assertTrue((self.dest / ".claude/skills/ai-pm/SKILL.md").is_file(),
+                        "解压目录下应直接是 AI_PM 内容，不能再套一层")
+        self.assertFalse((self.dest / "AI_PM").exists())
+        self.assertFalse((self.dest / "tree").exists())
+        self.assertTrue(os.access(self.dest / "scripts/run.sh", os.X_OK), "执行位丢了")
+        self.assertEqual((self.dest / "templates/中文说明.md").read_text(encoding="utf-8"), "中文\n")
+
+    @unittest.skipUnless(shutil.which("ditto"), "非 macOS，无 ditto")
+    def test_ditto_extract(self):
+        subprocess.run(["ditto", "-x", "-k", str(self.zip), str(self.dest)], check=True)
+        self._assert_install()
+
+    @unittest.skipUnless(shutil.which("unzip"), "无 unzip")
+    def test_unzip_extract(self):
+        subprocess.run(["unzip", "-q", str(self.zip), "-d", str(self.dest)], check=True)
+        self._assert_install()
+
+    @unittest.skipUnless(shutil.which("unzip") and RG, "无 unzip，或找不到 ripgrep（PATH 与 CLAUDE_CODE_EXECPATH 都没有）")
+    def test_ignore_hides_history_from_search(self):
+        subprocess.run(["unzip", "-q", str(self.zip), "-d", str(self.dest)], check=True)
+        hidden = subprocess.run(["rg", "--hidden", "-l", "OLD_ONLY_MARKER", str(self.dest)],
+                                executable=RG, capture_output=True, text=True)
+        self.assertEqual(hidden.stdout.strip(), "", "搜规则时不该搜到历史原件")
+        raw = subprocess.run(["rg", "--hidden", "--no-ignore", "-l", "OLD_ONLY_MARKER", str(self.dest)],
+                             executable=RG, capture_output=True, text=True)
+        self.assertIn(f"{module.DIST}/history/", raw.stdout, "前提：历史原件确实在包里")
 
 
 class TestVerify(unittest.TestCase):
