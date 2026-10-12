@@ -7,24 +7,42 @@
 单文件 104 MB、前十合计 380 MB，那是作者的真实对话记录。用排除法打包会直接发出去。
 
 用法：
-    python3 scripts/aipm_package.py --kind public  --out dist/
-    python3 scripts/aipm_package.py --kind private --out dist/
+    python3 scripts/aipm_package.py --kind private --out ~/Downloads
+    python3 scripts/aipm_package.py --kind public            # 默认写到 <仓库>/dist/public/AI_PM.zip
+产物：<out>/AI_PM.zip。zip 根平铺，双击解压即一个能用的 AI_PM 文件夹；升级材料在 .aipm-dist/。
 """
 from __future__ import annotations
 
 import argparse
 from functools import lru_cache
-import io
 import json
 import hashlib
 import re
 import subprocess
 import sys
-import tarfile
 import time
-from pathlib import Path
+import zipfile
+from pathlib import Path, PureWindowsPath
 
 ROOT = Path(__file__).resolve().parents[1]
+
+DIST = ".aipm-dist"
+PACKAGE_NAME = "AI_PM.zip"
+IGNORE_FILE = ".ignore"
+# ripgrep 在没有 git 的目录里也认 .ignore：Claude 搜规则时不会搜到历史原件里的旧版 SKILL.md
+IGNORE_CONTENT = "/.aipm-dist/\n"
+VERSIONS_SCHEMA = 2
+DIST_README = (
+    "# .aipm-dist\n\n"
+    "这里是 AI_PM 的升级材料（版本号、文件清单、历史原件），不是规则来源。\n"
+    "查规则、读规范请看根目录的 CLAUDE.md 和 .claude/skills/，不要引用这里的内容。\n"
+)
+# Windows 路径上限 260，给 C:\Users\<名字>\Downloads\AI_PM\ 留余量；打包器与校验器共用
+MAX_PATH_CHARS = 180
+MAX_SEGMENT_BYTES = 255
+PROBE_COUNT = 20
+_WIN_ILLEGAL = re.compile(r'[<>:"|?*\\\x00-\x1f]')
+_WIN_RESERVED = re.compile(r"^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$", re.IGNORECASE)
 
 # 私有版额外携带的路径（相对仓库根，可为文件或目录前缀）
 PRIVATE_EXTRA = [
@@ -98,6 +116,93 @@ def _walk_dir(root: Path, rel: str) -> list[str]:
     return found
 
 
+def git_blob_id(data: bytes) -> str:
+    """git blob sha1 的前 12 位，与 history/ 的命名一致。"""
+    return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\x00" + data).hexdigest()[:12]
+
+
+def content_digest(blobs: dict[str, str]) -> str:
+    """全部安装文件「路径 + blob」排序后的哈希。私有资料不在 git 里，同一提交下靠它区分新旧。"""
+    h = hashlib.sha256()
+    for path in sorted(blobs):
+        h.update(f"{path}\0{blobs[path]}\n".encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
+def path_problems(n: str) -> list[str]:
+    """路径本身的问题：穿越、绝对路径、Windows 解不开的名字、过长。打包器和校验器共用。"""
+    problems = []
+    win = PureWindowsPath(n)
+    if not n or n.startswith("/") or win.drive or win.is_absolute():
+        problems.append(f"非法路径（绝对路径）：{n}")
+    parts = n.rstrip("/").split("/")
+    if any(p in ("", ".", "..") for p in parts):
+        problems.append(f"非法路径（穿越或空段）：{n}")
+    for seg in parts:
+        if len(seg.encode("utf-8")) > MAX_SEGMENT_BYTES:
+            problems.append(f"单段超过 {MAX_SEGMENT_BYTES} 字节：{n}")
+            break
+        if seg not in (".", "..") and (_WIN_ILLEGAL.search(seg) or seg.endswith((".", " "))
+                                       or _WIN_RESERVED.match(seg)):
+            problems.append(f"Windows 上解压不了的名字：{n}")
+            break
+    if len(n) > MAX_PATH_CHARS:
+        problems.append(f"路径过长（{len(n)} > {MAX_PATH_CHARS} 字符，Windows 可能解压失败）：{n}")
+    return problems
+
+
+def _head_info(root: Path) -> tuple[str | None, int | None, str | None]:
+    """(HEAD 完整 sha, 提交时间戳, 带时区的提交时间)；还没有提交时全是 None。"""
+    r = subprocess.run(["git", "-C", str(root), "log", "-1", "--format=%H %ct %cI"],
+                       capture_output=True, text=True)
+    if r.returncode != 0 or not r.stdout.strip():
+        return None, None, None
+    sha, ts, iso = r.stdout.split()
+    return sha, int(ts), iso
+
+
+def _index_modes(root: Path) -> dict[str, int]:
+    """被跟踪文件 → git index 里的 mode。键集合同时就是「被跟踪的文件」。"""
+    out = subprocess.run(["git", "-C", str(root), "ls-files", "-s", "-z"],
+                         capture_output=True, text=True, check=True).stdout
+    modes = {}
+    for item in out.split("\0"):
+        if item:
+            meta, path = item.split("\t", 1)
+            modes[path] = int(meta.split()[0], 8)
+    return modes
+
+
+def _is_executable(root: Path, rel: str, modes: dict[str, int]) -> bool:
+    """被跟踪的以 git index 为准；私有额外路径不在 index 里，看文件系统权限。"""
+    if rel in modes:
+        return modes[rel] == 0o100755
+    return bool((root / rel).stat().st_mode & 0o111)
+
+
+def _probe_paths(files: list[str]) -> list[str]:
+    """升级前核对解压是否完整用：最长的若干条（Windows 最容易跳过）加两个关键文件。"""
+    picked = sorted(files, key=lambda p: (-len(p), p))[:PROBE_COUNT]
+    for key in ("CLAUDE.md", ".claude/skills/ai-pm/SKILL.md"):
+        if key in files and key not in picked:
+            picked.append(key)
+    return picked
+
+
+def _zip_time(ts: int | None) -> tuple:
+    t = time.localtime(ts if ts is not None else time.time())
+    return (max(t.tm_year, 1980), t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
+
+
+def _zip_add(zf: zipfile.ZipFile, arcname: str, data: bytes, executable: bool, date_time: tuple) -> None:
+    """每个条目显式设属性：Python 的默认值是不压缩、权限 0600、时间 1980 年。"""
+    info = zipfile.ZipInfo(arcname, date_time=date_time)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = 3
+    info.external_attr = (0o100755 if executable else 0o100644) << 16
+    zf.writestr(info, data)
+
+
 def _blocked(rel: str) -> bool:
     return any(rel.startswith(b) or rel == b.rstrip("/") for b in NEVER_INCLUDE)
 
@@ -106,7 +211,7 @@ def _packable(root: Path, rel: str) -> bool:
     """该路径是否真会进包：普通文件、非符号链接、工作区里存在。
 
     git ls-files 会把 mode 120000 的符号链接一并列出来（跨平台共享配置很常见），
-    不在这里剔掉的话，meta/versions.json 记的 file_count 会比 tar 实际条目多，
+    不在这里剔掉的话，.aipm-dist/versions.json 记的 file_count 会比 zip 实际条目多，
     下游按 file_count 校验就会误判。
     """
     p = root / rel
@@ -116,7 +221,7 @@ def _packable(root: Path, rel: str) -> bool:
 def collect_files(root: Path, kind: str) -> list[str]:
     """收集要打包的文件清单。kind ∈ {public, private}。
 
-    返回的每一项都保证进包（见 _packable），因此 len() 即 meta/versions.json 的 file_count。
+    返回的每一项都保证进包（见 _packable），因此 len() 即 .aipm-dist/versions.json 的 file_count。
     kind 非法时抛 ValueError——静默降级成 public 会让拼错一个字母的"私有包"少打一万多个文件。
     """
     if kind not in ("public", "private"):
@@ -168,6 +273,8 @@ def _is_managed(rel: str) -> bool:
     return rel in MANAGED_PREFIX or rel.startswith(
         tuple(prefix for prefix in MANAGED_PREFIX if prefix.endswith("/"))
     )
+
+is_managed = _is_managed  # 校验器导入用
 
 
 def collect_history(root: Path) -> dict:
@@ -281,8 +388,8 @@ def collect_revisions(root: Path, index: dict) -> list[dict]:
     return snapshots
 
 
-def write_history(tf, root: Path, index: dict) -> None:
-    """Write the history index and each unique blob into an open tar file."""
+def write_history(zf: zipfile.ZipFile, root: Path, index: dict, date_time: tuple) -> None:
+    """把历史索引、版本快照和每个唯一 blob 写进 .aipm-dist/history/。"""
     written: set[str] = set()
     for entries in index.values():
         for entry in entries:
@@ -290,27 +397,17 @@ def write_history(tf, root: Path, index: dict) -> None:
             if blob in written:
                 continue
             data = _read_history_blob(root, blob)
-            actual = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\x00" + data).hexdigest()
-            if not actual.startswith(blob):
+            if git_blob_id(data) != blob:
                 raise ValueError(f"历史 blob 校验失败：{blob}")
-            info = tarfile.TarInfo(f"history/{blob}")
-            info.size = len(data)
-            info.mtime = int(time.time())
-            tf.addfile(info, io.BytesIO(data))
+            _zip_add(zf, f"{DIST}/history/{blob}.blob", data, False, date_time)
             written.add(blob)
-    payload = json.dumps(index, ensure_ascii=False, indent=2).encode("utf-8")
-    info = tarfile.TarInfo("history/index.json")
-    info.size = len(payload)
-    info.mtime = int(time.time())
-    tf.addfile(info, io.BytesIO(payload))
+    _zip_add(zf, f"{DIST}/history/index.json",
+             json.dumps(index, ensure_ascii=False, indent=2).encode("utf-8"), False, date_time)
     revisions = json.dumps(
         {"schema_version": 1, "revisions": collect_revisions(root, index)},
         ensure_ascii=False, separators=(",", ":"),
     ).encode("utf-8")
-    info = tarfile.TarInfo("history/revisions.json")
-    info.size = len(revisions)
-    info.mtime = int(time.time())
-    tf.addfile(info, io.BytesIO(revisions))
+    _zip_add(zf, f"{DIST}/history/revisions.json", revisions, False, date_time)
 
 
 @lru_cache(maxsize=8192)
@@ -358,46 +455,72 @@ def _public_history(root: Path, index: dict) -> dict:
 
 
 def build_package(root: Path, kind: str, out: Path, version: str) -> Path:
-    """打包并返回产物路径。"""
+    """打包并返回 <out>/AI_PM.zip。先算完历史再建目录：中途失败不留半成品。"""
+    if out.suffix.lower() == ".zip":
+        raise SystemExit(f"⛔ --out 要给文件夹，不是 zip 路径：{out}（产物固定叫 {PACKAGE_NAME}）")
+    target = out / PACKAGE_NAME
     files = collect_files(root, kind)
+    bad_paths = [p for f in files for p in path_problems(f)]
+    if bad_paths:
+        raise SystemExit(f"⛔ 有 {len(bad_paths)} 个路径在 Windows 上解压不了或越界，先改名：{bad_paths[:10]}")
     history = collect_history(root)
     if kind == "public":
         history = _public_history(root, history)
+    commit, commit_ts, commit_iso = _head_info(root)
+    modes = _index_modes(root)
+    date_time = _zip_time(commit_ts)
+    changelog = ((root / "CHANGELOG.md").read_text(encoding="utf-8")
+                 if (root / "CHANGELOG.md").is_file() else "# changelog\n\n（尚无记录）\n")
     out.mkdir(parents=True, exist_ok=True)
-    target = out / f"AI_PM-{kind}-{version}.tar.gz"
-
-    versions_meta = {
-        "version": version,
-        "kind": kind,
-        "built_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "file_count": len(files),
-    }
-    changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8") if (root / "CHANGELOG.md").is_file() else "# changelog\n\n（尚无记录）\n"
-
-    with tarfile.open(target, "w:gz") as tf:
-        for rel in files:
-            # collect_files 已保证每一项都能进包，这里不再静默跳过——
-            # 否则 file_count 与实际条目又会分叉（见 _packable）。
-            tf.add(root / rel, arcname=f"tree/{rel}")
-        for name, content in (("meta/versions.json", json.dumps(versions_meta, ensure_ascii=False, indent=2)),
-                              ("meta/changelog.md", changelog)):
-            data = content.encode("utf-8")
-            info = tarfile.TarInfo(name)
-            info.size = len(data)
-            info.mtime = int(time.time())
-            tf.addfile(info, io.BytesIO(data))
-        write_history(tf, root, history)
+    part = target.with_name(target.name + ".part")
+    manifest: dict[str, dict] = {}
+    blobs: dict[str, str] = {}
+    try:
+        with zipfile.ZipFile(part, "w") as zf:
+            for rel in files:  # collect_files 已排序、已保证每项都能进包
+                data = (root / rel).read_bytes()
+                exe = _is_executable(root, rel, modes)
+                _zip_add(zf, rel, data, exe, date_time)
+                blobs[rel] = git_blob_id(data)
+                if _is_managed(rel) and rel in modes:  # 只收被跟踪的受管文件：本机私有文件不受管
+                    manifest[rel] = {"blob": blobs[rel], "exec": exe}
+            _zip_add(zf, IGNORE_FILE, IGNORE_CONTENT.encode("utf-8"), False, date_time)
+            versions_meta = {
+                "schema": VERSIONS_SCHEMA,
+                "version": version,
+                "kind": kind,
+                "commit": commit,
+                "commit_time": commit_iso,
+                "content_digest": content_digest(blobs),
+                "probe_paths": _probe_paths(files),
+                "built_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                "file_count": len(files),
+            }
+            for name, text in (
+                (f"{DIST}/versions.json", json.dumps(versions_meta, ensure_ascii=False, indent=2)),
+                (f"{DIST}/manifest.json", json.dumps(manifest, ensure_ascii=False, indent=1, sort_keys=True)),
+                (f"{DIST}/changelog.md", changelog),
+                (f"{DIST}/README.md", DIST_README),
+            ):
+                _zip_add(zf, name, text.encode("utf-8"), False, date_time)
+            write_history(zf, root, history, date_time)
+        part.replace(target)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
     return target
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--kind", choices=["public", "private"], required=True)
-    ap.add_argument("--out", default="dist")
+    ap.add_argument("--out", default=None, help="输出文件夹，默认 <仓库>/dist/<kind>/；产物固定叫 AI_PM.zip")
     ap.add_argument("--version", default=time.strftime("%Y%m%d"))
     ap.add_argument("--root", default=str(ROOT))
     args = ap.parse_args()
-    path = build_package(Path(args.root), args.kind, Path(args.out), args.version)
+    root = Path(args.root)
+    out = Path(args.out).expanduser() if args.out else root / "dist" / args.kind
+    path = build_package(root, args.kind, out, args.version)
     print(f"✅ {path}  ({path.stat().st_size / 1024 / 1024:.1f} MB)")
     return 0
 

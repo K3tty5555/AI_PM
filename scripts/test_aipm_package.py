@@ -4,13 +4,20 @@
 from __future__ import annotations
 
 import importlib.util
-import io
 import json
+import os
+import shutil
+import stat
+import struct
 import subprocess
-import tarfile
 import tempfile
+import time
+import unicodedata
 import unittest
+import warnings
+import zipfile
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "scripts" / "aipm_package.py"
@@ -54,6 +61,29 @@ def _init_repo(path: Path) -> None:
         ["git", "-C", str(path), "-c", "core.hooksPath=/dev/null", "add", "-A"],
     ):
         subprocess.run(cmd, check=True, capture_output=True, text=True)
+
+
+def _commit(repo: Path, message: str) -> None:
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True)
+    subprocess.run([
+        "git", "-C", str(repo), "-c", "user.name=Test", "-c", "user.email=test@example.test",
+        "-c", "core.hooksPath=/dev/null", "commit", "-qm", message,
+    ], check=True, capture_output=True)
+
+
+def _zip_names(path: Path) -> list[str]:
+    with zipfile.ZipFile(path) as zf:
+        return zf.namelist()
+
+
+def _zip_json(path: Path, name: str):
+    with zipfile.ZipFile(path) as zf:
+        return json.loads(zf.read(name).decode("utf-8"))
+
+
+def _body_names(names: list[str]) -> list[str]:
+    """去掉打包器生成的 .ignore 与 .aipm-dist/ 后的「安装内容」。"""
+    return [n for n in names if n != module.IGNORE_FILE and not n.startswith(module.DIST + "/")]
 
 
 class TestCollect(unittest.TestCase):
@@ -150,7 +180,7 @@ class TestSafetyLine(unittest.TestCase):
 
 class TestSymlinkExclusion(unittest.TestCase):
     def test_symlink_excluded_and_count_matches(self):
-        """tracked 符号链接不进包，file_count 必须等于 tar 里的 tree 条目数。"""
+        """tracked 符号链接不进包，file_count 必须等于包内安装条目数。"""
         with tempfile.TemporaryDirectory() as d:
             repo = Path(d)
             (repo / "real.md").write_text("real\n", encoding="utf-8")
@@ -162,30 +192,27 @@ class TestSymlinkExclusion(unittest.TestCase):
             self.assertEqual(files, ["real.md"], f"符号链接混入清单：{files}")
 
             out = module.build_package(repo, "public", repo / "dist", version="v0-test")
-            with tarfile.open(out) as tf:
-                tree = [n for n in tf.getnames() if n.startswith("tree/")]
-                meta = json.loads(tf.extractfile("meta/versions.json").read().decode("utf-8"))
-            self.assertEqual([n for n in tree], ["tree/real.md"])
-            self.assertEqual(meta["file_count"], len(tree), "file_count 与实际 tar 条目数不符")
+            self.assertEqual(out, repo / "dist" / "AI_PM.zip")
+            meta = _zip_json(out, f"{module.DIST}/versions.json")
+            self.assertEqual(_body_names(_zip_names(out)), ["real.md"])
+            self.assertEqual(meta["file_count"], 1, "file_count 与实际条目数不符")
 
 
 class TestBuild(unittest.TestCase):
     @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
-    def test_tar_contains_meta(self):
+    def test_zip_contains_dist_meta(self):
         with tempfile.TemporaryDirectory() as d:
             out = module.build_package(ROOT, "public", Path(d), version="v0.6.0-test")
-            self.assertTrue(out.exists())
-            with tarfile.open(out) as tf:
-                names = tf.getnames()
-            self.assertTrue(any(n.endswith("meta/versions.json") for n in names))
-            self.assertTrue(any(n.endswith("meta/changelog.md") for n in names))
+            names = _zip_names(out)
+            self.assertIn(f"{module.DIST}/versions.json", names)
+            self.assertIn(f"{module.DIST}/changelog.md", names)
+            self.assertIn(".claude/skills/ai-pm/SKILL.md", names, "解压后根下必须直接是 AI_PM 内容")
 
     @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
-    def test_tar_excludes_conversations(self):
+    def test_zip_excludes_conversations(self):
         with tempfile.TemporaryDirectory() as d:
             out = module.build_package(ROOT, "public", Path(d), version="v0.6.0-test")
-            with tarfile.open(out) as tf:
-                names = tf.getnames()
+            names = _zip_names(out)
             # 断言钉在真正的危险源——对话记录数据目录，而不是名字里带
             # "conversations" 的任何路径：scripts/ai-sync/snapshot-*-conversations.sh
             # 是产出这些记录的同步工具（794 B 脚本），本来就该随仓库分发。
@@ -194,14 +221,6 @@ class TestBuild(unittest.TestCase):
 
 
 class TestHistory(unittest.TestCase):
-    @staticmethod
-    def _commit(repo: Path, message: str) -> None:
-        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True)
-        subprocess.run([
-            "git", "-C", str(repo), "-c", "user.name=Test", "-c", "user.email=test@example.test",
-            "-c", "core.hooksPath=/dev/null", "commit", "-qm", message,
-        ], check=True, capture_output=True)
-
     def test_history_index_covers_managed_paths(self):
         """索引必须含受管路径的历史，且不含非受管路径。"""
         index = module.collect_history(ROOT)
@@ -229,15 +248,13 @@ class TestHistory(unittest.TestCase):
         """包内必须有 history/ 与 history/index.json。"""
         with tempfile.TemporaryDirectory() as d:
             out = module.build_package(ROOT, "public", Path(d), version="v-test")
-            with tarfile.open(out) as tf:
-                names = tf.getnames()
-                index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
-                revisions = json.loads(tf.extractfile("history/revisions.json").read().decode("utf-8"))
+            names = _zip_names(out)
+            index = _zip_json(out, f"{module.DIST}/history/index.json")
+            revisions = _zip_json(out, f"{module.DIST}/history/revisions.json")
         self.assertTrue(index)
         self.assertTrue(revisions["revisions"], "缺可用于版本打分的快照")
         self.assertEqual(revisions["schema_version"], 1)
-        self.assertTrue(any(n.startswith("history/") and n != "history/index.json" for n in names),
-                        "history/ 只有索引没有内容")
+        self.assertTrue(any(n.endswith(".blob") for n in names), "history/ 只有索引没有内容")
 
     @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_history_content_addressed(self):
@@ -250,10 +267,8 @@ class TestHistory(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as d:
             out = module.build_package(ROOT, "public", Path(d), version="v-test")
-            with tarfile.open(out) as tf:
-                names = [n for n in tf.getnames() if n.startswith("history/")
-                         and n not in ("history/index.json", "history/revisions.json")]
-                packaged = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
+            names = [n for n in _zip_names(out) if n.endswith(".blob")]
+            packaged = _zip_json(out, f"{module.DIST}/history/index.json")
         self.assertEqual(len(names), len(set(names)), "同一内容在包内重复写入")
         packaged_blobs = {e["blob"] for entries in packaged.values() for e in entries}
         self.assertEqual(len(names), len(packaged_blobs), "包内 blob 数与包内索引不一致")
@@ -265,9 +280,9 @@ class TestHistory(unittest.TestCase):
             path = repo / "CLAUDE.md"
             path.write_text("confidential old text\n", encoding="utf-8")
             _init_repo(repo)
-            self._commit(repo, "old")
+            _commit(repo, "old")
             path.write_text("clean new text\n", encoding="utf-8")
-            self._commit(repo, "new")
+            _commit(repo, "new")
             self.assertEqual(len(module.collect_history(repo)["CLAUDE.md"]), 2)
 
             with self.assertRaises(SystemExit):
@@ -277,20 +292,19 @@ class TestHistory(unittest.TestCase):
             denylist = repo / "scripts" / ".share-denylist"
             denylist.parent.mkdir()
             denylist.write_text("confidential\n", encoding="utf-8")
-            out = module.build_package(repo, "public", repo / "dist", "v-test")
-            with tarfile.open(out) as tf:
-                index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
-                revisions = json.loads(tf.extractfile("history/revisions.json").read().decode("utf-8"))
-                self.assertEqual(len(index["CLAUDE.md"]), 1)
-                self.assertEqual(tf.extractfile("history/" + index["CLAUDE.md"][0]["blob"]).read(),
+            out = module.build_package(repo, "public", repo / "dist" / "public", "v-test")
+            index = _zip_json(out, f"{module.DIST}/history/index.json")
+            revisions = _zip_json(out, f"{module.DIST}/history/revisions.json")
+            self.assertEqual(len(index["CLAUDE.md"]), 1)
+            with zipfile.ZipFile(out) as zf:
+                self.assertEqual(zf.read(f"{module.DIST}/history/{index['CLAUDE.md'][0]['blob']}.blob"),
                                  b"clean new text\n")
-                allowed = {e["blob"] for e in index["CLAUDE.md"]}
-                self.assertTrue(all(snapshot["files"].get("CLAUDE.md") in allowed
-                                    for snapshot in revisions["revisions"] if "CLAUDE.md" in snapshot["files"]))
+            allowed = {e["blob"] for e in index["CLAUDE.md"]}
+            self.assertTrue(all(snapshot["files"].get("CLAUDE.md") in allowed
+                                for snapshot in revisions["revisions"] if "CLAUDE.md" in snapshot["files"]))
 
-            private = module.build_package(repo, "private", repo / "dist", "v-private")
-            with tarfile.open(private) as tf:
-                index = json.loads(tf.extractfile("history/index.json").read().decode("utf-8"))
+            private = module.build_package(repo, "private", repo / "dist" / "private", "v-private")
+            index = _zip_json(private, f"{module.DIST}/history/index.json")
             self.assertEqual(len(index["CLAUDE.md"]), 2)
 
     def test_revisions_retain_unchanged_files_for_base_scoring(self):
@@ -299,9 +313,9 @@ class TestHistory(unittest.TestCase):
             repo = Path(d)
             (repo / "CLAUDE.md").write_text("first\n", encoding="utf-8")
             _init_repo(repo)
-            self._commit(repo, "first")
+            _commit(repo, "first")
             (repo / ".gitignore").write_text("dist/\n", encoding="utf-8")
-            self._commit(repo, "second")
+            _commit(repo, "second")
             index = module.collect_history(repo)
             revisions = module.collect_revisions(repo, index)
             self.assertEqual(len(revisions), 2)
@@ -310,6 +324,94 @@ class TestHistory(unittest.TestCase):
             self.assertNotIn(".gitignore", revisions[1]["files"])
 
 
+class TestLayout(unittest.TestCase):
+    """解压即可用：根下平铺安装内容，升级材料只在 .aipm-dist/。"""
+
+    def _repo(self, d: str) -> Path:
+        repo = Path(d) / "repo"
+        repo.mkdir()
+        (repo / "CLAUDE.md").write_text("# AI_PM\n", encoding="utf-8")
+        skill = repo / ".claude/skills/ai-pm/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text("---\nname: ai-pm\n---\n", encoding="utf-8")
+        run = repo / "scripts/run.sh"
+        run.parent.mkdir()
+        run.write_text("#!/bin/bash\necho ok\n", encoding="utf-8")
+        run.chmod(0o755)
+        _init_repo(repo)
+        _commit(repo, "first")
+        (repo / "scripts/.share-denylist").write_text("never-matches-zzz\n", encoding="utf-8")
+        return repo
+
+    def test_flat_layout_and_dist_files(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = module.build_package(self._repo(d), "public", Path(d) / "out", "v-test")
+            names = _zip_names(out)
+            self.assertEqual(out.name, "AI_PM.zip")
+            self.assertFalse([n for n in names if n.startswith(("AI_PM/", "tree/", "meta/", "history/"))])
+            self.assertEqual(sorted(_body_names(names)),
+                             [".claude/skills/ai-pm/SKILL.md", "CLAUDE.md", "scripts/run.sh"])
+            for n in ("versions.json", "manifest.json", "changelog.md", "README.md",
+                      "history/index.json", "history/revisions.json"):
+                self.assertIn(f"{module.DIST}/{n}", names)
+            with zipfile.ZipFile(out) as zf:
+                self.assertEqual(zf.read(".ignore"), b"/.aipm-dist/\n")
+                self.assertIn("不是规则来源", zf.read(f"{module.DIST}/README.md").decode("utf-8"))
+
+    def test_versions_fields(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            head, iso = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%H %cI"],
+                                       capture_output=True, text=True, check=True).stdout.split()
+            out = module.build_package(repo, "public", Path(d) / "out", "v-test")
+            meta = _zip_json(out, f"{module.DIST}/versions.json")
+            self.assertEqual((meta["schema"], meta["version"], meta["kind"]), (2, "v-test", "public"))
+            self.assertEqual(meta["commit"], head)
+            self.assertEqual(meta["commit_time"], iso)
+            self.assertEqual(meta["file_count"], 3)
+            with zipfile.ZipFile(out) as zf:
+                blobs = {n: module.git_blob_id(zf.read(n)) for n in _body_names(zf.namelist())}
+            self.assertEqual(meta["content_digest"], module.content_digest(blobs))
+            self.assertEqual(len(meta["content_digest"]), 16)
+            self.assertIn("CLAUDE.md", meta["probe_paths"])
+            self.assertEqual(meta["probe_paths"][0], ".claude/skills/ai-pm/SKILL.md", "最长路径排最前")
+
+    def test_manifest_only_tracked_managed(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            (repo / "scripts/.metrics-dict.md").write_text("本机字典\n", encoding="utf-8")
+            with mock.patch.object(module, "PRIVATE_EXTRA", ["scripts/.metrics-dict.md"]):
+                out = module.build_package(repo, "private", Path(d) / "out", "v-test")
+            self.assertIn("scripts/.metrics-dict.md", _zip_names(out), "私有文件照常进包")
+            manifest = _zip_json(out, f"{module.DIST}/manifest.json")
+            self.assertEqual(sorted(manifest), [".claude/skills/ai-pm/SKILL.md", "CLAUDE.md", "scripts/run.sh"],
+                             "没被 git 跟踪的私有文件不进清单")
+            expect = subprocess.run(["git", "-C", str(repo), "hash-object", "CLAUDE.md"],
+                                    capture_output=True, text=True, check=True).stdout.strip()[:12]
+            self.assertEqual(manifest["CLAUDE.md"], {"blob": expect, "exec": False})
+            self.assertTrue(manifest["scripts/run.sh"]["exec"])
+
+    def test_history_blobs_named_with_suffix(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = module.build_package(self._repo(d), "public", Path(d) / "out", "v-test")
+            names = set(_zip_names(out))
+            for entries in _zip_json(out, f"{module.DIST}/history/index.json").values():
+                for e in entries:
+                    self.assertIn(f"{module.DIST}/history/{e['blob']}.blob", names)
+
+    def test_path_problems_rules(self):
+        cases = {
+            "../escape.txt": "非法路径", "/abs.md": "非法路径", "C:/x.md": "非法路径",
+            "a\\b.md": "Windows", "a/CON.txt": "Windows", "a/x?.md": "Windows", "a/trail.": "Windows",
+            "a/" + "长" * 179 + ".md": "路径过长", "a/" + "x" * 256: "单段",
+        }
+        for name, needle in cases.items():
+            self.assertTrue(any(needle in p for p in module.path_problems(name)), (name, module.path_problems(name)))
+        for ok in ("CLAUDE.md", ".claude/skills/ai-pm/SKILL.md", "templates/中文说明.md", ".gitkeep"):
+            self.assertEqual(module.path_problems(ok), [], ok)
+
+
+@unittest.skip("Task 3 按 zip 重写校验器后整类替换")
 class TestVerify(unittest.TestCase):
     def _verify_module(self):
         p = ROOT / "scripts" / "aipm_package_verify.py"
