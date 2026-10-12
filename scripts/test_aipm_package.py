@@ -36,7 +36,8 @@ _PRIVATE_SKILLS = (".claude/skills/xfchat-wiki", ".claude/skills/tpd_cli", ".cla
 
 HAS_DENYLIST = _DENYLIST.is_file()
 HAS_PRIVATE_SKILLS = any((ROOT / rel).is_dir() for rel in _PRIVATE_SKILLS)
-HAS_PRIVATE_INPUTS = all((ROOT / p.rstrip("/")).exists() for p in module.PRIVATE_EXTRA)
+HAS_PRIVATE_INPUTS = (all((ROOT / p.rstrip("/")).exists() for p in module.PRIVATE_EXTRA)
+                      and all(Path(src).is_dir() for src in module.PRIVATE_MAPPED.values()))
 _PRIVATE_INPUTS_REASON = "私有版额外路径不全（分发环境或他人机器），私有包打不出来"
 
 
@@ -191,7 +192,7 @@ class TestSafetyLine(unittest.TestCase):
                 _init_repo(repo)
                 subprocess.run(["git", "-C", str(repo), "add", "-f", str(local)], check=True, capture_output=True)
                 self.assertIn("templates/configs/capability-registry.local.json", module._git_tracked(repo))
-                with mock.patch.object(module, "PRIVATE_EXTRA", []), \
+                with mock.patch.multiple(module, PRIVATE_EXTRA=[], PRIVATE_MAPPED={}), \
                         self.assertRaises(SystemExit, msg=kind) as ctx:
                     module.collect_files(repo, kind)
                 self.assertIn("capability-registry.local.json", str(ctx.exception))
@@ -322,7 +323,7 @@ class TestHistory(unittest.TestCase):
             self.assertTrue(all(snapshot["files"].get("CLAUDE.md") in allowed
                                 for snapshot in revisions["revisions"] if "CLAUDE.md" in snapshot["files"]))
 
-            with mock.patch.object(module, "PRIVATE_EXTRA", []):
+            with mock.patch.multiple(module, PRIVATE_EXTRA=[], PRIVATE_MAPPED={}):
                 private = module.build_package(repo, "private", repo / "dist" / "private", "v-private",
                                                allow_dirty=True)
             index = _zip_json(private, f"{module.DIST}/history/index.json")
@@ -401,7 +402,7 @@ class TestLayout(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             repo = self._repo(d)
             (repo / "scripts/.metrics-dict.md").write_text("本机字典\n", encoding="utf-8")
-            with mock.patch.object(module, "PRIVATE_EXTRA", ["scripts/.metrics-dict.md"]):
+            with mock.patch.multiple(module, PRIVATE_EXTRA=["scripts/.metrics-dict.md"], PRIVATE_MAPPED={}):
                 out = module.build_package(repo, "private", Path(d) / "out", "v-test")
             self.assertIn("scripts/.metrics-dict.md", _zip_names(out), "私有文件照常进包")
             manifest = _zip_json(out, f"{module.DIST}/manifest.json")
@@ -543,7 +544,7 @@ class TestGuards(unittest.TestCase):
             tool.write_text("#!/bin/bash\n", encoding="utf-8")
             tool.chmod(0o755)
             (repo / "vendor/a.md").write_text("a\n", encoding="utf-8")
-            with mock.patch.object(module, "PRIVATE_EXTRA", ["vendor/"]):
+            with mock.patch.multiple(module, PRIVATE_EXTRA=["vendor/"], PRIVATE_MAPPED={}):
                 out = module.build_package(repo, "private", Path(d) / "out", "v-test")
             with zipfile.ZipFile(out) as zf:
                 self.assertEqual((zf.getinfo("vendor/tool.sh").external_attr >> 16) & 0o777, 0o755)
@@ -552,12 +553,12 @@ class TestGuards(unittest.TestCase):
     def test_missing_private_extra_fails(self):
         with tempfile.TemporaryDirectory() as d:
             repo = self._repo(d)
-            with mock.patch.object(module, "PRIVATE_EXTRA", ["vendor/"]):
+            with mock.patch.multiple(module, PRIVATE_EXTRA=["vendor/"], PRIVATE_MAPPED={}):
                 with self.assertRaises(SystemExit) as ctx:
                     module.collect_files(repo, "private")
             self.assertIn("vendor/", str(ctx.exception))
             (repo / "vendor").mkdir()
-            with mock.patch.object(module, "PRIVATE_EXTRA", ["vendor/", "scripts/.metrics-dict.md"]):
+            with mock.patch.multiple(module, PRIVATE_EXTRA=["vendor/", "scripts/.metrics-dict.md"], PRIVATE_MAPPED={}):
                 with self.assertRaises(SystemExit) as ctx:
                     module.collect_files(repo, "private")
             self.assertIn(".metrics-dict.md", str(ctx.exception))
@@ -577,7 +578,9 @@ class TestGuards(unittest.TestCase):
     def test_is_private_only(self):
         yes = [".claude/skills/tpd_cli/SKILL.md", "vendor/x/y.js", "Vendor/x.js", "scripts/.metrics-dict.md",
                "templates/knowledge-base/pitfalls/坑.md", "Templates/Knowledge-Base/pitfalls/x.md",
-               "templates/persona/me.md", "output/assets/_inventory/a.json"]
+               "templates/persona/me.md", "output/assets/_inventory/a.json",
+               ".mcp.json", "templates/personal-skills/README.md",
+               "templates/personal-skills/metrics-query/SKILL.md"]
         no = ["templates/knowledge-base/README.md", "templates/knowledge-base/decisions/.gitkeep",
               "templates/persona/README.md", "templates/persona/.gitkeep", "CLAUDE.md",
               ".claude/skills/ai-pm/SKILL.md", "scripts/aipm_package.py"]
@@ -585,6 +588,98 @@ class TestGuards(unittest.TestCase):
             self.assertTrue(module.is_private_only(rel), rel)
         for rel in no:
             self.assertFalse(module.is_private_only(rel), rel)
+
+
+class TestPrivateBundle(unittest.TestCase):
+    """私有包从个人目录带上本机配置的私有技能与 metrics-query 安装件，并生成 Playwright 的 MCP 配置。"""
+
+    def _setup(self, d: str):
+        repo = Path(d) / "repo"
+        repo.mkdir()
+        (repo / "CLAUDE.md").write_text("ok\n", encoding="utf-8")
+        _init_repo(repo)
+        _commit(repo, "first")
+        (repo / "scripts").mkdir()
+        (repo / "scripts/.share-denylist").write_text("never-matches-zzz\n", encoding="utf-8")
+        internal = Path(d) / "home/internal"
+        (internal / "scripts").mkdir(parents=True)
+        (internal / "SKILL.md").write_text("---\nname: internal-skill\n---\n", encoding="utf-8")
+        run = internal / "scripts/run.cjs"
+        run.write_text("x\n", encoding="utf-8")
+        run.chmod(0o755)
+        (internal / ".DS_Store").write_bytes(b"x")
+        mq = Path(d) / "home/mq"
+        mq.mkdir(parents=True)
+        (mq / "SKILL.md").write_text("---\nname: metrics-query\n---\n", encoding="utf-8")
+        (mq / ".env").write_text("METRICS_API_KEY=not-a-real-key\n", encoding="utf-8")
+        mapped = {".claude/skills/internal-skill/": internal, "templates/personal-skills/metrics-query/": mq}
+        return repo, mapped
+
+    def test_private_gets_mapped_and_generated(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo, mapped = self._setup(d)
+            with mock.patch.multiple(module, PRIVATE_EXTRA=[], PRIVATE_MAPPED=mapped):
+                out = module.build_package(repo, "private", Path(d) / "out", "v-test")
+            with zipfile.ZipFile(out) as zf:
+                names = zf.namelist()
+                self.assertIn(".claude/skills/internal-skill/SKILL.md", names)
+                self.assertIn("templates/personal-skills/metrics-query/SKILL.md", names)
+                self.assertNotIn("templates/personal-skills/metrics-query/.env", names, "个人密钥绝不能进包")
+                self.assertNotIn(".claude/skills/internal-skill/.DS_Store", names)
+                self.assertEqual((zf.getinfo(".claude/skills/internal-skill/scripts/run.cjs").external_attr >> 16) & 0o777,
+                                 0o755)
+                mcp = json.loads(zf.read(".mcp.json"))
+                self.assertEqual(mcp["mcpServers"]["playwright"],
+                                 {"command": "npx", "args": ["-y", "@playwright/mcp@latest", "--browser", "chrome"]})
+                self.assertIn("~/.claude/skills/", zf.read("templates/personal-skills/README.md").decode("utf-8"))
+                meta = json.loads(zf.read(f"{module.DIST}/versions.json"))
+                manifest = json.loads(zf.read(f"{module.DIST}/manifest.json"))
+            self.assertEqual(meta["file_count"], len(_body_names(names)))
+            self.assertFalse([k for k in manifest if k == ".mcp.json" or "internal-skill" in k or "personal-skills" in k],
+                             "个人目录带来的和生成的文件都不受管，不进清单")
+
+    def test_public_gets_none_of_them(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo, mapped = self._setup(d)
+            with mock.patch.multiple(module, PRIVATE_EXTRA=[], PRIVATE_MAPPED=mapped):
+                out = module.build_package(repo, "public", Path(d) / "out", "v-test")
+            names = _zip_names(out)
+            self.assertFalse([n for n in names if n == ".mcp.json" or "internal-skill" in n or "personal-skills" in n])
+
+    def test_missing_mapped_source_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo, mapped = self._setup(d)
+            mapped[".claude/skills/internal-skill/"] = Path(d) / "nope"
+            with mock.patch.multiple(module, PRIVATE_EXTRA=[], PRIVATE_MAPPED=mapped):
+                with self.assertRaises(SystemExit) as ctx:
+                    module.collect_files(repo, "private")
+            self.assertIn("internal-skill", str(ctx.exception))
+
+
+    def test_local_bundle_conf(self):
+        """本机私有携带配置（gitignore）：内部名只写在这里，不进版本库。"""
+        with tempfile.TemporaryDirectory() as d:
+            conf = Path(d) / ".private-bundle.json"
+            self.assertEqual(module._load_private_bundle_conf(conf), ({}, ()))
+            conf.write_text(json.dumps({"mapped": {".claude/skills/internal-skill/": "~/x/internal-skill"},
+                                        "sentinels": [".claude/skills/internal-skill/SKILL.md"]}), encoding="utf-8")
+            mapped, sentinels = module._load_private_bundle_conf(conf)
+            self.assertEqual(mapped, {".claude/skills/internal-skill/": Path.home() / "x/internal-skill"})
+            self.assertEqual(sentinels, (".claude/skills/internal-skill/SKILL.md",))
+            for bad in ('[]', '{"mapped": {"no-slash": "~/x"}}', '{"mapped": {"/abs/": "~/x"}}', 'not json'):
+                conf.write_text(bad, encoding="utf-8")
+                with self.assertRaises(SystemExit, msg=bad):
+                    module._load_private_bundle_conf(conf)
+
+    def test_generated_name_clash_with_repo_file_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo, mapped = self._setup(d)
+            (repo / ".mcp.json").write_text("{}\n", encoding="utf-8")
+            _commit(repo, "track mcp")
+            with mock.patch.multiple(module, PRIVATE_EXTRA=[], PRIVATE_MAPPED=mapped):
+                with self.assertRaises(SystemExit) as ctx:
+                    module.collect_files(repo, "private")
+            self.assertIn(".mcp.json", str(ctx.exception))
 
 
 def _zinfo(name: str, mode: int = 0o100644, system: int = 3) -> zipfile.ZipInfo:
@@ -869,9 +964,17 @@ class TestVerify(unittest.TestCase):
         self.assertFlag(self.check(_valid_entries(extra={".claude/skills/tpd_cli/SKILL.md": b"x"})),
                         "公共包混入私有内容")
         self.assertFlag(self.check(_valid_entries(extra={"Vendor/x.js": b"x"})), "公共包混入私有内容")
+        self.assertFlag(self.check(_valid_entries(extra={".mcp.json": b"{}"})), "公共包混入私有内容")
         e = _valid_entries("private")
         del e["scripts/.metrics-dict.md"]
         self.assertFlag(self.check(e, "private"), "私有包缺关键文件")
+        e = _valid_entries("private")
+        del e["templates/personal-skills/metrics-query/SKILL.md"]
+        self.assertFlag(self.check(e, "private"), "私有包缺关键文件")
+
+    def test_personal_key_file_forbidden(self):
+        self.assertFlag(self.check(_valid_entries("private", extra={
+            "templates/personal-skills/metrics-query/.env": b"METRICS_API_KEY=x"}), "private"), "禁止路径")
 
     def test_manifest_rules(self):
         dist = module.DIST
