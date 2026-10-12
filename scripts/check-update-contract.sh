@@ -147,4 +147,12 @@ for key in "install_dir" "aipm-dist.old"; do
   grep -qF -- "$key" <<< "$ROLLBACK" && note_ok "rollback 含：$key" || note_fail "rollback 缺：$key"
 done
 
+STAGE4="$(extract_h3 '阶段 4：报告' "$UPD_SKILL")"
+grep -qF -- ".aipm-dist.incomplete" <<< "$STAGE1" && note_ok "阶段 1 含中断标记检查" || note_fail "阶段 1 缺中断标记检查"
+for key in ".aipm-dist.incomplete" ".aipm-dist.new"; do
+  grep -qF -- "$key" <<< "$ROLLBACK" && note_ok "rollback 含：$key" || note_fail "rollback 缺：$key"
+done
+grep -qF -- "history.jsonl" <<< "$STAGE3" && note_ok "阶段 3 含留痕 history.jsonl" || note_fail "阶段 3 缺留痕 history.jsonl"
+grep -qF -- "确认一句 base 已推进到新版" <<< "$STAGE4" && note_fail "阶段 4 仍写整体推进措辞" || note_ok "阶段 4 无整体推进措辞"
+
 exit $FAIL

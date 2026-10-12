@@ -82,6 +82,15 @@ class UpdateContractTests(unittest.TestCase):
             self.assertTrue(body, f"缺章节：{heading}")
             for key in keys:
                 self.assertIn(key, body, f"{heading} 缺：{key}")
+        stage1 = self._section(skill, "### 阶段 1：识别")
+        self.assertIn(".aipm-dist.incomplete", stage1)
+        self.assertLess(stage1.index(".aipm-dist.incomplete"), stage1.index("-ef"),
+                        "中断标记检查必须排在检查表之前")
+        rollback = self._section(skill, "## `rollback`")
+        for key in (".aipm-dist.incomplete", ".aipm-dist.new"):
+            self.assertIn(key, rollback, f"rollback 缺：{key}")
+        self.assertIn("history.jsonl", self._section(skill, "### 阶段 3：执行"))
+        self.assertNotIn("确认一句 base 已推进到新版", self._section(skill, "### 阶段 4：报告"))
         facade = (REPO / ".claude/skills/ai-pm/SKILL.md").read_text(encoding="utf-8")
         section = self._section(facade, "### `update` 命令分派")
         self.assertNotIn("--from", section)

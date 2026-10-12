@@ -45,7 +45,8 @@ allowed-tools: Read Write Edit Glob Grep Bash(mv) Bash(cp) Bash(mkdir) Bash(ls) 
 ### 阶段 1：识别
 
 1. 确认当前目录是一份 AI_PM：存在 `.claude/skills/ai-pm/SKILL.md` 与 `CLAUDE.md`。不满足就停下问用户要目录，不要就地猜。
-2. 进入合并前的检查。先用 `pwd -P` 取当前安装的真实路径、`realpath "<新包>"` 取新包的真实路径，再逐条对照：
+2. 当前安装根下有 `.aipm-dist.incomplete` → 先按「中断保护」处理，不进入后面任何检查（中断时 `.aipm-dist/` 可能不存在，版本比较没有意义）。
+3. 进入合并前的检查。先用 `pwd -P` 取当前安装的真实路径、`realpath "<新包>"` 取新包的真实路径，再逐条对照：
 
    | 情况 | 处理 |
    |---|---|
@@ -54,19 +55,18 @@ allowed-tools: Read Write Edit Glob Grep Bash(mv) Bash(cp) Bash(mkdir) Bash(ls) 
    | 给的路径下没有 `.aipm-dist/`，但它下面唯一的子文件夹里有 | 自动进一层，并告诉用户实际用的路径 |
    | 当前安装与新包的 `versions.json` 里 `commit`、`kind`、`content_digest` 都相同，且当前 `base.json` 没有落后于新包 `manifest.json` 的条目 | 停：已经是这一版 |
    | 同上，但 `base.json` 有落后条目（上一轮还有冲突没裁完） | **续跑**：只处理落后的文件 |
-   | 三项都相同、当前安装没有 `base.json`，而 `~/.ai-pm/update/history.jsonl` 里本安装（`install_dir` 相同）最后一次升级的目标版本不是这一版 | 停：**疑似**新包被直接解压覆盖在旧安装上，用户改过的文件可能已被冲掉。告诉用户别再动，从 `~/.ai-pm/update/backups/` 或自己的备份找回 |
+   | 三项都相同、当前安装没有 `base.json`，而 `~/.ai-pm/update/history.jsonl` 里本安装（`install_dir` 相同）最后一次升级的目标版本不是这一版 | 停：**疑似**新包被直接解压覆盖在旧安装上，用户改过的文件可能已被冲掉。告诉用户别再动，从 `~/.ai-pm/update/backups/` 或自己的备份找回。本安装在 `history.jsonl` 里没有任何记录时不判覆盖（首次解压的安装本来就没有记录；这种情况下被覆盖查不出来） |
    | 新包的 `commit_time` 早于当前安装 | 停，问用户是不是把新旧弄反了 |
    | `kind` 不同（公共 ↔ 私有） | 先说明差别，用户确认后才继续 |
    | 新包缺 `.aipm-dist/manifest.json` 或 `versions.json` 的 `probe_paths` 里列出的文件（逐个 `test -e`，不数总数） | 停，列出缺的文件，提示多半是解压时被跳过，请解压到短路径（如桌面）重来 |
 
-3. 识别每个受管文件的比较基准（base），按顺序：
-   1. 当前安装根下有 `.aipm-dist.incomplete` → 先按「中断保护」处理，不进入新升级。
-   2. 当前安装有 `.aipm-dist/base.json` 就用它；没有就用 `.aipm-dist/manifest.json`（首次解压的安装只有这个）。采信前抽样：挑 5 个用户不太会改的受管文件（优先 `scripts/*.py`），用 Read 读 `<新包>/.aipm-dist/history/<blob>.blob` 与用户文件逐字比，**至少 4 个**一致才采信；原件缺失的文件不进样本。用户电脑上没有算校验码的工具，只能逐字比。
-   3. 当前安装没有 `.aipm-dist/`，或上一条没过：用 `<新包>/.aipm-dist/history/revisions.json` 的快照逐版打分，取命中最多的版本；同分取较新的。
-   4. 还是识别不出：报告「版本未识别」，走保守路径——用户改过的文件一律保留、不参与合并，官方新增文件照常落。
+4. 识别每个受管文件的比较基准（base），按顺序：
+   1. 当前安装有 `.aipm-dist/base.json` 就用它；没有就用 `.aipm-dist/manifest.json`（首次解压的安装只有这个）。采信前抽样：挑 5 个用户不太会改的受管文件（优先 `scripts/*.py`），用 Read 读 `<新包>/.aipm-dist/history/<blob>.blob` 与用户文件逐字比，**至少 4 个**一致才采信；原件缺失的文件不进样本。用户电脑上没有算校验码的工具，只能逐字比。
+   2. 当前安装没有 `.aipm-dist/`，或上一条没过：用 `<新包>/.aipm-dist/history/revisions.json` 的快照逐版打分，取命中最多的版本；同分取较新的。
+   3. 还是识别不出：报告「版本未识别」，走保守路径——用户改过的文件一律保留、不参与合并，官方新增文件照常落。
 
    base 原件从 `<新包>/.aipm-dist/history/<blob>.blob` 读。公共包会过滤含内部名称的旧原件，原件缺失的文件按保守路径处理。
-4. 检测用户改动过哪些受管文件（与 base 逐文件比对）。比对范围严格取受管清单，`git ls-files <路径>` 拿到什么就算什么；拿不到 git 就靠内容比对，别退化成"整个目录都算受管"。本轮要写入的文件若是符号链接（`test -L`）或路径含 `..`、以 `/` 开头，跳过并在计划书里列出。
+5. 检测用户改动过哪些受管文件（与 base 逐文件比对）。比对范围严格取受管清单，`git ls-files <路径>` 拿到什么就算什么；拿不到 git 就靠内容比对，别退化成"整个目录都算受管"。本轮要写入的文件若是符号链接（`test -L`）或路径含 `..`、以 `/` 开头，跳过并在计划书里列出。
 
 ### 阶段 2：计划
 
@@ -85,6 +85,7 @@ allowed-tools: Read Write Edit Glob Grep Bash(mv) Bash(cp) Bash(mkdir) Bash(ls) 
 4. 知识库卡片按 `references/merge-protocol.md` 的知识库规则处理：dedup-key 主判据、**软退役**（写 `superseded-by`）、合并幂等锚、**绝不刷 `last-verified`**。物理删除必升用户。
 5. **base 按文件推进，落定一个推进一个。** 先把新包的 `manifest.json` 复制成 `base.json`（写在第 6 步的 `.aipm-dist.new/` 里），再把**没落定**的条目改回旧 blob：没裁决的冲突、走保守路径的文件都**不推进**。官方删除的文件落定后从 `base.json` 去掉；用户删除、官方仍保留的文件按合并协议询问用户，没答复前不推进。整体推进会让没合进来的官方改动永远丢掉，不推进又会让下一轮把官方新增块再插一遍——两头都静默。
 6. **落盘与切换。** 把新包的 `versions.json`、`changelog.md`、`manifest.json`、`README.md` 和第 5 步的 `base.json` 写到当前安装的 `.aipm-dist.new/`；再 `mv .aipm-dist <备份目录>/aipm-dist.old`；最后 `mv .aipm-dist.new .aipm-dist`。历史原件不复制进来：下一轮升级从那时的新包里取。技能没有删除权限，旧目录只挪不删。
+7. **留痕，再挪标记。** 切换完成后，向 `~/.ai-pm/update/history.jsonl` 追加一行留痕（0600，一次只追加完整一行，带 `install_dir`，即当前安装 `pwd -P` 的结果）；这一步做完，才把 `.aipm-dist.incomplete` `mv` 进本轮备份目录。
 
 ### 阶段 4：报告
 
@@ -96,7 +97,7 @@ allowed-tools: Read Write Edit Glob Grep Bash(mv) Bash(cp) Bash(mkdir) Bash(ls) 
 
 `M != 0` → 明确告知"升级未完成，有 M 处待裁决"，退出码非零。不允许"报告打印出来了"就当作"人已过目"。
 
-再向 `~/.ai-pm/update/history.jsonl` 追加一行留痕（0600，一次只追加完整一行），并在同一段回复里确认一句 base 已推进到新版。留痕里带 `install_dir`（当前安装 `pwd -P` 的结果）。
+留痕（含 `install_dir`）已在阶段 3 第 7 步写入。同一段回复里确认一句：已落定的文件 base 已推进到新版；没落定的 N 个文件留在 `base.json` 里等续跑（M = 0 时 N = 0）。
 
 最后一句告诉用户：升级已完成，新包文件夹 `<新包>` 可以删掉了，以后继续在当前这个 AI_PM 里用（会话记录跟着它）。M ≠ 0 时不说这句，改说还剩几处待裁决、用同一个新包再跑一次就会续跑。
 
@@ -114,7 +115,7 @@ allowed-tools: Read Write Edit Glob Grep Bash(mv) Bash(cp) Bash(mkdir) Bash(ls) 
 
 ## `rollback`
 
-读 `~/.ai-pm/update/history.jsonl`，只看 `install_dir` 等于当前安装 `pwd -P` 的行，取最后一行的 `backup_dir`：把备份里的受管文件写回原路径；把当前的 `.aipm-dist/` 挪进一个新的备份目录，再把 `<backup_dir>/aipm-dist.old` 用 `mv` 挪回成 `.aipm-dist`；当前安装根下若有 `.aipm-dist.incomplete`，也挪进备份目录。
+先确定备份目录 `backup_dir`：当前安装根下有 `.aipm-dist.incomplete` 就取其中记的备份目录；没有标记才读 `~/.ai-pm/update/history.jsonl`，只看 `install_dir` 等于当前安装 `pwd -P` 的行，取最后一行的 `backup_dir`（中断的升级还没写留痕，所以标记优先）。然后：把备份里的受管文件写回原路径；仅当 `<backup_dir>/aipm-dist.old` 存在时才换 `.aipm-dist`——先把当前的 `.aipm-dist/`（若有）挪进一个新的备份目录，再 `mv <backup_dir>/aipm-dist.old .aipm-dist`；`aipm-dist.old` 不存在说明切换还没发生，现有的 `.aipm-dist/` 仍是旧的，不要动；残留的 `.aipm-dist.new/` 挪进备份目录；最后把 `.aipm-dist.incomplete` 挪进备份目录。
 
 - 只回滚最后**一轮**。要退到更早的版本，连续执行，或按时间戳指定备份目录。
 - `.aipm-dist/` 随之换回，base 也就退回到那一轮之前；漏换会让下一轮拿错基线。
@@ -127,7 +128,7 @@ allowed-tools: Read Write Edit Glob Grep Bash(mv) Bash(cp) Bash(mkdir) Bash(ls) 
 
 ## 中断保护
 
-阶段 3 开始前在当前安装根下写 `.aipm-dist.incomplete`，内容含时间戳、备份目录路径、`install_dir`。标记放在各自安装里，一台机器装多份 AI_PM 时互不覆盖。阶段 3 正常结束、`.aipm-dist/` 切换完成后，把它 `mv` 进本轮备份目录（技能没有删除权限）。
+阶段 3 开始前在当前安装根下写 `.aipm-dist.incomplete`，内容含时间戳、备份目录路径、`install_dir`。标记放在各自安装里，一台机器装多份 AI_PM 时互不覆盖。阶段 3 正常结束、`.aipm-dist/` 切换完成且 `history.jsonl` 留痕写完后，才把它 `mv` 进本轮备份目录（技能没有删除权限）。
 
 下次启动见到 `.aipm-dist.incomplete`：**先提示用户有未完成的升级，问是否 rollback**，在用户答复前不进入新的升级。中途失败同理——标记不挪、不假装成功；能回到一致状态就回，回不去就如实说明停在哪个文件。M ≠ 0 不算中断：切换照常完成、标记照常挪走，没落定的文件留在 `base.json` 里等续跑。
 
