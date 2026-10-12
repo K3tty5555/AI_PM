@@ -1,5 +1,53 @@
 # AI_PM 更新日志
 
+## v0.6.1  (2026-10-12)
+
+自 `6ef8f84` 起共 43 次改动。
+
+- 2026-10-08 `89d95bc` feat(update): 报告与对账格式契约
+- 2026-10-08 `797e1f0` fix(package): file_count 与 tar 条目对齐，kind 非法即报错
+- 2026-10-08 `d8c9faa` fix(update): changelog 补幂等闸、版本块定位与 tag 取日
+- 2026-10-08 `9f97363` feat(update): 升级 skill 主入口与命令路由登记
+- 2026-10-08 `19550ca` feat(package): 分发包安全线校验器
+- 2026-10-08 `45c8beb` fix(update): 对账闸断言锁定字段与规则方向
+- 2026-10-08 `dd6d915` feat(package): 补内容寻址 history 与公共包历史安全线
+- 2026-10-08 `f5968bc` test(update): 接入升级打包回归与忽略分发产物
+- 2026-10-08 `b0ade2a` fix(package): 历史范围严格对齐受管白名单与索引路径
+- 2026-10-08 `be7bb0a` fix(update): 补整版历史快照供 base 识别
+- 2026-10-09 `0e38cc4` fix(update): 补注册表登记与 update 命令路由接线
+- 2026-10-09 `ee3d170` test(package): 打包器测试对私有输入环境敏感，修 fresh-clone 假绿
+- 2026-10-09 `27b1c4e` merge: AI_PM 版本升级能力（aipm-update）并入 main
+- 2026-10-09 `ca62b18` feat(intake): 只读扫描器——排除表/分类/哈希去重/凭证/可注入撞名检测/簇聚合/报告
+- 2026-10-09 `44ae3fc` fix(intake): _skill_collisions 默认含用户级目录，() 为测试固定空面
+- 2026-10-09 `5ecea7a` feat(intake): 写侧执行器——路径传参/多簇合并/三分支幂等/子路径保留/装载复查
+- 2026-10-09 `9462acb` fix(intake): finish 按簇去重计待处理、active_prd 校验前移、续传不重复记 skip
+- 2026-10-09 `9e6cd04` feat(intake): skill 本体——三阶段编排/stage置位/巨型簇下钻/claims提炼
+- 2026-10-09 `f35bd7b` fix(intake): SKILL.md 盘点命令补 scan 子命令
+- 2026-10-09 `22f264d` feat(intake): 主控路由/白名单/registry/速查表接线，补 update 速查表历史漏
+- 2026-10-09 `881dffb` test(intake): 契约测试锁定三件套，接入回归与fresh-clone白名单
+- 2026-10-09 `c856478` fix(intake): 恢复路由表 [路径] 参数，契约断言改前缀匹配
+- 2026-10-09 `ca3580f` test(intake): 端到端往返——结构/契约/claims gate/假仓validate/审计留痕
+- 2026-10-09 `e5fc9fe` fix(intake): 自适应切簇，全盘扫描可导出单个项目（C1）
+- 2026-10-09 `85ecdec` fix(intake): 凭证防线补隐藏文件/未归类/探测面，不可读文件不再崩扫描（C2 C3）
+- 2026-10-09 `16ea99a` fix(intake): skill --path 认 manifest 候选并做越界检查，active_prd 复制后核存在（I1 I2）
+- 2026-10-09 `1207581` fix(intake): verify 子命令把契约与 validate 纳入完成判定，stage/decide 子命令替代手工 Edit manifest（I3 I4）
+- 2026-10-09 `971026b` fix(intake): scandir 枚举，补 macOS 包目录/依赖目录排除，iCloud 占位不读，只对迁移候选算哈希（I5）
+- 2026-10-09 `0220dd6` fix(intake): SKILL.md 补 claims/sources 结构与 stage/decide/verify 流程，报告补撞名/超大/重复明细，同秒重试 id 对齐（I6 顺手修）
+- 2026-10-09 `af98cd0` feat(intake): 扫描器按内容认项目根 + 内容标题 + manifest schema v2
+- 2026-10-09 `8c28830` fix(intake): apply 测试按扫描 schema v2 最小适配
+- 2026-10-09 `7894284` refactor(intake): 内容标题抽取拆到 aipm_intake_titles.py（Ruling 24，行为不变）
+- 2026-10-09 `1508248` fix(intake): 部件目录下的扁平子目录并回父项目（Ruling 20）+ 版本目录第三条件单测（Ruling 23）
+- 2026-10-09 `db4019a` feat(intake): 执行侧按文件集落位——--include/--reason/--allow-dup、文件级 exclude + skip-cluster、按文件对账
+- 2026-10-09 `5c15496` docs(intake): SKILL.md 同步深层扫描语义（§8），契约测试锁住；spec §3/§4 本机同步
+- 2026-10-10 `2c35ac9` fix(intake): decide skip 落地并删 rename、copied 短路提示被排除文件
+- 2026-10-10 `8a46104` merge: /ai-pm intake 外部工作区整合并入 main
+- 2026-10-10 `85d3f49` fix(package): 分发形态 git 守卫——私有包剔除嵌套 .git + verify 禁令 + doctor 检查项 32
+- 2026-10-11 `188fb5a` fix(package): 分发包校验器加固——拦路径穿越/重复成员/tree 内链接，核对 file_count 与历史 blob 哈希
+- 2026-10-11 `6e137d0` fix(intake): 外部 skill 只登记到本机注册表，不再写入库文件（Ruling 13）
+- 2026-10-11 `a2679fb` merge: intake 外部 skill 登记改本机注册表（Ruling 13）并入 main
+- 2026-10-11 `b62f9cd` fix(intake): 清理延后 minor——报告防目录名注入、决策文件半行容错、标题抽取纠错
+- 2026-10-11 `14b4de8` merge: intake 延后 minor 清理并入 main
+
 ## v0.6.0  (2026-10-08)
 
 自 `v0.5.3` 起共 114 次改动。
