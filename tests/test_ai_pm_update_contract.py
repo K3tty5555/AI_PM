@@ -71,11 +71,13 @@ class UpdateContractTests(unittest.TestCase):
         expect = {
             "### 阶段 0：先读新版规则": ("按新版规则执行", "/add-dir"),
             "### 阶段 1：识别": ("-ef", "realpath", "content_digest", "probe_paths", "续跑", "疑似", "至少 4 个",
-                             "Read"),
-            "### 阶段 3：执行": (".aipm-dist.new", "aipm-dist.old", "不推进", "复制成 `base.json`"),
-            "### 阶段 4：报告": ("install_dir", "可以删掉"),
-            "## `rollback`": ("install_dir", "aipm-dist.old"),
+                             "Read", "补 `/`", "to_commit", "manifest.json` 的路径 ∪"),
+            "### 阶段 3：执行": (".aipm-dist.new", "aipm-dist.old", "不推进", "复制成 `base.json`", "held",
+                             "to_commit"),
+            "### 阶段 4：报告": ("install_dir", "可以删掉", "M = 0 且 N = 0", "held"),
+            "## `rollback`": ("install_dir", "aipm-dist.old", '"action":"rollback"'),
             "## 中断保护": (".aipm-dist.incomplete",),
+            "## `--dry-run`": ("阶段 0",),
         }
         for heading, keys in expect.items():
             body = self._section(skill, heading)
@@ -86,6 +88,15 @@ class UpdateContractTests(unittest.TestCase):
         self.assertIn(".aipm-dist.incomplete", stage1)
         self.assertLess(stage1.index(".aipm-dist.incomplete"), stage1.index("-ef"),
                         "中断标记检查必须排在检查表之前")
+        # 覆盖检查必须排在「已经是这一版」「续跑」之前：否则被覆盖的安装会静默落进续跑
+        self.assertIn("已经是这一版", stage1)
+        self.assertLess(stage1.index("疑似"), stage1.index("已经是这一版"),
+                        "覆盖检查（疑似）必须排在「已经是这一版」之前")
+        self.assertNotIn("M = 0 时 N = 0", self._section(skill, "### 阶段 4：报告"))
+        report = (skill_dir / "references/report-format.md").read_text(encoding="utf-8")
+        audit = self._section(report, "## 审计留痕")
+        for key in ('"to_commit"', '"to_content_digest"', '"action":"rollback"'):
+            self.assertIn(key, audit, f"report-format 审计留痕缺：{key}")
         rollback = self._section(skill, "## `rollback`")
         for key in (".aipm-dist.incomplete", ".aipm-dist.new"):
             self.assertIn(key, rollback, f"rollback 缺：{key}")

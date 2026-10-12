@@ -137,10 +137,10 @@ done
 STAGE1="$(extract_h3 '阶段 1：识别' "$UPD_SKILL")"
 STAGE3="$(extract_h3 '阶段 3：执行' "$UPD_SKILL")"
 ROLLBACK="$(extract_section '`rollback`' "$UPD_SKILL")"
-for key in "-ef" "realpath" "续跑"; do
+for key in "-ef" "realpath" "续跑" "补 \`/\`" "to_commit"; do
   grep -qF -- "$key" <<< "$STAGE1" && note_ok "阶段 1 含：$key" || note_fail "阶段 1 缺：$key"
 done
-for key in ".aipm-dist.new" "aipm-dist.old" "不推进"; do
+for key in ".aipm-dist.new" "aipm-dist.old" "不推进" "held"; do
   grep -qF -- "$key" <<< "$STAGE3" && note_ok "阶段 3 含：$key" || note_fail "阶段 3 缺：$key"
 done
 for key in "install_dir" "aipm-dist.old"; do
@@ -154,5 +154,18 @@ for key in ".aipm-dist.incomplete" ".aipm-dist.new"; do
 done
 grep -qF -- "history.jsonl" <<< "$STAGE3" && note_ok "阶段 3 含留痕 history.jsonl" || note_fail "阶段 3 缺留痕 history.jsonl"
 grep -qF -- "确认一句 base 已推进到新版" <<< "$STAGE4" && note_fail "阶段 4 仍写整体推进措辞" || note_ok "阶段 4 无整体推进措辞"
+for key in "M = 0 且 N = 0" "held"; do
+  grep -qF -- "$key" <<< "$STAGE4" && note_ok "阶段 4 含：$key" || note_fail "阶段 4 缺：$key"
+done
+# 覆盖检查（疑似）要排在「已经是这一版」之前：排在后面时，被覆盖的安装会先命中续跑、静默往下走
+LN_OVERWRITE=$(grep -nF -- "疑似" <<< "$STAGE1" | head -1 | cut -d: -f1)
+LN_SAME=$(grep -nF -- "已经是这一版" <<< "$STAGE1" | head -1 | cut -d: -f1)
+if [ -n "$LN_OVERWRITE" ] && [ -n "$LN_SAME" ] && [ "$LN_OVERWRITE" -lt "$LN_SAME" ]; then
+  note_ok "阶段 1 覆盖检查排在「已经是这一版」之前"
+else
+  note_fail "阶段 1 覆盖检查（疑似）缺失或排在「已经是这一版」之后"
+fi
+DRYRUN="$(extract_section '`--dry-run`' "$UPD_SKILL")"
+grep -qF -- "阶段 0" <<< "$DRYRUN" && note_ok "--dry-run 含阶段 0" || note_fail "--dry-run 缺阶段 0（先读新版规则）"
 
 exit $FAIL

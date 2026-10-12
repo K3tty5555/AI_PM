@@ -35,7 +35,7 @@
 | `templates/` | **仅 tracked 的（约 56 个，快照值）**；其余未追踪文件是用户的个人知识库 / persona，不受管 |
 | `scripts/` | **仅 tracked 的（约 72 个，快照值）**；`.metrics-dict.md` / `.share-denylist` / `.prose-*` 等私有文件除外 |
 
-表中计数一律是**快照值、不是契约**：机器判定现取 `git ls-files <路径>`；数据资产未 tracked，走目录实读。
+表中计数一律是**快照值、不是契约**。用户机上没有 git，「tracked」以清单为准：本轮受管清单 = 新包 `.aipm-dist/manifest.json` 的路径 ∪ 当前安装 `base.json`（没有就用当前 `manifest.json`）的路径；后者用来认出官方已删除的文件。`git ls-files <路径>` 只作开发仓（有 `.git`）的备用来源。数据资产未 tracked，走目录实读。
 
 **「永不触碰」优先于本清单。** 清单给的是目录级范围，永不触碰给的是其中的具体排除项（如受管 `templates/` 但排除其未追踪文件、受管 `scripts/` 但排除 `.` 开头的私有文件、受管 `.gitignore` 但其规则覆盖的内容本身不受管）。两者相遇时以永不触碰为准。
 
