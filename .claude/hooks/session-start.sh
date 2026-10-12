@@ -8,6 +8,15 @@ ROOT="$(pwd)"
 # 改用 C locale 让 bash 纯字节透传；PYTHONUTF8=1 保证 python 输出仍是 UTF-8。
 export LC_ALL=C PYTHONUTF8=1
 
+# 解压 AI_PM.zip 得到的安装才有 .aipm-dist/：开场报一句当前版本，方便同事分清新旧包。
+# 用户机不一定有 python，只用 sed 取值。
+if [ -f "$ROOT/.aipm-dist/versions.json" ]; then
+  VER=$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$ROOT/.aipm-dist/versions.json" | head -1)
+  KIND=$(sed -n 's/^ *"kind": *"\([^"]*\)".*/\1/p' "$ROOT/.aipm-dist/versions.json" | head -1)
+  if [ "$KIND" = "private" ]; then KIND_LABEL="私有版"; else KIND_LABEL="公共版"; fi
+  [ -n "$VER" ] && echo "📦 当前 AI_PM 版本：$VER（$KIND_LABEL）"
+fi
+
 if [ -x "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" ]; then
   "$ROOT/scripts/ai-sync/check-ai-context-freshness.sh" 2>/dev/null || true
 fi
