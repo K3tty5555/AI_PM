@@ -34,6 +34,8 @@ _PRIVATE_SKILLS = (".claude/skills/xfchat-wiki", ".claude/skills/tpd_cli", ".cla
 
 HAS_DENYLIST = _DENYLIST.is_file()
 HAS_PRIVATE_SKILLS = any((ROOT / rel).is_dir() for rel in _PRIVATE_SKILLS)
+HAS_PRIVATE_INPUTS = all((ROOT / p.rstrip("/")).exists() for p in module.PRIVATE_EXTRA)
+_PRIVATE_INPUTS_REASON = "私有版额外路径不全（分发环境或他人机器），私有包打不出来"
 
 _DENYLIST_REASON = (
     "未分发本机私有 scripts/.share-denylist（gitignore，仅作者本机）；"
@@ -103,7 +105,7 @@ class TestCollect(unittest.TestCase):
         bad = [f for f in files if f.startswith("output/")]
         self.assertEqual(bad, [], f"output/ 混入公共包：{bad[:3]}")
 
-    @unittest.skipUnless(HAS_PRIVATE_SKILLS, _PRIVATE_REASON)
+    @unittest.skipUnless(HAS_PRIVATE_INPUTS, _PRIVATE_INPUTS_REASON)
     def test_private_adds_private_skills(self):
         pub = set(module.collect_files(ROOT, "public"))
         pri = set(module.collect_files(ROOT, "private"))
@@ -173,7 +175,8 @@ class TestSafetyLine(unittest.TestCase):
                 _init_repo(repo)
                 subprocess.run(["git", "-C", str(repo), "add", "-f", str(local)], check=True, capture_output=True)
                 self.assertIn("templates/configs/capability-registry.local.json", module._git_tracked(repo))
-                with self.assertRaises(SystemExit, msg=kind) as ctx:
+                with mock.patch.object(module, "PRIVATE_EXTRA", []), \
+                        self.assertRaises(SystemExit, msg=kind) as ctx:
                     module.collect_files(repo, kind)
                 self.assertIn("capability-registry.local.json", str(ctx.exception))
 
@@ -202,7 +205,7 @@ class TestBuild(unittest.TestCase):
     @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_zip_contains_dist_meta(self):
         with tempfile.TemporaryDirectory() as d:
-            out = module.build_package(ROOT, "public", Path(d), version="v0.6.0-test")
+            out = module.build_package(ROOT, "public", Path(d), version="v0.6.0-test", allow_dirty=True)
             names = _zip_names(out)
             self.assertIn(f"{module.DIST}/versions.json", names)
             self.assertIn(f"{module.DIST}/changelog.md", names)
@@ -211,7 +214,7 @@ class TestBuild(unittest.TestCase):
     @unittest.skipUnless(HAS_DENYLIST, _DENYLIST_REASON)
     def test_zip_excludes_conversations(self):
         with tempfile.TemporaryDirectory() as d:
-            out = module.build_package(ROOT, "public", Path(d), version="v0.6.0-test")
+            out = module.build_package(ROOT, "public", Path(d), version="v0.6.0-test", allow_dirty=True)
             names = _zip_names(out)
             # 断言钉在真正的危险源——对话记录数据目录，而不是名字里带
             # "conversations" 的任何路径：scripts/ai-sync/snapshot-*-conversations.sh
@@ -247,7 +250,7 @@ class TestHistory(unittest.TestCase):
     def test_history_in_package(self):
         """包内必须有 history/ 与 history/index.json。"""
         with tempfile.TemporaryDirectory() as d:
-            out = module.build_package(ROOT, "public", Path(d), version="v-test")
+            out = module.build_package(ROOT, "public", Path(d), version="v-test", allow_dirty=True)
             names = _zip_names(out)
             index = _zip_json(out, f"{module.DIST}/history/index.json")
             revisions = _zip_json(out, f"{module.DIST}/history/revisions.json")
@@ -266,7 +269,7 @@ class TestHistory(unittest.TestCase):
         self.assertGreater(len(set(blobs)), 1, "历史索引没有可区分的内容 blob")
 
         with tempfile.TemporaryDirectory() as d:
-            out = module.build_package(ROOT, "public", Path(d), version="v-test")
+            out = module.build_package(ROOT, "public", Path(d), version="v-test", allow_dirty=True)
             names = [n for n in _zip_names(out) if n.endswith(".blob")]
             packaged = _zip_json(out, f"{module.DIST}/history/index.json")
         self.assertEqual(len(names), len(set(names)), "同一内容在包内重复写入")
@@ -292,7 +295,7 @@ class TestHistory(unittest.TestCase):
             denylist = repo / "scripts" / ".share-denylist"
             denylist.parent.mkdir()
             denylist.write_text("confidential\n", encoding="utf-8")
-            out = module.build_package(repo, "public", repo / "dist" / "public", "v-test")
+            out = module.build_package(repo, "public", repo / "dist" / "public", "v-test", allow_dirty=True)
             index = _zip_json(out, f"{module.DIST}/history/index.json")
             revisions = _zip_json(out, f"{module.DIST}/history/revisions.json")
             self.assertEqual(len(index["CLAUDE.md"]), 1)
@@ -303,7 +306,9 @@ class TestHistory(unittest.TestCase):
             self.assertTrue(all(snapshot["files"].get("CLAUDE.md") in allowed
                                 for snapshot in revisions["revisions"] if "CLAUDE.md" in snapshot["files"]))
 
-            private = module.build_package(repo, "private", repo / "dist" / "private", "v-private")
+            with mock.patch.object(module, "PRIVATE_EXTRA", []):
+                private = module.build_package(repo, "private", repo / "dist" / "private", "v-private",
+                                               allow_dirty=True)
             index = _zip_json(private, f"{module.DIST}/history/index.json")
             self.assertEqual(len(index["CLAUDE.md"]), 2)
 
@@ -409,6 +414,161 @@ class TestLayout(unittest.TestCase):
             self.assertTrue(any(needle in p for p in module.path_problems(name)), (name, module.path_problems(name)))
         for ok in ("CLAUDE.md", ".claude/skills/ai-pm/SKILL.md", "templates/中文说明.md", ".gitkeep"):
             self.assertEqual(module.path_problems(ok), [], ok)
+
+
+class TestGuards(unittest.TestCase):
+    def _repo(self, d: str) -> Path:
+        repo = Path(d) / "repo"
+        repo.mkdir()
+        (repo / "CLAUDE.md").write_text("ok\n", encoding="utf-8")
+        run = repo / "scripts/run.sh"
+        run.parent.mkdir()
+        run.write_text("#!/bin/bash\n", encoding="utf-8")
+        run.chmod(0o755)
+        _init_repo(repo)
+        _commit(repo, "first")
+        (repo / "scripts/.share-denylist").write_text("never-matches-zzz\n", encoding="utf-8")
+        return repo
+
+    def test_dirty_tracked_file_refuses(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            (repo / "CLAUDE.md").write_text("changed\n", encoding="utf-8")
+            with self.assertRaises(SystemExit) as ctx:
+                module.build_package(repo, "public", Path(d) / "out", "v-test")
+            self.assertIn("CLAUDE.md", str(ctx.exception))
+            self.assertFalse((Path(d) / "out").exists(), "拒绝时不得留下目录或半成品")
+            module.build_package(repo, "public", Path(d) / "out", "v-test", allow_dirty=True)
+
+    def test_untracked_file_does_not_block(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            (repo / "notes.txt").write_text("scratch\n", encoding="utf-8")
+            out = module.build_package(repo, "public", Path(d) / "out", "v-test")
+            self.assertNotIn("notes.txt", _zip_names(out))
+
+    def test_refuses_overwrite_before_heavy_work(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            module.build_package(repo, "public", Path(d) / "out", "v-test")
+            with mock.patch.object(module, "collect_history", side_effect=AssertionError("不该先算历史")):
+                with self.assertRaises(SystemExit) as ctx:
+                    module.build_package(repo, "public", Path(d) / "out", "v-test")
+            self.assertIn("--force", str(ctx.exception))
+            module.build_package(repo, "public", Path(d) / "out", "v-test", force=True)
+
+    def test_out_must_be_folder(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(SystemExit) as ctx:
+                module.build_package(self._repo(d), "public", Path(d) / "x.zip", "v-test")
+            self.assertIn("文件夹", str(ctx.exception))
+
+    def test_bad_path_refused_at_build(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            (repo / "a").mkdir()
+            (repo / "a/x?.md").write_text("x\n", encoding="utf-8")
+            _commit(repo, "bad name")
+            with self.assertRaises(SystemExit) as ctx:
+                module.build_package(repo, "public", Path(d) / "out", "v-test")
+            self.assertIn("Windows", str(ctx.exception))
+
+    def test_entry_attributes_and_commit_time(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            ts = int(subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%ct"],
+                                    capture_output=True, text=True, check=True).stdout)
+            out = module.build_package(repo, "public", Path(d) / "out", "v-test")
+            with zipfile.ZipFile(out) as zf:
+                infos = {i.filename: i for i in zf.infolist()}
+            expect_time = tuple(time.localtime(ts)[:6])
+            for info in infos.values():
+                self.assertEqual(info.compress_type, zipfile.ZIP_DEFLATED, info.filename)
+                self.assertEqual(info.create_system, 3, info.filename)
+                self.assertTrue(stat.S_ISREG(info.external_attr >> 16), info.filename)
+                # zip 时间精度 2 秒：只比到分钟
+                self.assertEqual(info.date_time[:5], expect_time[:5], info.filename)
+            self.assertEqual((infos["scripts/run.sh"].external_attr >> 16) & 0o777, 0o755)
+            self.assertEqual((infos["CLAUDE.md"].external_attr >> 16) & 0o777, 0o644)
+            body = _body_names(list(infos))
+            self.assertEqual(body, sorted(body), "条目要按路径排序写入")
+
+    def test_exec_bit_follows_git_index_not_filesystem(self):
+        """core.fileMode=false 下 index 与文件系统权限可以不同：以 index 为准，两个方向都验。"""
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d) / "repo"
+            (repo / "scripts").mkdir(parents=True)
+            subprocess.run(["git", "-c", "init.defaultBranch=main", "init", "-q", str(repo)],
+                           check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(repo), "config", "core.fileMode", "false"], check=True)
+            (repo / "CLAUDE.md").write_text("ok\n", encoding="utf-8")
+            (repo / "scripts/index_x.sh").write_text("#!/bin/bash\n", encoding="utf-8")  # 文件系统 644
+            fs_x = repo / "scripts/fs_x.sh"
+            fs_x.write_text("#!/bin/bash\n", encoding="utf-8")
+            fs_x.chmod(0o755)                                                              # 文件系统 755
+            subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(repo), "update-index", "--chmod=+x", "scripts/index_x.sh"], check=True)
+            subprocess.run(["git", "-C", str(repo), "update-index", "--chmod=-x", "scripts/fs_x.sh"], check=True)
+            subprocess.run([
+                "git", "-C", str(repo), "-c", "user.name=Test", "-c", "user.email=test@example.test",
+                "-c", "core.hooksPath=/dev/null", "commit", "-qm", "modes",
+            ], check=True, capture_output=True)
+            (repo / "scripts/.share-denylist").write_text("never-matches-zzz\n", encoding="utf-8")
+            out = module.build_package(repo, "public", Path(d) / "out", "v-test")
+            with zipfile.ZipFile(out) as zf:
+                self.assertEqual((zf.getinfo("scripts/index_x.sh").external_attr >> 16) & 0o777, 0o755)
+                self.assertEqual((zf.getinfo("scripts/fs_x.sh").external_attr >> 16) & 0o777, 0o644)
+
+    def test_untracked_private_extra_exec_from_filesystem(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            tool = repo / "vendor/tool.sh"
+            tool.parent.mkdir()
+            tool.write_text("#!/bin/bash\n", encoding="utf-8")
+            tool.chmod(0o755)
+            (repo / "vendor/a.md").write_text("a\n", encoding="utf-8")
+            with mock.patch.object(module, "PRIVATE_EXTRA", ["vendor/"]):
+                out = module.build_package(repo, "private", Path(d) / "out", "v-test")
+            with zipfile.ZipFile(out) as zf:
+                self.assertEqual((zf.getinfo("vendor/tool.sh").external_attr >> 16) & 0o777, 0o755)
+                self.assertEqual((zf.getinfo("vendor/a.md").external_attr >> 16) & 0o777, 0o644)
+
+    def test_missing_private_extra_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            with mock.patch.object(module, "PRIVATE_EXTRA", ["vendor/"]):
+                with self.assertRaises(SystemExit) as ctx:
+                    module.collect_files(repo, "private")
+            self.assertIn("vendor/", str(ctx.exception))
+            (repo / "vendor").mkdir()
+            with mock.patch.object(module, "PRIVATE_EXTRA", ["vendor/", "scripts/.metrics-dict.md"]):
+                with self.assertRaises(SystemExit) as ctx:
+                    module.collect_files(repo, "private")
+            self.assertIn(".metrics-dict.md", str(ctx.exception))
+
+    def test_tracked_generated_names_refused(self):
+        for rel in (".ignore", ".aipm-dist/x.json"):
+            with tempfile.TemporaryDirectory() as d:
+                repo = self._repo(d)
+                p = repo / rel
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text("x\n", encoding="utf-8")
+                subprocess.run(["git", "-C", str(repo), "add", "-f", rel], check=True, capture_output=True)
+                _commit(repo, "track generated name")
+                with self.assertRaises(SystemExit, msg=rel):
+                    module.build_package(repo, "public", Path(d) / "out", "v-test")
+
+    def test_is_private_only(self):
+        yes = [".claude/skills/tpd_cli/SKILL.md", "vendor/x/y.js", "Vendor/x.js", "scripts/.metrics-dict.md",
+               "templates/knowledge-base/pitfalls/坑.md", "Templates/Knowledge-Base/pitfalls/x.md",
+               "templates/persona/me.md", "output/assets/_inventory/a.json"]
+        no = ["templates/knowledge-base/README.md", "templates/knowledge-base/decisions/.gitkeep",
+              "templates/persona/README.md", "templates/persona/.gitkeep", "CLAUDE.md",
+              ".claude/skills/ai-pm/SKILL.md", "scripts/aipm_package.py"]
+        for rel in yes:
+            self.assertTrue(module.is_private_only(rel), rel)
+        for rel in no:
+            self.assertFalse(module.is_private_only(rel), rel)
 
 
 @unittest.skip("Task 3 按 zip 重写校验器后整类替换")

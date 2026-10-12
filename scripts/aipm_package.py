@@ -62,6 +62,28 @@ PRIVATE_EXTRA = [
     "output/assets/AI_PM知识库蒸馏-20260902/",
     "output/assets/_inventory/",
 ]
+# 私有包必须带的关键文件：校验器据此确认「私有包没少打」
+PRIVATE_SENTINELS = (
+    ".claude/skills/tpd_cli/SKILL.md",
+    ".claude/skills/xfchat-wiki/SKILL.md",
+    "scripts/.metrics-dict.md",
+)
+# 这两个模板目录公共包里也有骨架（README.md / .gitkeep），里面的卡片才是私有
+_SKELETON_DIRS = ("templates/knowledge-base/", "templates/persona/")
+
+
+def is_private_only(rel: str) -> bool:
+    """公共包里绝不该出现的路径。校验器从这里导入，不另抄一份。
+    忽略大小写：Mac / Windows 文件系统不分大小写，Vendor/ 解压后就是 vendor/。"""
+    low = rel.lower()
+    for prefix in PRIVATE_EXTRA:
+        p = prefix.lower()
+        if p in _SKELETON_DIRS and low.startswith(p):
+            return low.rsplit("/", 1)[-1] not in ("readme.md", ".gitkeep")
+        if low == p or (p.endswith("/") and low.startswith(p)):
+            return True
+    return False
+
 
 # 任何版本都不得携带的路径（安全线）
 NEVER_INCLUDE = [
@@ -74,6 +96,7 @@ NEVER_INCLUDE = [
     ".claude/settings.local.json",
     "templates/configs/capability-registry.local",  # 本机注册表：外部 skill 名，跟着安装目录走（Ruling 13）
     ".d2c/",
+    ".aipm-dist/",  # 打包器生成，仓库里不许有被跟踪的同名路径
     ".ai-shared/conversations/",
     ".ai-shared/memory-snapshots/",
     "docs/",
@@ -92,16 +115,13 @@ def _git_tracked(root: Path) -> list[str]:
 def _walk_dir(root: Path, rel: str) -> list[str]:
     """收集目录下所有普通文件（跳过符号链接）。
 
-    目录不存在时打到 stderr 而不是静默返回空——PRIVATE_EXTRA 拼错一个字母
-    就等于静默少打一整块资源，方向正是"少了还以为 OK"。
+    缺失直接失败：少打一整块资源比打包失败更糟（以前只打警告，「少了还以为 OK」）。
     """
     base = root / rel
     if not base.exists():
-        print(f"⚠️  {rel} 不存在，已跳过（PRIVATE_EXTRA 是否拼错？）", file=sys.stderr)
-        return []
+        raise SystemExit(f"⛔ 私有版额外路径 {rel} 不存在（PRIVATE_EXTRA 拼错，或这台机器没有私有资料）")
     if not base.is_dir():
-        print(f"⚠️  {rel} 不是目录，已跳过", file=sys.stderr)
-        return []
+        raise SystemExit(f"⛔ 私有版额外路径 {rel} 不是目录")
     found = []
     for p in base.rglob("*"):
         if p.is_symlink() or not p.is_file():
@@ -233,6 +253,8 @@ def collect_files(root: Path, kind: str) -> list[str]:
                 files.extend(_walk_dir(root, extra))
             elif (root / extra).is_file():
                 files.append(extra)
+            else:
+                raise SystemExit(f"⛔ 私有版额外文件 {extra} 不存在")
     deduped = sorted(set(files))
     # 安全线跑在过滤之前：tracked 但工作区已删的路径也照样拦截。
     blocked = [f for f in deduped if _blocked(f)]
@@ -454,12 +476,33 @@ def _public_history(root: Path, index: dict) -> dict:
     return result
 
 
-def build_package(root: Path, kind: str, out: Path, version: str) -> Path:
-    """打包并返回 <out>/AI_PM.zip。先算完历史再建目录：中途失败不留半成品。"""
+def _dirty_tracked(root: Path) -> list[str]:
+    """被跟踪且有未提交改动的文件（未跟踪文件不算）。"""
+    out = subprocess.run(
+        ["git", "-C", str(root), "-c", "core.quotepath=off", "status", "--porcelain=v1",
+         "--untracked-files=no"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    return sorted(line[3:] for line in out.splitlines() if line.strip())
+
+
+def build_package(root: Path, kind: str, out: Path, version: str, *,
+                  force: bool = False, allow_dirty: bool = False) -> Path:
+    """打包并返回 <out>/AI_PM.zip。先算完历史再建目录：中途失败不留半成品。
+    `allow_dirty` 只给测试用：开发途中拿当前仓库打包。命令行不提供这个开关。"""
     if out.suffix.lower() == ".zip":
         raise SystemExit(f"⛔ --out 要给文件夹，不是 zip 路径：{out}（产物固定叫 {PACKAGE_NAME}）")
     target = out / PACKAGE_NAME
+    if target.exists() and not force:
+        raise SystemExit(f"⛔ {target} 已存在；确认要覆盖就加 --force")
     files = collect_files(root, kind)
+    if IGNORE_FILE in files:
+        raise SystemExit(f"⛔ 仓库根的 {IGNORE_FILE} 由打包器生成，不能被 git 跟踪")
+    if not allow_dirty and _head_info(root)[0] is not None:
+        dirty = _dirty_tracked(root)
+        if dirty:
+            raise SystemExit(f"⛔ 有 {len(dirty)} 个被跟踪文件改了没提交，打出来的包对不上任何提交。"
+                             f"先提交或还原：{dirty[:10]}")
     bad_paths = [p for f in files for p in path_problems(f)]
     if bad_paths:
         raise SystemExit(f"⛔ 有 {len(bad_paths)} 个路径在 Windows 上解压不了或越界，先改名：{bad_paths[:10]}")
@@ -516,11 +559,12 @@ def main() -> int:
     ap.add_argument("--kind", choices=["public", "private"], required=True)
     ap.add_argument("--out", default=None, help="输出文件夹，默认 <仓库>/dist/<kind>/；产物固定叫 AI_PM.zip")
     ap.add_argument("--version", default=time.strftime("%Y%m%d"))
+    ap.add_argument("--force", action="store_true", help="覆盖已存在的 AI_PM.zip")
     ap.add_argument("--root", default=str(ROOT))
     args = ap.parse_args()
     root = Path(args.root)
     out = Path(args.out).expanduser() if args.out else root / "dist" / args.kind
-    path = build_package(root, args.kind, out, args.version)
+    path = build_package(root, args.kind, out, args.version, force=args.force)
     print(f"✅ {path}  ({path.stat().st_size / 1024 / 1024:.1f} MB)")
     return 0
 

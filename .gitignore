@@ -209,6 +209,9 @@ AI_PM/
 
 # 打包产物（作者侧分发用）
 /dist/
+/.aipm-dist/
+/.aipm-dist.new/
+/.aipm-dist.incomplete
 .claude/hooks/.knowledge-capture.enabled
 .claude/settings.json.bak*
 scripts/.regression-baseline.local
