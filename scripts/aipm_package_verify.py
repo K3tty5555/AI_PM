@@ -217,6 +217,8 @@ def _check_contents(zf: zipfile.ZipFile, files: dict, kind: str, problems: list[
             problems.append(f"versions.json schema 应为 2，实际 {meta.get('schema')!r}")
         if meta.get("kind") != kind:
             problems.append(f"kind 不符：包内声明 {meta.get('kind')!r}，校验按 {kind!r}")
+        if not _pkg.version_ok(meta.get("version")):
+            problems.append(f"versions.json version 不合规（只能用字母、数字和 . _ + -）：{meta.get('version')!r}")
         if not isinstance(meta.get("commit"), str) or not re.fullmatch(r"[0-9a-f]{40}", meta["commit"]):
             problems.append(f"versions.json commit 应为 40 位十六进制：{meta.get('commit')!r}")
         if not isinstance(meta.get("commit_time"), str):

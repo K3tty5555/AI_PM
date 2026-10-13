@@ -206,6 +206,7 @@ class TestSymlinkExclusion(unittest.TestCase):
             (repo / "real.md").write_text("real\n", encoding="utf-8")
             (repo / "link.md").symlink_to("real.md")
             _init_repo(repo)
+            _commit(repo, "first")
 
             self.assertIn("link.md", module._git_tracked(repo), "前置条件：git 应列出该符号链接")
             files = module.collect_files(repo, "public")
@@ -456,6 +457,30 @@ class TestGuards(unittest.TestCase):
             self.assertIn("CLAUDE.md", str(ctx.exception))
             self.assertFalse((Path(d) / "out").exists(), "拒绝时不得留下目录或半成品")
             module.build_package(repo, "public", Path(d) / "out", "v-test", allow_dirty=True)
+
+    def test_repo_without_commit_refuses(self):
+        """还没有提交的仓库：包里的 commit 无从填写，校验器必然不收——打包时就拒绝，不留「能生成、不能验收」的包。"""
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d) / "repo"
+            repo.mkdir()
+            (repo / "CLAUDE.md").write_text("ok\n", encoding="utf-8")
+            _init_repo(repo)
+            for allow_dirty in (False, True):
+                with self.assertRaises(SystemExit) as ctx:
+                    module.build_package(repo, "public", Path(d) / "out", "v-test", allow_dirty=allow_dirty)
+                self.assertIn("还没有提交", str(ctx.exception))
+            self.assertFalse((Path(d) / "out").exists(), "拒绝时不得留下目录或半成品")
+
+    def test_bad_version_refuses(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            for bad in ('v"bad', "v\\x", "v1\n2", "", " v1", "v/1", "v" * 65):
+                with self.assertRaises(SystemExit, msg=repr(bad)) as ctx:
+                    module.build_package(repo, "public", Path(d) / "out", bad)
+                self.assertIn("版本号", str(ctx.exception))
+            self.assertFalse((Path(d) / "out").exists(), "拒绝时不得留下目录或半成品")
+            for good in ("v0.6.4", "0.6.4", "20261013", "v-test", "v1.2.3-rc.1+build"):
+                self.assertTrue(module.version_ok(good), good)
 
     def test_untracked_file_does_not_block(self):
         with tempfile.TemporaryDirectory() as d:
@@ -1006,6 +1031,7 @@ class TestVerify(unittest.TestCase):
         self.assertFlag(self.check(e), "顶层必须是对象")
         for change, needle in (({"file_count": 99}, "file_count 不符"), ({"schema": 1}, "schema"),
                                ({"kind": "private"}, "kind 不符"), ({"commit": None}, "commit"),
+                               ({"version": 'v"bad'}, "version"), ({"version": None}, "version"),
                                ({"content_digest": "0" * 16}, "content_digest"),
                                ({"probe_paths": ["ghost.md"]}, "probe_paths")):
             self.assertFlag(self.check(_set_meta(_valid_entries(), **change)), needle)

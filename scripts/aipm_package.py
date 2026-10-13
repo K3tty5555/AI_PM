@@ -34,6 +34,14 @@ IGNORE_FILE = ".ignore"
 # ripgrep 在没有 git 的目录里也认 .ignore：Claude 搜规则时不会搜到历史原件里的旧版 SKILL.md
 IGNORE_CONTENT = "/.aipm-dist/\n"
 VERSIONS_SCHEMA = 2
+# 版本号会被开场脚本用 sed 从 versions.json 里截出来显示给用户：引号、反斜杠、换行都会让它截错。
+# 打包器和校验器共用这一条（2026-10-13，验收 R-01）
+VERSION_PATTERN = re.compile(r"[0-9A-Za-z][0-9A-Za-z._+-]{0,63}")
+
+
+def version_ok(version: object) -> bool:
+    return isinstance(version, str) and VERSION_PATTERN.fullmatch(version) is not None
+
 DIST_README = (
     "# .aipm-dist\n\n"
     "这里是 AI_PM 的升级材料（版本号、文件清单、历史原件），不是规则来源。\n"
@@ -593,13 +601,15 @@ def build_package(root: Path, kind: str, out: Path, version: str, *,
     `allow_dirty` 只给测试用：开发途中拿当前仓库打包。命令行不提供这个开关。"""
     if out.suffix.lower() == ".zip":
         raise SystemExit(f"⛔ --out 要给文件夹，不是 zip 路径：{out}（产物固定叫 {PACKAGE_NAME}）")
+    if not version_ok(version):
+        raise SystemExit(f"⛔ 版本号 {version!r} 不合规：只能用字母、数字和 . _ + -，以字母或数字开头，最长 64 位")
     target = out / PACKAGE_NAME
     if target.exists() and not force:
         raise SystemExit(f"⛔ {target} 已存在；确认要覆盖就加 --force")
     files = collect_files(root, kind)
     if IGNORE_FILE in files:
         raise SystemExit(f"⛔ 仓库根的 {IGNORE_FILE} 由打包器生成，不能被 git 跟踪")
-    if not allow_dirty and _head_info(root)[0] is not None:
+    if not allow_dirty and _head_info(root)[0] is not None:  # 没有提交的仓库在下面单独拒绝
         dirty = _dirty_tracked(root)
         if dirty:
             raise SystemExit(f"⛔ 有 {len(dirty)} 个被跟踪文件改了没提交，打出来的包对不上任何提交。"
@@ -610,10 +620,12 @@ def build_package(root: Path, kind: str, out: Path, version: str, *,
     clashes = duplicate_problems(files)
     if clashes:
         raise SystemExit(f"⛔ 有 {len(clashes)} 处路径在 macOS / Windows 上解压会互相覆盖，先改名：{clashes[:10]}")
+    commit, commit_ts, commit_iso = _head_info(root)
+    if commit is None:  # 包要记下对应哪个提交，校验器和升级都靠它（2026-10-13，验收 R-02）
+        raise SystemExit(f"⛔ {root} 还没有提交，打出来的包对不上任何提交。先提交一次再打包")
     history = collect_history(root)
     if kind == "public":
         history = _public_history(root, history)
-    commit, commit_ts, commit_iso = _head_info(root)
     modes = _index_modes(root)
     date_time = _zip_time(commit_ts)
     changelog = ((root / "CHANGELOG.md").read_text(encoding="utf-8")
