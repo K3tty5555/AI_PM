@@ -748,8 +748,6 @@ PRD「详细功能设计」中每个核心功能，自动生成 FAB 三行描述
 
 **云文档链配套命令（波1 v2，均零内部域名入口）**：云端手改回收/同步回本地 `python3 scripts/prd_pull.py --md <PRD> --project <项目>`（预览默认，--apply 回写；标记层以本地为准永不被覆盖）；发布后清尾 `prd_publish.py --project <项目> --cleanup`（旧档/空壳/孤儿清单，删除一律显式 --delete-doc+--yes）；历史重渲盘点 `prd_rerender_survey.py`。
 
-**原型远程发布增强档**：若当前 PRD 已有通过 `accept` 的 `06-prototype/`，允许用户选择远程发布。按 `.claude/skills/ai-pm/references/remote-prototype-publish.md` 执行 `scripts/aipm_remote_publish.py prepare`，登记远程评审链接、访问模式、`build_id`、`spec_hash` 和发布时间。原型发布失败或服务器尚未初始化时，PRD 保留“待远程发布”，不得填入虚假 URL；已有云文档正本仍按“先读最新版 → 定点替换 → 读回校验”更新。
-
 **云文档正本归属 gate（下一版本新增，发布/回收前强制）**：先运行 `python3 scripts/aipm_contracts.py cloud --project "{project_dir}" --operation publish|pull`。当前 PRD 必须在 `_status.json.artifacts` 登记唯一权威源：`local-primary` 才可进入现有 publish 预览；`cloud-primary` 禁止本地直推，先 pull/reconcile；`mixed` 在稳定块 ID 和条件写未成立前只允许冲突预览，默认阻断整篇 apply。该 gate 不替代 `prd_publish/prd_pull` 的 hash、blocks、revision、baseline、有损和写后读回保护。
 
 **定稿收口必做（forced-artifact，Stage3-A4 · 2026-07-12 挂点）**：PRD 定稿（发出/push 正本）时，本轮定稿新拍的术语、口径、推翻项逐条回写项目 `_conventions.md` §6（带日期+来源"定稿 {日期}"）；无新增显式写「{日期} 定稿：本次无」。
