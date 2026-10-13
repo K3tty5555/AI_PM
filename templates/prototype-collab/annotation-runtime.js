@@ -14,6 +14,7 @@
     const params = new URLSearchParams(location.search);
     const routeParams = new URLSearchParams(params);
     routeParams.delete("aipm_rev");
+    routeParams.delete("aipm_write_token");
     const routeQuery = routeParams.toString();
     const routeKey = (routeQuery ? `?${routeQuery}` : "") + location.hash;
     const mapped = routeMap[routeKey] || {};
