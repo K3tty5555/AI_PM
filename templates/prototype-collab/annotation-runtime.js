@@ -113,7 +113,10 @@
 
   async function syncProject() {
     try {
-      const response = await fetch("/__aipm_feedback__", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schema_version: 1, project, spec_hash: specHash, stage: "annotation", exported_at: new Date().toISOString(), items: state.items }) });
+      const token = new URLSearchParams(location.search).get("aipm_write_token");
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["X-AIPM-Feedback-Token"] = token;
+      const response = await fetch("/__aipm_feedback__", { method: "POST", headers, body: JSON.stringify({ schema_version: 1, project, spec_hash: specHash, stage: "annotation", exported_at: new Date().toISOString(), items: state.items }) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       setSyncState("已同步项目", "synced");
       return true;

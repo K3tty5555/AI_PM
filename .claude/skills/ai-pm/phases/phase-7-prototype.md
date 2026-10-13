@@ -262,6 +262,10 @@ wc -c {project_dir}/06-prototype/index.html
 6. 页面定点标注表单只保留“类型”和“内容”；已有标签支持“删除标签”并在删除前二次确认，历史 JSON 字段继续兼容但不再展示。用户说“意见已提交”时，读取 `feedback/` 下最新的 `review-feedback.json` 与 `annotations.json`。
 7. feedback/annotation JSON 经校验后，先运行 `modification-preview`；用户确认后才执行修改，完成后用 `diff-prototype` 和 `accept` 留下复核证据。
 
+### 远程发布增强档
+
+原型静态验收完成后，允许用户选择远程发布。按 `.claude/skills/ai-pm/references/remote-prototype-publish.md` 执行 `scripts/aipm_remote_publish.py prepare`，再生成部署计划。每次发布选择 `public` 或 `token` 访问模式；远程页面提交的巡检、标注和低保真确认通过 `scripts/aipm_remote_feedback.py` 写回服务器，并按 `spec_hash` 路由。发布完成后，将 `review` URL、访问模式、`build_id` 和发布时间登记到 `06-prototype/remote-publish.json`；服务器未完成初始化时保留“待远程发布”，不能伪造已发布链接。
+
 ## Phase 7.5: 原型完整性 + 设计质量审计（自动触发）
 
 若用户在前两步确认后要求第三步视觉稿，转 `ai-pm-prototype/references/visual-fidelity-stage.md`：读取项目 `designSpecPath` 与 `visualPackagePath`，先运行视觉包检查器核对 active PRD/spec；旧包 `ready` 不代表对当前版本有效。基于真实页面证据与已确认结构生成可编辑 HTML，再用浏览器导出逐帧 PNG，不能用通用工作台样式或跨版本 AI 生图替代产品视觉依据。

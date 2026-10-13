@@ -332,6 +332,14 @@ def _blocked(rel: str) -> bool:
     return any(rel.startswith(b) or rel == b.rstrip("/") for b in NEVER_INCLUDE)
 
 
+# 系统自动生成的文件：被跟踪了也不进包（测试夹具就跟踪着一个），清单和历史里同样不登记（2026-10-13）
+JUNK_NAMES = {".DS_Store"}
+
+
+def _is_junk(rel: str) -> bool:
+    return rel.rsplit("/", 1)[-1] in JUNK_NAMES
+
+
 def _packable(root: Path, rel: str) -> bool:
     """该路径是否真会进包：普通文件、非符号链接、工作区里存在。
 
@@ -340,7 +348,7 @@ def _packable(root: Path, rel: str) -> bool:
     下游按 file_count 校验就会误判。
     """
     p = root / rel
-    return p.is_file() and not p.is_symlink()
+    return p.is_file() and not p.is_symlink() and not _is_junk(rel)
 
 
 def collect_files(root: Path, kind: str) -> list[str]:
@@ -389,6 +397,8 @@ _BINARY_EXT = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".docx", ".xlsx"
 
 def _is_managed(rel: str) -> bool:
     """Return whether *rel* is an explicitly managed repository path."""
+    if _is_junk(rel):
+        return False
     # Knowledge cards and persona content are data assets with their own merge
     # route, even if an older commit happened to track them under templates/.
     if rel.startswith(("templates/knowledge-base/", "templates/persona/")):

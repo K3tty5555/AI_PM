@@ -90,6 +90,22 @@ def _commit(repo: Path, message: str) -> None:
     ], check=True, capture_output=True)
 
 
+def _load_verifier():
+    spec = importlib.util.spec_from_file_location("aipm_package_verify", ROOT / "scripts" / "aipm_package_verify.py")
+    v = importlib.util.module_from_spec(spec)
+    assert spec.loader
+    spec.loader.exec_module(v)
+    return v
+
+
+def _commit_staged(repo: Path, message: str) -> None:
+    """只提交已暂存的：_commit 的 add -A 会把夹具里的本机清单（.share-denylist）一并提交。"""
+    subprocess.run([
+        "git", "-C", str(repo), "-c", "user.name=Test", "-c", "user.email=test@example.test",
+        "-c", "core.hooksPath=/dev/null", "commit", "-qm", message,
+    ], check=True, capture_output=True)
+
+
 def _zip_names(path: Path) -> list[str]:
     with zipfile.ZipFile(path) as zf:
         return zf.namelist()
@@ -481,6 +497,28 @@ class TestGuards(unittest.TestCase):
             self.assertFalse((Path(d) / "out").exists(), "拒绝时不得留下目录或半成品")
             for good in ("v0.6.4", "0.6.4", "20261013", "v-test", "v1.2.3-rc.1+build"):
                 self.assertTrue(module.version_ok(good), good)
+
+    def test_ds_store_never_packed(self):
+        """被跟踪的 .DS_Store（如测试夹具）不进包、不进清单和历史，校验也不再报噪声。"""
+        with tempfile.TemporaryDirectory() as d:
+            repo = self._repo(d)
+            added = ("templates/x/.DS_Store", ".DS_Store", "tests/fixtures/.DS_Store",
+                     ".claude/skills/ai-pm/SKILL.md")  # 最后一个是校验器的必需文件
+            for rel in added:
+                (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+                (repo / rel).write_bytes(b"junk")
+            subprocess.run(["git", "-C", str(repo), "add", "-f", *added], check=True, capture_output=True)
+            _commit_staged(repo, "track junk")
+            self.assertIn("templates/x/.DS_Store", module._git_tracked(repo), "前置条件：git 跟踪着它")
+            out = module.build_package(repo, "public", Path(d) / "out", "v-test")
+            names = _zip_names(out)
+            self.assertFalse([n for n in names if n.endswith(".DS_Store")], names)
+            self.assertFalse([p for p in _zip_json(out, f"{module.DIST}/manifest.json") if p.endswith(".DS_Store")])
+            self.assertFalse([p for p in _zip_json(out, f"{module.DIST}/history/index.json") if p.endswith(".DS_Store")])
+            self.assertEqual(_zip_json(out, f"{module.DIST}/versions.json")["file_count"], len(_body_names(names)))
+            v = _load_verifier()
+            self.assertEqual(v.verify(out, "public"), [])
+            self.assertEqual(v.collect_warnings(out), [])
 
     def test_untracked_file_does_not_block(self):
         with tempfile.TemporaryDirectory() as d:

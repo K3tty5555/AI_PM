@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI_PM Prototype Remote Publish Manifest",
+  "type": "object",
+  "required": ["schema_version", "project", "build_id", "spec_hash", "prototype_hash", "access_mode", "created_at", "urls", "feedback", "files"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "project": {"type": "string", "minLength": 1},
+    "build_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{7,63}$"},
+    "spec_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "prototype_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "access_mode": {"enum": ["public", "token"]},
+    "created_at": {"type": "string", "minLength": 1},
+    "urls": {
+      "type": "object",
+      "required": ["lowfi", "prototype", "review"],
+      "properties": {
+        "lowfi": {"type": "string", "format": "uri-reference"},
+        "prototype": {"type": "string", "format": "uri-reference"},
+        "review": {"type": "string", "format": "uri-reference"}
+      },
+      "additionalProperties": false
+    },
+    "feedback": {
+      "type": "object",
+      "required": ["endpoint", "remote_write"],
+      "properties": {
+        "endpoint": {"type": "string", "format": "uri-reference"},
+        "remote_write": {"const": true}
+      },
+      "additionalProperties": false
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "size", "sha256"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(^|/)\.\.(?:/|$)).+$"},
+          "size": {"type": "integer", "minimum": 0},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

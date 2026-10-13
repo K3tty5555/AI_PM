@@ -69,6 +69,7 @@ run_check "经验分享文章工具自测" python3 -m unittest tests.test_ai_pm_
 run_check "经验分享文章契约自测" python3 -m unittest tests.test_ai_pm_sharing_contract
 run_check "升级契约（受管范围/合并协议/报告格式）" bash scripts/check-update-contract.sh
 run_check "打包器与校验器" python3 -m unittest scripts.test_aipm_package
+run_check "发布闸端到端（打包→校验→解压→开场版本→升级预演）" python3 -m unittest scripts.test_aipm_release_e2e
 run_check "升级产物自测（往返/幂等/阴性）" python3 scripts/aipm_update_selftest.py --selftest
 run_check "演讲材料路由与骨架契约自测" python3 -m unittest tests.test_ai_pm_deck_contract
 run_check "升级命令路由与注册表契约自测" python3 -m unittest tests.test_ai_pm_update_contract
