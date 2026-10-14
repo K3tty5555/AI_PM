@@ -61,6 +61,7 @@ run_check "知识沉淀队列+摘要自测（id/ack竞态/分片）" python3 scr
 run_check "知识沉淀 hook 单飞自测（双 Stop 只起一消费者）" python3 scripts/kc-hook-selftest.py
 run_check "skill 引用存在性（check-skill-ref-exists）" python3 scripts/check-skill-ref-exists.py
 run_check "原型协作生成器（确认门/资源/主题隔离）" python3 -m unittest scripts.test_aipm_prototype_collab
+run_check "标注路由不带口令" python3 -m unittest scripts.test_annotation_runtime_route
 run_check "设计稿抽取（URL/合并/token/还原）" python3 -m unittest scripts.test_aipm_design_ingest
 run_check "设计稿还原度区块差异" python3 -m unittest scripts.test_aipm_png_diff
 run_check "视觉包设计稿来源门禁" python3 -m unittest scripts.test_visual_anchor_mastergo

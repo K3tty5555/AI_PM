@@ -69,8 +69,6 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(node) Bash(grep) Agent
 
 其余：`scan-source` 生成源码证据，`emit-tokens` 生成工作台 Token，`summarize-feedback` / `modification-preview` 把反馈转修改计划（只出计划不改原型），`diff-prototype` 比两版差异，`serve` 起本地服务让反馈直接写回项目。
 
-**远程发布增强档**：命令链验收通过后，可按 `.claude/skills/ai-pm/references/remote-prototype-publish.md` 执行 `scripts/aipm_remote_publish.py prepare`，把当前原型打成不可变 bundle 并发布到 Connect 复用的腾讯云服务器。每次发布选择 `public` 或 `token` 访问模式；远程巡检、标注和低保真确认通过 `aipm_remote_feedback.py` 写回，反馈仍按现有 `spec_hash` 路由。首版先执行 `prepare` 和 `plan` 做本地校验，真实上传必须在服务器初始化完成后显式执行。
-
 **自检一句话**：交付前回答「用户现在能不能打开一个页面，在图上点一下写条意见，然后导出给我？」——答不上就是第 6 步没做。
 
 > 📌 完整契约、每条命令的完整参数、并行版本目录约定、截图工具链降级路径，全部在 [references/collaboration-loop.md](references/collaboration-loop.md)。**动原型就读它，无条件读**；别先判"这次算不算结构变化"再决定读不读。
