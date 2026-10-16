@@ -60,3 +60,12 @@
 - **`browser_evaluate` 脚本不用正则、不用嵌套引号**——工具调用是 JSON 编码，正则字面量 `/.../ ` 和多层引号会触发 "malformed tool call"。改用 `String.includes()` / `===` + 单层引号，复杂筛选拆成多次简单调用。
 - **对 Vue/SPA 元素，`el.click()` 或合成 MouseEvent 不触发 `@click`**（点了没反应）。正解：evaluate 里给目标元素 `setAttribute('data-go','x')` 打标记，再用 `browser_click` 带 selector `[data-go="x"]` 真实点击。
 - SPA 卡片常把 `@click` 绑在外层 button/a，标记叶子 span 会点空——标记可点祖先（`closest('button,a')`）。
+
+
+### 动手前必须当次问
+
+手机或电脑软件实测前，先向用户确认安装/卸载软件、输入密码验证码、付款、发送发布提交分享，以及打开微信短信邮件等动作。
+
+## 安卓 App / Windows 软件实测
+
+先跑 `python3 .claude/skills/ai-pm-setup/scripts/aipm_setup.py status --quick --target android --json`（Windows 软件替换 target）。不是 OK 就引导 `/ai-pm setup`；开场提醒设备上已登录账号，截图归档前检查隐私。

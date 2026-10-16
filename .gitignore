@@ -118,6 +118,10 @@ templates/**/uploads/
 templates/**/.cache/
 # 本机注册表（intake 装载的外部 skill 登记 + 锁 + 原子写临时文件），跟着安装目录走、不入库
 templates/configs/*capability-registry.local*
+# ai-pm-setup 本机登记、锁与项目级 MCP 配置
+templates/configs/device-setup.local*
+/.mcp.json
+/.mcp.json.bak
 
 # 个人知识库内容（含真实业务洞察、客户访谈、PRD 引用等私有信息）
 # 保留 README.md（目录说明）和 .gitkeep（目录骨架）

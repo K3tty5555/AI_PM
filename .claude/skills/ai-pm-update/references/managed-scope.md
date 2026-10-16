@@ -59,6 +59,8 @@
 - `scripts/` 下 `.` 开头的私有文件
 - 本机注册表 `templates/configs/capability-registry.local.json`，及其中登记的外部 skill 目录 `.claude/skills/<名>/`（intake 装载，Ruling 13）。**例外：官方包里出现同名 skill 时按冲突上报、问用户**（改名本地版或 unregister），不当成永不触碰静默跳过——否则官方 skill 永远装不上
 - 一切被 `.gitignore` 覆盖的内容
+- `.mcp.json` 及 `.mcp.json.bak`（ai-pm-setup 写入的本机绝对路径）
+- `templates/configs/device-setup.local.json` 及 `device-setup.local.lock`（ai-pm-setup 本机登记）
 
 **但由打包器 `PRIVATE_EXTRA` 携带的数据资产不在其列。** 它们是分发物，不是升级合并对象。本段的「`templates/` 下未追踪的文件」与「`output/`」两条不覆盖它们。理由见上文「本节不适用于数据资产」。
 

@@ -1,0 +1,4 @@
+List of devices attached
+2a078d64	device usb:1048576X product:fuxi model:2211133C device:fuxi transport_id:3
+
+\n

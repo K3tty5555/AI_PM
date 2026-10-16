@@ -116,6 +116,7 @@ allowed-tools: Read Write Edit Bash(ls) Bash(mkdir) Bash(cat) Bash(chmod) Bash(t
 | `/ai-pm [URL]` | 分析参考网页（Playwright MCP 抓取） |
 | `/ai-pm update` | AI_PM 自身版本升级（三方合并保留用户改造，支持 `--dry-run` / `rollback`） |
 | `/ai-pm intake [路径]` | 外部散乱文件整合：全盘扫描→确认→立项/skill 装载（小白零决策，缺省扫主目录） |
+| `/ai-pm setup` | 布置网页、安卓手机和 Windows 软件的操作能力 |
 
 ### `sharing` 命令分派
 
@@ -402,3 +403,7 @@ Phase 8（可选）: 需求评审（六角色并行）
 | `web-analysis.md` | 网页分析 |
 | `../ai-pm-strategy/SKILL.md` | 战略沙盘：独立高阶产品战略推演 skill |
 | `../ai-pm-acceptance/SKILL.md` | **产品验收 skill ⭐**——对照 PRD 验研发实现、出提单台账（产出模板可配置·默认 9 列），方法论在 `references/acceptance-judgment-card.md` |
+
+### `setup` 命令分派
+
+当首个参数为 `setup`：使用 `Skill(ai-pm-setup)`，将后续原始参数完整传入。不要在主控中复制安装流程。

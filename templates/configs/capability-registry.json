@@ -45,8 +45,17 @@
       "exit_condition": "形成继续、调整、停止或继续观察的结论并更新事实"
     }
   ],
-  "workspace_commands": ["init", "list", "switch", "continue", "new", "import", "reset", "delete", "config", "doctor", "refresh"],
+  "workspace_commands": ["init", "list", "switch", "continue", "new", "import", "reset", "delete", "config", "doctor", "refresh", "setup"],
   "capabilities": [
+    {
+      "id": "setup",
+      "skill": "ai-pm-setup",
+      "modes": [],
+      "phase_effect": {"kind": "none"},
+      "artifacts": ["device-setup-state"],
+      "side_effects": ["read-project", "write-local", "network-read", "install-local", "system-config"],
+      "legacy_commands": ["/ai-pm setup"]
+    },
     {
       "id": "orchestrate",
       "skill": "ai-pm",

@@ -1,0 +1,2 @@
+List of devices attached
+R58M123ABC	offline usb:1-1 transport_id:4

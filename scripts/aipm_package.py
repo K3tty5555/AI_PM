@@ -63,7 +63,7 @@ PRIVATE_EXTRA = [
     ".claude/skills/d2c-codegen/",
     ".claude/skills/d2c-fetch/",
     ".claude/skills/d2c-setup/",
-    "vendor/",
+    "vendor/android-platform-tools/",
     "templates/knowledge-base/",
     "templates/persona/",
     "scripts/.share-denylist",
@@ -75,6 +75,17 @@ PRIVATE_EXTRA = [
 # 本机私有携带配置（gitignore，模板 scripts/.private-bundle.example.json）。
 # 含内部平台名的技能只能写在这里：写进本文件会随公开仓库发出去（check-share-readiness 会拦）。
 PRIVATE_BUNDLE_CONF = ROOT / "scripts" / ".private-bundle.json"
+
+MCP_SERVERS_CONF = ROOT / "templates" / "configs" / "mcp-servers.json"
+
+
+def private_mcp_json() -> str:
+    conf = json.loads(MCP_SERVERS_CONF.read_text(encoding="utf-8"))
+    pw = conf["servers"]["playwright"]
+    ctx = {"version": pw["version"], "browser": "chrome", "tools": str(Path.home() / ".ai-pm" / "tools"), **conf["mirrors"]}
+    entry = {"command": pw["command"].format(**ctx), "args": [a.format(**ctx) for a in pw.get("args", [])]}
+    entry["env"] = {k: v.format(**ctx) for k, v in pw.get("env", {}).items()}
+    return json.dumps({"mcpServers": {"playwright": entry}}, ensure_ascii=False, indent=2) + "\n"
 
 
 def _load_private_bundle_conf(path: Path) -> tuple[dict[str, Path], tuple[str, ...]]:
@@ -111,9 +122,7 @@ _MAPPED_SKIP = re.compile(r"^(\.env(\..*)?|\.DS_Store)$")
 PRIVATE_GENERATED = {
     # Playwright 走项目级 MCP，不走官方插件：插件要从 GitHub 装，公司网络常连不上。
     # 用本机已装的 Chrome，免得再下载浏览器；跑过一次后 npx 缓存里有 playwright-core，依赖它的私有技能也能找到。
-    ".mcp.json": json.dumps({"mcpServers": {"playwright": {
-        "command": "npx", "args": ["-y", "@playwright/mcp@latest", "--browser", "chrome"]}}},
-        ensure_ascii=False, indent=2) + "\n",
+    ".mcp.json": private_mcp_json(),
     "templates/personal-skills/README.md": (
         "# 个人目录技能安装件\n\n"
         "这里的技能要装在个人目录 `~/.claude/skills/` 才能正常用：它们把密钥存在那里，也会自动更新到那里。\n\n"
@@ -128,7 +137,6 @@ PRIVATE_SENTINELS = (
     ".claude/skills/xfchat-wiki/SKILL.md",
     "scripts/.metrics-dict.md",
     "templates/personal-skills/metrics-query/SKILL.md",
-    ".mcp.json",
     *_LOCAL_SENTINELS,
 )
 # 这两个模板目录公共包里也有骨架（README.md / .gitkeep），里面的卡片才是私有
@@ -139,6 +147,8 @@ def is_private_only(rel: str) -> bool:
     """公共包里绝不该出现的路径。校验器从这里导入，不另抄一份。
     忽略大小写：Mac / Windows 文件系统不分大小写，Vendor/ 解压后就是 vendor/。"""
     low = rel.lower()
+    if low.startswith("vendor/"):
+        return True
     for prefix in [*PRIVATE_EXTRA, *PRIVATE_MAPPED, *PRIVATE_GENERATED]:
         p = prefix.lower()
         if p in _SKELETON_DIRS and low.startswith(p):
@@ -158,6 +168,8 @@ NEVER_INCLUDE = [
     ".claude/projects/",
     ".claude/settings.local.json",
     "templates/configs/capability-registry.local",  # 本机注册表：外部 skill 名，跟着安装目录走（Ruling 13）
+    "templates/configs/device-setup.local",
+    ".mcp.json.bak",
     ".d2c/",
     ".aipm-dist/",  # 打包器生成，仓库里不许有被跟踪的同名路径
     ".ai-shared/conversations/",

@@ -1,0 +1,3 @@
+List of devices attached
+AAA111	device usb:1-1 product:p1 model:Phone_A device:a transport_id:1
+BBB222	device usb:1-2 product:p2 model:Phone_B device:b transport_id:2

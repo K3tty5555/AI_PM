@@ -21,7 +21,13 @@
       "Skill(ai-pm-impact)",
       "Skill(ai-pm-retrospective)",
       "Skill(ai-pm-update)",
-      "Skill(ai-pm-intake)"
+      "Skill(ai-pm-intake)",
+      "Skill(ai-pm-setup)"
+    ],
+    "deny": [
+      "mcp__mobile-mcp__mobile_login_to_cloud_provider",
+      "mcp__mobile-mcp__mobile_allocate_remote_device",
+      "mcp__mobile-mcp__mobile_list_remote_devices"
     ]
   },
   "hooks": {

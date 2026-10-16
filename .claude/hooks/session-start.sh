@@ -8,6 +8,12 @@ ROOT="$(pwd)"
 # 改用 C locale 让 bash 纯字节透传；PYTHONUTF8=1 保证 python 输出仍是 UTF-8。
 export LC_ALL=C PYTHONUTF8=1
 
+# 操作能力布置：只读本机登记，存在待重开自检时提示一行。
+SETUP_PY="$ROOT/.claude/skills/ai-pm-setup/scripts/aipm_setup.py"
+if [ -f "$SETUP_PY" ] && command -v python3 >/dev/null 2>&1; then
+  python3 "$SETUP_PY" pending-hint 2>/dev/null || true
+fi
+
 
 # 下面是原有的开场检查。包成函数：解压安装时要把全部输出收起来，改用 JSON 交出去（见文件末尾）。
 aipm_session_start() {

@@ -78,6 +78,7 @@ run_check "intake 扫描与执行器" python3 -m unittest tests.test_aipm_intake
 run_check "intake 命令路由与注册表契约自测" python3 -m unittest tests.test_ai_pm_intake_contract
 run_check "本机注册表 overlay（合并读取/重名降级/防回退/不列外部名）" python3 -m unittest tests.test_aipm_registry_overlay
 run_check "intake 执行往返端到端（含 claims gate 与假仓 validate）" python3 -m unittest tests.test_aipm_intake_roundtrip
+run_check "操作能力布置（登记/合并/环境/安卓/浏览器/命令行/契约）" python3 -m unittest tests.test_aipm_setup_state tests.test_aipm_setup_mcp tests.test_aipm_setup_env tests.test_aipm_setup_android tests.test_aipm_setup_browser tests.test_aipm_setup_cli tests.test_ai_pm_setup_contract
 run_check "output 容器注册单源自测" python3 scripts/check-output-container-registry.py
 run_check "超龄清单脚本冒烟（review-stale-list，防 date 解析静默崩）" bash scripts/review-stale-list.sh 36500
 run_check "云文档 pull 离线自测（纯三方算法+复合键回写端到端）" python3 scripts/prd_pull.py --selftest
@@ -193,7 +194,17 @@ PYEOF
       --include-untracked tests/test_aipm_intake_apply.py \
       --include-untracked tests/test_ai_pm_intake_contract.py \
       --include-untracked tests/test_aipm_intake_roundtrip.py \
-      --include-untracked tests/test_aipm_registry_overlay.py
+      --include-untracked tests/test_aipm_registry_overlay.py \
+      --include-untracked .claude/skills/ai-pm-setup \
+      --include-untracked templates/configs/mcp-servers.json \
+      --include-untracked tests/fixtures/setup \
+      --include-untracked tests/test_aipm_setup_state.py \
+      --include-untracked tests/test_aipm_setup_mcp.py \
+      --include-untracked tests/test_aipm_setup_env.py \
+      --include-untracked tests/test_aipm_setup_android.py \
+      --include-untracked tests/test_aipm_setup_browser.py \
+      --include-untracked tests/test_aipm_setup_cli.py \
+      --include-untracked tests/test_ai_pm_setup_contract.py
 fi
 
 echo ""

@@ -31,7 +31,7 @@ ARTIFACT_TYPES = {
 }
 ARTIFACT_OWNERS = {"ai", "human", "shared", "external"}
 ARTIFACT_STATUSES = {"current", "stale", "archived", "missing"}
-SIDE_EFFECTS = {"read-project", "write-local", "network-read", "write-cloud", "external-write"}
+SIDE_EFFECTS = {"read-project", "write-local", "network-read", "write-cloud", "external-write", "install-local", "system-config"}
 LOCAL_TEXT_SUFFIXES = {".md", ".html", ".htm", ".txt", ".json", ".csv"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 # 外部 skill 名：要能原样写进 gitignore 规则（无通配/空白/换行），也要能当目录名

@@ -74,6 +74,8 @@
 
 ## 执行方式
 
+附：本机操作能力摘要（不计入 32 项，不做设备探测）：报告末尾可运行 `python3 .claude/skills/ai-pm-setup/scripts/aipm_setup.py status --quick --json`，只摘成一行；设备与电脑软件能力归 setup。
+
 **先跑机械兜底脚本**（零歧义引用的快速门，秒级）：
 ```bash
 python3 scripts/check-skill-ref-exists.py

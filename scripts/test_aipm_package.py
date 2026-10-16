@@ -692,8 +692,11 @@ class TestPrivateBundle(unittest.TestCase):
                 self.assertEqual((zf.getinfo(".claude/skills/internal-skill/scripts/run.cjs").external_attr >> 16) & 0o777,
                                  0o755)
                 mcp = json.loads(zf.read(".mcp.json"))
-                self.assertEqual(mcp["mcpServers"]["playwright"],
-                                 {"command": "npx", "args": ["-y", "@playwright/mcp@latest", "--browser", "chrome"]})
+                conf = json.loads((ROOT / "templates/configs/mcp-servers.json").read_text(encoding="utf-8"))
+                pw = conf["servers"]["playwright"]
+                self.assertEqual(mcp["mcpServers"]["playwright"]["args"], ["-y", "@playwright/mcp@%s" % pw["version"], "--browser", "chrome"])
+                self.assertEqual(mcp["mcpServers"]["playwright"]["env"]["npm_config_registry"], conf["mirrors"]["npm_registry"])
+                self.assertNotIn("@latest", json.dumps(mcp))
                 self.assertIn("~/.claude/skills/", zf.read("templates/personal-skills/README.md").decode("utf-8"))
                 meta = json.loads(zf.read(f"{module.DIST}/versions.json"))
                 manifest = json.loads(zf.read(f"{module.DIST}/manifest.json"))
@@ -707,7 +710,7 @@ class TestPrivateBundle(unittest.TestCase):
             with mock.patch.multiple(module, PRIVATE_EXTRA=[], PRIVATE_MAPPED=mapped):
                 out = module.build_package(repo, "public", Path(d) / "out", "v-test")
             names = _zip_names(out)
-            self.assertFalse([n for n in names if n == ".mcp.json" or "internal-skill" in n or "personal-skills" in n])
+            self.assertFalse([n for n in names if n == ".mcp.json" or "internal-skill" in n or "personal-skills" in n or n.lower().startswith("vendor/")])
 
     def test_missing_mapped_source_fails(self):
         with tempfile.TemporaryDirectory() as d:

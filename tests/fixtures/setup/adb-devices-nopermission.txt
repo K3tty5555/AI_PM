@@ -1,0 +1,2 @@
+List of devices attached
+R58M123ABC	no permissions (user in plugdev group); see [url] usb:1-1 transport_id:4

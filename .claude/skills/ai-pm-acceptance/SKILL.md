@@ -51,7 +51,7 @@ argument-hint: "[PRD或验收清单路径 | --template=模板名]"
 
 模式是 **PM 登录 + 拍板，AI 扛技术活**。用户视角只有两步：
 
-1. **打开验收浏览器** — AI 跑 `scripts/start-browser.sh`，会自动弹出一个浏览器窗口。
+1. **打开验收浏览器** — AI 跑 `python3 .claude/skills/ai-pm-setup/scripts/aipm_setup.py launch-browser`，会自动弹出一个浏览器窗口。
 2. **你登录测试环境** — 在弹出的窗口里像平时一样登录（过验证码/SSO），登好说一声。
 
 之后 AI 用 Playwright 接管这个你登录好的窗口去驱动验收。**端口、协议、连接细节都藏在脚本里，用户完全不用懂。**（底层用 Playwright 连接你已登录的真实页面——这是过 SSO、验真实登录态的唯一可行法，无头浏览器登不进去。）
@@ -84,3 +84,6 @@ argument-hint: "[PRD或验收清单路径 | --template=模板名]"
 **具体产品的 DOM 选择器、驱动代码不进 skill**。skill 只给「先探测后驱动」的 checklist 引导每个产品现摸，摸出来的选择器/驱动脚本是运行时产物、落项目侧 `_runner/`。原因：只有一个产品样本时把它的 DOM 抽成"通用引擎"会焊死、第二个产品就废——等第 2 个产品验收时 diff 两套探测结果，共性才抽进 skill。
 
 > 登录/断线重连/现场恢复的固定流程见 `references/login-session-protocol.md`（A4 公共协议，竞品实探与权限跑批共用）。
+
+
+验收安卓 App 或 Windows 软件前，先跑 `aipm_setup.py status --quick`，不是 OK 就引导 `/ai-pm setup`。

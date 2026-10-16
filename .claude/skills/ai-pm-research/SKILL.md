@@ -104,6 +104,7 @@ allowed-tools: Read Write Edit Bash(mkdir) Bash(ls) Bash(mv) Bash(python3) Bash(
   - ⚠️ **开浏览器前必须获用户当次授权**（复用项目既有"Playwright 未经允许禁止跑"纪律，非本 skill 另立）；无授权只走模式 A。
   - 默认走 Playwright MCP；要连用户日常 Chrome 登录态才上 CDP。
   - **完整操作手册（只读安全纪律 / MCP-CDP 选型 / 降级决策表 / 证据归档 / MCP 避坑）见 `.claude/skills/ai-pm-research/references/live-probe.md`，走模式 B 前必读。**
+  - **App 实测**（安卓 App / Windows 软件）先跑 `aipm_setup.py status --quick`，未布置就引导 `/ai-pm setup`。
 
 **模式 A · 批量抓取模式（同会话复用）：**
 
