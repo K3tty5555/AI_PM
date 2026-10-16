@@ -3,6 +3,9 @@
 """PRD 字数三档机械检查（口径唯一实现，单源=本文件头注释；判断卡 §7.1 只留指针）。
 
 口径（剔噪版，2026-07-15 用户拍板）——预处理按序：
+  ⓪ 附录不计入（2026-10-16 用户拍板）：<!-- word-count: exclude --> 到 <!-- /word-count: exclude -->
+     （缺结束标记则到文末）之间的内容不计字数；只认开始标记后第一个非空行是「## 附录…」标题的区间，
+     否则标记作废、照常计数（防把正文包进去绕硬线）。被排除的字数另报 EXCLUDED_APPENDIX: n，不参与判档
   ① 删 HTML 注释 <!--…-->（doctype 行 / 云增强指令 / 预算行不算字）
   ② 删已闭合围栏代码块（行级状态机，backtick/tilde fence；mermaid 等价于图，不算字；
      未闭合 fence = 整篇无有效档位 → BAND invalid_markdown + exit 4，fail-closed，
@@ -42,6 +45,9 @@ COMMENT_RE = re.compile(r'<!--.*?-->', re.DOTALL)
 IMAGE_RE = re.compile(r'!\[([^\]]*)\]\([^)]*\)')
 SEPARATOR_RE = re.compile(r'^[\s|:\-]+$')
 FENCE_RE = re.compile(r'^\s{0,3}(`{3,}|~{3,})')
+EXCLUDE_OPEN_RE = re.compile(r'^\s*<!--\s*word-count:\s*exclude\s*-->\s*$')
+EXCLUDE_CLOSE_RE = re.compile(r'^\s*<!--\s*/word-count:\s*exclude\s*-->\s*$')
+APPENDIX_HEAD_RE = re.compile(r'^#{2,3}\s+附录')
 
 BAND_EXIT = {
     'ok': 0, 'justify': 1, 'hard_stop': 2,
@@ -88,9 +94,51 @@ def strip_fences(text):
     return '\n'.join(out)
 
 
+def split_excluded(raw):
+    """⓪ 剥掉附录排除区，返回 (保留文本, 被排除文本, 被忽略的标记数)。
+    只认开始标记后第一个非空行是「## 附录」标题的区间；结束标记缺失时排除到文末。
+    不满足条件的标记原样留下（随后作为注释被删），区间内容照常计数——防止把正文包进去绕硬线。"""
+    lines = raw.split('\n')
+    keep, dropped, ignored = [], [], 0
+    i = 0
+    while i < len(lines):
+        if EXCLUDE_OPEN_RE.match(lines[i]):
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j < len(lines) and APPENDIX_HEAD_RE.match(lines[j]):
+                k = i + 1
+                while k < len(lines) and not EXCLUDE_CLOSE_RE.match(lines[k]):
+                    k += 1
+                dropped.extend(lines[i + 1:k])
+                i = k + 1
+                continue
+            ignored += 1
+        keep.append(lines[i])
+        i += 1
+    return '\n'.join(keep), '\n'.join(dropped), ignored
+
+
+def _count_text(text):
+    text = COMMENT_RE.sub('', text)
+    text = strip_fences(text)
+    if text is None:
+        return None
+    text = IMAGE_RE.sub(r'\1', text)
+    lines = [l for l in text.split('\n') if not (SEPARATOR_RE.match(l) and '-' in l and '|' in l)]
+    return len(re.sub(r'\s', '', '\n'.join(lines)))
+
+
+def excluded_chars(raw):
+    """附录排除区按同一口径算出的字数（供机器行报告；不参与判档）。"""
+    _, dropped, _ = split_excluded(raw)
+    return _count_text(dropped) or 0
+
+
 def char_count(raw):
     """按剔噪口径计数；未闭合 fence 返回 None。"""
-    text = COMMENT_RE.sub('', raw)
+    text, _, _ = split_excluded(raw)
+    text = COMMENT_RE.sub('', text)
     text = strip_fences(text)
     if text is None:
         return None
@@ -148,6 +196,12 @@ def run_file(path, doctype_override=None):
     band, count, doctype, source, reason = analyze(raw, doctype_override)
     for line in machine_lines(band, count, doctype, source, reason):
         print(line)
+    _, _, ignored = split_excluded(raw)
+    excluded = excluded_chars(raw)
+    if excluded:
+        print('EXCLUDED_APPENDIX: %d' % excluded)
+    if ignored:
+        print('WARN: %d 处 word-count:exclude 标记后面不是「## 附录」标题，已忽略、照常计数' % ignored)
     if band == 'justify' and not reason:
         print('HINT: 说理区须在文件头加 <!-- over-budget-reason: 一句话超因 -->（判断卡 §7.1）')
     return BAND_EXIT[band]
@@ -216,6 +270,19 @@ def selftest():
     check('reason_line', l2, 'OVER_BUDGET_REASON: present')
     # ⑥ 退出码映射
     check('exit_map', [BAND_EXIT[b] for b in ('ok', 'justify', 'hard_stop', 'skipped_decision_review', 'unknown_doctype', 'invalid_markdown')], [0, 1, 2, 3, 3, 4])
+    # ⑦ 附录不计入（2026-10-16 用户拍板）：只认紧跟「## 附录」标题的排除标记
+    ex_open, ex_close = '<!-- word-count: exclude -->', '<!-- /word-count: exclude -->'
+    band, count, _, _, _ = analyze(hdr + '字' * 14000 + '\n' + ex_open + '\n## 附录 C · 示例\n' + '例' * 5000 + '\n' + ex_close + '\n')
+    check('appendix_excluded_count', count, 14000)
+    check('appendix_excluded_band', band, 'justify')
+    band, count, _, _, _ = analyze(hdr + '字' * 14000 + '\n' + ex_open + '\n## 附录 C · 示例\n' + '例' * 5000 + '\n')
+    check('appendix_unclosed_to_eof_count', count, 14000)
+    band, count, _, _, _ = analyze(hdr + '字' * 100 + '\n' + ex_open + '\n## 附录 C\n例例\n' + ex_close + '\n尾巴四字')
+    check('after_close_counted', count, 104)
+    band, count, _, _, _ = analyze(hdr + '字' * 14000 + '\n' + ex_open + '\n## 六、详细设计\n' + '字' * 5000 + '\n' + ex_close)
+    check('non_appendix_marker_ignored_band', band, 'hard_stop')
+    check('non_appendix_marker_ignored_count', count, 14000 + len('##六、详细设计') + 5000)
+    check('excluded_report', excluded_chars(hdr + 'a\n' + ex_open + '\n## 附录 C\n例例\n' + ex_close), len('##附录C例例'))
 
     if fails:
         print('SELFTEST: FAIL (%d/%d)' % (len(fails), n_checks[0]))

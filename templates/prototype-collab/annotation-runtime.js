@@ -38,8 +38,8 @@
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `
     <style>/* AIPM_ANNOTATION_STYLE */</style>
-    <div class="launcher"><button class="btn primary" id="place"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>添加标签</button><button class="btn" id="open">标签列表 <span id="count">0</span></button></div>
-    <section class="panel hidden" id="panel"><div class="head"><strong>页面标注</strong><button id="close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="tools"><button class="btn" id="export">导出</button><button class="btn" id="import">导入</button><button class="sync-state" id="syncState" type="button" role="status" aria-live="polite" title="点击重试同步">浏览器草稿</button><input type="file" id="file" accept="application/json" hidden></div><div class="list" id="list"></div></section>
+    <div class="launcher" id="launcher" aria-label="页面标签工具"><button class="launcher-toggle" id="toggleTools" type="button" aria-expanded="false" aria-controls="launcherMenu" aria-label="展开页面标签工具"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 5.5h14v10H5z"/><path d="m8 19 2.5-3.5h3L16 19"/><path d="M8 9h8M8 12h5"/></svg><span id="count">0</span></button><div class="launcher-menu" id="launcherMenu" hidden><button class="btn primary" id="place"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>添加标签</button><button class="btn" id="open" aria-expanded="false" aria-controls="panel">标签列表 <span id="menuCount">0</span></button></div></div>
+    <section class="panel side-panel hidden" id="panel" aria-label="页面标签列表"><div class="head"><div><strong>页面标签</strong><span class="head-count"><span id="panelCount">0</span> 条</span></div><button id="close" aria-label="关闭标签列表"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="tools"><button class="btn" id="export">导出</button><button class="btn" id="import">导入</button><button class="sync-state" id="syncState" type="button" role="status" aria-live="polite" title="点击重试同步">浏览器草稿</button><input type="file" id="file" accept="application/json" hidden></div><div class="list" id="list"></div></section>
     <div id="pins"></div><div class="hint hidden" id="hint">点击页面元素或位置添加标签，Esc 取消</div>`;
 
   const $ = id => root.getElementById(id);
@@ -142,6 +142,8 @@
   function render() {
     const own = state.items.filter(item => item.page_id === pageId && item.state_id === stateId);
     $("count").textContent = own.length;
+    $("menuCount").textContent = own.length;
+    $("panelCount").textContent = own.length;
     $("list").innerHTML = own.length ? "" : '<div class="empty"><strong>把意见留在具体位置</strong><p>点击“添加标签”，再点选页面中的元素，即可记录说明或修改意见。</p></div>';
     $("pins").innerHTML = "";
     own.forEach((item, index) => {
@@ -155,7 +157,7 @@
       const pin = document.createElement("button");
       pin.className = `pin ${item.feedback_type} ${item.status === "resolved" ? "resolved" : ""}`;
       pin.textContent = String(index + 1);
-      pin.onclick = () => { openForm(item, null); $("panel").classList.remove("hidden"); };
+      pin.onclick = () => { openForm(item, null); togglePanel(true); setLauncher(false); };
       $("pins").appendChild(pin);
       positionPin(pin, item);
     });
@@ -255,10 +257,26 @@
   }
 
   document.addEventListener("click", captureClick, true);
-  document.addEventListener("keydown", event => { if (event.key === "Escape") stopPlacing(); });
-  $("place").onclick = () => { placing = true; $("hint").classList.remove("hidden"); $("panel").classList.add("hidden"); document.documentElement.style.cursor = "crosshair"; };
-  $("open").onclick = () => $("panel").classList.toggle("hidden");
-  $("close").onclick = () => $("panel").classList.add("hidden");
+  document.addEventListener("keydown", event => { if (event.key === "Escape") { stopPlacing(); setLauncher(false); } });
+  function setLauncher(open) {
+    $("launcherMenu").hidden = !open;
+    $("toggleTools").setAttribute("aria-expanded", String(open));
+    $("toggleTools").setAttribute("aria-label", open ? "收起页面标签工具" : "展开页面标签工具");
+    $("launcher").classList.toggle("expanded", open);
+  }
+  $("toggleTools").onclick = () => setLauncher($("launcherMenu").hidden);
+  $("place").onclick = () => { placing = true; $("hint").classList.remove("hidden"); togglePanel(false); setLauncher(false); document.documentElement.style.cursor = "crosshair"; };
+  document.addEventListener("click", event => {
+    if (!event.composedPath().includes(host) && !$("launcherMenu").hidden) setLauncher(false);
+  }, true);
+  function togglePanel(open) {
+    const next = typeof open === "boolean" ? open : $("panel").classList.contains("hidden");
+    $("panel").classList.toggle("hidden", !next);
+    $("open").setAttribute("aria-expanded", String(next));
+    if (next) setLauncher(false);
+  }
+  $("open").onclick = () => togglePanel();
+  $("close").onclick = () => togglePanel(false);
   $("syncState").onclick = () => syncProject();
   $("export").onclick = () => {
     const payload = { schema_version: 1, project, spec_hash: specHash, stage: "annotation", exported_at: new Date().toISOString(), items: state.items };

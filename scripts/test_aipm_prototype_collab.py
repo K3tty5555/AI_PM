@@ -268,6 +268,10 @@ class PrototypeCollabTests(unittest.TestCase):
 
     def test_annotation_form_only_asks_for_type_and_content(self):
         runtime = module.annotation_runtime()
+        self.assertIn('class="panel side-panel hidden"', runtime)
+        self.assertIn('aria-controls="panel"', runtime)
+        self.assertIn('id="panelCount"', runtime)
+        self.assertIn('transform:translate(-50%,-50%)', runtime)
         self.assertIn('<label>类型<select id="type">', runtime)
         self.assertIn('<label>内容<textarea id="comment"', runtime)
         self.assertNotIn('<label>标题<input id="title"', runtime)
